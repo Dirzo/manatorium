@@ -250,7 +250,7 @@ function startBattle(run, meta) {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, meta, syn);
     let pos, rafter = false;
     st.groundRange = st.range;
-    if (h.place.type === 'rafter') { pos = { x: RAFTER_XS[h.place.i], y: RAFTER_Y }; rafter = true; st.range = BAL.rafterRange; }
+    if (h.place.type === 'rafter') { pos = rafterPosition(run, h.place.i); rafter = true; st.range = BAL.rafterRange; }
     else pos = cellPos(h.place.c, h.place.r);
     if (run.mods.inspire) st.atk = Math.round(st.atk * 1.25);
     if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
@@ -468,11 +468,11 @@ function projLand(B, p) {
 // ----- castle -----
 // melee foes at the wall raise a ladder to reach rafter heroes; once someone is up, a pack of three or more grabs a ram
 function siegeTricks(B, u, dt) {
-  if (u.onRafter) { u.y = RAFTER_Y; u.z = 0; u.x = clamp(u.x, 4, CASTLE_X - 2); }
+  if (u.onRafter) { u.y = castleRafterY(B.run); u.z = 0; u.x = clamp(u.x, 4, CASTLE_X - 2); }
   if (u.climb) { const L = u.climb; L.t += dt;
     if (L.phase === 'raise') { u.atkT = 0.1; if (L.t >= 1.1) { L.phase = 'up'; L.t = 0; } return true; }
-    const top = u.y - RAFTER_Y; u.z = Math.min(top, top * L.t / 1.4); u.x = CASTLE_X + 11;
-    if (L.t >= 1.4) { u.climb = null; u.onRafter = true; u.z = 0; u.y = RAFTER_Y; u.x = CASTLE_X - 4; u.retarget = 0; B.ladders = (B.ladders || 0) + 1; FX.text(u.x, u.y - 22, 'OVER THE WALL', '#ff7a9a', true); }
+    const top = Math.max(0, u.y - castleRafterY(B.run)); u.z = Math.min(top, top * L.t / 1.4); u.x = CASTLE_X + 11;
+    if (L.t >= 1.4) { u.climb = null; u.onRafter = true; u.z = 0; u.y = castleRafterY(B.run); u.x = CASTLE_X - 4; u.retarget = 0; B.ladders = (B.ladders || 0) + 1; FX.text(u.x, u.y - 22, 'OVER THE WALL', '#ff7a9a', true); }
     return true; }
   if (u.onRafter || u.flying || u.boss || u.range > 40 || u.ram || u.x > CASTLE_X + 14 + (u.scale - 1) * 10 || (u.target && u.target.alive)) return false;
   const rafters = B.heroes.some(h => h.alive && h.rafter);

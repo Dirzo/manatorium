@@ -1,0 +1,9 @@
+const fs=require('node:fs');const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+(async()=>{
+ const b=await chromium.launch({channel:'chrome',headless:true}),p=await b.newPage({viewport:{width:1200,height:1400}});
+ const readCards=async file=>{await p.setContent(fs.readFileSync(file,'utf8'));return p.evaluate(()=>Object.fromEntries([...document.querySelectorAll('article')].map(a=>[a.querySelector('h2').textContent.split(' · ')[0],a.querySelector('img').src])));};
+ const before=await readCards('../elemental-gameplay-before-presence.html'),after=await readCards('../elemental-gameplay-preview.html');
+ const sizes={Ice:[75,149],Meat:[78,159],Salty:[63,145]};
+ const html='<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Castle presence — before and after</title><style>body{margin:0;padding:20px;background:#172231;color:#eee;font:16px system-ui}h1{margin:0 0 8px}p{color:#c5d1ce;margin:0 0 18px}section{margin:18px 0}h2{margin:0 0 8px;font-size:22px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}figure{margin:0;background:#243347;padding:8px}figcaption{padding:3px 0 8px;color:#d0ddd4}img{width:100%;image-rendering:pixelated}@media(max-width:800px){.pair{grid-template-columns:1fr}}</style><h1>More imposing castles</h1><p>Actual combat at the same game scale. Rebuilt architecture, preserved sprite proportions.</p>'+Object.keys(sizes).map(el=>'<section><h2>'+el+'</h2><div class="pair"><figure><figcaption>Before · '+sizes[el][0]+' pixels tall</figcaption><img src="'+before[el]+'"></figure><figure><figcaption>After · '+sizes[el][1]+' pixels tall</figcaption><img src="'+after[el]+'"></figure></div></section>').join('');
+ fs.writeFileSync('../castle-presence-comparison.html',html);await p.setContent(html);await p.screenshot({path:'docs/castle-presence-comparison.png',fullPage:true});await b.close();
+})().catch(e=>{console.error(e);process.exit(1)});

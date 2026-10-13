@@ -4,6 +4,41 @@ const CASTLE_X = 92;              // front face of the castle wall
 const GRID = { x: 104, y: 112, cell: 22, cols: 10, rows: 7, courtCols: 4 };
 const RAFTER_Y = 66;
 const RAFTER_XS = [16, 34, 52, 70, 86];
+// Element sprites retain their own proportions and existing architectural decks.
+const CASTLE_SHAPES = {
+  fire: { aspect: 961 / 1350, width: 108, slots: [[.49,.40],[.64,.40],[.79,.40]] },
+  water: { aspect: 918 / 1266, width: 100, slots: [[.43,.49],[.57,.49],[.71,.49]] },
+  nature: { aspect: 1021 / 1315, width: 104, slots: [[.23,.38],[.37,.38],[.80,.51]] },
+  ice: { aspect: 992 / 1482, width: 104, slots: [[.34,.61],[.53,.61],[.72,.61]] },
+  lightning: { aspect: 1213 / 1235, width: 104, slots: [[.28,.66],[.47,.66],[.66,.66]] },
+  dark: { aspect: 1172 / 1290, width: 104, slots: [[.24,.61],[.43,.62],[.66,.62]] },
+  light: { aspect: 1006 / 1512, width: 104, slots: [[.48,.43],[.64,.43],[.79,.43]] },
+  void: { aspect: 1070 / 1341, width: 104, slots: [[.15,.13],[.35,.14],[.72,.34]] },
+  salty: { aspect: 1023 / 1484, width: 104, slots: [[.32,.59],[.51,.59],[.70,.59]] },
+  sweet: { aspect: 1184 / 1259, width: 104, slots: [[.14,.43],[.47,.59],[.88,.53]] },
+  meat: { aspect: 941 / 1492, width: 104, slots: [[.25,.34],[.51,.42],[.76,.43]] },
+  treat: { aspect: 1148 / 1243, width: 104, slots: [[.26,.61],[.46,.61],[.66,.61]] }
+};
+function castleShape(run) {
+  const spec = CASTLE_SHAPES[run.castleEl]; if (!spec) return null;
+  const tier = Math.min(10, run.stats && run.stats.bosses ? run.stats.bosses.length : 0);
+  const width = Math.round(spec.width - (10 - tier) * .6), height = Math.round(width / spec.aspect);
+  // Short keeps share the visual center of the castle area, instead of sinking
+  // into its bottom corner. Larger keeps retain their established ground line.
+  const x = Math.round((110 - width) / 2);
+  const y = Math.min(236 - height, Math.round(174 - height / 2));
+  return { x, y, width, height, baseY: y + height, slots: spec.slots };
+}
+function rafterPosition(run, i) {
+  const shape = castleShape(run);
+  if (!shape) return { x: RAFTER_XS[i], y: RAFTER_Y };
+  const slot = shape.slots[Math.min(i, shape.slots.length - 1)];
+  return { x: Math.round(shape.x + shape.width * slot[0]), y: Math.round(shape.y + shape.height * slot[1]) };
+}
+function castleRafterY(run) {
+  // Attackers reach the lowest unlocked deck, including staggered balconies.
+  return Math.max(...Array.from({length:Math.max(1,rafterSlots(run))},(_,i)=>rafterPosition(run,i).y));
+}
 
 const RACES = {
   human:    { name: 'Human',    color: '#ffd166', desc: n => `Valor: Humans gain +${[15, 30][n]}% HP and attack.`, at: [2, 3] },

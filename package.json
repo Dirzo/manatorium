@@ -5,7 +5,7 @@
   "description": "Browser castle-defense auto battler, bundled into one HTML file.",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs && cp dist/manatorium.html index.html && mkdir -p site && cp dist/manatorium.html site/index.html",
+    "build": "node build.mjs",
     "deploy": "npx wrangler deploy",
     "boss-odds": "node tools/boss-odds.mjs",
     "item-scaling": "node tools/item-scaling.mjs"

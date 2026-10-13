@@ -18,7 +18,7 @@ function load() {
 // ----- prep units -----
 function rebuildPrepUnits() {
   G.prepUnits = G.run.roster.filter(h => h.place).map(h => {
-    const p = h.place.type === 'rafter' ? { x: RAFTER_XS[h.place.i], y: RAFTER_Y } : cellPos(h.place.c, h.place.r);
+    const p = h.place.type === 'rafter' ? rafterPosition(G.run, h.place.i) : cellPos(h.place.c, h.place.r);
     const st = heroStats(h, G.run, G.meta);
     return { key: heroSpriteKey(h), x: p.x, y: p.y, side: 'hero', facing: 1, phase: (h.uid.charCodeAt(1) % 10) / 7, inst: h, hp: 1, maxHp: 1, vscale: st.scale, els: heroElements(G.run, h) };
   });
@@ -250,7 +250,7 @@ G.select = function (uid) { G.selected = uid; UI.renderRoster(); if (UI.page ===
 // ----- placement / pointer -----
 function toLogical(e) { const r = $('arena').getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, inside: e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom }; }
 function slotAt(p) {
-  for (let i = 0; i < rafterSlots(G.run); i++) if (Math.abs(p.x - RAFTER_XS[i]) <= 9 && p.y > RAFTER_Y - 22 && p.y < RAFTER_Y + 6) return { type: 'rafter', i };
+  for (let i = 0; i < rafterSlots(G.run); i++) if (Math.abs(p.x - rafterPosition(G.run, i).x) <= 9 && p.y > rafterPosition(G.run, i).y - 22 && p.y < rafterPosition(G.run, i).y + 6) return { type: 'rafter', i };
   const c = Math.floor((p.x - GRID.x) / GRID.cell), r = Math.floor((p.y - GRID.y) / GRID.cell);
   if (c >= 0 && c < GRID.cols && r >= 0 && r < GRID.rows) return { type: 'grid', c, r };
   return null;
@@ -262,7 +262,7 @@ function placeHero(h, s) {
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
-  const p = s.type === 'rafter' ? { x: RAFTER_XS[s.i], y: RAFTER_Y } : cellPos(s.c, s.r); FX.puff(p.x, p.y, 0.6);
+  const p = s.type === 'rafter' ? rafterPosition(G.run, s.i) : cellPos(s.c, s.r); FX.puff(p.x, p.y, 0.6);
 }
 function heroAtPoint(p) { for (const u of G.prepUnits.slice().reverse()) if (u.inst && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2) return u.inst; return null; }
 

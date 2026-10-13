@@ -1,0 +1,15 @@
+# Castle sprite prompts
+
+Generated using the built-in imagegen tool. Reference: approved coarse 16-bit Fire/Water/Nature concept sheet.
+
+## fire
+
+Edit target: attached three-castle 16-bit pixel concept sheet. Produce ONLY the FIRE castle (castle 1 from the left) as a separate isolated game sprite on genuine transparent background. Preserve its architecture exactly: stepped chunky black basalt fortress, asymmetrical furnace chimney, large rectangular battlements and iron gate. Maintain authentic COARSE 16-bit console pixel art, as if 64x128 pixel sprite upscaled by nearest neighbor. Large flat pixel clusters, 12 to 16 colors, no fine detail or smooth shading. Main gates at lower right. Entire sprite including foundation visible. No text, labels, other castles, surrounding scenery or characters. Preserve same silhouette and same coarse simplified pixel style as attached. All background including empty spaces under bridges and arches MUST be transparent. Do not add detail. Do not make higher resolution illustration. Tight composition with minimal transparent margin. This is a final sprite for use in a game.
+
+## water
+
+Edit target: attached three-castle 16-bit pixel concept sheet. Produce ONLY the WATER castle (castle 2 from the left) as a separate isolated game sprite on genuine transparent background. Preserve its architecture exactly: two unequal towers joined by two levels of open aqueduct arches, blue conical roofs, large transparent gaps between columns. Maintain authentic COARSE 16-bit console pixel art, as if 64x128 pixel sprite upscaled by nearest neighbor. Large flat pixel clusters, 12 to 16 colors, no fine detail or smooth shading. Main gates at lower right. Entire sprite including foundation visible. No text, labels, other castles, surrounding scenery or characters. Preserve same silhouette and same coarse simplified pixel style as attached. All background including empty spaces under bridges and arches MUST be transparent. Do not add detail. Do not make higher resolution illustration. Tight composition with minimal transparent margin. This is a final sprite for use in a game.
+
+## nature
+
+Edit target: attached three-castle 16-bit pixel concept sheet. Produce ONLY the NATURE castle (castle 3 from the left) as a separate isolated game sprite on genuine transparent background. Preserve its architecture exactly: two large living tree trunks of unequal heights, leaf crowns, connected wooden platforms and rope bridge, root-supported hollow-trunk gate. Maintain authentic COARSE 16-bit console pixel art, as if 64x128 pixel sprite upscaled by nearest neighbor. Large flat pixel clusters, 12 to 16 colors, no fine detail or smooth shading. Main gates at lower right. Entire sprite including foundation visible. No text, labels, other castles, surrounding scenery or characters. Preserve same silhouette and same coarse simplified pixel style as attached. All background including empty spaces under bridges and arches MUST be transparent. Do not add detail. Do not make higher resolution illustration. Tight composition with minimal transparent margin. This is a final sprite for use in a game.
