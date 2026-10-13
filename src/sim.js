@@ -13,7 +13,7 @@ const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
-const HORDE_DIFF = [1.064, 1.029, 1.116, 1.494, 0.999, 0.534, 0.392, 0.216, 0.053, 0.028];
+const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 function hpMul(s) { return Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
 function atkMul(s) { return Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }

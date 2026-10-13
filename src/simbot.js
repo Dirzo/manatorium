@@ -1,10 +1,10 @@
 // ===== Bot agents: headless full runs with the real sim (Node tool + in-game Sim Lab) =====
 const BOT_STYLES = {
-  brawler:  { name: 'Brawler',  focus: 'ad',  comps: ['sword', 'bow', 'glove', 'belt'], techs: ['vault1', 'ballista1', 'walls1', 'drill', 'ballista2', 'scav', 'pulleys', 'trophy', 'wells', 'fountain', 'rafters1', 'vault2', 'college', 'ballista3', 'hammer2', 'walls2', 'kiln'], desc: 'Drafts high Attack rolls, stacks swords, bows and gloves.' },
-  arcanist: { name: 'Arcanist', focus: 'ap',  comps: ['rod', 'tear', 'rod', 'glove'],     techs: ['wells', 'vault1', 'resonance', 'lab', 'walls1', 'focus', 'prism', 'drill', 'ballista1', 'scav', 'aether', 'fountain', 'rafters1', 'college', 'trophy'], desc: 'Drafts high Ability power, rushes signatures and combos.' },
-  bulwark:  { name: 'Bulwark',  focus: 'def', comps: ['vest', 'belt', 'cloak', 'tear'],   techs: ['walls1', 'fountain', 'vault1', 'rafters1', 'ballista1', 'walls2', 'drill', 'rafters2', 'bastion', 'resonance', 'ballista2', 'scav', 'college'], desc: 'Drafts high Defense, builds walls and tanky items.' },
-  balanced: { name: 'Balanced', focus: null,  comps: null,                                 techs: ['vault1', 'walls1', 'wells', 'ballista1', 'drill', 'scav', 'fountain', 'resonance', 'lab', 'rafters1', 'pulleys', 'trophy', 'prism', 'focus', 'vault2', 'college', 'walls2', 'ballista2', 'aether'], desc: 'Takes the best total rolls and spreads its gold.' },
-  crit:     { name: 'Crit Ranger', focus: 'ad', cls: 'ranger', comps: ['glove', 'glove', 'bow', 'sword'], techs: ['rafters1', 'vault1', 'ballista1', 'walls1', 'drill', 'rafters2', 'scav', 'wells', 'fountain'], desc: 'Stacks crit on rangers and parks them in the rafters, like Cam\'s run.' },
+  brawler:  { name: 'Brawler',  focus: 'ad',  comps: ['sword', 'bow', 'glove', 'belt'], techs: ['vault1', 'ballista1', 'walls1', 'drill', 'ballista2', 'scav', 'pulleys', 'trophy', 'wells', 'fountain', 'rafters1', 'vault2', 'college', 'ballista3', 'hammer2', 'walls2', 'kiln', 'superanvil'], desc: 'Drafts high Attack rolls, stacks swords, bows and gloves.' },
+  arcanist: { name: 'Arcanist', focus: 'ap',  comps: ['rod', 'tear', 'rod', 'glove'],     techs: ['wells', 'vault1', 'resonance', 'lab', 'walls1', 'focus', 'prism', 'drill', 'ballista1', 'scav', 'aether', 'fountain', 'rafters1', 'college', 'trophy', 'superanvil'], desc: 'Drafts high Ability power, rushes signatures and combos.' },
+  bulwark:  { name: 'Bulwark',  focus: 'def', comps: ['vest', 'belt', 'cloak', 'tear'],   techs: ['walls1', 'fountain', 'vault1', 'rafters1', 'ballista1', 'walls2', 'drill', 'rafters2', 'bastion', 'resonance', 'ballista2', 'scav', 'college', 'superanvil'], desc: 'Drafts high Defense, builds walls and tanky items.' },
+  balanced: { name: 'Balanced', focus: null,  comps: null,                                 techs: ['vault1', 'walls1', 'wells', 'ballista1', 'drill', 'scav', 'fountain', 'resonance', 'lab', 'rafters1', 'pulleys', 'trophy', 'prism', 'focus', 'vault2', 'college', 'walls2', 'ballista2', 'aether', 'superanvil'], desc: 'Takes the best total rolls and spreads its gold.' },
+  crit:     { name: 'Crit Ranger', focus: 'ad', cls: 'ranger', comps: ['glove', 'glove', 'bow', 'sword'], techs: ['rafters1', 'vault1', 'ballista1', 'walls1', 'drill', 'rafters2', 'scav', 'wells', 'fountain', 'superanvil'], desc: 'Stacks crit on rangers and parks them in the rafters, like Cam\'s run.' },
   chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
 };
 
@@ -13,13 +13,53 @@ function botScoreOpt(style, o) {
   const r = o.rolls, sum = r.ad + r.ap + r.def;
   return (S.focus ? r[S.focus] * 2.2 : 0) + sum + HERO_BY_ID[o.id].tier * 5 + (S.cls && HERO_BY_ID[o.id].cls === S.cls ? 12 : 0) + Math.random();
 }
+// ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
+const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
+function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : h.rolls.ap > h.rolls.ad + 2 ? 'ap' : 'ad'; }
+function botFin(run, h) { return heroItems(run, h).filter(i => i.parts.length === 2).length; }
+function botCarryScore(run, style, h) {
+  const S = BOT_STYLES[style], k = botKind(h), d = HERO_BY_ID[h.id];
+  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (k === 'ap' ? h.rolls.ap : h.rolls.ad) + d.tier * 4 + (S.cls && d.cls === S.cls ? 30 : 0)
+    + (S.focus === 'ap' && k === 'ap' ? 15 : 0) + (S.focus === 'ad' && (k === 'ad' || k === 'ranger') ? 10 : 0)
+    + (h.uid === run.botCarry ? 8 : 0) + botFin(run, h) * 6;
+}
+// carry first, then everyone else by how good a carry they would be
+function botItemOrder(run, style) {
+  const o = run.roster.slice().sort((a, b) => botCarryScore(run, style, b) - botCarryScore(run, style, a));
+  run.botCarry = o[0] && o[0].uid; return o;
+}
+function botPairScore(h, a, b) { const w = CARRY_COMPS[botKind(h)]; return (w.includes(a) ? 2 : 0) + (w.includes(b) ? 2 : 0) + (a === b && w.includes(a) ? 0.5 : 0) + (a === 'spatula' || b === 'spatula' ? 1 : 0); }
 function botGiveItems(run, style) {
-  // hand every unheld item to the hero with the fewest items (prefer the one with a lone component so it fuses)
-  for (const it of run.stash.filter(x => !x.holder)) {
-    const heroes = run.roster.slice().sort((a, b) => b.level - a.level);
-    const fuse = it.parts.length === 1 && heroes.find(h => heroItems(run, h).some(x => x.parts.length === 1));
-    const target = fuse || heroes.find(h => h.items.length < ITEM_SLOTS);
-    if (target) giveItem(run, it, target);
+  if (style === 'chaos') {
+    for (const it of run.stash.filter(x => !x.holder)) {
+      const heroes = run.roster.slice().sort((a, b) => b.level - a.level);
+      const fuse = it.parts.length === 1 && heroes.find(h => heroItems(run, h).some(x => x.parts.length === 1));
+      const target = fuse || heroes.find(h => h.items.length < ITEM_SLOTS);
+      if (target) giveItem(run, it, target);
+    }
+    return;
+  }
+  const order = botItemOrder(run, style), loose = () => run.stash.filter(x => !x.holder);
+  // finished items go to the first hero in line with a free slot
+  for (const it of loose().filter(x => x.parts.length === 2)) { const h = order.find(h => h.items.length < ITEM_SLOTS); if (h) giveItem(run, it, h); }
+  // components: complete half-built items first, then hand out whole pairs so they fuse at once
+  for (const h of order) {
+    let comps = loose().filter(x => x.parts.length === 1);
+    const lone = heroItems(run, h).find(x => x.parts.length === 1);
+    if (lone && comps.length) { const best = comps.slice().sort((x, y) => botPairScore(h, lone.parts[0], y.parts[0]) - botPairScore(h, lone.parts[0], x.parts[0]))[0]; giveItem(run, best, h); comps = loose().filter(x => x.parts.length === 1); }
+    while (comps.length >= 2 && h.items.length < ITEM_SLOTS) {
+      let bp = null, bs = -1;
+      for (let i = 0; i < comps.length; i++) for (let j = i + 1; j < comps.length; j++) { const sc = botPairScore(h, comps[i].parts[0], comps[j].parts[0]); if (sc > bs) { bs = sc; bp = [comps[i], comps[j]]; } }
+      giveItem(run, bp[0], h); giveItem(run, bp[1], h); comps = loose().filter(x => x.parts.length === 1);
+    }
+  }
+  // a single leftover component waits on the first hero with room, ready to fuse next time
+  for (const it of loose().filter(x => x.parts.length === 1)) { const h = order.find(h => h.items.length < ITEM_SLOTS && !heroItems(run, h).some(x => x.parts.length === 1)); if (h) giveItem(run, it, h); }
+  // late game: the carry forges its two best finished items into a super item
+  const c = order[0];
+  if (c && superAnvilOpen(run) && run.gold >= SUPER_COST + 20 && !heroItems(run, c).some(x => x.sup)) {
+    const fin = heroItems(run, c).filter(x => x.parts.length === 2 && !x.sup);
+    if (fin.length >= 2) { fin.sort((x, y) => botPairScore(c, ...y.parts) - botPairScore(c, ...x.parts)); forgeSuper(run, fin[0], fin[1]); }
   }
 }
 // bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
@@ -39,9 +79,13 @@ function botShop(run, meta, style) {
   if (run.castle.hp < run.castle.max * 0.6) repairCastle(run);
 }
 function botPickLoot(run, style, opts) {
-  const S = BOT_STYLES[style];
-  if (!S.comps) return pick(opts);
-  return opts.slice().sort((a, b) => b.parts.filter(p => S.comps.includes(p)).length - a.parts.filter(p => S.comps.includes(p)).length)[0];
+  if (style === 'chaos') return pick(opts);
+  // shop for the first hero in line who still needs finished items
+  const order = botItemOrder(run, style), h = order.find(h => botFin(run, h) < ITEM_SLOTS) || order[0];
+  if (!h) return opts[0];
+  const w = CARRY_COMPS[botKind(h)], lone = heroItems(run, h).find(x => x.parts.length === 1) || run.stash.find(x => !x.holder && x.parts.length === 1);
+  const sc = o => o.parts.length === 2 ? botPairScore(h, ...o.parts) + 3 : (w.includes(o.parts[0]) ? 2 : 0) + (lone ? botPairScore(h, lone.parts[0], o.parts[0]) * 0.5 : 0) + Math.random() * 0.1;
+  return opts.slice().sort((a, b) => sc(b) - sc(a))[0];
 }
 function botElement(run, style, h, opts) {
   const S = BOT_STYLES[style];
