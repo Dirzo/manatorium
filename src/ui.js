@@ -179,6 +179,9 @@ const UI = {
     const run = G.run; if (!run) return;
     const shown = Math.max(0, run.gold - Math.max(0, UI.pendingGold));
     $('gold').textContent = fmt(shown);
+    { const rb = $('repairBtn'), c = run.castle, rc = repairCost(run), hurt = c.hp < c.max; // top-bar repair: shown between sieges whenever the walls are damaged
+      rb.hidden = !hurt || G.phase !== 'prep'; rb.disabled = shown < rc; rb.classList.toggle('urgent', c.hp < c.max * 0.5 && shown >= rc);
+      $('repairSub').textContent = `+${Math.round(Math.min(c.max * 0.2, c.max - c.hp))} HP · ${rc}g`; rb.title = shown < rc ? `Masons charge ${rc} gold. You have ${shown}.` : 'Masons repair 20% of the castle.'; }
     $('diamonds').textContent = G.meta.diamonds;
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
@@ -195,6 +198,7 @@ const UI = {
     if (B && !B.done) { const cd = B.hammer.cd, max = hammerCooldown(run, G.meta); hb.disabled = cd > 0 || !!B.hammer.pending; $('hammerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; }
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
     hb.classList.toggle('armed', G.armed === 'hammer');
+    hb.hidden = !$('repairBtn').hidden; // between sieges the repair button takes the hammer's room
     const pb = $('powerBtn'); pb.hidden = !run.castleEl;
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }

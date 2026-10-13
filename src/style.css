@@ -51,15 +51,23 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .brand { display: flex; flex-direction: column; line-height: 1; margin-right: 6px; }
 .brand h1 { font-size: 24px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink), 3px 3px 0 #c2410c; letter-spacing: 0.04em; }
 .brand span { font-family: var(--f-display); font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
-.siegeinfo { display: flex; flex-direction: column; min-width: 150px; }
+.siegeinfo { display: flex; flex-direction: column; min-width: 150px; flex: 0 0 auto; }
 .siegeinfo b { font-family: var(--f-display); font-size: 18px; font-weight: 600; }
 .siegeinfo small { color: var(--muted); font-size: 12px; }
 .siegeinfo small.boss { color: var(--rose); font-family: var(--f-display); letter-spacing: 0.06em; }
-.castlebar { display: flex; flex-direction: column; gap: 3px; min-width: 150px; flex: 1 1 150px; max-width: 260px; }
+.castlebar { display: flex; flex-direction: column; gap: 3px; min-width: 120px; flex: 1 1 150px; max-width: 260px; }
 .castlebar .bar { height: 12px; border: 2px solid var(--ink); background: #3a2a4a; border-radius: 2px; overflow: hidden; }
 .castlebar .bar i { display: block; height: 100%; background: linear-gradient(#8ff0a4, var(--mint) 50%, #3fb85a); transition: width .2s; }
 .castlebar .bar i.low { background: linear-gradient(#ff9ab6, var(--rose) 50%, #d03a6a); }
 .castlebar small { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+.repairBtn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 9px; border: 2px solid var(--ink); border-radius: 6px; background: linear-gradient(#ffe48a, var(--gold)); color: #2a1a00; box-shadow: 0 3px 0 var(--ink); cursor: pointer; font: inherit; line-height: 1.1; white-space: nowrap; }
+.repairBtn b { font-size: 13px; } .repairBtn span { font-size: 11px; opacity: .85; }
+.repairBtn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.repairBtn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.repairBtn:disabled { background: var(--panel); color: var(--muted); cursor: not-allowed; }
+.repairBtn.urgent { animation: repairPulse 1s ease-in-out infinite; }
+@keyframes repairPulse { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 0 5px rgba(255, 90, 120, .6); } }
+@media (prefers-reduced-motion: reduce) { .repairBtn.urgent { animation: none; box-shadow: 0 3px 0 var(--ink), 0 0 0 4px rgba(255, 90, 120, .6); } }
 .purse { display: flex; gap: 12px; align-items: center; }
 .purse .coinbox { display: flex; align-items: center; gap: 5px; font-family: var(--f-display); font-size: 20px; }
 .purse .coinbox img { width: 22px; height: 22px; }

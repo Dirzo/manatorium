@@ -477,6 +477,7 @@ function wire() {
   $('sp4').onclick = () => { G.speed = 4; UI.hud(); };
   $('hammerBtn').onclick = () => { if (G.B && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; SFX.play('click'); UI.hud(); } };
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
+  $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
   $('soundBtn').onclick = () => { SFX.init(); SFX.on = !SFX.on; $('soundBtn').textContent = SFX.on ? 'Sound on' : 'Sound off'; $('soundBtn').setAttribute('aria-pressed', String(SFX.on)); try { localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } };
   $('menuBtn').onclick = () => showTitle();
   document.addEventListener('keydown', e => {

@@ -56,15 +56,23 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .brand { display: flex; flex-direction: column; line-height: 1; margin-right: 6px; }
 .brand h1 { font-size: 24px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink), 3px 3px 0 #c2410c; letter-spacing: 0.04em; }
 .brand span { font-family: var(--f-display); font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
-.siegeinfo { display: flex; flex-direction: column; min-width: 150px; }
+.siegeinfo { display: flex; flex-direction: column; min-width: 150px; flex: 0 0 auto; }
 .siegeinfo b { font-family: var(--f-display); font-size: 18px; font-weight: 600; }
 .siegeinfo small { color: var(--muted); font-size: 12px; }
 .siegeinfo small.boss { color: var(--rose); font-family: var(--f-display); letter-spacing: 0.06em; }
-.castlebar { display: flex; flex-direction: column; gap: 3px; min-width: 150px; flex: 1 1 150px; max-width: 260px; }
+.castlebar { display: flex; flex-direction: column; gap: 3px; min-width: 120px; flex: 1 1 150px; max-width: 260px; }
 .castlebar .bar { height: 12px; border: 2px solid var(--ink); background: #3a2a4a; border-radius: 2px; overflow: hidden; }
 .castlebar .bar i { display: block; height: 100%; background: linear-gradient(#8ff0a4, var(--mint) 50%, #3fb85a); transition: width .2s; }
 .castlebar .bar i.low { background: linear-gradient(#ff9ab6, var(--rose) 50%, #d03a6a); }
 .castlebar small { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+.repairBtn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 9px; border: 2px solid var(--ink); border-radius: 6px; background: linear-gradient(#ffe48a, var(--gold)); color: #2a1a00; box-shadow: 0 3px 0 var(--ink); cursor: pointer; font: inherit; line-height: 1.1; white-space: nowrap; }
+.repairBtn b { font-size: 13px; } .repairBtn span { font-size: 11px; opacity: .85; }
+.repairBtn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.repairBtn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.repairBtn:disabled { background: var(--panel); color: var(--muted); cursor: not-allowed; }
+.repairBtn.urgent { animation: repairPulse 1s ease-in-out infinite; }
+@keyframes repairPulse { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 0 5px rgba(255, 90, 120, .6); } }
+@media (prefers-reduced-motion: reduce) { .repairBtn.urgent { animation: none; box-shadow: 0 3px 0 var(--ink), 0 0 0 4px rgba(255, 90, 120, .6); } }
 .purse { display: flex; gap: 12px; align-items: center; }
 .purse .coinbox { display: flex; align-items: center; gap: 5px; font-family: var(--f-display); font-size: 20px; }
 .purse .coinbox img { width: 22px; height: 22px; }
@@ -992,6 +1000,7 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
       <div class="hint" id="railHint">Facilities open between sieges.</div>
     </nav>
     <div class="castlebar"><small><span id="castleLabel">Castle</span><span id="castleTxt" class="num">1000 / 1000</span></small><div class="bar"><i id="castleFill" style="width:100%"></i></div></div>
+    <button class="repairBtn" id="repairBtn" hidden><b>&#128296; Repair</b><span id="repairSub">+20%</span></button>
     <div class="purse">
       <div class="coinbox" id="goldBox" title="Gold"><img class="px" id="goldIcon" alt=""><span id="gold" class="num">0</span></div>
       <div class="coinbox" title="Diamonds, kept between runs" hidden><img class="px" id="diaIcon" alt=""><span id="diamonds" class="num">0</span></div>
@@ -6214,6 +6223,9 @@ const UI = {
     const run = G.run; if (!run) return;
     const shown = Math.max(0, run.gold - Math.max(0, UI.pendingGold));
     $('gold').textContent = fmt(shown);
+    { const rb = $('repairBtn'), c = run.castle, rc = repairCost(run), hurt = c.hp < c.max; // top-bar repair: shown between sieges whenever the walls are damaged
+      rb.hidden = !hurt || G.phase !== 'prep'; rb.disabled = shown < rc; rb.classList.toggle('urgent', c.hp < c.max * 0.5 && shown >= rc);
+      $('repairSub').textContent = `+${Math.round(Math.min(c.max * 0.2, c.max - c.hp))} HP · ${rc}g`; rb.title = shown < rc ? `Masons charge ${rc} gold. You have ${shown}.` : 'Masons repair 20% of the castle.'; }
     $('diamonds').textContent = G.meta.diamonds;
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
@@ -6230,6 +6242,7 @@ const UI = {
     if (B && !B.done) { const cd = B.hammer.cd, max = hammerCooldown(run, G.meta); hb.disabled = cd > 0 || !!B.hammer.pending; $('hammerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; }
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
     hb.classList.toggle('armed', G.armed === 'hammer');
+    hb.hidden = !$('repairBtn').hidden; // between sieges the repair button takes the hammer's room
     const pb = $('powerBtn'); pb.hidden = !run.castleEl;
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
@@ -7722,6 +7735,7 @@ function wire() {
   $('sp4').onclick = () => { G.speed = 4; UI.hud(); };
   $('hammerBtn').onclick = () => { if (G.B && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; SFX.play('click'); UI.hud(); } };
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
+  $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
   $('soundBtn').onclick = () => { SFX.init(); SFX.on = !SFX.on; $('soundBtn').textContent = SFX.on ? 'Sound on' : 'Sound off'; $('soundBtn').setAttribute('aria-pressed', String(SFX.on)); try { localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } };
   $('menuBtn').onclick = () => showTitle();
   document.addEventListener('keydown', e => {
