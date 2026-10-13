@@ -241,6 +241,7 @@ function startBattle(run, meta) {
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
+  B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
@@ -252,6 +253,8 @@ function startBattle(run, meta) {
     if (h.place.type === 'rafter') { pos = { x: RAFTER_XS[h.place.i], y: RAFTER_Y }; rafter = true; st.range = BAL.rafterRange; }
     else pos = cellPos(h.place.c, h.place.r);
     if (run.mods.inspire) st.atk = Math.round(st.atk * 1.25);
+    if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
+    if (B.hzK === 'gale') st.as *= 1.2;
     if (chalice) st.startMana += 0.2;
     const u = makeUnit('hero', { def: d, inst: h, key: heroSpriteKey(h), x: pos.x, y: pos.y, hx: pos.x, hy: pos.y, rafter, maxHp: st.hp, hp: st.hp, st, vscale: st.scale,
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
@@ -279,6 +282,9 @@ function spawnEnemy(B, id, opts = {}) {
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
   if (mods.partyhats) spdM *= 0.85;
+  const hzK = HAZARDS[mods.hz] && HAZARDS[mods.hz].kind;
+  if (hzK === 'gale') spdM *= 1.2;
+  if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
   const y = opts.y != null ? opts.y : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15;
@@ -286,6 +292,8 @@ function spawnEnemy(B, id, opts = {}) {
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
     flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
+  if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
+  if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name); FX.shake(6); FX.sound('boss'); }
@@ -643,6 +651,35 @@ function bossSkill(B, u, sk) {
 }
 
 // ----- step -----
+// ----- field hazards (one siege only, set by encounter cards) -----
+const FLOOD = { x0: 338, x1: 382 };
+function inFlood(u) { return !u.flying && u.x > FLOOD.x0 && u.x < FLOOD.x1; }
+function hzSpd(B, u) {
+  const k = B.hzK; if (!k || u.flying || u.onRafter || u.rafter) return 1;
+  if (k === 'mud') return 0.75;
+  if (k === 'flood' && inFlood(u)) return 0.6;
+  return 1;
+}
+function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.y + 8, GRID.y + GRID.rows * GRID.cell - 4) }; }
+function stepHazard(B, dt) {
+  const k = B.hzK; if (!k) return;
+  const live = B.enemies.filter(e => e.alive && !e.flying), heroes = B.heroes.filter(h => h.alive && !h.rafter);
+  if (k === 'flood') for (const e of live) if (inFlood(e)) e.soakT = Math.max(e.soakT, 0.4);
+  if (k === 'rocks') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(1.6, 2.4);
+      // aim: mostly at the horde, sometimes at your heroes, sometimes nowhere in particular
+      const r = Math.random(), tg = r < 0.5 && live.length ? pick(live) : r < 0.8 && heroes.length ? pick(heroes) : null, p = tg ? { x: tg.x + rand(-6, 6), y: tg.y + rand(-4, 4) } : hzFieldPoint();
+      B.zones.push({ type: 'telegraph', x: p.x, y: p.y, r: 16, t: 0, dur: 1.1, meteor: true, rock: true, cols: ['#6a5a4a', '#c9bca8'], onEnd: z => {
+        for (const h of inRadius(B.heroes, z, z.r)) if (!h.rafter) dealDamage(B, null, h, h.maxHp * 0.1, { unavoidable: true, kind: 'hazard' });
+        for (const e of inRadius(B.enemies, z, z.r)) if (!e.flying) { dealDamage(B, null, e, e.maxHp * (e.boss ? 0.02 : 0.16), { kind: 'hazard' }); e.stun = Math.max(e.stun, e.boss ? 0 : 0.5); }
+        FX.explode(z.x, z.y - 2, 14, ['#b0a090', '#7a6a5a', '#e0d4c0']); FX.particles(z.x, z.y - 2, 8, ['#8a7a6a', '#c9bca8'], { spread: 12, up: true }); FX.shake(2); FX.sound('thud'); } }); } }
+  if (k === 'embers') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(2, 3); const r = Math.random(), tg = r < 0.45 && live.length ? pick(live) : r < 0.7 && heroes.length ? pick(heroes) : null;
+      B.hzPatches.push(Object.assign(tg ? { x: tg.x + rand(-10, 10), y: tg.y + rand(-6, 6) } : hzFieldPoint(), { r: 15, t: 0, life: 6, tick: 0 })); }
+    for (const P of B.hzPatches) { P.t += dt; if (P.t < 0.8) continue; P.tick -= dt; if (P.tick > 0) continue; P.tick = 0.5;
+      for (const h of inRadius(B.heroes, P, P.r)) if (!h.rafter) dealDamage(B, null, h, h.maxHp * 0.02, { unavoidable: true, kind: 'hazard' });
+      for (const e of inRadius(B.enemies, P, P.r)) if (!e.flying) dealDamage(B, null, e, e.maxHp * (e.boss ? 0.004 : 0.035), { kind: 'hazard' }); }
+    B.hzPatches = B.hzPatches.filter(P => P.t < P.life); }
+}
+
 function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
@@ -695,6 +732,7 @@ function stepBattle(B, dt) {
     else B.projs.push({ src, tgt: t, type: 'bolt', dmg, x: 74, y: 40, sx: 74, sy: 40, tx: t.x, ty: t.y - 8 - t.z, t: 0, dur: Math.max(0.1, dist({ x: 74, y: 40 }, t) / 320), arc: 6, o: {} });
     FX.sound('twang'); } else B.ballistaCd = 0.3; } }
 
+  stepHazard(B, dt);
   for (const u of B.heroes) if (u.alive) stepHero(B, u, dt);
   for (const u of B.enemies) if (u.alive) stepEnemy(B, u, dt);
   stepRam(B, dt);
@@ -820,7 +858,7 @@ function stepHero(B, u, dt) {
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
-    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt), dt); } }
+    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
     else {
       u.facing = t.x >= u.x ? 1 : -1;
       u.cd -= dt;
@@ -853,7 +891,7 @@ function stepEnemy(B, u, dt) {
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   if (u.boss) { for (const sk in u.skillT) { u.skillT[sk] -= dt; if (u.skillT[sk] <= 0) { u.skillT[sk] = bossSkill(B, u, sk); u.atkT = 0.4; } } }
-  const spd = u.spd * (1 - u.slowAmt);
+  const spd = u.spd * (1 - u.slowAmt) * hzSpd(B, u);
   const heroes = B.heroes;
   u.retarget -= dt;
   // siege ladders and rams: wall-huggers climb to the rafters, crowds bring a ram

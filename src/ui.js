@@ -78,6 +78,18 @@ const VISITORS = {
   dragon: { gen: 'quad', body: '#7a5ad8', belly: '#ffd84a', eye: '#ffde3a', wings: true, horns: true },
   masons: { head: 'dwarf', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#5a4a8c', weapon: 'hammer', metal: '#a8a8c0' },
   geode: { head: 'beast', skin: '#8a6a5a', snout: '#d8c0b0', ears: 'round', hat: 'none', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#5a4a3a', weapon: 'none' },
+  rentdue: { head: 'goblin', skin: '#8ad84a', hat: 'none', armor: '#5a3a8a', armor2: '#3a2a5a', cloth: '#ffcf3a', weapon: 'none', eye: '#5fd3ff' },
+  leakyditch: { head: 'toad', skin: '#7ac85a', belly: '#e0f0c0', hat: 'crown', armor: '#3a8ad8', armor2: '#2a5a9a', cloth: '#ffcf3a', weapon: 'none' },
+  mudseason: { gen: 'quad', body: '#ff9fb0', belly: '#ffc9d0', eye: '#1a1a2a' },
+  dragoncold: { gen: 'quad', body: '#5ab84a', belly: '#ffd84a', eye: '#ff8a3a', wings: true, horns: true },
+  windmill: { head: 'human', skin: SK.pale, hair: '#e8e8f0', hat: 'wizard', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffffff', weapon: 'staff', gem: '#dff4ff' },
+  fogman: { head: 'human', skin: SK.tan, hair: '#2a1a12', hat: 'none', armor: '#8a90a8', armor2: '#5a6078', cloth: '#ff5d8f', weapon: 'none' },
+  goldrush: { head: 'dwarf', skin: SK.tan, hair: '#8a4b2a', hat: 'helm', armor: '#8a6a4a', armor2: '#5a4a3a', cloth: '#ffd84a', weapon: 'hammer', metal: '#ffd84a' },
+  snowday: { head: 'human', skin: SK.pale, hair: '#c8e8ff', hat: 'wizard', armor: '#e8f4ff', armor2: '#9ac8ff', cloth: '#5fd3ff', weapon: 'staff', gem: '#ffffff' },
+  merchant: { head: 'human', skin: SK.tan, hair: '#8a4b2a', hat: 'hood', armor: '#ff8a3a', armor2: '#c05a1a', cloth: '#ffd84a', weapon: 'none' },
+  smith: { head: 'dwarf', skin: SK.pale, hair: '#ff6a3a', hat: 'none', armor: '#4a4f63', armor2: '#262a38', cloth: '#c9a35a', weapon: 'hammer', metal: '#cfd6e6' },
+  festival: { head: 'elf', skin: SK.pale, hair: '#ffd84a', hat: 'crown', armor: '#ff5d8f', armor2: '#c03a6a', cloth: '#7cf09a', weapon: 'none' },
+  luckycoin: { head: 'human', skin: SK.pale, hair: '#c8c8d8', hat: 'wizard', armor: '#3a64c9', armor2: '#24408a', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffcf3a' },
   tinker: { head: 'dwarf', skin: SK.tan, hair: '#c8c8d8', hat: 'bandana', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#ffd84a', weapon: 'hammer', metal: '#cfd6e6' },
 };
 
@@ -130,7 +142,7 @@ const UI = {
     d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
       ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
       <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
-      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+      <div class="ff-name"><small>${o.title || (sup ? 'Super item forged' : 'Item combined')}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
     document.body.appendChild(d);
     // pixel anvil, violet and gold for the super anvil
     const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
@@ -219,6 +231,7 @@ const UI = {
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
+    const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
     const mods = Object.keys(run.mods).filter(m => modNote[m]); if (mods.length) h += `<div class="mods">${mods.map(m => `<p>${esc(modNote[m])}</p>`).join('')}</div>`;
     $('intelMain').innerHTML = h;
   },
@@ -568,7 +581,15 @@ const UI = {
   animateXP(sheet) { sheet.querySelectorAll('.xpbar.big').forEach(b => { const i = b.querySelector('i'); i.style.transition = 'none'; i.style.width = b.dataset.from + '%'; requestAnimationFrame(() => requestAnimationFrame(() => { i.style.transition = 'width 1.1s cubic-bezier(.3,.9,.3,1)'; i.style.width = b.dataset.to + '%'; })); }); },
   encounterHTML(enc) {
     return `<span class="eyebrow">${enc.story ? `The story so far · ${esc(FACTIONS[enc.f].name)}` : 'Between the sieges'}</span><div class="visitor ${enc.story ? 'story' : ''}"><img class="px" src="${enc.portrait ? portrait(enc.portrait, 'idle0') : portrait('npc:' + enc.id, 'idle0')}" alt=""><div><h2>${esc(enc.title)}</h2><p class="lede">${esc(enc.text)}</p></div></div>
-      <div class="opts">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
+      ${enc.boon ? '<p class="boonnote">Every choice here is good. Pick what your keep needs.</p>' : ''}
+      <div class="opts ${enc.boon ? 'boon' : ''}">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b><span class="etags">${encTags(o.fx).map(t => `<i class="et ${t.k}">${esc(t.s)}</i>`).join('')}</span>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
+  },
+  // a hazard's field preview: a tiny painted strip plus what it does
+  hazardCard(id) { const z = HAZARDS[id]; return `<div class="hzcard" style="--hz:${z.col}"><img class="px" src="${hazardThumbURL(id)}" alt=""><div><b>${esc(z.name)}</b><span>${esc(z.desc)}</span><small>Only for the next siege.</small></div></div>`; },
+  reforgeHTML(run, list, title) {
+    const who = it => { const h = it.holder && run.roster.find(x => x.uid === it.holder); return h ? heroDisplayName(h) : 'In the stash'; };
+    return `<span class="eyebrow">${esc(title)}</span><h2>Reforge an item</h2><p class="lede">Pick a finished item. It becomes a different random finished item and stays with whoever holds it.</p>
+      <div class="rflist">${list.map(it => `<button class="rf" data-rf="${it.uid}"><img class="px" src="${itemIconURL(it)}" alt=""><div><b>${esc(itemName(it))}</b><span>${esc(who(it))}</span></div></button>`).join('')}</div>`;
   },
 
   // ----- coach: one-time highlights that point at trays as they appear -----

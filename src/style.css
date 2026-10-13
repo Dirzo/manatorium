@@ -888,3 +888,19 @@ button[data-tip] { cursor: pointer; }
 .buydraft .dbtn span { display: flex; align-items: center; gap: 4px; font-size: 13px; }
 .buydraft .dbtn .cost img { width: 14px; height: 14px; }
 .buydraft .dbtn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* encounter choice tags, boon cards, hazard preview, reforge picker */
+.opt .etags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; }
+.et { font-style: normal; font-family: var(--f-display); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--ink); color: #10122a; background: #c9d0ea; }
+.et.gold { background: #ffd84a; } .et.xp { background: #9ff6ff; } .et.forge { background: #ffb26a; } .et.item { background: #d9b8ff; }
+.et.walls { background: #b8e6a8; } .et.secret { background: #ff9fd0; } .et.good { background: #7cf09a; } .et.kind { background: #ffc9e0; }
+.et.cost, .et.risk, .et.rude { background: #ff8a9a; } .et.hz { background: #3a2a14; color: #ffcf7a; border-color: #ffb02e; }
+.opts.boon { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.boonnote { margin: 8px 0 4px; font-family: var(--f-display); color: var(--gold); font-size: 13px; }
+.hzcard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; margin-top: 10px; padding: 8px; border: 2px solid var(--hz); border-radius: 5px; background: rgba(0, 0, 0, 0.25); }
+.hzcard img { width: 96px; height: 48px; border: 2px solid var(--ink); border-radius: 3px; }
+.hzcard b { display: block; font-family: var(--f-display); color: var(--hz); font-size: 15px; } .hzcard span { display: block; font-size: 13px; } .hzcard small { color: var(--muted); font-size: 11px; }
+.mods.hz p { color: #ffcf7a; } .mods.hz b { color: #ffb02e; }
+.rflist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; }
+.rf { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 2px solid var(--ink); background: var(--panel-2); border-radius: 5px; padding: 6px 8px; box-shadow: 0 3px 0 var(--ink); }
+.rf:hover { background: #3d4d99; } .rf img { width: 32px; height: 32px; } .rf b { display: block; font-family: var(--f-display); color: var(--gold); font-size: 14px; } .rf span { font-size: 12px; color: var(--muted); }

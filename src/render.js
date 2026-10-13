@@ -309,6 +309,54 @@ function drawProj(g, p) {
   }
 }
 
+// ----- field hazards: ground layer (over=false) under the units, weather layer (over=true) on top -----
+// box is the field area; the same painter draws the little preview on the encounter card.
+function drawHazard(g, id, box, t, B, over) {
+  const Z = HAZARDS[id]; if (!Z) return; const k = Z.kind, X = box.x, Y = box.y, Wd = box.w, Hd = box.h;
+  if (!over && k === 'flood') { const x0 = Math.round(B || Wd > 200 ? FLOOD.x0 : X + Wd * 0.4), x1 = Math.round(B || Wd > 200 ? FLOOD.x1 : X + Wd * 0.62);
+    g.fillStyle = '#6a4a2a'; g.fillRect(x0 - 2, Y, 2, Hd); g.fillRect(x1, Y, 2, Hd);
+    g.fillStyle = 'rgba(58,138,216,0.62)'; g.fillRect(x0, Y, x1 - x0, Hd);
+    for (let y = Y + 2; y < Y + Hd; y += 5) { const off = Math.round(Math.sin(y * 0.3 + t * 3) * 4); g.fillStyle = 'rgba(191,244,255,0.55)'; g.fillRect(x0 + 4 + ((y * 7) % Math.max(1, x1 - x0 - 14)) + off, y, 6, 1); }
+    g.fillStyle = 'rgba(255,255,255,0.35)'; for (let y = Y; y < Y + Hd; y += 3) { if (Math.sin(y * 0.7 + t * 6) > 0.6) { g.fillRect(x0, y, 1, 2); g.fillRect(x1 - 1, y + 1, 1, 2); } } }
+  if (!over && k === 'mud') { const snow = id === 'snow', base = Z.col;
+    g.fillStyle = snow ? 'rgba(232,244,255,0.42)' : id === 'slime' ? 'rgba(90,190,80,0.30)' : 'rgba(110,76,40,0.40)'; g.fillRect(X, Y, Wd, Hd);
+    for (let i = 0; i < Wd * Hd / 140; i++) { const px = X + Math.floor(hash(i, 3) * Wd), py = Y + Math.floor(hash(i, 7) * Hd), w = 3 + Math.floor(hash(i, 11) * 7);
+      g.fillStyle = hash(i, 13) < 0.5 ? base : snow ? '#ffffff' : id === 'slime' ? '#b8f0a0' : '#5a3a1a'; g.globalAlpha = snow ? 0.8 : 0.6; g.fillRect(px, py, w, 2); g.fillRect(px + 1, py - 1, w - 2, 1); }
+    if (id === 'slime') for (let i = 0; i < 8; i++) { const ph = (t * 0.7 + hash(i, 5)) % 1, px = X + Math.floor(hash(i, 9) * Wd), py = Y + Math.floor(hash(i, 17) * Hd); g.globalAlpha = 1 - ph; g.fillStyle = '#d8ffc8'; g.fillRect(px, py - Math.round(ph * 3), 2, 2); }
+    g.globalAlpha = 1; }
+  if (!over && k === 'goldrush') { for (let i = 0; i < Wd * Hd / 900; i++) { const px = X + Math.floor(hash(i, 21) * Wd), py = Y + Math.floor(hash(i, 23) * Hd), tw = Math.sin(t * 3 + i * 1.7) > 0.85;
+      g.fillStyle = '#8a6a2a'; g.fillRect(px - 1, py, 4, 1); g.fillStyle = '#ffd84a'; g.fillRect(px, py - 1, 2, 1);
+      if (tw) { g.fillStyle = '#ffffff'; g.fillRect(px, py - 4, 1, 3); g.fillRect(px - 1, py - 3, 3, 1); } } }
+  if (!over && k === 'embers') { const P = B ? B.hzPatches : [0, 1, 2].map(i => ({ x: X + Wd * (0.25 + 0.25 * i), y: Y + Hd * (0.35 + 0.25 * (i % 2)), r: Math.min(15, Hd * 0.3), t: 2, life: 6 }));
+    for (const p of P) { const a = Math.min(1, p.t / 0.8) * Math.min(1, (p.life - p.t) / 0.8), x = Math.round(p.x), y = Math.round(p.y);
+      g.globalAlpha = 0.5 * a; g.fillStyle = '#2a1408'; g.beginPath(); g.ellipse(x, y, p.r, p.r * 0.55, 0, 0, Math.PI * 2); g.fill();
+      if (p.t < 0.8) { g.globalAlpha = 0.6; g.strokeStyle = '#ff8a3a'; g.beginPath(); g.ellipse(x, y, p.r * p.t / 0.8, p.r * 0.55 * p.t / 0.8, 0, 0, Math.PI * 2); g.stroke(); }
+      else { g.globalAlpha = 0.35 * a; g.fillStyle = '#ff6a1a'; g.beginPath(); g.ellipse(x, y, p.r * 0.8, p.r * 0.42, 0, 0, Math.PI * 2); g.fill();
+      for (let i = 0; i < 14; i++) { const ang = hash(i, x) * Math.PI * 2, rr = hash(i, y) * p.r * 0.85, fx = Math.round(x + Math.cos(ang) * rr), fy = Math.round(y + Math.sin(ang) * rr * 0.55), fl = Math.floor(t * 10 + i) % 3;
+        g.globalAlpha = a; g.fillStyle = '#ff3d1a'; g.fillRect(fx - 1, fy - 2 - fl, 3, 3 + fl); g.fillStyle = '#ffd23a'; g.fillRect(fx, fy - 1 - fl, 1, 2 + fl); } } }
+    g.globalAlpha = 1; }
+  if (over && k === 'fog') { for (let i = 0; i < 14; i++) { const sp = 6 + hash(i, 2) * 10, px = X + ((hash(i, 4) * Wd - t * sp) % Wd + Wd) % Wd, py = Y - 10 + hash(i, 6) * (Hd + 10), r = 26 + hash(i, 8) * 22;
+      g.globalAlpha = 0.22; g.fillStyle = '#dfe4ea'; g.beginPath(); g.ellipse(px, py, r, r * 0.45, 0, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 0.12; g.fillStyle = '#c9d0d8'; g.fillRect(X, Y - 20, Wd, Hd + 20); g.globalAlpha = 1; }
+  if (over && k === 'gale') { g.fillStyle = 'rgba(255,255,255,0.85)'; for (let i = 0; i < 28; i++) { const sp = 160 + hash(i, 3) * 120, len = 8 + Math.floor(hash(i, 5) * 14), px = X + Wd - ((t * sp + hash(i, 9) * Wd) % (Wd + 30)), py = Y - 30 + Math.floor(hash(i, 7) * (Hd + 30)) + Math.round(Math.sin(t * 5 + i) * 2);
+      g.fillRect(Math.round(px), py, len, 1); }
+    for (let i = 0; i < 6; i++) { const px = X + Wd - ((t * 120 + hash(i, 31) * Wd) % Wd), py = Y + hash(i, 33) * Hd + Math.sin(t * 6 + i) * 6; g.fillStyle = i % 2 ? '#7cc05a' : '#c9a35a'; g.fillRect(Math.round(px), Math.round(py), 2, 1); } }
+  if (over && k === 'embers') { for (let i = 0; i < 12; i++) { const ph = (t * (0.18 + hash(i, 1) * 0.15) + hash(i, 3)) % 1, px = X + hash(i, 5) * Wd + Math.sin(t * 2 + i) * 6, py = Y - 60 + ph * (Hd + 60);
+      g.globalAlpha = 1 - ph * 0.6; g.fillStyle = Math.floor(t * 8 + i) % 2 ? '#ffd23a' : '#ff6a3d'; g.fillRect(Math.round(px), Math.round(py), 1, 2); } g.globalAlpha = 1; }
+  if (over && k === 'rocks' && !B) { for (let i = 0; i < 3; i++) { const x = Math.round(X + Wd * (0.3 + 0.2 * i)), y = Math.round(Y + Hd * (0.4 + 0.15 * (i % 2)));
+      g.strokeStyle = `rgba(255,61,110,${0.4 + 0.4 * Math.abs(Math.sin(t * 6 + i))})`; g.beginPath(); g.ellipse(x, y, 10, 5.5, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#7a6a5a'; g.fillRect(x - 3, y - 18 - i * 6, 6, 5); g.fillStyle = '#c9bca8'; g.fillRect(x - 2, y - 18 - i * 6, 3, 2); } }
+}
+// a still frame of a hazard on a strip of grass, for encounter cards
+const HZ_THUMBS = {};
+function hazardThumbURL(id) {
+  if (HZ_THUMBS[id]) return HZ_THUMBS[id];
+  const c = document.createElement('canvas'); c.width = 96; c.height = 48; const g = c.getContext('2d');
+  g.fillStyle = '#6cbf4a'; g.fillRect(0, 0, 96, 48); g.fillStyle = '#5aa63e'; for (let i = 0; i < 40; i++) g.fillRect(Math.floor(hash(i, 41) * 96), Math.floor(hash(i, 43) * 48), 2, 1);
+  g.fillStyle = '#9a9ab8'; g.fillRect(0, 0, 8, 48); g.fillStyle = '#c9c4e6'; g.fillRect(0, 0, 7, 48);
+  drawHazard(g, id, { x: 10, y: 4, w: 86, h: 42 }, 1.3, null, false); drawHazard(g, id, { x: 10, y: 4, w: 86, h: 42 }, 1.3, null, true);
+  return HZ_THUMBS[id] = c.toDataURL();
+}
+
 function renderFrame(V, dt) {
   R.t += dt; const g = R.lctx, run = V.run, B = V.B, t = R.t;
   const fi = factionIndex(run.siege);
@@ -346,6 +394,7 @@ function renderFrame(V, dt) {
     for (let i = 0; i < rafterSlots(run); i++) { const x = RAFTER_XS[i], hov = V.hover && V.hover.type === 'rafter' && V.hover.i === i;
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, RAFTER_Y - 18, 16, 19); }
   }
+  drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
   drawSpellDecals(g);
   // units
   let units;
@@ -384,6 +433,7 @@ function renderFrame(V, dt) {
     g.strokeStyle = 'rgba(255,207,58,0.8)'; g.beginPath(); g.ellipse(Math.round(p.x), Math.round(p.y), p.r * k, p.r * 0.55 * k, 0, 0, Math.PI * 2); g.stroke();
     g.fillStyle = OUTLINE; g.fillRect(Math.round(p.x) - 6, Math.round(by) - 12, 12, 12); g.fillStyle = '#a8a3c8'; g.fillRect(Math.round(p.x) - 5, Math.round(by) - 11, 10, 10); g.fillStyle = '#d4cff0'; g.fillRect(Math.round(p.x) - 5, Math.round(by) - 11, 10, 2); g.fillStyle = '#ffcf3a'; g.fillRect(Math.round(p.x) - 1, Math.round(by) - 8, 2, 4); }
   if (V.hammerArmed && V.mouse) { const m = V.mouse; g.strokeStyle = Math.floor(t * 6) % 2 ? '#ffcf3a' : '#ffffff'; g.beginPath(); g.ellipse(Math.round(m.x), Math.round(m.y), 34, 19, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#ffcf3a'; g.fillRect(Math.round(m.x) - 3, Math.round(m.y), 7, 1); g.fillRect(Math.round(m.x), Math.round(m.y) - 3, 1, 7); }
+  drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, true);
   // particles
   for (const p of FXS.parts) { g.globalAlpha = Math.min(1, 2 * (1 - p.t / p.life)); g.fillStyle = p.color; if (p.streak) { g.fillRect(Math.round(p.x), Math.round(p.y), 1, 4); g.fillStyle = '#ffffff'; g.fillRect(Math.round(p.x), Math.round(p.y) + 4, 1, 1); } else g.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size); }
   g.globalAlpha = 1;

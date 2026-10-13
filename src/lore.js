@@ -14,15 +14,15 @@ const STORY = [
     { p: 1, title: 'A Strongly Worded Letter', portrait: 'e:grubnose',
       text: 'A goblin runner delivers a letter written on a leaf. "To whoever lives in the BIG HOUSE. I am Grubnose, King of the Goblins. I live in a ditch. It is damp. My throne is a bucket. You have RAFTERS. This is not fair. Regards, Grubnose."',
       opts: [{ label: 'Send a polite reply', fx: 'mood:1,xpAll:15', sub: 'Your heroes help write it. Grubnose is deeply confused by kindness.' },
-        { label: 'Use it as kindling', fx: 'mood:-1,gold:15', sub: 'Warm hands. Somewhere out in the ditch, a goblin king senses it.' }] },
+        { label: 'Use it as kindling', fx: 'mood:-1,gold:15,hz:embers', sub: 'Warm hands. The burning letter blows over the field: embers fall next siege. Somewhere in the ditch, a goblin king senses it.' }] },
     { p: 2, title: 'The Bucket Throne', portrait: 'e:grubnose',
       text: "Grubnose's throne has a hole in it. A delegation arrives carrying the bucket and a list of demands: a new bucket, a window for the ditch, and \"one (1) rafter\".",
       opts: [{ label: 'Send him a nicer bucket', fx: 'pay:20,mood:1,xpAll:25', sub: 'Spend 20 gold on a copper bucket. He will treasure it forever.' },
         { label: 'Return the bucket full of rocks', fx: 'mood:-1,gold:25', sub: 'The delegation pays you to take the rocks back out. Goblin logic.' }] },
     { p: 3, title: 'The Landlord Problem', portrait: 'npc:gobunion',
       text: 'Your masons found an old deed. The ditch Grubnose lives in is on your land. Technically, you are his landlord. He has been paying rent in rocks for six years and nobody noticed.',
-      opts: [{ label: 'Fix the leak in his ditch', fx: 'pay:25,mood:1,heal:10', sub: 'Spend 25 gold. The masons patch his ditch, then your wall on the way home.' },
-        { label: 'Raise the rent', fx: 'mood:-1,gold:45', sub: 'He pays in rocks, then in gold, then in rage.' }] },
+      opts: [{ label: 'Fix the leak in his ditch', fx: 'pay:25,mood:1,hz:flood', sub: 'Spend 25 gold. The masons reroute his leak into a channel across the field. Next siege foes wade through it: slowed and soaked.' },
+        { label: 'Raise the rent', fx: 'mood:-1,gold:45,hz:rocks', sub: 'He pays in rocks. Next siege, by catapult, onto everyone. Then in rage.' }] },
     bossDeal('grubnose', 'Grubnose Has Had Enough',
       'Grubnose is standing on his bucket screaming about the rent, the rocks and the kindling. He is coming for the castle and he is bringing every cousin he has.',
       'Grubnose sits on his new bucket, conflicted. You have been decent to him. But the horde expects a siege, and a king has to keep up appearances.',
@@ -37,7 +37,7 @@ const STORY = [
     { p: 1, title: 'A Custody Hearing', portrait: 'e:gloop',
       text: 'Mother Gloop has filed paperwork, somehow, while being a slime. She says your heroes keep "splitting her children" and demands visitation rights to every slimelet you have popped.',
       opts: [{ label: 'Apologize to Mother Gloop', fx: 'mood:1,xpAll:20', sub: 'She wobbles. It might be forgiveness. It might be digestion.' },
-        { label: 'Argue they split themselves', fx: 'mood:-1,gold:25', sub: 'Legally you are right. Emotionally you are very wrong.' }] },
+        { label: 'Argue they split themselves', fx: 'mood:-1,gold:25,hz:slime', sub: 'Legally you are right. Emotionally you are very wrong. She slimes the field: everyone on foot moves 25% slower next siege.' }] },
     { p: 3, title: 'Slimelet Daycare', portrait: 'e:slime',
       text: 'A lost slimelet is stuck to your gate, crying. The crying is mostly more slime. It keeps saying "mama" in a voice like a drain.',
       opts: [{ label: 'Carry it back to the bog', fx: 'mood:1,heal:10', sub: 'Mother Gloop watches from the reeds. She saw that.' },
@@ -55,7 +55,7 @@ const STORY = [
     { p: 1, title: 'The Ashen Memoir', portrait: 'e:wyrm',
       text: 'Vexmora the Ashen Wyrm is writing her memoir, "Scales of Woe". She needs a villain for chapter three and would like to interview your castle.',
       opts: [{ label: 'Give a gracious interview', fx: 'mood:1,xpAll:20', sub: 'You come across as "surprisingly reasonable, for a building".' },
-        { label: 'Demand final edit', fx: 'mood:-1,gold:30', sub: 'She pays you to go away. You are now chapters three through nine.' }] },
+        { label: 'Demand final edit', fx: 'mood:-1,gold:30,hz:embers', sub: 'She pays you to go away, then burns the draft over your field. Burning pages fall next siege.' }] },
     { p: 3, title: 'Zombie Book Club', portrait: 'e:zombie',
       text: 'The zombies read chapter three. They have notes. Mostly "BRAINS", but one makes a fair point about pacing.',
       opts: [{ label: 'Join the book club', fx: 'mood:1,xpAll:30', sub: 'Snacks are questionable. Discussion is lively.' },
@@ -76,7 +76,7 @@ const STORY = [
         { label: 'Buy front row seats', fx: 'pay:20,mood:1,xpAll:20', sub: 'Spend 20 gold. Malgoth adores a paying audience.' }] },
     { p: 3, title: 'Leave Us a Review', portrait: 'e:juggler',
       text: 'Malgoth wants five stars in the carnival guestbook. The guestbook is on fire. That might be part of the show.',
-      opts: [{ label: 'Five stars, wonderful show', fx: 'mood:1,xpAll:25', sub: 'Malgoth twirls his mustache with joy.' },
+      opts: [{ label: 'Five stars, wonderful show', fx: 'mood:1,hz:goldrush', sub: 'Malgoth throws a parade in your honor. Next siege his performers wear gold: +50% gold, but 20% tougher.' },
         { label: 'Two stars, too many imps', fx: 'mood:-1,gold:35', sub: 'A sobbing imp refunds your ticket. Twice.' }] },
     bossDeal('ringmaster', 'The Big Top Comes Down',
       'Malgoth has read the reviews. He is coming to the castle with the whole carnival, and every act is a knife act.',
@@ -95,7 +95,7 @@ const STORY = [
     { p: 3, title: 'The Mold Situation', portrait: 'e:shroom',
       text: 'Something fuzzy is growing in the pantry. It is wearing a tiny name tag that says "Baron\'s Ambassador". It would like to be left alone to grow.',
       opts: [{ label: 'Give it a nice dark shelf', fx: 'mood:1,heal:10', sub: 'The ambassador thrives. The bread does not.' },
-        { label: 'Scrub the pantry', fx: 'mood:-1,xpAll:30', sub: 'Your heroes scrub all night. The Baron takes it personally.' }] },
+        { label: 'Scrub the pantry', fx: 'mood:-1,xpAll:30,hz:fog', sub: 'Your heroes scrub all night. The spores drift onto the field: thick fog next siege cuts ranged attacks by 30%.' }] },
     bossDeal('sporebaron', 'The Baron Takes Root',
       'The Spore Baron has declared your castle "condemned and delicious". His spores darken the sky.',
       'The Spore Baron arrives, but he keeps stopping to admire the shelf you gave his ambassador.',
@@ -113,7 +113,7 @@ const STORY = [
     { p: 3, title: 'Snow Removal', portrait: 'e:yeti',
       text: 'Who shovels the path between the castle and the clans? The Matriarch says you do. There is a form.',
       opts: [{ label: 'Shovel it', fx: 'mood:1,xpAll:30', sub: 'Great exercise. The yetis wave.' },
-        { label: 'Build a snowman blocking it', fx: 'mood:-1,gold:35', sub: 'It is a really good snowman. Tourists pay to see it.' }] },
+        { label: 'Build a snowman blocking it', fx: 'mood:-1,gold:35,hz:snow', sub: 'Tourists pay to see it. The yetis bury the field in snow: everyone on foot moves 25% slower next siege.' }] },
     bossDeal('matriarch', 'Final Notice',
       'The Matriarch has issued a FINAL NOTICE. She is coming to enforce the bylaws personally, with fists the size of carts.',
       'The Matriarch arrives for the yearly inspection. She grumbles, but she brought a fruitcake.',
@@ -131,7 +131,7 @@ const STORY = [
     { p: 3, title: 'The Family Reunion', portrait: 'e:bandit',
       text: 'Big Mama Trashpaw is throwing a family reunion in your dumpster. There are many, many cousins. Someone brought a possum. Nobody knows whose possum it is.',
       opts: [{ label: 'Bring a casserole', fx: 'pay:20,mood:1,xpAll:25', sub: 'Spend 20 gold. You are now an honorary raccoon.' },
-        { label: 'Hose them down', fx: 'mood:-1,gold:40', sub: 'They flee, dropping everything they stole. It is a lot.' }] },
+        { label: 'Hose them down', fx: 'mood:-1,gold:40,hz:flood', sub: 'They flee, dropping everything they stole. The hose floods the field: next siege foes wade through water.' }] },
     bossDeal('trashpaw', 'Big Mama Is Hungry',
       'Big Mama Trashpaw has run out of patience and out of snacks. She is coming for the whole kitchen.',
       'Big Mama Trashpaw is coming, but she sent a note first: "Nothing personal, hon. 40 kids. You understand."',
@@ -145,7 +145,7 @@ const STORY = [
     { p: 1, title: 'Warranty Expired', portrait: 'e:colossus',
       text: 'The Brass Colossus is squeaking. Its warranty expired a hundred years ago. It asks, very politely, for a little oil.',
       opts: [{ label: 'Lend it the oil', fx: 'mood:1,xpAll:25', sub: 'It stops squeaking and hums a little tune.' },
-        { label: 'Sell it oil at a markup', fx: 'mood:-1,gold:40', sub: 'Business is business. Its eyes glow a little redder.' }] },
+        { label: 'Sell it oil at a markup', fx: 'mood:-1,gold:40,hz:gale', sub: 'Business is business. It vents steam at you all next siege: a gale makes foes 20% faster and your heroes attack 20% faster.' }] },
     { p: 3, title: 'Firmware Update', portrait: 'e:cog',
       text: 'The Clockwork Host pushed an update overnight. Every cog now says "please" before attacking.',
       opts: [{ label: 'Say please back', fx: 'mood:1,xpAll:30', sub: 'An extremely polite siege follows.' },
@@ -163,7 +163,7 @@ const STORY = [
     { p: 1, title: 'Parking Violation', portrait: 'e:pinchbeard',
       text: 'A pirate ship is parked in your moat. Captain Pinchbeard insists the moat is "international waters" and has started charging your masons a toll to cross it.',
       opts: [{ label: 'Pay the toll', fx: 'pay:20,mood:1,heal:10', sub: 'Spend 20 gold. He gives you a receipt with a skull on it.' },
-        { label: 'Issue him a ticket', fx: 'mood:-1,gold:35', sub: 'He pays it, furious. Pirates have surprisingly good credit.' }] },
+        { label: 'Issue him a ticket', fx: 'mood:-1,gold:35,hz:flood', sub: 'He pays, furious, then opens the moat locks out of spite. The field floods next siege.' }] },
     { p: 3, title: 'Shanty Night', portrait: 'e:deckhand',
       text: 'The corsairs are singing sea shanties outside the walls at three in the morning. The crabs keep perfect time with their claws.',
       opts: [{ label: 'Sing along', fx: 'mood:1,xpAll:30', sub: 'Your heroes know all the words. Pinchbeard is moved to tears.' },
@@ -189,7 +189,7 @@ const STORY = [
     { p: 3, title: 'The Goose Manifesto', portrait: 'e:gosling',
       text: 'A gosling delivers a scroll thirty feet long. It is the goose\'s manifesto. It is the word HONK written ten thousand times. On the back: "the castle was always mine."',
       opts: [{ label: 'Read the whole thing', fx: 'mood:1,xpAll:45', sub: 'It takes all night. You understand the goose a little better. You wish you did not.' },
-        { label: 'Use it as wallpaper', fx: 'mood:-1,gold:45', sub: 'It is surprisingly good wallpaper.' }] },
+        { label: 'Use it as wallpaper', fx: 'mood:-1,gold:45,hz:gale', sub: 'It is surprisingly good wallpaper. The goose honks so hard a gale blows across the next siege.' }] },
     bossDeal('goosegod', 'The Honkening',
       'The Eternal Goose rises over the hill, wings blotting out the sun. It remembers every slight. It remembers the moat. It is coming for everything.',
       'The Eternal Goose looks down at the castle. For one moment it almost seems fond of you. Then it honks, and the ground shakes.',
@@ -203,5 +203,15 @@ function storyChapter(run) {
   const p = done % 5, f = factionIndex(done);
   const ch = (STORY[f] || []).find(c => c.p === p); if (!ch) return null;
   const id = `story${f}_${p}`; if ((run.storySeen || []).includes(id)) return null;
-  return Object.assign({}, ch, { id, f, text: typeof ch.text === 'function' ? ch.text(run) : ch.text, story: true });
+  // after a boss falls everything is upside, so the epilogue also offers the smith's reforge
+  const opts = p === 0 ? [...ch.opts, { label: 'Ask the smith to reforge', fx: 'reforge', sub: 'Pick one of your finished items and turn it into a different one.' }] : ch.opts;
+  return Object.assign({}, ch, { id, f, opts, text: typeof ch.text === 'function' ? ch.text(run) : ch.text, story: true });
+}
+// the card that plays after a siege: a story chapter when one is due, else a boon card (all upside) or a trade-off card
+function drawEncounter(run, recent = []) {
+  const story = storyChapter(run); if (story) return story;
+  const boon = Math.random() < 0.4;
+  const pool = ENCOUNTERS.filter(e => !!e.boon === boon && !recent.includes(e.id) && !(e.opts && e.opts.some(o => /secret:(\w+)/.test(o.fx) && run.discovered[o.fx.match(/secret:(\w+)/)[1]]) && Math.random() < 0.7));
+  const enc = pick(pool.length ? pool : ENCOUNTERS.filter(e => !!e.boon === boon));
+  return enc.boon ? Object.assign({}, enc, { opts: boonOpts(run) }) : enc;
 }

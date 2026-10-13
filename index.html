@@ -893,6 +893,22 @@ button[data-tip] { cursor: pointer; }
 .buydraft .dbtn span { display: flex; align-items: center; gap: 4px; font-size: 13px; }
 .buydraft .dbtn .cost img { width: 14px; height: 14px; }
 .buydraft .dbtn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* encounter choice tags, boon cards, hazard preview, reforge picker */
+.opt .etags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; }
+.et { font-style: normal; font-family: var(--f-display); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--ink); color: #10122a; background: #c9d0ea; }
+.et.gold { background: #ffd84a; } .et.xp { background: #9ff6ff; } .et.forge { background: #ffb26a; } .et.item { background: #d9b8ff; }
+.et.walls { background: #b8e6a8; } .et.secret { background: #ff9fd0; } .et.good { background: #7cf09a; } .et.kind { background: #ffc9e0; }
+.et.cost, .et.risk, .et.rude { background: #ff8a9a; } .et.hz { background: #3a2a14; color: #ffcf7a; border-color: #ffb02e; }
+.opts.boon { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.boonnote { margin: 8px 0 4px; font-family: var(--f-display); color: var(--gold); font-size: 13px; }
+.hzcard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; margin-top: 10px; padding: 8px; border: 2px solid var(--hz); border-radius: 5px; background: rgba(0, 0, 0, 0.25); }
+.hzcard img { width: 96px; height: 48px; border: 2px solid var(--ink); border-radius: 3px; }
+.hzcard b { display: block; font-family: var(--f-display); color: var(--hz); font-size: 15px; } .hzcard span { display: block; font-size: 13px; } .hzcard small { color: var(--muted); font-size: 11px; }
+.mods.hz p { color: #ffcf7a; } .mods.hz b { color: #ffb02e; }
+.rflist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; }
+.rf { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 2px solid var(--ink); background: var(--panel-2); border-radius: 5px; padding: 6px 8px; box-shadow: 0 3px 0 var(--ink); }
+.rf:hover { background: #3d4d99; } .rf img { width: 32px; height: 32px; } .rf b { display: block; font-family: var(--f-display); color: var(--gold); font-size: 14px; } .rf span { font-size: 12px; color: var(--muted); }
 </style>
 <div id="app">
   <header class="hud">
@@ -1417,33 +1433,86 @@ const SPECS = {
 };
 const SPEC_ADESC = { aegisDome: 'Shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
 
+// ===== Field hazards: a card can change the battlefield for the next siege only =====
+// kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
+const HAZARDS = {
+  flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed, and soaked foes take 15% more damage.' },
+  mud:      { kind: 'mud', name: 'Mud Season', short: 'Mud', col: '#a07a4a', desc: 'The field is soup. Everyone on foot moves 25% slower.' },
+  slime:    { kind: 'mud', name: 'Bog Slime', short: 'Slime', col: '#7ad46a', desc: 'Sticky slime covers the field. Everyone on foot moves 25% slower.' },
+  snow:     { kind: 'mud', name: 'Snowdrifts', short: 'Snow', col: '#e8f4ff', desc: 'Deep snow everywhere. Everyone on foot moves 25% slower.' },
+  fog:      { kind: 'fog', name: 'Thick Fog', short: 'Fog', col: '#c9d0d8', desc: 'Nobody can see far. Every ranged attacker, yours and theirs, loses 30% range.' },
+  rocks:    { kind: 'rocks', name: 'Rock Rain', short: 'Rocks', col: '#b0a090', desc: 'Goblin catapults lob rocks all siege. Watch for the red circles: rocks hit heroes and foes alike.' },
+  embers:   { kind: 'embers', name: 'Falling Embers', short: 'Embers', col: '#ff8a3a', desc: 'Burning bits drift down and set patches of the field alight. Fire burns anyone standing in it.' },
+  gale:     { kind: 'gale', name: 'Gale', short: 'Gale', col: '#dff4ff', desc: 'A gale blows at the castle. Foes march 20% faster, but your heroes attack 20% faster too.' },
+  goldrush: { kind: 'goldrush', name: 'Gold Rush', short: 'Gold Rush', col: '#ffd84a', desc: 'Foes carry 50% more gold, but they are 20% tougher.' },
+};
+
+// little chips on each choice so a card reads at a glance: what you get, what it costs
+function encTags(fx) {
+  const t = [];
+  for (const f of fx.split(',')) { const [k, a] = f.split(':'), n = +a;
+    if (k === 'hz' && HAZARDS[a]) t.push({ k: 'hz', s: HAZARDS[a].short + ' next siege' });
+    else if (k === 'gold') t.push(n >= 0 ? { k: 'gold', s: 'Gold' } : { k: 'cost', s: `−${-n} gold` });
+    else if (k === 'pay') t.push({ k: 'cost', s: `−${n} gold` });
+    else if (k === 'xpAll' || k === 'xpOne') t.push({ k: 'xp', s: k === 'xpAll' ? 'XP for all' : 'XP' });
+    else if (k === 'reforge') t.push({ k: 'forge', s: 'Reforge' });
+    else if (k === 'item' || k === 'comp' || k === 'haggle') t.push({ k: 'item', s: 'Item' });
+    else if (k === 'heal' || k === 'maxhp') t.push({ k: 'walls', s: 'Walls' });
+    else if (k === 'secret') t.push({ k: 'secret', s: 'Discovery' });
+    else if (k === 'mood') t.push(n > 0 ? { k: 'kind', s: 'Kind' } : { k: 'rude', s: 'Grudge' });
+    else if (k === 'mod' && ['fewer', 'tiny', 'bosssoft'].includes(a)) t.push({ k: 'good', s: 'Weaker horde' });
+    else if (k === 'mod' && ['curse', 'chickens', 'honked', 'bossmad'].includes(a)) t.push({ k: 'risk', s: 'Tougher horde' });
+    else if (k === 'mod' && ['inspire', 'tonic', 'giant'].includes(a)) t.push({ k: 'good', s: 'Hero buff' });
+    else if (k === 'mod' && a === 'partyhats') t.push({ k: 'gold', s: 'Party hats' });
+    else if (k === 'gamble' || k === 'duel') t.push({ k: 'risk', s: 'Gamble' }); }
+  return t;
+}
+
 // ===== Encounters: between sieges, mostly unhinged =====
 // opts fx: comma list of effects. sub = what the player is told.
+// Trade-off cards bend the next siege (hz: field hazards, mod: horde changes). Boon cards (boon: true) are all upside:
+// gold, XP for everyone, or reforging an item, and the player picks which.
 const ENCOUNTERS = [
   { id: 'gobunion', title: 'The Goblin Union Is On Strike', text: 'The horde is picketing outside the walls. Their signs say "FAIR WAGES" and "DENTAL" and one just says "ROCKS". A goblin with a megaphone wants to negotiate.',
-    opts: [{ label: 'Offer dental', fx: 'gold:-20,mod:fewer', sub: 'Lose 20 gold. Half the strikers stay home next siege.' }, { label: 'Hire a scab hero', fx: 'recruit,mod:curse', sub: 'A champion crosses the picket line and joins you. The union is FURIOUS.' }] },
-  { id: 'gobcatapult', title: 'Catapult Malfunction', text: 'A goblin catapult misfired and launched a sack into your courtyard. The sack is yelling "I AM A HERO, PLEASE" in a muffled voice.',
-    opts: [{ label: 'Open the sack', fx: 'recruit', sub: 'A champion tumbles out and joins your keep.' }, { label: 'Return to sender', fx: 'gold:30,xpAll:20', sub: 'Throw it back over the wall. The goblins pay a ransom out of confusion.' }] },
+    opts: [{ label: 'Offer dental', fx: 'gold:-20,mod:fewer', sub: 'Lose 20 gold. Half the strikers stay home next siege.' }, { label: 'Break the strike', fx: 'gold:45,hz:rocks', sub: 'You raid the union fund. Next siege the strikers throw their signs, then their rocks, at everyone.' }] },
+  { id: 'gobcatapult', title: 'Catapult Malfunction', text: 'A goblin catapult misfired and launched a sack into your courtyard. The sack is clanking. The catapult is still firing.',
+    opts: [{ label: 'Open the sack', fx: 'item:any,hz:rocks', sub: 'A finished item! The catapult crew wants it back and keeps lobbing rocks all next siege.' }, { label: 'Return to sender', fx: 'gold:30,xpAll:20', sub: 'Throw it back over the wall. The goblins pay a ransom out of confusion.' }] },
+  { id: 'rentdue', title: 'The Rent Is Due', text: 'A goblin in a tiny waistcoat slides an invoice under the gate. Apparently the field outside your castle is a rental. Late fees are payable in rocks.',
+    opts: [{ label: 'Pay the rent', fx: 'pay:30,xpAll:35', sub: 'Spend 30 gold. The goblins throw your heroes a housewarming party.' }, { label: 'Refuse to pay', fx: 'gold:30,hz:rocks', sub: 'The invoice envelope had 30 gold in it. They come to collect next siege, by catapult.' }] },
+  { id: 'leakyditch', title: 'The Ditch Is Leaking', text: 'The goblin ditch by your walls sprang a leak. Water is pooling across the field and a frog has declared it a sovereign nation.',
+    opts: [{ label: 'Let it flood', fx: 'hz:flood,xpAll:20', sub: 'Foes wade through it next siege: slowed and soaked. Mind your melee heroes, they wade too.' }, { label: 'Patch it', fx: 'pay:20,heal:25', sub: 'Spend 20 gold. The masons patch the ditch and your walls on the way back.' }] },
+  { id: 'mudseason', title: 'Mud Season', text: 'It rained for three days. The field is now soup. A pig is having the best week of its life.',
+    opts: [{ label: 'Charge pig rides', fx: 'gold:45,hz:mud', sub: 'Big money. Next siege everyone on foot slogs 25% slower, heroes too.' }, { label: 'Lay down planks', fx: 'pay:20,xpAll:30', sub: 'Spend 20 gold. Your heroes learn carpentry.' }] },
+  { id: 'dragoncold', title: 'A Dragon With a Cold', text: 'A dragon is camped beside the field with a terrible cold. Every sneeze sets something on fire. It is very apologetic.',
+    opts: [{ label: 'Bring it soup', fx: 'xpAll:25,heal:15', sub: 'It sneezes gratefully onto nothing important.' }, { label: 'Sell tickets', fx: 'gold:55,hz:embers', sub: 'Crowds love it. Next siege burning patches fall on the field and burn anyone in them.' }] },
+  { id: 'windmill', title: "The Wizard's Windmill", text: 'A wizard bolted a windmill to your tower. It runs backwards and makes weather. He will not say why.',
+    opts: [{ label: 'Switch it on', fx: 'hz:gale,xpOne:80', sub: 'Gale next siege: foes march 20% faster, your heroes attack 20% faster. A hero clings on for 80 XP.' }, { label: 'Sell it for parts', fx: 'gold:40', sub: 'The wizard is offended but takes the money.' }] },
+  { id: 'fogman', title: 'Fog Machine Salesman', text: '"It is the future of siege warfare." He pulls a lever. Nobody can see him anymore. He keeps talking.',
+    opts: [{ label: 'Buy the demo model', fx: 'pay:15,hz:fog,mod:fewer', sub: 'Spend 15 gold. Thick fog next siege cuts all ranged attacks by 30%, and a quarter of the horde gets lost in it.' }, { label: 'Find him and shoo him', fx: 'xpAll:25', sub: 'It takes all night. Great cardio.' }] },
+  { id: 'goldrush', title: 'Gold in the Field', text: 'Prospectors struck gold right where the horde likes to march. So did the horde. Everyone is digging.',
+    opts: [{ label: 'Let them dig', fx: 'hz:goldrush', sub: 'Next siege foes carry 50% more gold, but all that digging made them 20% tougher.' }, { label: 'Claim it first', fx: 'gold:35', sub: 'You stake the claim. Modest but safe.' }] },
+  { id: 'snowday', title: 'A Wizard Sneezed Snow', text: 'It is midsummer. There are four feet of snow on the field. The wizard says "bless me" to himself and leaves.',
+    opts: [{ label: 'Build snow forts', fx: 'hz:snow,heal:20', sub: 'Next siege everyone on foot slogs 25% slower. The snow packs your wall cracks too.' }, { label: 'Sell snowcones', fx: 'gold:40', sub: 'It is very hot. Business is booming.' }] },
   { id: 'gobwedding', title: 'You Are Invited to a Goblin Wedding', text: 'Grubnose\'s cousin is getting married between sieges. The invitation is written in mud. Plus-ones welcome. Weapons mandatory.',
-    opts: [{ label: 'Attend and dance', fx: 'xpAll:40,heal:15', sub: 'Your heroes dance badly but sincerely. +XP and the masons get a day off to patch the walls.' }, { label: 'Object to the marriage', fx: 'duel', sub: 'Your best hero fights the groom. Probably wins.' }] },
+    opts: [{ label: 'Attend and dance', fx: 'xpAll:40,hz:mud', sub: 'Your heroes dance badly but sincerely. The dance floor was the field. It is mud now.' }, { label: 'Object to the marriage', fx: 'duel', sub: 'Your best hero fights the groom. Probably wins.' }] },
   { id: 'gobmom', title: "Grubnose's Mom", text: 'A tiny goblin grandmother is knocking on the gate with a casserole. "Have you seen my boy? Big crown. Smells like feet."',
-    opts: [{ label: 'Tell her the truth', fx: 'xpAll:50', sub: 'She cries, hugs every hero, and teaches them a thing or two.' }, { label: 'Lie and take the casserole', fx: 'gold:45,mod:curse', sub: 'It is delicious. The next horde senses your guilt.' }] },
+    opts: [{ label: 'Tell her the truth', fx: 'xpAll:50', sub: 'She cries, hugs every hero, and teaches them a thing or two.' }, { label: 'Lie and take the casserole', fx: 'gold:45,mod:curse', sub: 'It is delicious. The next horde senses your guilt: +30% HP.' }] },
   { id: 'gobstartup', title: 'Goblin Startup Pitch', text: 'Three goblins in turtlenecks pitch "Uber, but for rocks." They need seed funding. They have a slideshow drawn on a cave wall.',
-    opts: [{ label: 'Invest 40 gold', fx: 'pay:40,gamble', sub: 'A random hero gets equity. It might pay off hugely, or it might be rocks.' }, { label: 'Steal the idea', fx: 'gold:35', sub: 'You launch it first. Margins are thin but real.' }] },
+    opts: [{ label: 'Invest 40 gold', fx: 'pay:40,gamble', sub: 'A random hero gets equity. It might pay off hugely, or it might be rocks.' }, { label: 'Steal the idea', fx: 'gold:35,hz:rocks', sub: 'You launch it first. The goblins demonstrate the product on your field next siege.' }] },
   { id: 'gobmime', title: 'A Goblin Mime', text: 'He is trapped in an invisible box. He has been trapped in it since the last siege. He looks genuinely distressed.',
     opts: [{ label: 'Free him', fx: 'mustache', sub: 'Grateful, he paints a magnificent mustache on a hero. It is somehow real.' }, { label: 'Applaud', fx: 'xpOne:90', sub: 'A hero learns the art of silence. And 90 XP.' }] },
-  { id: 'gobtavern', title: 'The Wrong Tavern', text: 'Your heroes went for drinks and ended up in a goblin tavern. Everyone is staring. A mercenary in the corner looks bored.',
-    opts: [{ label: 'Buy the mercenary a drink', fx: 'pay:30,recruit', sub: 'Spend 30 gold. A champion joins you.' }, { label: 'Start a bar fight', fx: 'xpAll:35,mod:partyhats', sub: 'You win. Somehow the goblins leave wearing party hats.' }] },
+  { id: 'gobtavern', title: 'The Wrong Tavern', text: 'Your heroes went for drinks and ended up in a goblin tavern. Everyone is staring. The fireplace is very large and very unattended.',
+    opts: [{ label: 'Buy a round for the house', fx: 'pay:30,mod:inspire', sub: 'Spend 30 gold. Heroes +25% attack next siege, mostly from confidence.' }, { label: 'Start a bar fight', fx: 'xpAll:35,hz:embers', sub: 'You win. Someone kicked the fireplace. Embers rain on the field next siege.' }] },
   { id: 'gobfortune', title: 'Goblin Fortune Teller', text: '"I see... a castle. And goblins. Many goblins. Hitting it." She is not wrong. She wants a coin.',
-    opts: [{ label: 'Pay for the full reading', fx: 'pay:15,gold:45', sub: 'She reveals where some treasure is buried. It is under her chair.' }, { label: 'Ask about love', fx: 'heal:20', sub: 'She tells the castle it is handsome. Walls repaired out of sheer confidence.' }] },
+    opts: [{ label: 'Pay for the full reading', fx: 'pay:15,gold:45', sub: 'She reveals where some treasure is buried. It is under her chair.' }, { label: 'Ask about the weather', fx: 'hz:fog,mod:fewer', sub: '"Foggy," she says, and it is. A quarter of the horde gets lost. Ranged attacks lose 30% range.' }] },
   { id: 'goose', title: 'A Goose Has Entered the Keep', text: 'Nobody let it in. It has taken the throne and will not be moved. It honks at the Sky Hammer.',
     opts: [{ label: 'Befriend the goose', fx: 'secret:goose', sub: 'Discovers the Goose Moat in the Artificers\' Hall' }, { label: 'Chase it out', fx: 'xpAll:30,mod:honked', sub: 'Heroes earn 30 XP. The goose will remember this.' }] },
   { id: 'accountant', title: "The Horde's Accountant", text: 'A goblin in tiny spectacles is auditing your siege. "You killed 40 of our employees. That\'s a lot of paperwork."',
     opts: [{ label: 'Pay the "fine"', fx: 'gold:-25,mod:fewer', sub: 'Lose 25 gold. Next siege has 25% fewer foes.' }, { label: 'Commit light tax fraud', fx: 'gold:60,mod:curse', sub: '+60 gold. Next horde is 30% tougher and furious.' }] },
   { id: 'barrel', title: 'Wizard Stuck in a Barrel', text: '"Don\'t ask how. Just roll me somewhere useful." The barrel is humming.',
-    opts: [{ label: 'Roll him to the Armory', fx: 'comp:rod', sub: 'He leaves a Wand of Mild Peril behind' }, { label: 'Roll him downhill', fx: 'xpOne:90', sub: 'A random hero chases him for 90 XP' }] },
-  { id: 'trenchcoat', title: 'Three Kobolds in a Trench Coat', text: '"Hello. I am a normal human hero. I would like to join." One of the kobolds sneezes.',
-    opts: [{ label: 'Welcome, normal human', fx: 'recruit', sub: 'A real champion was hiding under the coat the whole time. They join you.' }, { label: 'Pull off the coat', fx: 'gold:45', sub: 'They scatter. One drops a purse.' }] },
+    opts: [{ label: 'Roll him to the Armory', fx: 'comp:rod', sub: 'He leaves a Wand of Mild Peril behind' }, { label: 'Roll him downhill', fx: 'xpOne:90,hz:mud', sub: 'A hero chases him for 90 XP. The barrel leaks potion. The field turns to mud.' }] },
+  { id: 'trenchcoat', title: 'Three Kobolds in a Trench Coat', text: '"Hello. I am a normal human consultant. I would like to improve your castle." One of the kobolds sneezes.',
+    opts: [{ label: 'Hire the consultant', fx: 'xpAll:35,hz:fog', sub: 'They teach your heroes some tricks. Their smoke machine fogs the next siege.' }, { label: 'Pull off the coat', fx: 'gold:45', sub: 'They scatter. One drops a purse.' }] },
   { id: 'cheese', title: 'The Cheese Wheel of Destiny', text: 'An enormous wheel of cheese is rolling toward the keep. It has been rolling for three days. It is still accelerating.',
     opts: [{ label: 'Catch it with engineering', fx: 'secret:cheese', sub: "Discovers the Cheese Trebuchet" }, { label: 'Eat it', fx: 'heal:30,xpAll:20', sub: 'Repair 30% castle. Heroes +20 XP. Everyone is sleepy.' }] },
   { id: 'mimic', title: 'The Mimic Wants a Hug', text: 'A treasure chest with a long tongue is looking at you with enormous eyes.',
@@ -1459,11 +1528,11 @@ const ENCOUNTERS = [
   { id: 'intern', title: 'The Necromancy Intern', text: '"I was told to raise the dead but I raised dinner." The roast chicken is walking around. It seems happy.',
     opts: [{ label: 'Give them a job', fx: 'secret:intern', sub: 'Discovers the Necromancy Intern' }, { label: 'Eat the walking dinner', fx: 'xpAll:25,heal:15', sub: 'Heroes +25 XP and the castle is repaired 15%' }] },
   { id: 'bard', title: 'A Bard at the Gate', text: 'Their song about your last siege is wildly exaggerated. In this version, your castle can fly.',
-    opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire', sub: 'Heroes +25% attack next siege' }] },
+    opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire,hz:gale', sub: 'Heroes +25% attack. The song is so loud it whips up a gale next siege.' }] },
   { id: 'pigeons', title: 'Pigeons With Opinions', text: 'Forty pigeons have landed on the walls and are all looking at you. One has a tiny scroll.',
-    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (more draft choices)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:20', sub: 'They poop gold. Heroes +20 XP.' }] },
+    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:20', sub: 'They poop gold. Heroes +20 XP.' }] },
   { id: 'hottub', title: 'Hot Spring Under the Keep', text: 'The dwarves dug too deep. They found a hot spring. The dwarves are now refusing to leave the hot spring.',
-    opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Bottle the water', fx: 'heal:30', sub: 'Holy water for the walls: 30% castle repair' }] },
+    opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,heal:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
   { id: 'alchemist', title: 'Free Sample Day', text: 'The alchemist is offering free samples. All the potions are bubbling. One is screaming quietly.',
     opts: [{ label: 'Drink the screaming one', fx: 'gamble', sub: '55%: a random hero gains a huge pile of XP. 45%: they turn tiny for a siege.' }, { label: 'Drink the calm one', fx: 'mod:tonic', sub: 'Heroes start the next siege at full mana' }] },
   { id: 'mushroom', title: 'A Suspicious Mushroom', text: 'It is red with white dots and smells like levelling up.',
@@ -1472,11 +1541,20 @@ const ENCOUNTERS = [
     opts: [{ label: 'Buy the mystery box (40g)', fx: 'pay:40,item:any', sub: 'Costs 40 gold. A finished item.' }, { label: 'Haggle aggressively', fx: 'haggle', sub: '50%: two free components. 50%: the castle gets singed.' }] },
   { id: 'masons', title: 'Traveling Masons', text: 'A crew of masons offers a quick patch-up. They are already eating your bread.',
     opts: [{ label: 'Quick patch', fx: 'heal:35', sub: 'Repair 35% castle HP' }, { label: 'Proper job (50g)', fx: 'maxhp', sub: '+15% castle max HP, costs 50 gold' }] },
-  { id: 'geode', title: 'A Glittering Geode', text: 'Diggers in the cellar hit something sparkly. It also hums the castle anthem.',
-    opts: [{ label: 'Crack it open', fx: 'xpAll:40', sub: 'Something shiny and magical spills out. Every hero feels smarter.' }, { label: 'Sell it whole', fx: 'gold:50' }] },
-  { id: 'tinker', title: 'The Wandering Tinker', text: 'A tinker with a squeaky cart offers a trinket from the pile, or will buy your scrap.',
-    opts: [{ label: 'Take a trinket', fx: 'xpAll:30', sub: 'The trinket is a training manual. Everyone reads it.' }, { label: 'Sell scrap', fx: 'gold:35' }] },
+  // ---- boon cards: every choice is good. Gold, XP for everyone, or reforge an item ----
+  { id: 'merchant', boon: true, title: 'A Grateful Merchant', text: 'Your heroes saved her caravan from the horde last siege. She insists on paying you back, and she has options.' },
+  { id: 'smith', boon: true, title: 'The Wandering Smith', text: 'A smith with a portable anvil and enormous forearms is passing through. "Coin, a lesson, or a bit of hammering. Pick one."' },
+  { id: 'festival', boon: true, title: 'Festival of the Walls', text: 'The townsfolk are throwing a festival because the castle is still standing. Everyone wants to give your heroes something.' },
+  { id: 'geode', boon: true, title: 'A Glittering Geode', text: 'Diggers in the cellar hit something sparkly. It hums the castle anthem and seems happy to help.' },
+  { id: 'tinker', boon: true, title: 'The Wandering Tinker', text: 'A tinker with a squeaky cart offers a trade from the pile. Everything on it is, somehow, exactly what you need.' },
+  { id: 'luckycoin', boon: true, title: 'The Lucky Coin', text: 'A coin landed on its edge in the courtyard and stayed there. The court wizard says this is a once-a-century omen. Of what, he is not sure.' },
 ];
+// the three choices on every boon card
+function boonOpts(run) {
+  return [{ label: 'Take the gold', fx: 'gold:55', sub: 'A fat purse for the Guild Hall or the Artificers.' },
+    { label: 'Train every hero', fx: 'xpAll:45', sub: 'Every champion on your roster gains XP.' },
+    { label: 'Reforge an item', fx: 'reforge', sub: 'Pick one of your finished items and turn it into a different one. Shuffles your build.' }];
+}
 
 // ===== Temperaments: every champion is born with one. Half are good-guy energy, half bad-guy energy.
 // Each one trades a strength for a weakness. Two champions on the field with the same temperament unlock its pair bonus.
@@ -2848,6 +2926,7 @@ function startBattle(run, meta) {
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
+  B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
@@ -2859,6 +2938,8 @@ function startBattle(run, meta) {
     if (h.place.type === 'rafter') { pos = { x: RAFTER_XS[h.place.i], y: RAFTER_Y }; rafter = true; st.range = BAL.rafterRange; }
     else pos = cellPos(h.place.c, h.place.r);
     if (run.mods.inspire) st.atk = Math.round(st.atk * 1.25);
+    if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
+    if (B.hzK === 'gale') st.as *= 1.2;
     if (chalice) st.startMana += 0.2;
     const u = makeUnit('hero', { def: d, inst: h, key: heroSpriteKey(h), x: pos.x, y: pos.y, hx: pos.x, hy: pos.y, rafter, maxHp: st.hp, hp: st.hp, st, vscale: st.scale,
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
@@ -2886,6 +2967,9 @@ function spawnEnemy(B, id, opts = {}) {
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
   if (mods.partyhats) spdM *= 0.85;
+  const hzK = HAZARDS[mods.hz] && HAZARDS[mods.hz].kind;
+  if (hzK === 'gale') spdM *= 1.2;
+  if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
   const y = opts.y != null ? opts.y : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15;
@@ -2893,6 +2977,8 @@ function spawnEnemy(B, id, opts = {}) {
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
     flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
+  if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
+  if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name); FX.shake(6); FX.sound('boss'); }
@@ -3250,6 +3336,35 @@ function bossSkill(B, u, sk) {
 }
 
 // ----- step -----
+// ----- field hazards (one siege only, set by encounter cards) -----
+const FLOOD = { x0: 338, x1: 382 };
+function inFlood(u) { return !u.flying && u.x > FLOOD.x0 && u.x < FLOOD.x1; }
+function hzSpd(B, u) {
+  const k = B.hzK; if (!k || u.flying || u.onRafter || u.rafter) return 1;
+  if (k === 'mud') return 0.75;
+  if (k === 'flood' && inFlood(u)) return 0.6;
+  return 1;
+}
+function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.y + 8, GRID.y + GRID.rows * GRID.cell - 4) }; }
+function stepHazard(B, dt) {
+  const k = B.hzK; if (!k) return;
+  const live = B.enemies.filter(e => e.alive && !e.flying), heroes = B.heroes.filter(h => h.alive && !h.rafter);
+  if (k === 'flood') for (const e of live) if (inFlood(e)) e.soakT = Math.max(e.soakT, 0.4);
+  if (k === 'rocks') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(1.6, 2.4);
+      // aim: mostly at the horde, sometimes at your heroes, sometimes nowhere in particular
+      const r = Math.random(), tg = r < 0.5 && live.length ? pick(live) : r < 0.8 && heroes.length ? pick(heroes) : null, p = tg ? { x: tg.x + rand(-6, 6), y: tg.y + rand(-4, 4) } : hzFieldPoint();
+      B.zones.push({ type: 'telegraph', x: p.x, y: p.y, r: 16, t: 0, dur: 1.1, meteor: true, rock: true, cols: ['#6a5a4a', '#c9bca8'], onEnd: z => {
+        for (const h of inRadius(B.heroes, z, z.r)) if (!h.rafter) dealDamage(B, null, h, h.maxHp * 0.1, { unavoidable: true, kind: 'hazard' });
+        for (const e of inRadius(B.enemies, z, z.r)) if (!e.flying) { dealDamage(B, null, e, e.maxHp * (e.boss ? 0.02 : 0.16), { kind: 'hazard' }); e.stun = Math.max(e.stun, e.boss ? 0 : 0.5); }
+        FX.explode(z.x, z.y - 2, 14, ['#b0a090', '#7a6a5a', '#e0d4c0']); FX.particles(z.x, z.y - 2, 8, ['#8a7a6a', '#c9bca8'], { spread: 12, up: true }); FX.shake(2); FX.sound('thud'); } }); } }
+  if (k === 'embers') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(2, 3); const r = Math.random(), tg = r < 0.45 && live.length ? pick(live) : r < 0.7 && heroes.length ? pick(heroes) : null;
+      B.hzPatches.push(Object.assign(tg ? { x: tg.x + rand(-10, 10), y: tg.y + rand(-6, 6) } : hzFieldPoint(), { r: 15, t: 0, life: 6, tick: 0 })); }
+    for (const P of B.hzPatches) { P.t += dt; if (P.t < 0.8) continue; P.tick -= dt; if (P.tick > 0) continue; P.tick = 0.5;
+      for (const h of inRadius(B.heroes, P, P.r)) if (!h.rafter) dealDamage(B, null, h, h.maxHp * 0.02, { unavoidable: true, kind: 'hazard' });
+      for (const e of inRadius(B.enemies, P, P.r)) if (!e.flying) dealDamage(B, null, e, e.maxHp * (e.boss ? 0.004 : 0.035), { kind: 'hazard' }); }
+    B.hzPatches = B.hzPatches.filter(P => P.t < P.life); }
+}
+
 function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
@@ -3302,6 +3417,7 @@ function stepBattle(B, dt) {
     else B.projs.push({ src, tgt: t, type: 'bolt', dmg, x: 74, y: 40, sx: 74, sy: 40, tx: t.x, ty: t.y - 8 - t.z, t: 0, dur: Math.max(0.1, dist({ x: 74, y: 40 }, t) / 320), arc: 6, o: {} });
     FX.sound('twang'); } else B.ballistaCd = 0.3; } }
 
+  stepHazard(B, dt);
   for (const u of B.heroes) if (u.alive) stepHero(B, u, dt);
   for (const u of B.enemies) if (u.alive) stepEnemy(B, u, dt);
   stepRam(B, dt);
@@ -3427,7 +3543,7 @@ function stepHero(B, u, dt) {
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
-    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt), dt); } }
+    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
     else {
       u.facing = t.x >= u.x ? 1 : -1;
       u.cd -= dt;
@@ -3460,7 +3576,7 @@ function stepEnemy(B, u, dt) {
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   if (u.boss) { for (const sk in u.skillT) { u.skillT[sk] -= dt; if (u.skillT[sk] <= 0) { u.skillT[sk] = bossSkill(B, u, sk); u.atkT = 0.4; } } }
-  const spd = u.spd * (1 - u.slowAmt);
+  const spd = u.spd * (1 - u.slowAmt) * hzSpd(B, u);
   const heroes = B.heroes;
   u.retarget -= dt;
   // siege ladders and rams: wall-huggers climb to the rafters, crowds bring a ram
@@ -3700,6 +3816,16 @@ function buyTech(run, meta, id) {
 function repairCost(run) { return 25 + 4 * run.siege; }
 function repairCastle(run) { const c = repairCost(run); if (run.castle.hp >= run.castle.max) return { err: 'The walls are already whole.' }; if (run.gold < c) return { err: `Masons charge ${c} gold.` }; run.gold -= c; const a = Math.round(run.castle.max * 0.2); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); return { ok: true, a }; }
 
+// ----- reforge: reroll a finished item into a different finished item (same holder, same slot) -----
+function reforgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
+function reforgeItem(run, it) {
+  if (!it || it.parts.length !== 2 || it.sup) return { err: 'Only finished items can be reforged.' };
+  const from = itemName(it), old = itemKey(...it.parts); let parts;
+  for (let i = 0; i < 40; i++) { parts = randomFinished().parts; if (itemKey(...parts) !== old) break; }
+  it.parts = parts; it.el = null;
+  return { ok: true, it, from };
+}
+
 // ----- encounters -----
 function resolveEncounter(run, meta, fxs) {
   const out = [], levels = [];
@@ -3713,6 +3839,9 @@ function resolveEncounter(run, meta, fxs) {
       case 'xpAll': for (const h of run.roster) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); } out.push(`Every hero gains ${Math.round(n * (1 + 0.1 * run.siege))} XP.`); break;
       case 'xpOne': { const h = pick(run.roster); if (h) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} gains ${v} XP.`); } break; }
       case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold as an apology.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
+      case 'hz': if (HAZARDS[arg]) { run.mods.hz = arg; out.push(`Next siege: ${HAZARDS[arg].name}. ${HAZARDS[arg].desc}`); } break;
+      case 'reforge': { const list = reforgeable(run); if (!list.length) { const it = randomFinished(); run.stash.push(it); out.push(`You have nothing finished to reforge, so the smith hands you ${itemName(it)} instead.`); break; }
+        run.pendingReforge = true; out.push('Pick an item to reforge.'); break; }
       case 'mod': run.mods[arg] = true; if (arg === 'bossmad') out.push('The boss is coming in a rage.'); break;
       case 'mood': run.mood = (run.mood || 0) + n; out.push(n > 0 ? 'They will remember that kindly.' : 'They will remember that.'); break;
       case 'bossdeal': if ((run.mood || 0) >= 1) { run.mods.bosssoft = true; out.push('They accept. Their heart is not in this siege.'); } else if ((run.mood || 0) <= -1) { run.mods.bossmad = true; out.push('They laugh in your face. After everything you did? The boss is coming in a rage.'); } else out.push('They shrug. Nothing changes.'); break;
@@ -3786,15 +3915,15 @@ const STORY = [
     { p: 1, title: 'A Strongly Worded Letter', portrait: 'e:grubnose',
       text: 'A goblin runner delivers a letter written on a leaf. "To whoever lives in the BIG HOUSE. I am Grubnose, King of the Goblins. I live in a ditch. It is damp. My throne is a bucket. You have RAFTERS. This is not fair. Regards, Grubnose."',
       opts: [{ label: 'Send a polite reply', fx: 'mood:1,xpAll:15', sub: 'Your heroes help write it. Grubnose is deeply confused by kindness.' },
-        { label: 'Use it as kindling', fx: 'mood:-1,gold:15', sub: 'Warm hands. Somewhere out in the ditch, a goblin king senses it.' }] },
+        { label: 'Use it as kindling', fx: 'mood:-1,gold:15,hz:embers', sub: 'Warm hands. The burning letter blows over the field: embers fall next siege. Somewhere in the ditch, a goblin king senses it.' }] },
     { p: 2, title: 'The Bucket Throne', portrait: 'e:grubnose',
       text: "Grubnose's throne has a hole in it. A delegation arrives carrying the bucket and a list of demands: a new bucket, a window for the ditch, and \"one (1) rafter\".",
       opts: [{ label: 'Send him a nicer bucket', fx: 'pay:20,mood:1,xpAll:25', sub: 'Spend 20 gold on a copper bucket. He will treasure it forever.' },
         { label: 'Return the bucket full of rocks', fx: 'mood:-1,gold:25', sub: 'The delegation pays you to take the rocks back out. Goblin logic.' }] },
     { p: 3, title: 'The Landlord Problem', portrait: 'npc:gobunion',
       text: 'Your masons found an old deed. The ditch Grubnose lives in is on your land. Technically, you are his landlord. He has been paying rent in rocks for six years and nobody noticed.',
-      opts: [{ label: 'Fix the leak in his ditch', fx: 'pay:25,mood:1,heal:10', sub: 'Spend 25 gold. The masons patch his ditch, then your wall on the way home.' },
-        { label: 'Raise the rent', fx: 'mood:-1,gold:45', sub: 'He pays in rocks, then in gold, then in rage.' }] },
+      opts: [{ label: 'Fix the leak in his ditch', fx: 'pay:25,mood:1,hz:flood', sub: 'Spend 25 gold. The masons reroute his leak into a channel across the field. Next siege foes wade through it: slowed and soaked.' },
+        { label: 'Raise the rent', fx: 'mood:-1,gold:45,hz:rocks', sub: 'He pays in rocks. Next siege, by catapult, onto everyone. Then in rage.' }] },
     bossDeal('grubnose', 'Grubnose Has Had Enough',
       'Grubnose is standing on his bucket screaming about the rent, the rocks and the kindling. He is coming for the castle and he is bringing every cousin he has.',
       'Grubnose sits on his new bucket, conflicted. You have been decent to him. But the horde expects a siege, and a king has to keep up appearances.',
@@ -3809,7 +3938,7 @@ const STORY = [
     { p: 1, title: 'A Custody Hearing', portrait: 'e:gloop',
       text: 'Mother Gloop has filed paperwork, somehow, while being a slime. She says your heroes keep "splitting her children" and demands visitation rights to every slimelet you have popped.',
       opts: [{ label: 'Apologize to Mother Gloop', fx: 'mood:1,xpAll:20', sub: 'She wobbles. It might be forgiveness. It might be digestion.' },
-        { label: 'Argue they split themselves', fx: 'mood:-1,gold:25', sub: 'Legally you are right. Emotionally you are very wrong.' }] },
+        { label: 'Argue they split themselves', fx: 'mood:-1,gold:25,hz:slime', sub: 'Legally you are right. Emotionally you are very wrong. She slimes the field: everyone on foot moves 25% slower next siege.' }] },
     { p: 3, title: 'Slimelet Daycare', portrait: 'e:slime',
       text: 'A lost slimelet is stuck to your gate, crying. The crying is mostly more slime. It keeps saying "mama" in a voice like a drain.',
       opts: [{ label: 'Carry it back to the bog', fx: 'mood:1,heal:10', sub: 'Mother Gloop watches from the reeds. She saw that.' },
@@ -3827,7 +3956,7 @@ const STORY = [
     { p: 1, title: 'The Ashen Memoir', portrait: 'e:wyrm',
       text: 'Vexmora the Ashen Wyrm is writing her memoir, "Scales of Woe". She needs a villain for chapter three and would like to interview your castle.',
       opts: [{ label: 'Give a gracious interview', fx: 'mood:1,xpAll:20', sub: 'You come across as "surprisingly reasonable, for a building".' },
-        { label: 'Demand final edit', fx: 'mood:-1,gold:30', sub: 'She pays you to go away. You are now chapters three through nine.' }] },
+        { label: 'Demand final edit', fx: 'mood:-1,gold:30,hz:embers', sub: 'She pays you to go away, then burns the draft over your field. Burning pages fall next siege.' }] },
     { p: 3, title: 'Zombie Book Club', portrait: 'e:zombie',
       text: 'The zombies read chapter three. They have notes. Mostly "BRAINS", but one makes a fair point about pacing.',
       opts: [{ label: 'Join the book club', fx: 'mood:1,xpAll:30', sub: 'Snacks are questionable. Discussion is lively.' },
@@ -3848,7 +3977,7 @@ const STORY = [
         { label: 'Buy front row seats', fx: 'pay:20,mood:1,xpAll:20', sub: 'Spend 20 gold. Malgoth adores a paying audience.' }] },
     { p: 3, title: 'Leave Us a Review', portrait: 'e:juggler',
       text: 'Malgoth wants five stars in the carnival guestbook. The guestbook is on fire. That might be part of the show.',
-      opts: [{ label: 'Five stars, wonderful show', fx: 'mood:1,xpAll:25', sub: 'Malgoth twirls his mustache with joy.' },
+      opts: [{ label: 'Five stars, wonderful show', fx: 'mood:1,hz:goldrush', sub: 'Malgoth throws a parade in your honor. Next siege his performers wear gold: +50% gold, but 20% tougher.' },
         { label: 'Two stars, too many imps', fx: 'mood:-1,gold:35', sub: 'A sobbing imp refunds your ticket. Twice.' }] },
     bossDeal('ringmaster', 'The Big Top Comes Down',
       'Malgoth has read the reviews. He is coming to the castle with the whole carnival, and every act is a knife act.',
@@ -3867,7 +3996,7 @@ const STORY = [
     { p: 3, title: 'The Mold Situation', portrait: 'e:shroom',
       text: 'Something fuzzy is growing in the pantry. It is wearing a tiny name tag that says "Baron\'s Ambassador". It would like to be left alone to grow.',
       opts: [{ label: 'Give it a nice dark shelf', fx: 'mood:1,heal:10', sub: 'The ambassador thrives. The bread does not.' },
-        { label: 'Scrub the pantry', fx: 'mood:-1,xpAll:30', sub: 'Your heroes scrub all night. The Baron takes it personally.' }] },
+        { label: 'Scrub the pantry', fx: 'mood:-1,xpAll:30,hz:fog', sub: 'Your heroes scrub all night. The spores drift onto the field: thick fog next siege cuts ranged attacks by 30%.' }] },
     bossDeal('sporebaron', 'The Baron Takes Root',
       'The Spore Baron has declared your castle "condemned and delicious". His spores darken the sky.',
       'The Spore Baron arrives, but he keeps stopping to admire the shelf you gave his ambassador.',
@@ -3885,7 +4014,7 @@ const STORY = [
     { p: 3, title: 'Snow Removal', portrait: 'e:yeti',
       text: 'Who shovels the path between the castle and the clans? The Matriarch says you do. There is a form.',
       opts: [{ label: 'Shovel it', fx: 'mood:1,xpAll:30', sub: 'Great exercise. The yetis wave.' },
-        { label: 'Build a snowman blocking it', fx: 'mood:-1,gold:35', sub: 'It is a really good snowman. Tourists pay to see it.' }] },
+        { label: 'Build a snowman blocking it', fx: 'mood:-1,gold:35,hz:snow', sub: 'Tourists pay to see it. The yetis bury the field in snow: everyone on foot moves 25% slower next siege.' }] },
     bossDeal('matriarch', 'Final Notice',
       'The Matriarch has issued a FINAL NOTICE. She is coming to enforce the bylaws personally, with fists the size of carts.',
       'The Matriarch arrives for the yearly inspection. She grumbles, but she brought a fruitcake.',
@@ -3903,7 +4032,7 @@ const STORY = [
     { p: 3, title: 'The Family Reunion', portrait: 'e:bandit',
       text: 'Big Mama Trashpaw is throwing a family reunion in your dumpster. There are many, many cousins. Someone brought a possum. Nobody knows whose possum it is.',
       opts: [{ label: 'Bring a casserole', fx: 'pay:20,mood:1,xpAll:25', sub: 'Spend 20 gold. You are now an honorary raccoon.' },
-        { label: 'Hose them down', fx: 'mood:-1,gold:40', sub: 'They flee, dropping everything they stole. It is a lot.' }] },
+        { label: 'Hose them down', fx: 'mood:-1,gold:40,hz:flood', sub: 'They flee, dropping everything they stole. The hose floods the field: next siege foes wade through water.' }] },
     bossDeal('trashpaw', 'Big Mama Is Hungry',
       'Big Mama Trashpaw has run out of patience and out of snacks. She is coming for the whole kitchen.',
       'Big Mama Trashpaw is coming, but she sent a note first: "Nothing personal, hon. 40 kids. You understand."',
@@ -3917,7 +4046,7 @@ const STORY = [
     { p: 1, title: 'Warranty Expired', portrait: 'e:colossus',
       text: 'The Brass Colossus is squeaking. Its warranty expired a hundred years ago. It asks, very politely, for a little oil.',
       opts: [{ label: 'Lend it the oil', fx: 'mood:1,xpAll:25', sub: 'It stops squeaking and hums a little tune.' },
-        { label: 'Sell it oil at a markup', fx: 'mood:-1,gold:40', sub: 'Business is business. Its eyes glow a little redder.' }] },
+        { label: 'Sell it oil at a markup', fx: 'mood:-1,gold:40,hz:gale', sub: 'Business is business. It vents steam at you all next siege: a gale makes foes 20% faster and your heroes attack 20% faster.' }] },
     { p: 3, title: 'Firmware Update', portrait: 'e:cog',
       text: 'The Clockwork Host pushed an update overnight. Every cog now says "please" before attacking.',
       opts: [{ label: 'Say please back', fx: 'mood:1,xpAll:30', sub: 'An extremely polite siege follows.' },
@@ -3935,7 +4064,7 @@ const STORY = [
     { p: 1, title: 'Parking Violation', portrait: 'e:pinchbeard',
       text: 'A pirate ship is parked in your moat. Captain Pinchbeard insists the moat is "international waters" and has started charging your masons a toll to cross it.',
       opts: [{ label: 'Pay the toll', fx: 'pay:20,mood:1,heal:10', sub: 'Spend 20 gold. He gives you a receipt with a skull on it.' },
-        { label: 'Issue him a ticket', fx: 'mood:-1,gold:35', sub: 'He pays it, furious. Pirates have surprisingly good credit.' }] },
+        { label: 'Issue him a ticket', fx: 'mood:-1,gold:35,hz:flood', sub: 'He pays, furious, then opens the moat locks out of spite. The field floods next siege.' }] },
     { p: 3, title: 'Shanty Night', portrait: 'e:deckhand',
       text: 'The corsairs are singing sea shanties outside the walls at three in the morning. The crabs keep perfect time with their claws.',
       opts: [{ label: 'Sing along', fx: 'mood:1,xpAll:30', sub: 'Your heroes know all the words. Pinchbeard is moved to tears.' },
@@ -3961,7 +4090,7 @@ const STORY = [
     { p: 3, title: 'The Goose Manifesto', portrait: 'e:gosling',
       text: 'A gosling delivers a scroll thirty feet long. It is the goose\'s manifesto. It is the word HONK written ten thousand times. On the back: "the castle was always mine."',
       opts: [{ label: 'Read the whole thing', fx: 'mood:1,xpAll:45', sub: 'It takes all night. You understand the goose a little better. You wish you did not.' },
-        { label: 'Use it as wallpaper', fx: 'mood:-1,gold:45', sub: 'It is surprisingly good wallpaper.' }] },
+        { label: 'Use it as wallpaper', fx: 'mood:-1,gold:45,hz:gale', sub: 'It is surprisingly good wallpaper. The goose honks so hard a gale blows across the next siege.' }] },
     bossDeal('goosegod', 'The Honkening',
       'The Eternal Goose rises over the hill, wings blotting out the sun. It remembers every slight. It remembers the moat. It is coming for everything.',
       'The Eternal Goose looks down at the castle. For one moment it almost seems fond of you. Then it honks, and the ground shakes.',
@@ -3975,7 +4104,17 @@ function storyChapter(run) {
   const p = done % 5, f = factionIndex(done);
   const ch = (STORY[f] || []).find(c => c.p === p); if (!ch) return null;
   const id = `story${f}_${p}`; if ((run.storySeen || []).includes(id)) return null;
-  return Object.assign({}, ch, { id, f, text: typeof ch.text === 'function' ? ch.text(run) : ch.text, story: true });
+  // after a boss falls everything is upside, so the epilogue also offers the smith's reforge
+  const opts = p === 0 ? [...ch.opts, { label: 'Ask the smith to reforge', fx: 'reforge', sub: 'Pick one of your finished items and turn it into a different one.' }] : ch.opts;
+  return Object.assign({}, ch, { id, f, opts, text: typeof ch.text === 'function' ? ch.text(run) : ch.text, story: true });
+}
+// the card that plays after a siege: a story chapter when one is due, else a boon card (all upside) or a trade-off card
+function drawEncounter(run, recent = []) {
+  const story = storyChapter(run); if (story) return story;
+  const boon = Math.random() < 0.4;
+  const pool = ENCOUNTERS.filter(e => !!e.boon === boon && !recent.includes(e.id) && !(e.opts && e.opts.some(o => /secret:(\w+)/.test(o.fx) && run.discovered[o.fx.match(/secret:(\w+)/)[1]]) && Math.random() < 0.7));
+  const enc = pick(pool.length ? pool : ENCOUNTERS.filter(e => !!e.boon === boon));
+  return enc.boon ? Object.assign({}, enc, { opts: boonOpts(run) }) : enc;
 }
 
 // ===== Achievements =====
@@ -4786,6 +4925,54 @@ function drawProj(g, p) {
   }
 }
 
+// ----- field hazards: ground layer (over=false) under the units, weather layer (over=true) on top -----
+// box is the field area; the same painter draws the little preview on the encounter card.
+function drawHazard(g, id, box, t, B, over) {
+  const Z = HAZARDS[id]; if (!Z) return; const k = Z.kind, X = box.x, Y = box.y, Wd = box.w, Hd = box.h;
+  if (!over && k === 'flood') { const x0 = Math.round(B || Wd > 200 ? FLOOD.x0 : X + Wd * 0.4), x1 = Math.round(B || Wd > 200 ? FLOOD.x1 : X + Wd * 0.62);
+    g.fillStyle = '#6a4a2a'; g.fillRect(x0 - 2, Y, 2, Hd); g.fillRect(x1, Y, 2, Hd);
+    g.fillStyle = 'rgba(58,138,216,0.62)'; g.fillRect(x0, Y, x1 - x0, Hd);
+    for (let y = Y + 2; y < Y + Hd; y += 5) { const off = Math.round(Math.sin(y * 0.3 + t * 3) * 4); g.fillStyle = 'rgba(191,244,255,0.55)'; g.fillRect(x0 + 4 + ((y * 7) % Math.max(1, x1 - x0 - 14)) + off, y, 6, 1); }
+    g.fillStyle = 'rgba(255,255,255,0.35)'; for (let y = Y; y < Y + Hd; y += 3) { if (Math.sin(y * 0.7 + t * 6) > 0.6) { g.fillRect(x0, y, 1, 2); g.fillRect(x1 - 1, y + 1, 1, 2); } } }
+  if (!over && k === 'mud') { const snow = id === 'snow', base = Z.col;
+    g.fillStyle = snow ? 'rgba(232,244,255,0.42)' : id === 'slime' ? 'rgba(90,190,80,0.30)' : 'rgba(110,76,40,0.40)'; g.fillRect(X, Y, Wd, Hd);
+    for (let i = 0; i < Wd * Hd / 140; i++) { const px = X + Math.floor(hash(i, 3) * Wd), py = Y + Math.floor(hash(i, 7) * Hd), w = 3 + Math.floor(hash(i, 11) * 7);
+      g.fillStyle = hash(i, 13) < 0.5 ? base : snow ? '#ffffff' : id === 'slime' ? '#b8f0a0' : '#5a3a1a'; g.globalAlpha = snow ? 0.8 : 0.6; g.fillRect(px, py, w, 2); g.fillRect(px + 1, py - 1, w - 2, 1); }
+    if (id === 'slime') for (let i = 0; i < 8; i++) { const ph = (t * 0.7 + hash(i, 5)) % 1, px = X + Math.floor(hash(i, 9) * Wd), py = Y + Math.floor(hash(i, 17) * Hd); g.globalAlpha = 1 - ph; g.fillStyle = '#d8ffc8'; g.fillRect(px, py - Math.round(ph * 3), 2, 2); }
+    g.globalAlpha = 1; }
+  if (!over && k === 'goldrush') { for (let i = 0; i < Wd * Hd / 900; i++) { const px = X + Math.floor(hash(i, 21) * Wd), py = Y + Math.floor(hash(i, 23) * Hd), tw = Math.sin(t * 3 + i * 1.7) > 0.85;
+      g.fillStyle = '#8a6a2a'; g.fillRect(px - 1, py, 4, 1); g.fillStyle = '#ffd84a'; g.fillRect(px, py - 1, 2, 1);
+      if (tw) { g.fillStyle = '#ffffff'; g.fillRect(px, py - 4, 1, 3); g.fillRect(px - 1, py - 3, 3, 1); } } }
+  if (!over && k === 'embers') { const P = B ? B.hzPatches : [0, 1, 2].map(i => ({ x: X + Wd * (0.25 + 0.25 * i), y: Y + Hd * (0.35 + 0.25 * (i % 2)), r: Math.min(15, Hd * 0.3), t: 2, life: 6 }));
+    for (const p of P) { const a = Math.min(1, p.t / 0.8) * Math.min(1, (p.life - p.t) / 0.8), x = Math.round(p.x), y = Math.round(p.y);
+      g.globalAlpha = 0.5 * a; g.fillStyle = '#2a1408'; g.beginPath(); g.ellipse(x, y, p.r, p.r * 0.55, 0, 0, Math.PI * 2); g.fill();
+      if (p.t < 0.8) { g.globalAlpha = 0.6; g.strokeStyle = '#ff8a3a'; g.beginPath(); g.ellipse(x, y, p.r * p.t / 0.8, p.r * 0.55 * p.t / 0.8, 0, 0, Math.PI * 2); g.stroke(); }
+      else { g.globalAlpha = 0.35 * a; g.fillStyle = '#ff6a1a'; g.beginPath(); g.ellipse(x, y, p.r * 0.8, p.r * 0.42, 0, 0, Math.PI * 2); g.fill();
+      for (let i = 0; i < 14; i++) { const ang = hash(i, x) * Math.PI * 2, rr = hash(i, y) * p.r * 0.85, fx = Math.round(x + Math.cos(ang) * rr), fy = Math.round(y + Math.sin(ang) * rr * 0.55), fl = Math.floor(t * 10 + i) % 3;
+        g.globalAlpha = a; g.fillStyle = '#ff3d1a'; g.fillRect(fx - 1, fy - 2 - fl, 3, 3 + fl); g.fillStyle = '#ffd23a'; g.fillRect(fx, fy - 1 - fl, 1, 2 + fl); } } }
+    g.globalAlpha = 1; }
+  if (over && k === 'fog') { for (let i = 0; i < 14; i++) { const sp = 6 + hash(i, 2) * 10, px = X + ((hash(i, 4) * Wd - t * sp) % Wd + Wd) % Wd, py = Y - 10 + hash(i, 6) * (Hd + 10), r = 26 + hash(i, 8) * 22;
+      g.globalAlpha = 0.22; g.fillStyle = '#dfe4ea'; g.beginPath(); g.ellipse(px, py, r, r * 0.45, 0, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 0.12; g.fillStyle = '#c9d0d8'; g.fillRect(X, Y - 20, Wd, Hd + 20); g.globalAlpha = 1; }
+  if (over && k === 'gale') { g.fillStyle = 'rgba(255,255,255,0.85)'; for (let i = 0; i < 28; i++) { const sp = 160 + hash(i, 3) * 120, len = 8 + Math.floor(hash(i, 5) * 14), px = X + Wd - ((t * sp + hash(i, 9) * Wd) % (Wd + 30)), py = Y - 30 + Math.floor(hash(i, 7) * (Hd + 30)) + Math.round(Math.sin(t * 5 + i) * 2);
+      g.fillRect(Math.round(px), py, len, 1); }
+    for (let i = 0; i < 6; i++) { const px = X + Wd - ((t * 120 + hash(i, 31) * Wd) % Wd), py = Y + hash(i, 33) * Hd + Math.sin(t * 6 + i) * 6; g.fillStyle = i % 2 ? '#7cc05a' : '#c9a35a'; g.fillRect(Math.round(px), Math.round(py), 2, 1); } }
+  if (over && k === 'embers') { for (let i = 0; i < 12; i++) { const ph = (t * (0.18 + hash(i, 1) * 0.15) + hash(i, 3)) % 1, px = X + hash(i, 5) * Wd + Math.sin(t * 2 + i) * 6, py = Y - 60 + ph * (Hd + 60);
+      g.globalAlpha = 1 - ph * 0.6; g.fillStyle = Math.floor(t * 8 + i) % 2 ? '#ffd23a' : '#ff6a3d'; g.fillRect(Math.round(px), Math.round(py), 1, 2); } g.globalAlpha = 1; }
+  if (over && k === 'rocks' && !B) { for (let i = 0; i < 3; i++) { const x = Math.round(X + Wd * (0.3 + 0.2 * i)), y = Math.round(Y + Hd * (0.4 + 0.15 * (i % 2)));
+      g.strokeStyle = `rgba(255,61,110,${0.4 + 0.4 * Math.abs(Math.sin(t * 6 + i))})`; g.beginPath(); g.ellipse(x, y, 10, 5.5, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#7a6a5a'; g.fillRect(x - 3, y - 18 - i * 6, 6, 5); g.fillStyle = '#c9bca8'; g.fillRect(x - 2, y - 18 - i * 6, 3, 2); } }
+}
+// a still frame of a hazard on a strip of grass, for encounter cards
+const HZ_THUMBS = {};
+function hazardThumbURL(id) {
+  if (HZ_THUMBS[id]) return HZ_THUMBS[id];
+  const c = document.createElement('canvas'); c.width = 96; c.height = 48; const g = c.getContext('2d');
+  g.fillStyle = '#6cbf4a'; g.fillRect(0, 0, 96, 48); g.fillStyle = '#5aa63e'; for (let i = 0; i < 40; i++) g.fillRect(Math.floor(hash(i, 41) * 96), Math.floor(hash(i, 43) * 48), 2, 1);
+  g.fillStyle = '#9a9ab8'; g.fillRect(0, 0, 8, 48); g.fillStyle = '#c9c4e6'; g.fillRect(0, 0, 7, 48);
+  drawHazard(g, id, { x: 10, y: 4, w: 86, h: 42 }, 1.3, null, false); drawHazard(g, id, { x: 10, y: 4, w: 86, h: 42 }, 1.3, null, true);
+  return HZ_THUMBS[id] = c.toDataURL();
+}
+
 function renderFrame(V, dt) {
   R.t += dt; const g = R.lctx, run = V.run, B = V.B, t = R.t;
   const fi = factionIndex(run.siege);
@@ -4823,6 +5010,7 @@ function renderFrame(V, dt) {
     for (let i = 0; i < rafterSlots(run); i++) { const x = RAFTER_XS[i], hov = V.hover && V.hover.type === 'rafter' && V.hover.i === i;
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, RAFTER_Y - 18, 16, 19); }
   }
+  drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
   drawSpellDecals(g);
   // units
   let units;
@@ -4861,6 +5049,7 @@ function renderFrame(V, dt) {
     g.strokeStyle = 'rgba(255,207,58,0.8)'; g.beginPath(); g.ellipse(Math.round(p.x), Math.round(p.y), p.r * k, p.r * 0.55 * k, 0, 0, Math.PI * 2); g.stroke();
     g.fillStyle = OUTLINE; g.fillRect(Math.round(p.x) - 6, Math.round(by) - 12, 12, 12); g.fillStyle = '#a8a3c8'; g.fillRect(Math.round(p.x) - 5, Math.round(by) - 11, 10, 10); g.fillStyle = '#d4cff0'; g.fillRect(Math.round(p.x) - 5, Math.round(by) - 11, 10, 2); g.fillStyle = '#ffcf3a'; g.fillRect(Math.round(p.x) - 1, Math.round(by) - 8, 2, 4); }
   if (V.hammerArmed && V.mouse) { const m = V.mouse; g.strokeStyle = Math.floor(t * 6) % 2 ? '#ffcf3a' : '#ffffff'; g.beginPath(); g.ellipse(Math.round(m.x), Math.round(m.y), 34, 19, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#ffcf3a'; g.fillRect(Math.round(m.x) - 3, Math.round(m.y), 7, 1); g.fillRect(Math.round(m.x), Math.round(m.y) - 3, 1, 7); }
+  drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, true);
   // particles
   for (const p of FXS.parts) { g.globalAlpha = Math.min(1, 2 * (1 - p.t / p.life)); g.fillStyle = p.color; if (p.streak) { g.fillRect(Math.round(p.x), Math.round(p.y), 1, 4); g.fillStyle = '#ffffff'; g.fillRect(Math.round(p.x), Math.round(p.y) + 4, 1, 1); } else g.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size); }
   g.globalAlpha = 1;
@@ -5073,7 +5262,7 @@ function botPlayRun(style, meta, opts = {}) {
     if (run.roster.length < 2) draft();
     botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
-    run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = st || pick(ENCOUNTERS); resolveEncounter(run, meta, pick(enc.opts).fx);
+    run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
   }
   return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rolls: h.rolls, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
@@ -5266,6 +5455,18 @@ const VISITORS = {
   dragon: { gen: 'quad', body: '#7a5ad8', belly: '#ffd84a', eye: '#ffde3a', wings: true, horns: true },
   masons: { head: 'dwarf', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#5a4a8c', weapon: 'hammer', metal: '#a8a8c0' },
   geode: { head: 'beast', skin: '#8a6a5a', snout: '#d8c0b0', ears: 'round', hat: 'none', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#5a4a3a', weapon: 'none' },
+  rentdue: { head: 'goblin', skin: '#8ad84a', hat: 'none', armor: '#5a3a8a', armor2: '#3a2a5a', cloth: '#ffcf3a', weapon: 'none', eye: '#5fd3ff' },
+  leakyditch: { head: 'toad', skin: '#7ac85a', belly: '#e0f0c0', hat: 'crown', armor: '#3a8ad8', armor2: '#2a5a9a', cloth: '#ffcf3a', weapon: 'none' },
+  mudseason: { gen: 'quad', body: '#ff9fb0', belly: '#ffc9d0', eye: '#1a1a2a' },
+  dragoncold: { gen: 'quad', body: '#5ab84a', belly: '#ffd84a', eye: '#ff8a3a', wings: true, horns: true },
+  windmill: { head: 'human', skin: SK.pale, hair: '#e8e8f0', hat: 'wizard', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffffff', weapon: 'staff', gem: '#dff4ff' },
+  fogman: { head: 'human', skin: SK.tan, hair: '#2a1a12', hat: 'none', armor: '#8a90a8', armor2: '#5a6078', cloth: '#ff5d8f', weapon: 'none' },
+  goldrush: { head: 'dwarf', skin: SK.tan, hair: '#8a4b2a', hat: 'helm', armor: '#8a6a4a', armor2: '#5a4a3a', cloth: '#ffd84a', weapon: 'hammer', metal: '#ffd84a' },
+  snowday: { head: 'human', skin: SK.pale, hair: '#c8e8ff', hat: 'wizard', armor: '#e8f4ff', armor2: '#9ac8ff', cloth: '#5fd3ff', weapon: 'staff', gem: '#ffffff' },
+  merchant: { head: 'human', skin: SK.tan, hair: '#8a4b2a', hat: 'hood', armor: '#ff8a3a', armor2: '#c05a1a', cloth: '#ffd84a', weapon: 'none' },
+  smith: { head: 'dwarf', skin: SK.pale, hair: '#ff6a3a', hat: 'none', armor: '#4a4f63', armor2: '#262a38', cloth: '#c9a35a', weapon: 'hammer', metal: '#cfd6e6' },
+  festival: { head: 'elf', skin: SK.pale, hair: '#ffd84a', hat: 'crown', armor: '#ff5d8f', armor2: '#c03a6a', cloth: '#7cf09a', weapon: 'none' },
+  luckycoin: { head: 'human', skin: SK.pale, hair: '#c8c8d8', hat: 'wizard', armor: '#3a64c9', armor2: '#24408a', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffcf3a' },
   tinker: { head: 'dwarf', skin: SK.tan, hair: '#c8c8d8', hat: 'bandana', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#ffd84a', weapon: 'hammer', metal: '#cfd6e6' },
 };
 
@@ -5318,7 +5519,7 @@ const UI = {
     d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
       ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
       <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
-      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+      <div class="ff-name"><small>${o.title || (sup ? 'Super item forged' : 'Item combined')}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
     document.body.appendChild(d);
     // pixel anvil, violet and gold for the super anvil
     const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
@@ -5407,6 +5608,7 @@ const UI = {
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
+    const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
     const mods = Object.keys(run.mods).filter(m => modNote[m]); if (mods.length) h += `<div class="mods">${mods.map(m => `<p>${esc(modNote[m])}</p>`).join('')}</div>`;
     $('intelMain').innerHTML = h;
   },
@@ -5756,7 +5958,15 @@ const UI = {
   animateXP(sheet) { sheet.querySelectorAll('.xpbar.big').forEach(b => { const i = b.querySelector('i'); i.style.transition = 'none'; i.style.width = b.dataset.from + '%'; requestAnimationFrame(() => requestAnimationFrame(() => { i.style.transition = 'width 1.1s cubic-bezier(.3,.9,.3,1)'; i.style.width = b.dataset.to + '%'; })); }); },
   encounterHTML(enc) {
     return `<span class="eyebrow">${enc.story ? `The story so far · ${esc(FACTIONS[enc.f].name)}` : 'Between the sieges'}</span><div class="visitor ${enc.story ? 'story' : ''}"><img class="px" src="${enc.portrait ? portrait(enc.portrait, 'idle0') : portrait('npc:' + enc.id, 'idle0')}" alt=""><div><h2>${esc(enc.title)}</h2><p class="lede">${esc(enc.text)}</p></div></div>
-      <div class="opts">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
+      ${enc.boon ? '<p class="boonnote">Every choice here is good. Pick what your keep needs.</p>' : ''}
+      <div class="opts ${enc.boon ? 'boon' : ''}">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b><span class="etags">${encTags(o.fx).map(t => `<i class="et ${t.k}">${esc(t.s)}</i>`).join('')}</span>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
+  },
+  // a hazard's field preview: a tiny painted strip plus what it does
+  hazardCard(id) { const z = HAZARDS[id]; return `<div class="hzcard" style="--hz:${z.col}"><img class="px" src="${hazardThumbURL(id)}" alt=""><div><b>${esc(z.name)}</b><span>${esc(z.desc)}</span><small>Only for the next siege.</small></div></div>`; },
+  reforgeHTML(run, list, title) {
+    const who = it => { const h = it.holder && run.roster.find(x => x.uid === it.holder); return h ? heroDisplayName(h) : 'In the stash'; };
+    return `<span class="eyebrow">${esc(title)}</span><h2>Reforge an item</h2><p class="lede">Pick a finished item. It becomes a different random finished item and stays with whoever holds it.</p>
+      <div class="rflist">${list.map(it => `<button class="rf" data-rf="${it.uid}"><img class="px" src="${itemIconURL(it)}" alt=""><div><b>${esc(itemName(it))}</b><span>${esc(who(it))}</span></div></button>`).join('')}</div>`;
   },
 
   // ----- coach: one-time highlights that point at trays as they appear -----
@@ -6327,18 +6537,32 @@ function showCastle() {
 }
 
 function showEncounter() {
-  const story = storyChapter(G.run);
-  const pool = ENCOUNTERS.filter(e => !G.lastEnc.includes(e.id) && !(e.opts.some(o => /secret:(\w+)/.test(o.fx) && G.run.discovered[o.fx.match(/secret:(\w+)/)[1]]) && Math.random() < 0.7));
-  const enc = story || pick(pool.length ? pool : ENCOUNTERS); if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 6); G.phase = 'encounter';
+  const enc = drawEncounter(G.run, G.lastEnc), story = enc.story ? enc : null; if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 8); G.phase = 'encounter';
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
     const o = enc.opts[+b.dataset.opt]; if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
     const lv = r.levels.map(([h, n]) => `${heroDisplayName(h)} reached level ${h.level}!`);
-    UI.modal(`<span class="eyebrow">${esc(enc.title)}</span><h2>${esc(o.label)}</h2><div class="outcome">${r.out.concat(lv).map(esc).join('<br>')}</div>
+    const outcome = extra => {
+      const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz];
+      UI.modal(`<span class="eyebrow">${esc(enc.title)}</span><h2>${esc(o.label)}</h2><div class="outcome">${r.out.filter(x => x !== 'Pick an item to reforge.').concat(extra || [], lv).map(esc).join('<br>')}</div>
+      ${hz ? UI.hazardCard(G.run.mods.hz) : ''}
       <p class="lede">Next: siege ${G.run.siege}${isBossSiege(G.run.siege) ? `. ${esc(ENEMIES[bossFor(G.run.siege)].name)} is coming` : ` against the ${esc(FACTIONS[factionIndex(G.run.siege)].name)}`}${(G.run.siege - 1) % 5 === 0 ? '. A new horde has arrived.' : '.'}</p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="toKeep">Back to the keep</button></div>`, s2 => s2.querySelector('#toKeep').onclick = () => { UI.closeModal(); nextPost(); });
-    changed();
+      changed(); };
+    if (G.run.pendingReforge) { G.run.pendingReforge = false; showReforge(enc, items => outcome(items)); } else outcome();
   }));
+}
+
+// pick one finished item; it turns into a different finished item and stays on whoever held it
+function showReforge(enc, done) {
+  const run = G.run, list = reforgeable(run);
+  UI.modal(UI.reforgeHTML(run, list, enc.title), s => s.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => {
+    const it = list.find(x => x.uid === b.dataset.rf), before = itemIconURL(it), r = reforgeItem(run, it); if (r.err) return UI.toast(r.err, true);
+    const h = it.holder && run.roster.find(x => x.uid === it.holder);
+    TEL.event('reforge', { to: it.parts });
+    UI.closeModal();
+    UI.forge({ title: 'Item reforged', inputs: [before], out: itemIconURL(it), name: itemName(it), sub: h ? `for ${heroDisplayName(h)}` : 'Back in the stash', after: () => done([`${r.from} was reforged into ${itemName(it)}.`]) });
+  }), 'wide');
 }
 
 function toPrep() {

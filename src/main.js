@@ -168,18 +168,32 @@ function showCastle() {
 }
 
 function showEncounter() {
-  const story = storyChapter(G.run);
-  const pool = ENCOUNTERS.filter(e => !G.lastEnc.includes(e.id) && !(e.opts.some(o => /secret:(\w+)/.test(o.fx) && G.run.discovered[o.fx.match(/secret:(\w+)/)[1]]) && Math.random() < 0.7));
-  const enc = story || pick(pool.length ? pool : ENCOUNTERS); if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 6); G.phase = 'encounter';
+  const enc = drawEncounter(G.run, G.lastEnc), story = enc.story ? enc : null; if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 8); G.phase = 'encounter';
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
     const o = enc.opts[+b.dataset.opt]; if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
     const lv = r.levels.map(([h, n]) => `${heroDisplayName(h)} reached level ${h.level}!`);
-    UI.modal(`<span class="eyebrow">${esc(enc.title)}</span><h2>${esc(o.label)}</h2><div class="outcome">${r.out.concat(lv).map(esc).join('<br>')}</div>
+    const outcome = extra => {
+      const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz];
+      UI.modal(`<span class="eyebrow">${esc(enc.title)}</span><h2>${esc(o.label)}</h2><div class="outcome">${r.out.filter(x => x !== 'Pick an item to reforge.').concat(extra || [], lv).map(esc).join('<br>')}</div>
+      ${hz ? UI.hazardCard(G.run.mods.hz) : ''}
       <p class="lede">Next: siege ${G.run.siege}${isBossSiege(G.run.siege) ? `. ${esc(ENEMIES[bossFor(G.run.siege)].name)} is coming` : ` against the ${esc(FACTIONS[factionIndex(G.run.siege)].name)}`}${(G.run.siege - 1) % 5 === 0 ? '. A new horde has arrived.' : '.'}</p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="toKeep">Back to the keep</button></div>`, s2 => s2.querySelector('#toKeep').onclick = () => { UI.closeModal(); nextPost(); });
-    changed();
+      changed(); };
+    if (G.run.pendingReforge) { G.run.pendingReforge = false; showReforge(enc, items => outcome(items)); } else outcome();
   }));
+}
+
+// pick one finished item; it turns into a different finished item and stays on whoever held it
+function showReforge(enc, done) {
+  const run = G.run, list = reforgeable(run);
+  UI.modal(UI.reforgeHTML(run, list, enc.title), s => s.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => {
+    const it = list.find(x => x.uid === b.dataset.rf), before = itemIconURL(it), r = reforgeItem(run, it); if (r.err) return UI.toast(r.err, true);
+    const h = it.holder && run.roster.find(x => x.uid === it.holder);
+    TEL.event('reforge', { to: it.parts });
+    UI.closeModal();
+    UI.forge({ title: 'Item reforged', inputs: [before], out: itemIconURL(it), name: itemName(it), sub: h ? `for ${heroDisplayName(h)}` : 'Back in the stash', after: () => done([`${r.from} was reforged into ${itemName(it)}.`]) });
+  }), 'wide');
 }
 
 function toPrep() {

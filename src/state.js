@@ -154,6 +154,16 @@ function buyTech(run, meta, id) {
 function repairCost(run) { return 25 + 4 * run.siege; }
 function repairCastle(run) { const c = repairCost(run); if (run.castle.hp >= run.castle.max) return { err: 'The walls are already whole.' }; if (run.gold < c) return { err: `Masons charge ${c} gold.` }; run.gold -= c; const a = Math.round(run.castle.max * 0.2); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); return { ok: true, a }; }
 
+// ----- reforge: reroll a finished item into a different finished item (same holder, same slot) -----
+function reforgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
+function reforgeItem(run, it) {
+  if (!it || it.parts.length !== 2 || it.sup) return { err: 'Only finished items can be reforged.' };
+  const from = itemName(it), old = itemKey(...it.parts); let parts;
+  for (let i = 0; i < 40; i++) { parts = randomFinished().parts; if (itemKey(...parts) !== old) break; }
+  it.parts = parts; it.el = null;
+  return { ok: true, it, from };
+}
+
 // ----- encounters -----
 function resolveEncounter(run, meta, fxs) {
   const out = [], levels = [];
@@ -167,6 +177,9 @@ function resolveEncounter(run, meta, fxs) {
       case 'xpAll': for (const h of run.roster) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); } out.push(`Every hero gains ${Math.round(n * (1 + 0.1 * run.siege))} XP.`); break;
       case 'xpOne': { const h = pick(run.roster); if (h) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} gains ${v} XP.`); } break; }
       case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold as an apology.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
+      case 'hz': if (HAZARDS[arg]) { run.mods.hz = arg; out.push(`Next siege: ${HAZARDS[arg].name}. ${HAZARDS[arg].desc}`); } break;
+      case 'reforge': { const list = reforgeable(run); if (!list.length) { const it = randomFinished(); run.stash.push(it); out.push(`You have nothing finished to reforge, so the smith hands you ${itemName(it)} instead.`); break; }
+        run.pendingReforge = true; out.push('Pick an item to reforge.'); break; }
       case 'mod': run.mods[arg] = true; if (arg === 'bossmad') out.push('The boss is coming in a rage.'); break;
       case 'mood': run.mood = (run.mood || 0) + n; out.push(n > 0 ? 'They will remember that kindly.' : 'They will remember that.'); break;
       case 'bossdeal': if ((run.mood || 0) >= 1) { run.mods.bosssoft = true; out.push('They accept. Their heart is not in this siege.'); } else if ((run.mood || 0) <= -1) { run.mods.bossmad = true; out.push('They laugh in your face. After everything you did? The boss is coming in a rage.'); } else out.push('They shrug. Nothing changes.'); break;
