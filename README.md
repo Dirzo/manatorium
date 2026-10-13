@@ -12,7 +12,7 @@ Saves are kept in the browser's local storage.
 
 ## Website (Cloudflare)
 
-`wrangler.jsonc` publishes `site/` as a static Cloudflare Worker named `siege-of-legends`. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler.
+`wrangler.jsonc` publishes `site/` as the static Cloudflare Worker `manatorium`, live at https://manatorium.noobscrub.workers.dev. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler.
 
 ## Build
 
