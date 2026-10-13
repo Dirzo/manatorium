@@ -337,14 +337,18 @@ function showTitle() {
   const parade = ['brann', 'iria', 'vale', 'grukk', 'thessa', 'rattle', 'pip', 'fenn', 'ursa', 'croak'].map((id, i) => `<img class="px" src="${portrait('h:' + id + (i % 3 === 1 ? ':' + EL_KEYS[i] : ''))}" alt="" style="animation-delay:${i * 0.12}s">`).join('')
     + ['grunt', 'chicken', 'slime', 'goose', 'imp', 'yeti', 'cog'].map((id, i) => `<img class="px" src="${portrait('e:' + id)}" alt="" style="animation-delay:${i * 0.12 + 0.6}s">`).join('');
   const metaHTML = metaLedgerHTML();
-  $('title').innerHTML = `<div class="wrap">
-    <div class="logo"><h1>Siege of Legends</h1><p>Castle defense auto battler</p></div>
+  $('title').innerHTML = `<section class="hero"><canvas id="titleBg" class="px"></canvas><div class="hero-shade"></div>
+    <div class="hero-in">
+      <div class="logo"><span class="eyebrow-in">A castle defense auto battler</span><h1 data-t="Siege of Legends">Siege of Legends</h1><p>Fifty sieges. Ten hordes. One goose.</p></div>
+      <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
+        <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
+        <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Diamonds <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
+    </div>
+    <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
+    <div class="wrap">
     <div class="parade">${parade}</div>
-    <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small></div>
-    <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
-      <button class="btn ${has ? '' : 'primary'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
-      <button class="btn" id="tPlaytest">Playtest menu</button></div>
-    <div class="records"><span>Highest keep: <b>${G.meta.best} floors</b></span><span>Runs: <b>${G.meta.runs}</b></span><span>Diamonds: <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
+    <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small><button class="btn small" id="tIntro">▶ Replay intro</button></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
@@ -358,6 +362,9 @@ function showTitle() {
   wireLedger();
   $('tFs').onclick = () => UI.fullscreen();
   $('tPlaytest').onclick = () => { SFX.init(); showPlaytest(); };
+  $('tDown').onclick = () => t.querySelector('.wrap').scrollIntoView({ behavior: 'smooth' });
+  $('tIntro').onclick = () => startIntro(() => titleEnter());
+  startTitleBg($('titleBg'));
   const c = $('tContinue'); if (c) c.onclick = () => { SFX.init(); G.paused = false; $('title').hidden = true; resumeRun(); };
   let armed = false;
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
@@ -442,6 +449,8 @@ function startPlaytest(s) {
   msg.textContent = 'The bot is getting started…'; setTimeout(tick, 30);
 }
 
+function titleEnter() { const t = $('title'); t.classList.remove('enter'); void t.offsetWidth; t.classList.add('enter'); }
+
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
@@ -495,6 +504,8 @@ function boot(hotData) {
   G.phase = 'title';
   rebuildPrepUnits(); UI.refresh();
   showTitle();
+  // the opening cinematic plays over the title on a fresh load (not on hot reloads); ?nointro skips it
+  if (!hotData && !/[?&]nointro/.test(location.search)) startIntro(() => titleEnter()); else titleEnter();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
   try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
