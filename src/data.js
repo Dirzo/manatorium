@@ -59,12 +59,12 @@ const CLASSES = {
 };
 
 const CLASS_BASE = {
-  guardian:  { hp: 560, atk: 22, as: 0.8, range: 15, spd: 26, armor: 35, mana: 90 },
+  guardian:  { hp: 560, atk: 25, as: 0.8, range: 15, spd: 26, armor: 35, mana: 90 },
   berserker: { hp: 420, atk: 34, as: 1.0, range: 15, spd: 32, armor: 15, mana: 80 },
   rogue:     { hp: 320, atk: 36, as: 1.15, range: 15, spd: 46, armor: 10, mana: 70 },
   ranger:    { hp: 270, atk: 29, as: 0.9, range: 118, spd: 26, armor: 5, mana: 80 },
-  mage:      { hp: 250, atk: 22, as: 0.7, range: 104, spd: 24, armor: 5, mana: 70 },
-  cleric:    { hp: 290, atk: 16, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
+  mage:      { hp: 260, atk: 25, as: 0.75, range: 104, spd: 24, armor: 5, mana: 70 },
+  cleric:    { hp: 300, atk: 23, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
 };
 const TIER_MUL = [0, 1, 1.4, 1.95];
 const TIER_COST = [0, 25, 55, 110];
@@ -74,7 +74,7 @@ const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', 
 
 const HEROES = [
   // tier 1
-  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Slams the ground, stunning nearby foes for 1.5s and gaining a 25% HP shield.',
+  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground, stunning foes for 1.5s and gaining a 25% HP shield.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
   { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd for 320% attack in an area.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
@@ -84,7 +84,7 @@ const HEROES = [
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for 60% attack.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts nearby enemies for 3s and gains +60 armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains +60 armor.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
   { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing 35% of their max HP.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
@@ -103,7 +103,7 @@ const HEROES = [
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
   { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing 300% attack.', proj: 'spit',
     spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'spear', metal: '#e6f0ff' } },
-  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts nearby enemies and gives all allies +35% attack for 4s.',
+  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies +35% attack for 4s.',
     spr: { head: 'beast', skin: '#8a5a32', snout: '#d9b48a', hat: 'none', ears: 'round', armor: '#6aa84f', armor2: '#3f7030', cloth: '#ffd84a', weapon: 'shield', metal: '#d9c38a' } },
   { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for 12% max HP.', proj: 'heal',
     spr: { head: 'orc', skin: SK.orc2, hair: '#ffffff', hairStyle: 'long', hat: 'none', armor: '#c94a7a', armor2: '#7a2a4a', cloth: '#ffd84a', weapon: 'totem', gem: '#ff5d8f' } },
@@ -118,7 +118,7 @@ const HEROES = [
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
   { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for 260% attack, pushing every enemy back and slowing them.', proj: 'bubble',
     spr: { head: 'toad', skin: '#4a9e8f', belly: '#cfeedd', hat: 'wizard', armor: '#5a4ab0', armor2: '#352a7a', cloth: '#7cf0ff', weapon: 'staff', gem: '#5fd3ff' } },
-  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Shields every ally for 40% of their max HP.',
+  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for 40% of their max HP.',
     spr: { head: 'dwarf', skin: SK.brown, hair: '#e8e8f0', hat: 'helm', plume: '#5fd3ff', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffcf3a', weapon: 'shield', metal: '#ffcf3a' } },
   { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for 25% max HP.', proj: 'heal',
     spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hairStyle: 'long', hat: 'crown', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff' } },
@@ -133,7 +133,7 @@ const ENEMIES = {
   // Goblin Warband
   grunt:   { name: 'Goblin', hp: 75, atk: 9, as: 0.9, range: 13, spd: 20, armor: 0, gold: 5, cost: 1, kind: 'melee', spr: { gen: 'humanoid', head: 'goblin', skin: SK.gob, hat: 'none', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#5a3a22', weapon: 'sword', metal: '#b8b8c8' } },
   slinger: { name: 'Goblin Slinger', hp: 52, atk: 8, as: 0.7, range: 72, spd: 18, armor: 0, gold: 8, cost: 1.5, kind: 'ranged', proj: 'rock', spr: { gen: 'humanoid', head: 'goblin', skin: '#a3d95a', hat: 'bandana', armor: '#6a4a8a', armor2: '#4a2f61', cloth: '#ff7a3a', weapon: 'none' } },
-  wolf:    { name: 'Wolf Rider', hp: 110, atk: 13, as: 1.0, range: 13, spd: 42, armor: 5, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#8a8aa0', belly: '#c8c8d8', rider: SK.gob, riderCloth: '#c94a3a', eye: '#ffde3a' } },
+  wolf:    { name: 'Wolf Rider', hp: 110, atk: 13, as: 1.0, range: 13, spd: 30, armor: 5, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#8a8aa0', belly: '#c8c8d8', rider: SK.gob, riderCloth: '#c94a3a', eye: '#ffde3a' } },
   shaman:  { name: 'Goblin Shaman', hp: 70, atk: 7, as: 0.6, range: 64, spd: 17, armor: 0, gold: 15, cost: 2.5, kind: 'healer', proj: 'soul', spr: { gen: 'humanoid', head: 'goblin', skin: '#6fbf5a', hat: 'hood', armor: '#3a7a8a', armor2: '#24505a', cloth: '#ffd84a', weapon: 'staff', gem: '#ff5dd8' } },
   master:  { name: 'Master Goblin', hp: 300, atk: 22, as: 0.9, range: 14, spd: 18, armor: 20, gold: 30, cost: 6, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'goblin', skin: '#5aa83a', hat: 'helm', armor: '#6a6a7a', armor2: '#3a3a4a', cloth: '#d83a3a', weapon: 'axe', metal: '#e0e0f0' } },
   // Bogmire
@@ -150,7 +150,7 @@ const ENEMIES = {
   bonegiant:{ name: 'Bone Giant', hp: 700, atk: 30, as: 0.6, range: 16, spd: 13, armor: 30, gold: 45, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#5a4a6a', armor: '#5a4a6a', armor2: '#3a2a4a', cloth: '#3a2a4a', weapon: 'axe', metal: '#c8c0b0' } },
   // Imp Carnival
   imp:     { name: 'Imp', hp: 70, atk: 11, as: 1.1, range: 13, spd: 36, armor: 0, gold: 9, cost: 1.4, kind: 'flyer', spr: { gen: 'flyer', body: '#ff4a4a', wing: '#8a1a3a', eye: '#ffde3a', horns: true } },
-  hound:   { name: 'Hellhound', hp: 160, atk: 18, as: 1.1, range: 13, spd: 44, armor: 5, gold: 14, cost: 2.2, kind: 'melee', spr: { gen: 'quad', body: '#3a2a3a', belly: '#ff6a2a', eye: '#ffde3a', fire: true } },
+  hound:   { name: 'Hellhound', hp: 160, atk: 18, as: 1.1, range: 13, spd: 31, armor: 5, gold: 14, cost: 2.2, kind: 'melee', spr: { gen: 'quad', body: '#3a2a3a', belly: '#ff6a2a', eye: '#ffde3a', fire: true } },
   juggler: { name: 'Fire Juggler', hp: 120, atk: 17, as: 0.8, range: 78, spd: 18, armor: 5, gold: 16, cost: 2.5, kind: 'ranged', proj: 'fire', spr: { gen: 'humanoid', head: 'goblin', skin: '#ff7a5a', hat: 'wizard', armor: '#ffd84a', armor2: '#d84a8a', cloth: '#5a2a8a', weapon: 'none' } },
   brute:   { name: 'Pit Brute', hp: 900, atk: 34, as: 0.7, range: 16, spd: 15, armor: 30, gold: 50, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'orc', skin: '#d84a4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#ffe9b0', armor: '#3a2a3a', armor2: '#1a121a', cloth: '#ffd84a', weapon: 'axe', metal: '#ff8a3a' } },
   // Frostfang Clans
@@ -487,12 +487,12 @@ const SPECS = {
   rogue:     { a: { name: 'Assassin', desc: r => `Rogue signatures are ${40 * r}% stronger and one rank higher.` },
                b: { name: 'Shadow Clones', ability: 'shadowClones', desc: r => `Rogues cast Shadow Clones instead: two shadow copies join the fight for the rest of the siege. Power ${100 + 25 * (r - 1)}%.` } },
 };
-const SPEC_ADESC = { aegisDome: 'Shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
 
 // ===== Field hazards: a card can change the battlefield for the next siege only =====
 // kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
 const HAZARDS = {
-  flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed, and soaked foes take 15% more damage.' },
+  flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed. Foes stay slowed for a moment after they climb out, and soaked foes take 15% more damage.' },
   mud:      { kind: 'mud', name: 'Mud Season', short: 'Mud', col: '#a07a4a', desc: 'The field is soup. Everyone on foot moves 25% slower.' },
   slime:    { kind: 'mud', name: 'Bog Slime', short: 'Slime', col: '#7ad46a', desc: 'Sticky slime covers the field. Everyone on foot moves 25% slower.' },
   snow:     { kind: 'mud', name: 'Snowdrifts', short: 'Snow', col: '#e8f4ff', desc: 'Deep snow everywhere. Everyone on foot moves 25% slower.' },

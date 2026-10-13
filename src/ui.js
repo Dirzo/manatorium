@@ -112,7 +112,7 @@ const UI = {
   init() {
     $('goldIcon').src = iconURL('coin', 3); $('diaIcon').src = iconURL('diamond', 3); $('hammerIcon').src = iconURL('hammer', 2);
     const navIcon = { guild: portrait('h:brann'), armory: iconURL('sword', 4), hall: iconURL('gem', 4) };
-    document.querySelectorAll('.rail button').forEach(b => { b.querySelector('img').src = navIcon[b.dataset.page]; b.onclick = () => { SFX.play('click'); UI.openPage(UI.page === b.dataset.page ? null : b.dataset.page); UI.coachDone('rail-' + b.dataset.page); }; });
+    document.querySelectorAll('.rail button').forEach(b => { b.querySelector('img').src = navIcon[b.dataset.page]; b.onclick = () => { SFX.play('click'); UI.openPage(UI.page === b.dataset.page ? null : b.dataset.page); UI.coachDone('rail-' + b.dataset.page); if (b.dataset.page === 'guild') UI.coachDone('draft-ready'); }; });
     $('drawerBack').onclick = () => UI.openPage(null);
     document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const el = e.target.closest && e.target.closest('[data-tip]'); if (el) { if (el !== UI.tipEl) UI.tipShow(el, e.clientX, e.clientY); } else if (UI.tipKey) UI.tipHide(); });
     document.addEventListener('pointermove', e => { if (UI.tipKey) UI.tipMove(e.clientX, e.clientY); });
@@ -217,7 +217,7 @@ const UI = {
     $('nav-guild').dataset.badge = '';
   },
 
-  refresh() { UI.hud(); UI.renderRoster(); UI.renderIntel(); UI.renderStats(); if (UI.page) UI.renderPage(); },
+  refresh() { const gb = $('nav-guild'), run = G.run; if (gb) gb.classList.toggle('ready', !!run && G.phase === 'prep' && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)); UI.hud(); UI.renderRoster(); UI.renderIntel(); UI.renderStats(); if (UI.page) UI.renderPage(); },
   intelKey: '',
   renderIntel() {
     const run = G.run, B = G.B, s = run.siege, fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5;

@@ -209,6 +209,11 @@ function toPrep() {
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
   if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
+  // first time each run you can afford a champion: say so loudly (Cam)
+  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) {
+    run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
+    setTimeout(() => { UI.banner('Champion ready to draft', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `You have enough gold to draft your first champion (${draftCost(run)} gold). Open the Guild Hall to recruit them.`); }, 350);
+  }
 }
 
 // ----- actions -----
@@ -226,7 +231,7 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
-    case 'buydraft': { if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }

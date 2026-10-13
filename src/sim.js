@@ -99,7 +99,8 @@ function heroStats(h, run, meta, syn) {
   const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], tm = TIER_MUL[d.tier], lm = heroLevelMul(h.level), R = effRolls(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
   const sm = 1 + 0.15 * (meta.ranks.banners || 0);
-  const adM = 0.7 + 0.06 * R.ad, apM = 0.7 + 0.06 * R.ap, defM = 0.75 + 0.05 * R.def;
+  // low rolls hurt less (Cam: any starter should clear siege 1); a roll of 10 is unchanged
+  const adM = 0.82 + 0.048 * R.ad, apM = 0.82 + 0.048 * R.ap, defM = 0.85 + 0.04 * R.def;
   const s = { hp: b.hp * tm * lm * gm * defM, atk: b.atk * tm * lm * gm * adM, as: b.as, range: b.range, spd: b.spd, armor: b.armor + (d.tier - 1) * 5 + R.def * 2, mana: b.mana,
     crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, startMana: 0, manaGain: 1, revive: 0, storm: 0, frost: 0, midas: 0,
     ap: (1 + 0.15 * (meta.ranks.codex || 0)) * apM, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
@@ -308,6 +309,9 @@ function nearest(list, p, maxD = Infinity, filter) {
   return best;
 }
 function inRadius(list, p, r) { return list.filter(u => u.alive && dist(u, p) <= r); }
+// every guardian signature taunts in a wide circle (Cam: guardians must pull the whole front line)
+const TAUNT_R = 120;
+function guardTaunt(B, u, t) { const rad = TAUNT_R + 10 * RK(u); for (const e of inRadius(B.enemies, u, rad)) { e.taunt = u; e.tauntT = Math.max(e.tauntT, t); } FX.shockwave(u.x, u.y - 4, rad, '#ff3d6e'); }
 function densest(list, r, near, maxD = 999) {
   let best = null, bc = 0;
   for (const u of list) { if (!u.alive || (near && dist(u, near) > maxD)) continue; const c = inRadius(list, u, r).length; if (c > bc) { bc = c; best = u; } }
@@ -486,11 +490,11 @@ function siegeTricks(B, u, dt) {
 function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.crew) if (e.alive && e.x > CASTLE_X + 34) e.ram = null; R.crew = R.crew.filter(e => e.alive && e.ram === R);
   if (R.crew.length < 2) { for (const e of R.crew) e.ram = null; B.ram = null; return; }
   R.t += dt; R.swing = (R.t % 2.4) / 2.4; for (const e of R.crew) { e.atkT = 0.1; e.facing = -1; }
-  if (R.t >= 2.4) { R.t = 0; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
+  if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
-  B.castle.hp -= dmg; B.castleHitT = 0.15;
+  B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
-  if (src && src.alive && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
+  if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 
@@ -499,7 +503,7 @@ function damageCastle(B, dmg, src) {
 const S = u => u.st.atk * Math.max(0.3, u.st.ap) * Math.max(0.3, u.st.sigMul);
 const RK = u => Math.max(0, u.st.rank - 1);
 const ABILITIES = {
-  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u); u.shield += u.maxHp * (0.25 + 0.05 * r);
+  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u); u.shield += u.maxHp * (0.25 + 0.05 * r); guardTaunt(B, u, 2);
     fireProj(B, u, t, 'orb', 0, { speed: 260, vfx: { shape: 'disc', col: '#ffe066', col2: '#fff7c0', pw }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, S(u) * 1.2, { sig: true }); e.stun = Math.max(e.stun, 1.5 + 0.2 * r); }
       FX.blast(p.tx, p.ty + 6, rad, ['#ffffff', '#fff3a0', '#ffe066', '#c99a2a'], pw); FX.sound('bash'); } }); FX.sound('whoosh'); },
   fireball(B, u) { const r = RK(u), rad = 30 * (1 + 0.12 * r); const c = densest(B.enemies, 28, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false;
@@ -507,7 +511,7 @@ const ABILITIES = {
   bladeDance(B, u) { const r = RK(u); const ts = B.enemies.filter(e => e.alive && dist(e, u) < 130 + 15 * r).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, 4 + r); if (!ts.length) return false; u.dash = { ts, i: 0, t: 0, mul: 2 }; FX.sound('dash'); },
   arrowRain(B, u) { const r = RK(u); const c = densest(B.enemies, 30, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false; B.zones.push({ type: 'arrows', x: c.x, y: c.y, r: 32 * (1 + 0.12 * r), n: 6 + 2 * r, every: 0.3, t: 0, src: u, dmg: S(u) * 0.7, pw: sigPower(u) }); FX.launch(u.x + 4, u.y - 14 - (u.z || 0), 8 + 2 * r); FX.sound('cast'); },
   whirlwind(B, u) { u.spin = 2 + 0.4 * RK(u); u.spinTick = 0; FX.sound('whirl'); },
-  boneWall(B, u) { const r = RK(u); for (const e of inRadius(B.enemies, u, 64 + 8 * r)) { e.taunt = u; e.tauntT = 3 + 0.5 * r; } u.armorBuff = 60 + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
+  boneWall(B, u) { const r = RK(u); guardTaunt(B, u, 3 + 0.5 * r); u.armorBuff = 60 + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
   lilySplash(B, u) { const r = RK(u); const allies = B.heroes.filter(h => h.alive && h.hp < h.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3 + r); if (!allies.length) return false; for (const a of allies) fireProj(B, u, a, 'heal', a.maxHp * (0.35 + 0.05 * r) * Math.max(0.5, u.st.ap * u.st.sigMul), { speed: 160, vfx: { shape: 'lily', col: '#7cf0ff', col2: '#ffffff', pw: sigPower(u) } }); FX.particles(u.x, u.y - 14, 20, '#7cf0ff', { spread: 26, up: true }); FX.sound('heal'); },
   pounce(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < 170).sort((a, b) => b.x - a.x)[0]; if (!t) return false; const r = RK(u); u.leap = { sx: u.x, sy: u.y, tx: t.x - 8, ty: t.y, t: 0, dur: 0.35, h: 30, onLand: () => { dealDamage(B, u, t, S(u) * (4.5 + 0.5 * r), { sig: true }); FX.claws(t.x, t.y - 10, '#ff9a3a'); for (const e of inRadius(B.enemies, t, 18 + 4 * r)) if (e !== t) dealDamage(B, u, e, S(u) * 1.2, { sig: true }); FX.particles(t.x, t.y - 8, 24, '#ff5d8f', { spread: 30 }); FX.shockwave(t.x, t.y, 40, '#ff5d8f'); FX.shake(4); FX.sound('slash'); } }; },
   rampage(B, u) { const r = RK(u); const t = B.enemies.filter(e => e.alive && !e.onRafter && dist(e, u) < 120 + 10 * r).sort((a, b) => b.x - a.x)[0]; if (!t) return false;
@@ -524,7 +528,7 @@ const ABILITIES = {
     for (let i = 0; i < k; i++) { summonThrall(B, u, 1 + 0.1 * r, 'thrall'); const th = B.heroes[B.heroes.length - 1]; FX.fly(u.x, u.y - 14, th.x, th.y - 6, 'skull', '#9dff6a', '#e8ffd0', sigPower(u), 0.35, i * 0.08); FX.spikes(th.x - 4, th.y, '#f1ecdc', 0.3); FX.spikes(th.x + 4, th.y, '#f1ecdc', 0.33); } FX.sound('summon'); },
   tongueLash(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < u.st.range * 1.3).sort((a, b) => b.hp - a.hp)[0]; if (!t) return false;
     FX.beam(u.x + 6, u.y - 10, t.x, t.y - 8 - t.z, '#ff7aa8', 3, 0.3); if (!t.boss) { t.x = u.x + 22; t.y = u.y; t.z = 0; } t.stun = 2 + 0.3 * RK(u); dealDamage(B, u, t, S(u) * 3, { sig: true }); FX.blast(t.x, t.y - 2, 12, ['#ffffff', '#ffb0cc', '#ff7aa8', '#8a2a4a'], sigPower(u), { shards: 4 }); FX.sound('slurp'); },
-  thunderRoar(B, u) { const r = RK(u); for (const e of inRadius(B.enemies, u, 70 + 8 * r)) { e.taunt = u; e.tauntT = 2.5; } for (const h of B.heroes) if (h.alive) { h.buffAtk = 0.35 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
+  thunderRoar(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.buffAtk = 0.35 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
   warDrums(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { h.buffAs = 0.45 + 0.05 * r; h.buffAsT = 4; healUnit(B, u, h, h.maxHp * 0.12 * Math.max(0.5, u.st.ap * u.st.sigMul), true); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 14, 'note', '#ff5d8f', '#ffffff', sigPower(u), 0.4, rand(0, 0.2)); } FX.text(u.x, u.y - 26, 'BOOM BOOM', '#ff5d8f', true); FX.sound('drums'); },
   sunlance(B, u) { const t = nearest(B.enemies, u, 999); if (!t) return false; const y = t.y - 8 - t.z, sy = u.y - 12 - (u.z || 0), w = 13 + 2 * RK(u);
     for (const e of B.enemies) if (e.alive && e.x > u.x && Math.abs((e.y - 8 - e.z) - lerpY(u.x, sy, t.x, y, e.x)) < w) dealDamage(B, u, e, S(u) * 4.2, { sig: true });
@@ -533,13 +537,13 @@ const ABILITIES = {
     u.leap = { sx: u.x, sy: u.y, tx: c.x - 6, ty: c.y, t: 0, dur: 0.45, h: 50, onLand: () => { for (const e of inRadius(B.enemies, u, rad)) { dealDamage(B, u, e, S(u) * 5, { sig: true }); e.stun = Math.max(e.stun, 1); } FX.blast(u.x, u.y, rad, ['#ffffff', '#ffcf3a', '#c9a35a', '#5a4a2a'], sigPower(u), { shards: 16 }); FX.shake(6); FX.sound('quake'); } }; },
   deathMark(B, u) { const ts = B.enemies.filter(e => e.alive).sort((a, b) => b.hp - a.hp).slice(0, 4 + RK(u)); if (!ts.length) return false; const pw = sigPower(u); for (const e of ts) fireProj(B, u, e, 'orb', 0, { speed: 340, vfx: { shape: 'dagger', col: '#8a5aff', col2: '#ff3d6e', pw, size: 0.9 }, onLand: p => { if (e.alive) { B.marks.push({ e, t: 1.5, src: u, dmg: S(u) * 6 }); FX.claws(e.x, e.y - 10, '#8a5aff'); } } }); FX.sound('mark'); },
   greatFlood(B, u) { B.waves.push({ type: 'flood', x: CASTLE_X, vx: 240, life: 1.7, t: 0, src: u, dmg: S(u) * (2.6 + 0.3 * RK(u)), hit: new Set(), kb: 40 }); FX.sound('flood'); },
-  runicAegis(B, u) { const pw = sigPower(u); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.4 + 0.05 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
+  runicAegis(B, u) { const pw = sigPower(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.4 + 0.05 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
   bloom(B, u) { const dead = B.heroes.filter(h => !h.alive && !h.temp).sort((a, b) => b.def.tier - a.def.tier)[0];
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
     for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, h.maxHp * (0.25 + 0.04 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul)); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
   stampede(B, u) { const n = 4 + RK(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: S(u) * 3.5, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
   // ----- class spec signatures (meta) -----
-  aegisDome(B, u) { const r = RK(u), P = Math.max(0.5, u.st.ap * u.st.sigMul); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.35 + 0.04 * r) * P; }
+  aegisDome(B, u) { const r = RK(u), P = Math.max(0.5, u.st.ap * u.st.sigMul); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.35 + 0.04 * r) * P; }
     for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, S(u) * 1.5, { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
   bloodFrenzy(B, u) { const r = RK(u); healUnit(B, u, u, u.maxHp * 0.3, true); u.buffAs = Math.max(u.buffAs, 1 + 0.1 * r); u.buffAsT = 5; u.buffAtk = Math.max(u.buffAtk, 0.5 + 0.05 * r); u.buffAtkT = 5; FX.particles(u.x, u.y - 8, 24, ['#ff3d3d', '#ffffff'], { spread: 16, up: true }); FX.sound('roar'); },
   hawkStrike(B, u) { const t = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!t) return false; const y = t.y;
@@ -664,7 +668,7 @@ function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.
 function stepHazard(B, dt) {
   const k = B.hzK; if (!k) return;
   const live = B.enemies.filter(e => e.alive && !e.flying), heroes = B.heroes.filter(h => h.alive && !h.rafter);
-  if (k === 'flood') for (const e of live) if (inFlood(e)) e.soakT = Math.max(e.soakT, 0.4);
+  if (k === 'flood') for (const e of live) if (inFlood(e)) { e.soakT = Math.max(e.soakT, 0.4); e.slowT = Math.max(e.slowT, 1.5); e.slowAmt = Math.max(e.slowAmt, 0.3); if (Math.random() < dt * 4) FX.particles(e.x, e.y + 2, 2, ['#bff4ff', '#5fb8ff'], { spread: 5, up: true }); } // foes leave the ditch dripping and slow
   if (k === 'rocks') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(1.6, 2.4);
       // aim: mostly at the horde, sometimes at your heroes, sometimes nowhere in particular
       const r = Math.random(), tg = r < 0.5 && live.length ? pick(live) : r < 0.8 && heroes.length ? pick(heroes) : null, p = tg ? { x: tg.x + rand(-6, 6), y: tg.y + rand(-4, 4) } : hzFieldPoint();
@@ -827,7 +831,7 @@ function castSignature(B, u) {
   if (u.st.sp.hex) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
   if (E.light) for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.1 * E.light, true, 'element');
   if (E.void) { const t = densest(B.enemies, 30) ; if (t) { for (const e of inRadius(B.enemies, t, 60)) if (!e.boss) { e.x += (t.x - e.x) * 0.6; e.y += (t.y - e.y) * 0.6; } FX.vortex(t.x, t.y, [ELEMENTS.void.col, '#0f0a2a']); } }
-  if (E.meat) for (const e of inRadius(B.enemies, u, 70)) { e.taunt = u; e.tauntT = 2.5; }
+  if (E.meat) for (const e of inRadius(B.enemies, u, TAUNT_R)) { e.taunt = u; e.tauntT = Math.max(e.tauntT, 2.5); }
   return true;
 }
 
@@ -846,6 +850,9 @@ function stepHero(B, u, dt) {
   if (u.retarget <= 0 || !u.target || !u.target.alive) {
     u.retarget = 0.3; u.target = null;
     if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
+    // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
+    if (!u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
+      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
     if (!u.target) {
       if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70));
       else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120).sort((a, b) => b.x - a.x)[0] || null;
@@ -921,7 +928,7 @@ function stepEnemy(B, u, dt) {
     const stopX = CASTLE_X + (u.range > 40 ? u.range * 0.8 : 6) + (u.scale - 1) * 10;
     if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.cell), spd, dt); u.facing = -1; }
     else { u.facing = -1; u.cd -= dt; if (u.cd <= 0) { u.cd = 1 / u.as; u.atkT = 0.2;
-      if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
+      if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk, u); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
       else if (!u.ram) { damageCastle(B, u.atk, u); FX.particles(CASTLE_X, u.y - 10, 3, '#c9c4e6', { spread: 8 }); FX.sound('thud'); } } }
   }
 }

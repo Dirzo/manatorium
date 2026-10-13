@@ -101,6 +101,9 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 .rail button:hover { background: var(--panel-2); }
 .rail button[aria-pressed="true"] { background: var(--gold); color: #2a1a00; }
 .rail button[disabled] { opacity: 0.5; }
+.rail button.ready { border-color: var(--gold); animation: railReady 1.2s ease-in-out infinite; }
+@keyframes railReady { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 0 4px rgba(255, 207, 58, 0.55); } }
+@media (prefers-reduced-motion: reduce) { .rail button.ready { animation: none; box-shadow: 0 3px 0 var(--ink), 0 0 0 3px rgba(255, 207, 58, 0.55); } }
 .rail .hint { font-size: 11px; color: var(--muted); text-align: center; padding: 4px; }
 .arena-wrap { flex: 0 1 auto; width: min(100%, max(560px, calc((100vh - 300px) * 16 / 9))); min-width: 0; position: relative; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; box-shadow: 0 5px 0 var(--ink); background: #74d35a; }
 #arena { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; }
@@ -1107,12 +1110,12 @@ const CLASSES = {
 };
 
 const CLASS_BASE = {
-  guardian:  { hp: 560, atk: 22, as: 0.8, range: 15, spd: 26, armor: 35, mana: 90 },
+  guardian:  { hp: 560, atk: 25, as: 0.8, range: 15, spd: 26, armor: 35, mana: 90 },
   berserker: { hp: 420, atk: 34, as: 1.0, range: 15, spd: 32, armor: 15, mana: 80 },
   rogue:     { hp: 320, atk: 36, as: 1.15, range: 15, spd: 46, armor: 10, mana: 70 },
   ranger:    { hp: 270, atk: 29, as: 0.9, range: 118, spd: 26, armor: 5, mana: 80 },
-  mage:      { hp: 250, atk: 22, as: 0.7, range: 104, spd: 24, armor: 5, mana: 70 },
-  cleric:    { hp: 290, atk: 16, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
+  mage:      { hp: 260, atk: 25, as: 0.75, range: 104, spd: 24, armor: 5, mana: 70 },
+  cleric:    { hp: 300, atk: 23, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
 };
 const TIER_MUL = [0, 1, 1.4, 1.95];
 const TIER_COST = [0, 25, 55, 110];
@@ -1122,7 +1125,7 @@ const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', 
 
 const HEROES = [
   // tier 1
-  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Slams the ground, stunning nearby foes for 1.5s and gaining a 25% HP shield.',
+  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground, stunning foes for 1.5s and gaining a 25% HP shield.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
   { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd for 320% attack in an area.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
@@ -1132,7 +1135,7 @@ const HEROES = [
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for 60% attack.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts nearby enemies for 3s and gains +60 armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains +60 armor.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
   { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing 35% of their max HP.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
@@ -1151,7 +1154,7 @@ const HEROES = [
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
   { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing 300% attack.', proj: 'spit',
     spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'spear', metal: '#e6f0ff' } },
-  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts nearby enemies and gives all allies +35% attack for 4s.',
+  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies +35% attack for 4s.',
     spr: { head: 'beast', skin: '#8a5a32', snout: '#d9b48a', hat: 'none', ears: 'round', armor: '#6aa84f', armor2: '#3f7030', cloth: '#ffd84a', weapon: 'shield', metal: '#d9c38a' } },
   { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for 12% max HP.', proj: 'heal',
     spr: { head: 'orc', skin: SK.orc2, hair: '#ffffff', hairStyle: 'long', hat: 'none', armor: '#c94a7a', armor2: '#7a2a4a', cloth: '#ffd84a', weapon: 'totem', gem: '#ff5d8f' } },
@@ -1166,7 +1169,7 @@ const HEROES = [
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
   { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for 260% attack, pushing every enemy back and slowing them.', proj: 'bubble',
     spr: { head: 'toad', skin: '#4a9e8f', belly: '#cfeedd', hat: 'wizard', armor: '#5a4ab0', armor2: '#352a7a', cloth: '#7cf0ff', weapon: 'staff', gem: '#5fd3ff' } },
-  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Shields every ally for 40% of their max HP.',
+  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for 40% of their max HP.',
     spr: { head: 'dwarf', skin: SK.brown, hair: '#e8e8f0', hat: 'helm', plume: '#5fd3ff', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffcf3a', weapon: 'shield', metal: '#ffcf3a' } },
   { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for 25% max HP.', proj: 'heal',
     spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hairStyle: 'long', hat: 'crown', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff' } },
@@ -1181,7 +1184,7 @@ const ENEMIES = {
   // Goblin Warband
   grunt:   { name: 'Goblin', hp: 75, atk: 9, as: 0.9, range: 13, spd: 20, armor: 0, gold: 5, cost: 1, kind: 'melee', spr: { gen: 'humanoid', head: 'goblin', skin: SK.gob, hat: 'none', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#5a3a22', weapon: 'sword', metal: '#b8b8c8' } },
   slinger: { name: 'Goblin Slinger', hp: 52, atk: 8, as: 0.7, range: 72, spd: 18, armor: 0, gold: 8, cost: 1.5, kind: 'ranged', proj: 'rock', spr: { gen: 'humanoid', head: 'goblin', skin: '#a3d95a', hat: 'bandana', armor: '#6a4a8a', armor2: '#4a2f61', cloth: '#ff7a3a', weapon: 'none' } },
-  wolf:    { name: 'Wolf Rider', hp: 110, atk: 13, as: 1.0, range: 13, spd: 42, armor: 5, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#8a8aa0', belly: '#c8c8d8', rider: SK.gob, riderCloth: '#c94a3a', eye: '#ffde3a' } },
+  wolf:    { name: 'Wolf Rider', hp: 110, atk: 13, as: 1.0, range: 13, spd: 30, armor: 5, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#8a8aa0', belly: '#c8c8d8', rider: SK.gob, riderCloth: '#c94a3a', eye: '#ffde3a' } },
   shaman:  { name: 'Goblin Shaman', hp: 70, atk: 7, as: 0.6, range: 64, spd: 17, armor: 0, gold: 15, cost: 2.5, kind: 'healer', proj: 'soul', spr: { gen: 'humanoid', head: 'goblin', skin: '#6fbf5a', hat: 'hood', armor: '#3a7a8a', armor2: '#24505a', cloth: '#ffd84a', weapon: 'staff', gem: '#ff5dd8' } },
   master:  { name: 'Master Goblin', hp: 300, atk: 22, as: 0.9, range: 14, spd: 18, armor: 20, gold: 30, cost: 6, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'goblin', skin: '#5aa83a', hat: 'helm', armor: '#6a6a7a', armor2: '#3a3a4a', cloth: '#d83a3a', weapon: 'axe', metal: '#e0e0f0' } },
   // Bogmire
@@ -1198,7 +1201,7 @@ const ENEMIES = {
   bonegiant:{ name: 'Bone Giant', hp: 700, atk: 30, as: 0.6, range: 16, spd: 13, armor: 30, gold: 45, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#5a4a6a', armor: '#5a4a6a', armor2: '#3a2a4a', cloth: '#3a2a4a', weapon: 'axe', metal: '#c8c0b0' } },
   // Imp Carnival
   imp:     { name: 'Imp', hp: 70, atk: 11, as: 1.1, range: 13, spd: 36, armor: 0, gold: 9, cost: 1.4, kind: 'flyer', spr: { gen: 'flyer', body: '#ff4a4a', wing: '#8a1a3a', eye: '#ffde3a', horns: true } },
-  hound:   { name: 'Hellhound', hp: 160, atk: 18, as: 1.1, range: 13, spd: 44, armor: 5, gold: 14, cost: 2.2, kind: 'melee', spr: { gen: 'quad', body: '#3a2a3a', belly: '#ff6a2a', eye: '#ffde3a', fire: true } },
+  hound:   { name: 'Hellhound', hp: 160, atk: 18, as: 1.1, range: 13, spd: 31, armor: 5, gold: 14, cost: 2.2, kind: 'melee', spr: { gen: 'quad', body: '#3a2a3a', belly: '#ff6a2a', eye: '#ffde3a', fire: true } },
   juggler: { name: 'Fire Juggler', hp: 120, atk: 17, as: 0.8, range: 78, spd: 18, armor: 5, gold: 16, cost: 2.5, kind: 'ranged', proj: 'fire', spr: { gen: 'humanoid', head: 'goblin', skin: '#ff7a5a', hat: 'wizard', armor: '#ffd84a', armor2: '#d84a8a', cloth: '#5a2a8a', weapon: 'none' } },
   brute:   { name: 'Pit Brute', hp: 900, atk: 34, as: 0.7, range: 16, spd: 15, armor: 30, gold: 50, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'orc', skin: '#d84a4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#ffe9b0', armor: '#3a2a3a', armor2: '#1a121a', cloth: '#ffd84a', weapon: 'axe', metal: '#ff8a3a' } },
   // Frostfang Clans
@@ -1535,12 +1538,12 @@ const SPECS = {
   rogue:     { a: { name: 'Assassin', desc: r => `Rogue signatures are ${40 * r}% stronger and one rank higher.` },
                b: { name: 'Shadow Clones', ability: 'shadowClones', desc: r => `Rogues cast Shadow Clones instead: two shadow copies join the fight for the rest of the siege. Power ${100 + 25 * (r - 1)}%.` } },
 };
-const SPEC_ADESC = { aegisDome: 'Shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
 
 // ===== Field hazards: a card can change the battlefield for the next siege only =====
 // kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
 const HAZARDS = {
-  flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed, and soaked foes take 15% more damage.' },
+  flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed. Foes stay slowed for a moment after they climb out, and soaked foes take 15% more damage.' },
   mud:      { kind: 'mud', name: 'Mud Season', short: 'Mud', col: '#a07a4a', desc: 'The field is soup. Everyone on foot moves 25% slower.' },
   slime:    { kind: 'mud', name: 'Bog Slime', short: 'Slime', col: '#7ad46a', desc: 'Sticky slime covers the field. Everyone on foot moves 25% slower.' },
   snow:     { kind: 'mud', name: 'Snowdrifts', short: 'Snow', col: '#e8f4ff', desc: 'Deep snow everywhere. Everyone on foot moves 25% slower.' },
@@ -2888,7 +2891,8 @@ function heroStats(h, run, meta, syn) {
   const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], tm = TIER_MUL[d.tier], lm = heroLevelMul(h.level), R = effRolls(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
   const sm = 1 + 0.15 * (meta.ranks.banners || 0);
-  const adM = 0.7 + 0.06 * R.ad, apM = 0.7 + 0.06 * R.ap, defM = 0.75 + 0.05 * R.def;
+  // low rolls hurt less (Cam: any starter should clear siege 1); a roll of 10 is unchanged
+  const adM = 0.82 + 0.048 * R.ad, apM = 0.82 + 0.048 * R.ap, defM = 0.85 + 0.04 * R.def;
   const s = { hp: b.hp * tm * lm * gm * defM, atk: b.atk * tm * lm * gm * adM, as: b.as, range: b.range, spd: b.spd, armor: b.armor + (d.tier - 1) * 5 + R.def * 2, mana: b.mana,
     crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, startMana: 0, manaGain: 1, revive: 0, storm: 0, frost: 0, midas: 0,
     ap: (1 + 0.15 * (meta.ranks.codex || 0)) * apM, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
@@ -3097,6 +3101,9 @@ function nearest(list, p, maxD = Infinity, filter) {
   return best;
 }
 function inRadius(list, p, r) { return list.filter(u => u.alive && dist(u, p) <= r); }
+// every guardian signature taunts in a wide circle (Cam: guardians must pull the whole front line)
+const TAUNT_R = 120;
+function guardTaunt(B, u, t) { const rad = TAUNT_R + 10 * RK(u); for (const e of inRadius(B.enemies, u, rad)) { e.taunt = u; e.tauntT = Math.max(e.tauntT, t); } FX.shockwave(u.x, u.y - 4, rad, '#ff3d6e'); }
 function densest(list, r, near, maxD = 999) {
   let best = null, bc = 0;
   for (const u of list) { if (!u.alive || (near && dist(u, near) > maxD)) continue; const c = inRadius(list, u, r).length; if (c > bc) { bc = c; best = u; } }
@@ -3275,11 +3282,11 @@ function siegeTricks(B, u, dt) {
 function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.crew) if (e.alive && e.x > CASTLE_X + 34) e.ram = null; R.crew = R.crew.filter(e => e.alive && e.ram === R);
   if (R.crew.length < 2) { for (const e of R.crew) e.ram = null; B.ram = null; return; }
   R.t += dt; R.swing = (R.t % 2.4) / 2.4; for (const e of R.crew) { e.atkT = 0.1; e.facing = -1; }
-  if (R.t >= 2.4) { R.t = 0; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
+  if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
-  B.castle.hp -= dmg; B.castleHitT = 0.15;
+  B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
-  if (src && src.alive && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
+  if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 
@@ -3288,7 +3295,7 @@ function damageCastle(B, dmg, src) {
 const S = u => u.st.atk * Math.max(0.3, u.st.ap) * Math.max(0.3, u.st.sigMul);
 const RK = u => Math.max(0, u.st.rank - 1);
 const ABILITIES = {
-  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u); u.shield += u.maxHp * (0.25 + 0.05 * r);
+  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u); u.shield += u.maxHp * (0.25 + 0.05 * r); guardTaunt(B, u, 2);
     fireProj(B, u, t, 'orb', 0, { speed: 260, vfx: { shape: 'disc', col: '#ffe066', col2: '#fff7c0', pw }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, S(u) * 1.2, { sig: true }); e.stun = Math.max(e.stun, 1.5 + 0.2 * r); }
       FX.blast(p.tx, p.ty + 6, rad, ['#ffffff', '#fff3a0', '#ffe066', '#c99a2a'], pw); FX.sound('bash'); } }); FX.sound('whoosh'); },
   fireball(B, u) { const r = RK(u), rad = 30 * (1 + 0.12 * r); const c = densest(B.enemies, 28, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false;
@@ -3296,7 +3303,7 @@ const ABILITIES = {
   bladeDance(B, u) { const r = RK(u); const ts = B.enemies.filter(e => e.alive && dist(e, u) < 130 + 15 * r).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, 4 + r); if (!ts.length) return false; u.dash = { ts, i: 0, t: 0, mul: 2 }; FX.sound('dash'); },
   arrowRain(B, u) { const r = RK(u); const c = densest(B.enemies, 30, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false; B.zones.push({ type: 'arrows', x: c.x, y: c.y, r: 32 * (1 + 0.12 * r), n: 6 + 2 * r, every: 0.3, t: 0, src: u, dmg: S(u) * 0.7, pw: sigPower(u) }); FX.launch(u.x + 4, u.y - 14 - (u.z || 0), 8 + 2 * r); FX.sound('cast'); },
   whirlwind(B, u) { u.spin = 2 + 0.4 * RK(u); u.spinTick = 0; FX.sound('whirl'); },
-  boneWall(B, u) { const r = RK(u); for (const e of inRadius(B.enemies, u, 64 + 8 * r)) { e.taunt = u; e.tauntT = 3 + 0.5 * r; } u.armorBuff = 60 + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
+  boneWall(B, u) { const r = RK(u); guardTaunt(B, u, 3 + 0.5 * r); u.armorBuff = 60 + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
   lilySplash(B, u) { const r = RK(u); const allies = B.heroes.filter(h => h.alive && h.hp < h.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3 + r); if (!allies.length) return false; for (const a of allies) fireProj(B, u, a, 'heal', a.maxHp * (0.35 + 0.05 * r) * Math.max(0.5, u.st.ap * u.st.sigMul), { speed: 160, vfx: { shape: 'lily', col: '#7cf0ff', col2: '#ffffff', pw: sigPower(u) } }); FX.particles(u.x, u.y - 14, 20, '#7cf0ff', { spread: 26, up: true }); FX.sound('heal'); },
   pounce(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < 170).sort((a, b) => b.x - a.x)[0]; if (!t) return false; const r = RK(u); u.leap = { sx: u.x, sy: u.y, tx: t.x - 8, ty: t.y, t: 0, dur: 0.35, h: 30, onLand: () => { dealDamage(B, u, t, S(u) * (4.5 + 0.5 * r), { sig: true }); FX.claws(t.x, t.y - 10, '#ff9a3a'); for (const e of inRadius(B.enemies, t, 18 + 4 * r)) if (e !== t) dealDamage(B, u, e, S(u) * 1.2, { sig: true }); FX.particles(t.x, t.y - 8, 24, '#ff5d8f', { spread: 30 }); FX.shockwave(t.x, t.y, 40, '#ff5d8f'); FX.shake(4); FX.sound('slash'); } }; },
   rampage(B, u) { const r = RK(u); const t = B.enemies.filter(e => e.alive && !e.onRafter && dist(e, u) < 120 + 10 * r).sort((a, b) => b.x - a.x)[0]; if (!t) return false;
@@ -3313,7 +3320,7 @@ const ABILITIES = {
     for (let i = 0; i < k; i++) { summonThrall(B, u, 1 + 0.1 * r, 'thrall'); const th = B.heroes[B.heroes.length - 1]; FX.fly(u.x, u.y - 14, th.x, th.y - 6, 'skull', '#9dff6a', '#e8ffd0', sigPower(u), 0.35, i * 0.08); FX.spikes(th.x - 4, th.y, '#f1ecdc', 0.3); FX.spikes(th.x + 4, th.y, '#f1ecdc', 0.33); } FX.sound('summon'); },
   tongueLash(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < u.st.range * 1.3).sort((a, b) => b.hp - a.hp)[0]; if (!t) return false;
     FX.beam(u.x + 6, u.y - 10, t.x, t.y - 8 - t.z, '#ff7aa8', 3, 0.3); if (!t.boss) { t.x = u.x + 22; t.y = u.y; t.z = 0; } t.stun = 2 + 0.3 * RK(u); dealDamage(B, u, t, S(u) * 3, { sig: true }); FX.blast(t.x, t.y - 2, 12, ['#ffffff', '#ffb0cc', '#ff7aa8', '#8a2a4a'], sigPower(u), { shards: 4 }); FX.sound('slurp'); },
-  thunderRoar(B, u) { const r = RK(u); for (const e of inRadius(B.enemies, u, 70 + 8 * r)) { e.taunt = u; e.tauntT = 2.5; } for (const h of B.heroes) if (h.alive) { h.buffAtk = 0.35 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
+  thunderRoar(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.buffAtk = 0.35 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
   warDrums(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { h.buffAs = 0.45 + 0.05 * r; h.buffAsT = 4; healUnit(B, u, h, h.maxHp * 0.12 * Math.max(0.5, u.st.ap * u.st.sigMul), true); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 14, 'note', '#ff5d8f', '#ffffff', sigPower(u), 0.4, rand(0, 0.2)); } FX.text(u.x, u.y - 26, 'BOOM BOOM', '#ff5d8f', true); FX.sound('drums'); },
   sunlance(B, u) { const t = nearest(B.enemies, u, 999); if (!t) return false; const y = t.y - 8 - t.z, sy = u.y - 12 - (u.z || 0), w = 13 + 2 * RK(u);
     for (const e of B.enemies) if (e.alive && e.x > u.x && Math.abs((e.y - 8 - e.z) - lerpY(u.x, sy, t.x, y, e.x)) < w) dealDamage(B, u, e, S(u) * 4.2, { sig: true });
@@ -3322,13 +3329,13 @@ const ABILITIES = {
     u.leap = { sx: u.x, sy: u.y, tx: c.x - 6, ty: c.y, t: 0, dur: 0.45, h: 50, onLand: () => { for (const e of inRadius(B.enemies, u, rad)) { dealDamage(B, u, e, S(u) * 5, { sig: true }); e.stun = Math.max(e.stun, 1); } FX.blast(u.x, u.y, rad, ['#ffffff', '#ffcf3a', '#c9a35a', '#5a4a2a'], sigPower(u), { shards: 16 }); FX.shake(6); FX.sound('quake'); } }; },
   deathMark(B, u) { const ts = B.enemies.filter(e => e.alive).sort((a, b) => b.hp - a.hp).slice(0, 4 + RK(u)); if (!ts.length) return false; const pw = sigPower(u); for (const e of ts) fireProj(B, u, e, 'orb', 0, { speed: 340, vfx: { shape: 'dagger', col: '#8a5aff', col2: '#ff3d6e', pw, size: 0.9 }, onLand: p => { if (e.alive) { B.marks.push({ e, t: 1.5, src: u, dmg: S(u) * 6 }); FX.claws(e.x, e.y - 10, '#8a5aff'); } } }); FX.sound('mark'); },
   greatFlood(B, u) { B.waves.push({ type: 'flood', x: CASTLE_X, vx: 240, life: 1.7, t: 0, src: u, dmg: S(u) * (2.6 + 0.3 * RK(u)), hit: new Set(), kb: 40 }); FX.sound('flood'); },
-  runicAegis(B, u) { const pw = sigPower(u); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.4 + 0.05 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
+  runicAegis(B, u) { const pw = sigPower(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.4 + 0.05 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
   bloom(B, u) { const dead = B.heroes.filter(h => !h.alive && !h.temp).sort((a, b) => b.def.tier - a.def.tier)[0];
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
     for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, h.maxHp * (0.25 + 0.04 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul)); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
   stampede(B, u) { const n = 4 + RK(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: S(u) * 3.5, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
   // ----- class spec signatures (meta) -----
-  aegisDome(B, u) { const r = RK(u), P = Math.max(0.5, u.st.ap * u.st.sigMul); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.35 + 0.04 * r) * P; }
+  aegisDome(B, u) { const r = RK(u), P = Math.max(0.5, u.st.ap * u.st.sigMul); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.35 + 0.04 * r) * P; }
     for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, S(u) * 1.5, { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
   bloodFrenzy(B, u) { const r = RK(u); healUnit(B, u, u, u.maxHp * 0.3, true); u.buffAs = Math.max(u.buffAs, 1 + 0.1 * r); u.buffAsT = 5; u.buffAtk = Math.max(u.buffAtk, 0.5 + 0.05 * r); u.buffAtkT = 5; FX.particles(u.x, u.y - 8, 24, ['#ff3d3d', '#ffffff'], { spread: 16, up: true }); FX.sound('roar'); },
   hawkStrike(B, u) { const t = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!t) return false; const y = t.y;
@@ -3453,7 +3460,7 @@ function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.
 function stepHazard(B, dt) {
   const k = B.hzK; if (!k) return;
   const live = B.enemies.filter(e => e.alive && !e.flying), heroes = B.heroes.filter(h => h.alive && !h.rafter);
-  if (k === 'flood') for (const e of live) if (inFlood(e)) e.soakT = Math.max(e.soakT, 0.4);
+  if (k === 'flood') for (const e of live) if (inFlood(e)) { e.soakT = Math.max(e.soakT, 0.4); e.slowT = Math.max(e.slowT, 1.5); e.slowAmt = Math.max(e.slowAmt, 0.3); if (Math.random() < dt * 4) FX.particles(e.x, e.y + 2, 2, ['#bff4ff', '#5fb8ff'], { spread: 5, up: true }); } // foes leave the ditch dripping and slow
   if (k === 'rocks') { B.hzT -= dt; if (B.hzT <= 0) { B.hzT = rand(1.6, 2.4);
       // aim: mostly at the horde, sometimes at your heroes, sometimes nowhere in particular
       const r = Math.random(), tg = r < 0.5 && live.length ? pick(live) : r < 0.8 && heroes.length ? pick(heroes) : null, p = tg ? { x: tg.x + rand(-6, 6), y: tg.y + rand(-4, 4) } : hzFieldPoint();
@@ -3616,7 +3623,7 @@ function castSignature(B, u) {
   if (u.st.sp.hex) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
   if (E.light) for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.1 * E.light, true, 'element');
   if (E.void) { const t = densest(B.enemies, 30) ; if (t) { for (const e of inRadius(B.enemies, t, 60)) if (!e.boss) { e.x += (t.x - e.x) * 0.6; e.y += (t.y - e.y) * 0.6; } FX.vortex(t.x, t.y, [ELEMENTS.void.col, '#0f0a2a']); } }
-  if (E.meat) for (const e of inRadius(B.enemies, u, 70)) { e.taunt = u; e.tauntT = 2.5; }
+  if (E.meat) for (const e of inRadius(B.enemies, u, TAUNT_R)) { e.taunt = u; e.tauntT = Math.max(e.tauntT, 2.5); }
   return true;
 }
 
@@ -3635,6 +3642,9 @@ function stepHero(B, u, dt) {
   if (u.retarget <= 0 || !u.target || !u.target.alive) {
     u.retarget = 0.3; u.target = null;
     if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
+    // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
+    if (!u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
+      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
     if (!u.target) {
       if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70));
       else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120).sort((a, b) => b.x - a.x)[0] || null;
@@ -3710,7 +3720,7 @@ function stepEnemy(B, u, dt) {
     const stopX = CASTLE_X + (u.range > 40 ? u.range * 0.8 : 6) + (u.scale - 1) * 10;
     if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.cell), spd, dt); u.facing = -1; }
     else { u.facing = -1; u.cd -= dt; if (u.cd <= 0) { u.cd = 1 / u.as; u.atkT = 0.2;
-      if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
+      if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk, u); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
       else if (!u.ram) { damageCastle(B, u.atk, u); FX.particles(CASTLE_X, u.y - 10, 3, '#c9c4e6', { spread: 8 }); FX.sound('thud'); } } }
   }
 }
@@ -5943,13 +5953,13 @@ const CLASS_REC = {
 };
 // kind: dmg (Power), heal (target max HP × Ability power × signature power), rank (rank only), summon, buff
 const ABILITY_SCALE = {
-  shieldBash: { rec: ['ap', 'def'], txt: '120% Power to nearby foes and a 1.5s stun (+0.2s per rank). Shields itself for 25% of max HP (+5% per rank).' },
+  shieldBash: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2s. 120% Power to nearby foes and a 1.5s stun (+0.2s per rank). Shields itself for 25% of max HP (+5% per rank).' },
   fireball: { rec: ['ap', 'ad'], txt: '320% Power in an area. Each rank widens the blast 12%.' },
   bladeDance: { rec: ['ad', 'ap'], txt: '200% Power per dash. Hits 4 foes, +1 per rank.' },
   arrowRain: { rec: ['ad', 'ap'], txt: '6 volleys of 70% Power, +2 volleys per rank.' },
   rampage: { rec: ['ad', 'def'], txt: 'Charges the farthest foe in reach (120 range, +10 per rank) for 220% Power (+25% per rank) to everything in the path, stuns them briefly, then +40% attack speed for 4s.' },
   whirlwind: { rec: ['ad', 'ap'], txt: 'Spins for 2s (+0.4s per rank), hitting for 60% Power four times a second.' },
-  boneWall: { rec: ['def'], txt: 'Taunts nearby foes for 3s (+0.5s per rank) and gains 60 armor (+20 per rank). Scales with rank, not Power.' },
+  boneWall: { rec: ['def'], txt: 'Taunts foes in a wide circle for 3s (+0.5s per rank) and gains 60 armor (+20 per rank). Scales with rank, not Power.' },
   lilySplash: { rec: ['ap', 'def'], txt: 'Heals the 3 most hurt allies (+1 per rank) for 35% of their max HP (+5% per rank) × Ability power × signature power.' },
   pounce: { rec: ['ad', 'ap'], txt: '450% Power to the furthest foe (+50% per rank) and 120% Power around it.' },
   quake: { rec: ['ad', 'ap'], txt: '280% Power shockwave with knockback. Each rank makes it longer and taller.' },
@@ -5958,16 +5968,16 @@ const ABILITY_SCALE = {
   cannonball: { rec: ['ad', 'ap'], txt: '380% Power blast that knocks foes back. Each rank widens it 12%.' },
   raiseDead: { rec: ['ap'], txt: 'Raises 2 thralls (+1 every 2 ranks). Thrall HP and attack scale with level and Ability power.' },
   tongueLash: { rec: ['ad', 'ap'], txt: '300% Power to the toughest foe in range, pulls it in and stuns 2s (+0.3s per rank).' },
-  thunderRoar: { rec: ['def'], txt: 'Taunts nearby foes for 2.5s and gives every hero +35% attack (+5% per rank) for 4s. Scales with rank, not Power.' },
+  thunderRoar: { rec: ['def'], txt: 'Taunts foes in a wide circle for 2.5s and gives every hero +35% attack (+5% per rank) for 4s. Scales with rank, not Power.' },
   warDrums: { rec: ['ap'], txt: 'Every hero gets +45% attack speed (+5% per rank) and heals 12% of max HP × Ability power × signature power.' },
   sunlance: { rec: ['ap', 'ad'], txt: '420% Power to every foe in a line. Each rank widens the beam.' },
   earthsplitter: { rec: ['ad', 'ap'], txt: '500% Power slam with a 1s stun. Each rank widens it 12%.' },
   deathMark: { rec: ['ad', 'ap'], txt: 'Marks the 4 toughest foes (+1 per rank). Each mark bursts for 600% Power after 1.5s.' },
   greatFlood: { rec: ['ap', 'ad'], txt: 'A wave across the whole field for 260% Power (+30% per rank) with knockback.' },
-  runicAegis: { rec: ['ap', 'def'], txt: 'Shields every hero for 40% of their max HP (+5% per rank) × Ability power × signature power.' },
+  runicAegis: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2.5s. Shields every hero for 40% of their max HP (+5% per rank) × Ability power × signature power.' },
   bloom: { rec: ['ap'], txt: 'Revives the best fallen hero at 60% HP, then heals everyone 25% of max HP (+4% per rank) × Ability power × signature power.' },
   stampede: { rec: ['ap', 'ad'], txt: '4 spirit beasts (+1 per rank), each hitting for 350% Power.' },
-  aegisDome: { rec: ['ap', 'def'], txt: 'Shields everyone for 35% of max HP (+4% per rank) × Ability power × signature power, and blasts nearby foes for 150% Power with a stun.' },
+  aegisDome: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2.5s. Shields everyone for 35% of max HP (+4% per rank) × Ability power × signature power, and blasts nearby foes for 150% Power with a stun.' },
   bloodFrenzy: { rec: ['ad'], txt: 'Heals 30% of max HP, then +100% attack speed (+10% per rank) and +50% attack for 5s. Scales with Attack, not Ability power.' },
   hawkStrike: { rec: ['ad', 'ap'], txt: '320% Power to a whole lane. Foes hit take 20% more damage for 5s.' },
   meteor: { rec: ['ap', 'ad'], txt: '600% Power after a short warning, with a stun. Each rank widens it.' },
@@ -6137,7 +6147,7 @@ const UI = {
   init() {
     $('goldIcon').src = iconURL('coin', 3); $('diaIcon').src = iconURL('diamond', 3); $('hammerIcon').src = iconURL('hammer', 2);
     const navIcon = { guild: portrait('h:brann'), armory: iconURL('sword', 4), hall: iconURL('gem', 4) };
-    document.querySelectorAll('.rail button').forEach(b => { b.querySelector('img').src = navIcon[b.dataset.page]; b.onclick = () => { SFX.play('click'); UI.openPage(UI.page === b.dataset.page ? null : b.dataset.page); UI.coachDone('rail-' + b.dataset.page); }; });
+    document.querySelectorAll('.rail button').forEach(b => { b.querySelector('img').src = navIcon[b.dataset.page]; b.onclick = () => { SFX.play('click'); UI.openPage(UI.page === b.dataset.page ? null : b.dataset.page); UI.coachDone('rail-' + b.dataset.page); if (b.dataset.page === 'guild') UI.coachDone('draft-ready'); }; });
     $('drawerBack').onclick = () => UI.openPage(null);
     document.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const el = e.target.closest && e.target.closest('[data-tip]'); if (el) { if (el !== UI.tipEl) UI.tipShow(el, e.clientX, e.clientY); } else if (UI.tipKey) UI.tipHide(); });
     document.addEventListener('pointermove', e => { if (UI.tipKey) UI.tipMove(e.clientX, e.clientY); });
@@ -6242,7 +6252,7 @@ const UI = {
     $('nav-guild').dataset.badge = '';
   },
 
-  refresh() { UI.hud(); UI.renderRoster(); UI.renderIntel(); UI.renderStats(); if (UI.page) UI.renderPage(); },
+  refresh() { const gb = $('nav-guild'), run = G.run; if (gb) gb.classList.toggle('ready', !!run && G.phase === 'prep' && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)); UI.hud(); UI.renderRoster(); UI.renderIntel(); UI.renderStats(); if (UI.page) UI.renderPage(); },
   intelKey: '',
   renderIntel() {
     const run = G.run, B = G.B, s = run.siege, fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5;
@@ -7444,6 +7454,11 @@ function toPrep() {
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
   if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
+  // first time each run you can afford a champion: say so loudly (Cam)
+  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) {
+    run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
+    setTimeout(() => { UI.banner('Champion ready to draft', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `You have enough gold to draft your first champion (${draftCost(run)} gold). Open the Guild Hall to recruit them.`); }, 350);
+  }
 }
 
 // ----- actions -----
@@ -7461,7 +7476,7 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
-    case 'buydraft': { if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
