@@ -199,7 +199,7 @@ const UI = {
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
     hb.classList.toggle('armed', G.armed === 'hammer');
     hb.hidden = !$('repairBtn').hidden; // between sieges the repair button takes the hammer's room
-    const pb = $('powerBtn'); pb.hidden = !run.castleEl;
+    const pb = $('powerBtn'); pb.hidden = !run.castleEl || !$('repairBtn').hidden;
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
@@ -317,7 +317,7 @@ const UI = {
     if (kind === 'syn') return synTipHTML(a);
     if (kind === 'combo') return comboTipHTML(key.slice(6));
     if (kind === 'help' && a === 'tmp') return `<b>Temperament pairs</b><p>Every champion has a temperament, half good-guy and half bad-guy energy. Two champions with the same one on the field unlock its pair bonus.</p>`;
-    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Every pair of different elements on the field could form a combo, but only ${COMBO_SLOTS} fire. Click a combo between sieges to switch it on.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
+    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Every pair of different elements on the field could form a combo, but only ${COMBO_SLOTS} fire. The first time a pair appears you choose which version of it to forge. Click a combo between sieges to switch it on.</p><p class="note">An elemental castle counts as an element and opens a 3rd slot for combos that include it.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
     if (kind === 'txt') { const [t, d] = key.slice(4).split('|'); return `<b>${esc(t)}</b><p>${esc(d || '')}</p>`; }
     if (kind === 'stat') return statTipHTML(a);
     return '';
@@ -450,7 +450,7 @@ const UI = {
     let bon = ''; for (const k in RACES) bon += badge(k, RACES[k], race[k], true); for (const k in CLASSES) bon += badge(k, CLASSES[k], cls[k], false);
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
-    for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
+    for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
     const fe = stackElements(run); let elb = '';
     for (const e of EL_KEYS) { const n = fe[e] || 0; if (!n) continue; const t = n >= 2; elb += `<div class="syb elst ${t ? 'on' : ''}" style="--rc:${ELEMENTS[e].col};--ec:${ELEMENTS[e].col};--ec2:${ELEMENTS[e].col2}" data-tip="els:${e}" aria-label="${ELEMENTS[e].name} ${n}"><span class="orb"></span><b class="cnt">${n}</b><span class="pips">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('')}</span></div>`; }
     const tc = temperCounts(run); let tmb = '';
@@ -459,7 +459,7 @@ const UI = {
     if (bon) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:bonus">Bonuses</span>${bon}</div>`;
     if (elb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:els">Elements</span>${elb}</div>`;
     if (tmb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:tmp">Pairs</span>${tmb}</div>`;
-    if (all.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${COMBO_SLOTS}</b></span>${com}</div>`;
+    if (all.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
@@ -480,7 +480,7 @@ const UI = {
           : `<span class="near tmpn ${T.side}" data-tip="tmp:${k}"><span class="syb tmp ${T.side}"><span class="glyph">${T.icon}</span></span><b>${T.name}</b><small>1/2</small></span>`; });
       const on = rows.filter(r => r.startsWith('<div')), off = rows.filter(r => !r.startsWith('<div'));
       if (rows.length) tp += `<section class="tsec"><h4>Temperaments <b>${on.length}</b></h4>${on.length ? `<div class="tgrid">${on.join('')}</div>` : ''}${off.length ? `<div class="nears"><small>${on.length ? 'Unpaired' : 'Pair two of the same for a bonus'}</small>${off.join('')}</div>` : ''}</section>`; }
-    if (all.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${COMBO_SLOTS}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4><div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div></section>`;
+    if (all.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4><div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div></section>`;
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     for (const hr of run.roster) {
@@ -557,10 +557,16 @@ const UI = {
     const r = effRolls(G.run, hr);
     let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its power scales with the matching roll, and different elements across your heroes form combos.</p>${rollBars(r)}</div></div><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 0.6 + 0.08 * r[E.style];
-      const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => COMBOS[comboKey(e, x)]).filter(Boolean);
+      const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
         <small>Power ${Math.round(p * 100)}% from ${STAT_NAME[E.style]} ${r[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
+  },
+  comboFormHTML(key, kinds) {
+    const [a, b] = key.split('+'), A = ELEMENTS[a], Bc = ELEMENTS[b];
+    let h = `<span class="eyebrow">New element combo</span><h2><span style="color:${A.col}">${A.name}</span> + <span style="color:${Bc.col}">${Bc.name}</span></h2><p class="lede">Your champions found a new pair. Choose what it becomes. The pick lasts the whole run.</p><div class="elcards">`;
+    kinds.forEach((k, i) => { const I = comboFormInfo(key, k); h += `<button class="ecard cform" data-pick="${i}" style="--ec:${A.col};--ec2:${Bc.col};animation-delay:${i * 0.09}s"><div class="eorb cglyph"><span>${COMBO_GLYPH[I.kind] || '✦'}</span></div><h3>${esc(I.name)}</h3>${I.sig ? '<b class="pw">Signature combo</b>' : `<b class="pw">${esc(COMBO_FORM[I.kind][0])}</b>`}<p>${esc(I.desc)}</p></button>`; });
+    return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn small" id="cformLater">Decide later</button></div>`;
   },
   castleHTML(opts) {
     let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2>Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;

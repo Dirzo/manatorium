@@ -313,6 +313,33 @@ const COMBOS = {
 };
 function comboKey(a, b) { return EL_KEYS.indexOf(a) < EL_KEYS.indexOf(b) ? a + '+' + b : b + '+' + a; }
 const CRITTERS = { 'dark+treat': 'ghost', 'void+meat': 'meatman', 'meat+treat': 'dog' };
+// ----- combo forms: the first time a pair shows up the player picks 1 of 3 versions of it (Cam).
+// Option 1 is always the pair's signature combo above; the other two are drawn from what the two elements are good at.
+const COMBO_FORM = {
+  nova:   ['Burst',     'Explodes in the biggest crowd of foes.'],
+  rain:   ['Barrage',   'Strikes rain down on random foes.'],
+  wave:   ['Surge',     'A wave rolls across the field, hitting and pushing back every foe.'],
+  heal:   ['Bloom',     'Heals every hero for 15% of their max HP.'],
+  shield: ['Ward',      'Shields every hero for 18% of their max HP.'],
+  haste:  ['Rush',      'Heroes attack 35% faster for 4s.'],
+  rage:   ['Fury',      'Heroes deal 35% more damage for 4s.'],
+  freeze: ['Lock',      'Freezes foes near the castle in place.'],
+  shred:  ['Rend',      'Shreds the armor of every foe and nicks them.'],
+  vortex: ['Maelstrom', 'Pulls the biggest crowd together and crushes it.'],
+};
+const STYLE_FORMS = { ad: ['rage', 'shred', 'rain', 'haste'], ap: ['nova', 'rain', 'vortex', 'wave'], def: ['shield', 'heal', 'freeze', 'wave'] };
+const EL_PREFIX = { dark: 'Shadow', light: 'Sun', lightning: 'Storm', fire: 'Flame', water: 'Tide', ice: 'Frost', nature: 'Thorn', void: 'Void', salty: 'Brine', sweet: 'Sugar', meat: 'Meat', treat: 'Snack' };
+function comboFormInfo(key, kind) {
+  const C = COMBOS[key]; if (!C) return null; if (!kind || kind === C[1]) return { name: C[0], kind: C[1], desc: C[2], sig: true };
+  const [a, b] = key.split('+'), F = COMBO_FORM[kind]; return { name: `${EL_PREFIX[a]}-${EL_PREFIX[b]} ${F[0]}`, kind, desc: F[1], sig: false };
+}
+function comboFormOptions(key) {
+  const C = COMBOS[key], [a, b] = key.split('+');
+  let pool = [...new Set([...STYLE_FORMS[ELEMENTS[a].style], ...STYLE_FORMS[ELEMENTS[b].style]])].filter(k => k !== C[1]);
+  if (pool.length < 2) pool = Object.keys(COMBO_FORM).filter(k => k !== C[1]);
+  pool.sort(() => Math.random() - 0.5);
+  return [C[1], pool[0], pool[1]];
+}
 
 // Elemental castle defense abilities (manual, key E)
 const CASTLE_POWERS = {

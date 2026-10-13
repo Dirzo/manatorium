@@ -25,7 +25,21 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); UI.refresh(); save(); }
+function changed() { rebuildPrepUnits(); UI.refresh(); save(); offerComboForm(); }
+// a new element pair on the field: the player chooses which version of the combo to forge
+function offerComboForm() {
+  const run = G.run; if (!run || G.phase !== 'prep' || !$('modal').hidden || G.comboAsk) return;
+  const c = possibleCombos(run).find(c => c.unpicked && !(run.comboLater || {})[c.key]); if (!c) return;
+  G.comboAsk = setTimeout(() => { G.comboAsk = null; if (G.phase === 'prep' && $('modal').hidden && possibleCombos(run).some(x => x.key === c.key && x.unpicked)) showComboForm(c.key); }, 450);
+}
+function showComboForm(key) {
+  const run = G.run; run.comboOffer = run.comboOffer || {}; const kinds = run.comboOffer[key] || (run.comboOffer[key] = comboFormOptions(key)); save();
+  UI.modal(UI.comboFormHTML(key, kinds), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const k = kinds[+b.dataset.pick]; setComboForm(run, key, k); UI.closeModal(); SFX.play('level');
+    const c = possibleCombos(run).find(c => c.key === key); UI.toast(`${c.name} forged.${activeCombos(run).some(x => x.key === key) ? ' It fires during sieges.' : ' Click it in the Combos bar to switch it on.'}`);
+    TEL.event('comboForm', { key, kind: k }); changed();
+  }) || (s.querySelector('#cformLater').onclick = () => { run.comboLater = Object.assign({}, run.comboLater, { [key]: 1 }); UI.closeModal(); changed(); }), 'wide');
+}
 
 // ----- flow -----
 function startRun() {
@@ -245,7 +259,7 @@ G.act = function (act, arg) {
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
-    case 'combo': if (G.phase !== 'prep') return; toggleCombo(run, arg); SFX.play('click'); break;
+    case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();

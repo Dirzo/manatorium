@@ -65,26 +65,35 @@ function fieldElements(run) {
   for (const h of placedHeroes(run)) for (const e of heroElements(run, h)) n[e] = (n[e] || 0) + 1;
   return n;
 }
-// element stacks also count the castle's element as one more carrier (only when a champion has it). Combos ignore the castle.
+// element stacks also count the castle's element as one more carrier (only when a champion has it).
 function stackElements(run) { const n = fieldElements(run); if (run.castleEl && n[run.castleEl]) n[run.castleEl]++; return n; }
-// every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which
+// every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which.
+// An elemental castle counts as an element for combos and opens a 3rd slot that only takes combos with the castle's element (Cam).
 const COMBO_SLOTS = 2;
+function comboSlots(run) { return COMBO_SLOTS + (run.castleEl ? 1 : 0); }
 function possibleCombos(run) {
-  const n = fieldElements(run), ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [];
-  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), C = COMBOS[key]; if (C) out.push({ key, a: ks[i], b: ks[j], name: C[0], kind: C[1], desc: C[2] }); }
+  const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1;
+  const ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), I = comboFormInfo(key, forms[key]);
+    if (I) out.push({ key, a: ks[i], b: ks[j], name: I.name, kind: I.kind, desc: I.desc, sig: I.sig, castle: !!run.castleEl && (ks[i] === run.castleEl || ks[j] === run.castleEl), unpicked: !forms[key] }); }
   return out;
 }
 function activeCombos(run) {
-  const all = possibleCombos(run);
-  const pick = run.comboPick || [], chosen = pick.map(k => all.find(c => c.key === k)).filter(Boolean).slice(-COMBO_SLOTS);
-  for (const c of all) if (chosen.length < COMBO_SLOTS && !chosen.includes(c)) chosen.push(c);
-  return chosen;
+  const all = possibleCombos(run), out = [];
+  if (run.castleEl) { const c = all.find(c => c.castle && c.key === run.castleCombo) || all.find(c => c.castle); if (c) out.push(Object.assign(c, { slot: 'castle' })); }
+  const rest = all.filter(c => !out.includes(c)), pick = run.comboPick || [];
+  const chosen = pick.map(k => rest.find(c => c.key === k)).filter(Boolean).slice(-COMBO_SLOTS);
+  for (const c of rest) if (chosen.length < COMBO_SLOTS && !chosen.includes(c)) chosen.push(c);
+  return [...chosen, ...out];
 }
-// choosing an inactive combo swaps out the one picked longest ago
+// choosing an inactive combo swaps out the one picked longest ago; castle-element combos go to the castle slot first
 function toggleCombo(run, key) {
-  const cur = activeCombos(run).map(c => c.key); if (cur.includes(key)) return;
+  const act = activeCombos(run), cur = act.filter(c => c.slot !== 'castle').map(c => c.key); if (act.some(c => c.key === key)) return;
+  const c = possibleCombos(run).find(c => c.key === key); if (!c) return;
+  if (c.castle) { run.castleCombo = key; return; }
   run.comboPick = [...cur, key].slice(-COMBO_SLOTS);
 }
+function setComboForm(run, key, kind) { run.comboForm = Object.assign({}, run.comboForm, { [key]: kind }); if (run.comboOffer) delete run.comboOffer[key]; }
 // releasing a champion pays a little gold back and returns their items to the stash
 function sellValue(h) { return 10 + 6 * h.level; }
 function sellHero(run, h) {

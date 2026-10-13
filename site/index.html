@@ -56,7 +56,8 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .brand { display: flex; flex-direction: column; line-height: 1; margin-right: 6px; }
 .brand h1 { font-size: 24px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink), 3px 3px 0 #c2410c; letter-spacing: 0.04em; }
 .brand span { font-family: var(--f-display); font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
-.siegeinfo { display: flex; flex-direction: column; min-width: 150px; flex: 0 0 auto; }
+.siegeinfo { display: flex; flex-direction: column; min-width: 96px; flex: 0 1 auto; overflow: hidden; }
+.siegeinfo b, .siegeinfo small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .siegeinfo b { font-family: var(--f-display); font-size: 18px; font-weight: 600; }
 .siegeinfo small { color: var(--muted); font-size: 12px; }
 .siegeinfo small.boss { color: var(--rose); font-family: var(--f-display); letter-spacing: 0.06em; }
@@ -988,6 +989,13 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .hero .logo h1::after { content: attr(data-t); position: absolute; inset: 0; color: transparent; text-shadow: none; -webkit-background-clip: text; background-clip: text; background-image: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.85) 50%, transparent 58%); background-size: 250% 100%; background-position: 120% 0; animation: shine 5s ease-in-out 1.6s infinite; pointer-events: none; }
 @keyframes shine { 0%, 70% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
 @media (prefers-reduced-motion: reduce) { #title.enter * { animation: none !important; } .hero .logo h1::after, .scrollcue, .in-gate span { animation: none; } }
+
+/* combo forms + castle combo slot */
+.syb.combo.cslot, .trait.combo.cslot { outline: 2px dashed var(--gold); outline-offset: 1px; }
+.syb.combo.new::after, .trait.combo.new::after { content: '!'; position: absolute; top: -6px; right: -6px; width: 15px; height: 15px; border-radius: 50%; background: var(--rose); color: #fff; font: 700 11px/15px var(--f-display, sans-serif); text-align: center; border: 2px solid var(--ink); }
+.syb.combo, .trait.combo { position: relative; }
+.ecard.cform .cglyph { display: grid; place-items: center; background: radial-gradient(circle, var(--ec2), var(--ec) 70%); }
+.ecard.cform .cglyph span { font-size: 40px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
 </style>
 <div id="app">
   <header class="hud">
@@ -1373,6 +1381,33 @@ const COMBOS = {
 };
 function comboKey(a, b) { return EL_KEYS.indexOf(a) < EL_KEYS.indexOf(b) ? a + '+' + b : b + '+' + a; }
 const CRITTERS = { 'dark+treat': 'ghost', 'void+meat': 'meatman', 'meat+treat': 'dog' };
+// ----- combo forms: the first time a pair shows up the player picks 1 of 3 versions of it (Cam).
+// Option 1 is always the pair's signature combo above; the other two are drawn from what the two elements are good at.
+const COMBO_FORM = {
+  nova:   ['Burst',     'Explodes in the biggest crowd of foes.'],
+  rain:   ['Barrage',   'Strikes rain down on random foes.'],
+  wave:   ['Surge',     'A wave rolls across the field, hitting and pushing back every foe.'],
+  heal:   ['Bloom',     'Heals every hero for 15% of their max HP.'],
+  shield: ['Ward',      'Shields every hero for 18% of their max HP.'],
+  haste:  ['Rush',      'Heroes attack 35% faster for 4s.'],
+  rage:   ['Fury',      'Heroes deal 35% more damage for 4s.'],
+  freeze: ['Lock',      'Freezes foes near the castle in place.'],
+  shred:  ['Rend',      'Shreds the armor of every foe and nicks them.'],
+  vortex: ['Maelstrom', 'Pulls the biggest crowd together and crushes it.'],
+};
+const STYLE_FORMS = { ad: ['rage', 'shred', 'rain', 'haste'], ap: ['nova', 'rain', 'vortex', 'wave'], def: ['shield', 'heal', 'freeze', 'wave'] };
+const EL_PREFIX = { dark: 'Shadow', light: 'Sun', lightning: 'Storm', fire: 'Flame', water: 'Tide', ice: 'Frost', nature: 'Thorn', void: 'Void', salty: 'Brine', sweet: 'Sugar', meat: 'Meat', treat: 'Snack' };
+function comboFormInfo(key, kind) {
+  const C = COMBOS[key]; if (!C) return null; if (!kind || kind === C[1]) return { name: C[0], kind: C[1], desc: C[2], sig: true };
+  const [a, b] = key.split('+'), F = COMBO_FORM[kind]; return { name: `${EL_PREFIX[a]}-${EL_PREFIX[b]} ${F[0]}`, kind, desc: F[1], sig: false };
+}
+function comboFormOptions(key) {
+  const C = COMBOS[key], [a, b] = key.split('+');
+  let pool = [...new Set([...STYLE_FORMS[ELEMENTS[a].style], ...STYLE_FORMS[ELEMENTS[b].style]])].filter(k => k !== C[1]);
+  if (pool.length < 2) pool = Object.keys(COMBO_FORM).filter(k => k !== C[1]);
+  pool.sort(() => Math.random() - 0.5);
+  return [C[1], pool[0], pool[1]];
+}
 
 // Elemental castle defense abilities (manual, key E)
 const CASTLE_POWERS = {
@@ -2866,26 +2901,35 @@ function fieldElements(run) {
   for (const h of placedHeroes(run)) for (const e of heroElements(run, h)) n[e] = (n[e] || 0) + 1;
   return n;
 }
-// element stacks also count the castle's element as one more carrier (only when a champion has it). Combos ignore the castle.
+// element stacks also count the castle's element as one more carrier (only when a champion has it).
 function stackElements(run) { const n = fieldElements(run); if (run.castleEl && n[run.castleEl]) n[run.castleEl]++; return n; }
-// every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which
+// every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which.
+// An elemental castle counts as an element for combos and opens a 3rd slot that only takes combos with the castle's element (Cam).
 const COMBO_SLOTS = 2;
+function comboSlots(run) { return COMBO_SLOTS + (run.castleEl ? 1 : 0); }
 function possibleCombos(run) {
-  const n = fieldElements(run), ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [];
-  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), C = COMBOS[key]; if (C) out.push({ key, a: ks[i], b: ks[j], name: C[0], kind: C[1], desc: C[2] }); }
+  const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1;
+  const ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), I = comboFormInfo(key, forms[key]);
+    if (I) out.push({ key, a: ks[i], b: ks[j], name: I.name, kind: I.kind, desc: I.desc, sig: I.sig, castle: !!run.castleEl && (ks[i] === run.castleEl || ks[j] === run.castleEl), unpicked: !forms[key] }); }
   return out;
 }
 function activeCombos(run) {
-  const all = possibleCombos(run);
-  const pick = run.comboPick || [], chosen = pick.map(k => all.find(c => c.key === k)).filter(Boolean).slice(-COMBO_SLOTS);
-  for (const c of all) if (chosen.length < COMBO_SLOTS && !chosen.includes(c)) chosen.push(c);
-  return chosen;
+  const all = possibleCombos(run), out = [];
+  if (run.castleEl) { const c = all.find(c => c.castle && c.key === run.castleCombo) || all.find(c => c.castle); if (c) out.push(Object.assign(c, { slot: 'castle' })); }
+  const rest = all.filter(c => !out.includes(c)), pick = run.comboPick || [];
+  const chosen = pick.map(k => rest.find(c => c.key === k)).filter(Boolean).slice(-COMBO_SLOTS);
+  for (const c of rest) if (chosen.length < COMBO_SLOTS && !chosen.includes(c)) chosen.push(c);
+  return [...chosen, ...out];
 }
-// choosing an inactive combo swaps out the one picked longest ago
+// choosing an inactive combo swaps out the one picked longest ago; castle-element combos go to the castle slot first
 function toggleCombo(run, key) {
-  const cur = activeCombos(run).map(c => c.key); if (cur.includes(key)) return;
+  const act = activeCombos(run), cur = act.filter(c => c.slot !== 'castle').map(c => c.key); if (act.some(c => c.key === key)) return;
+  const c = possibleCombos(run).find(c => c.key === key); if (!c) return;
+  if (c.castle) { run.castleCombo = key; return; }
   run.comboPick = [...cur, key].slice(-COMBO_SLOTS);
 }
+function setComboForm(run, key, kind) { run.comboForm = Object.assign({}, run.comboForm, { [key]: kind }); if (run.comboOffer) delete run.comboOffer[key]; }
 // releasing a champion pays a little gold back and returns their items to the stash
 function sellValue(h) { return 10 + 6 * h.level; }
 function sellHero(run, h) {
@@ -6038,8 +6082,9 @@ function synTipHTML(k) {
   return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
 }
 function comboTipHTML(key) {
-  const C = COMBOS[key]; if (!C) return ''; const [a, b] = key.split('+'), on = activeCombos(G.run).some(c => c.key === key);
-  return `<b><span style="color:${ELEMENTS[a].col}">${ELEMENTS[a].name}</span> + <span style="color:${ELEMENTS[b].col}">${ELEMENTS[b].name}</span>: ${esc(C[0])}</b><p>${esc(C[2])}</p><p class="note">${on ? 'On. Fires during sieges.' : 'Off. Click between sieges to switch it on.'}</p>`;
+  const c = possibleCombos(G.run).find(c => c.key === key); if (!c) return ''; const [a, b] = key.split('+'), act = activeCombos(G.run).find(x => x.key === key);
+  const st = c.unpicked ? 'New pair. Click between sieges to choose what it becomes.' : act ? (act.slot === 'castle' ? 'On, in the castle slot. Fires during sieges.' : 'On. Fires during sieges.') : c.castle ? 'Off. Click between sieges to put it in the castle slot.' : 'Off. Click between sieges to switch it on.';
+  return `<b><span style="color:${ELEMENTS[a].col}">${ELEMENTS[a].name}</span> + <span style="color:${ELEMENTS[b].col}">${ELEMENTS[b].name}</span>: ${esc(c.name)}</b><p>${esc(c.desc)}</p><p class="note">${st}</p>`;
 }
 
 // ===== DOM interface =====
@@ -6243,7 +6288,7 @@ const UI = {
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
     hb.classList.toggle('armed', G.armed === 'hammer');
     hb.hidden = !$('repairBtn').hidden; // between sieges the repair button takes the hammer's room
-    const pb = $('powerBtn'); pb.hidden = !run.castleEl;
+    const pb = $('powerBtn'); pb.hidden = !run.castleEl || !$('repairBtn').hidden;
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
@@ -6361,7 +6406,7 @@ const UI = {
     if (kind === 'syn') return synTipHTML(a);
     if (kind === 'combo') return comboTipHTML(key.slice(6));
     if (kind === 'help' && a === 'tmp') return `<b>Temperament pairs</b><p>Every champion has a temperament, half good-guy and half bad-guy energy. Two champions with the same one on the field unlock its pair bonus.</p>`;
-    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Every pair of different elements on the field could form a combo, but only ${COMBO_SLOTS} fire. Click a combo between sieges to switch it on.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
+    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Every pair of different elements on the field could form a combo, but only ${COMBO_SLOTS} fire. The first time a pair appears you choose which version of it to forge. Click a combo between sieges to switch it on.</p><p class="note">An elemental castle counts as an element and opens a 3rd slot for combos that include it.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
     if (kind === 'txt') { const [t, d] = key.slice(4).split('|'); return `<b>${esc(t)}</b><p>${esc(d || '')}</p>`; }
     if (kind === 'stat') return statTipHTML(a);
     return '';
@@ -6494,7 +6539,7 @@ const UI = {
     let bon = ''; for (const k in RACES) bon += badge(k, RACES[k], race[k], true); for (const k in CLASSES) bon += badge(k, CLASSES[k], cls[k], false);
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
-    for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
+    for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
     const fe = stackElements(run); let elb = '';
     for (const e of EL_KEYS) { const n = fe[e] || 0; if (!n) continue; const t = n >= 2; elb += `<div class="syb elst ${t ? 'on' : ''}" style="--rc:${ELEMENTS[e].col};--ec:${ELEMENTS[e].col};--ec2:${ELEMENTS[e].col2}" data-tip="els:${e}" aria-label="${ELEMENTS[e].name} ${n}"><span class="orb"></span><b class="cnt">${n}</b><span class="pips">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('')}</span></div>`; }
     const tc = temperCounts(run); let tmb = '';
@@ -6503,7 +6548,7 @@ const UI = {
     if (bon) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:bonus">Bonuses</span>${bon}</div>`;
     if (elb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:els">Elements</span>${elb}</div>`;
     if (tmb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:tmp">Pairs</span>${tmb}</div>`;
-    if (all.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${COMBO_SLOTS}</b></span>${com}</div>`;
+    if (all.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
@@ -6524,7 +6569,7 @@ const UI = {
           : `<span class="near tmpn ${T.side}" data-tip="tmp:${k}"><span class="syb tmp ${T.side}"><span class="glyph">${T.icon}</span></span><b>${T.name}</b><small>1/2</small></span>`; });
       const on = rows.filter(r => r.startsWith('<div')), off = rows.filter(r => !r.startsWith('<div'));
       if (rows.length) tp += `<section class="tsec"><h4>Temperaments <b>${on.length}</b></h4>${on.length ? `<div class="tgrid">${on.join('')}</div>` : ''}${off.length ? `<div class="nears"><small>${on.length ? 'Unpaired' : 'Pair two of the same for a bonus'}</small>${off.join('')}</div>` : ''}</section>`; }
-    if (all.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${COMBO_SLOTS}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4><div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div></section>`;
+    if (all.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4><div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div></section>`;
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     for (const hr of run.roster) {
@@ -6601,10 +6646,16 @@ const UI = {
     const r = effRolls(G.run, hr);
     let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its power scales with the matching roll, and different elements across your heroes form combos.</p>${rollBars(r)}</div></div><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 0.6 + 0.08 * r[E.style];
-      const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => COMBOS[comboKey(e, x)]).filter(Boolean);
+      const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
         <small>Power ${Math.round(p * 100)}% from ${STAT_NAME[E.style]} ${r[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
+  },
+  comboFormHTML(key, kinds) {
+    const [a, b] = key.split('+'), A = ELEMENTS[a], Bc = ELEMENTS[b];
+    let h = `<span class="eyebrow">New element combo</span><h2><span style="color:${A.col}">${A.name}</span> + <span style="color:${Bc.col}">${Bc.name}</span></h2><p class="lede">Your champions found a new pair. Choose what it becomes. The pick lasts the whole run.</p><div class="elcards">`;
+    kinds.forEach((k, i) => { const I = comboFormInfo(key, k); h += `<button class="ecard cform" data-pick="${i}" style="--ec:${A.col};--ec2:${Bc.col};animation-delay:${i * 0.09}s"><div class="eorb cglyph"><span>${COMBO_GLYPH[I.kind] || '✦'}</span></div><h3>${esc(I.name)}</h3>${I.sig ? '<b class="pw">Signature combo</b>' : `<b class="pw">${esc(COMBO_FORM[I.kind][0])}</b>`}<p>${esc(I.desc)}</p></button>`; });
+    return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn small" id="cformLater">Decide later</button></div>`;
   },
   castleHTML(opts) {
     let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2>Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;
@@ -7283,7 +7334,21 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); UI.refresh(); save(); }
+function changed() { rebuildPrepUnits(); UI.refresh(); save(); offerComboForm(); }
+// a new element pair on the field: the player chooses which version of the combo to forge
+function offerComboForm() {
+  const run = G.run; if (!run || G.phase !== 'prep' || !$('modal').hidden || G.comboAsk) return;
+  const c = possibleCombos(run).find(c => c.unpicked && !(run.comboLater || {})[c.key]); if (!c) return;
+  G.comboAsk = setTimeout(() => { G.comboAsk = null; if (G.phase === 'prep' && $('modal').hidden && possibleCombos(run).some(x => x.key === c.key && x.unpicked)) showComboForm(c.key); }, 450);
+}
+function showComboForm(key) {
+  const run = G.run; run.comboOffer = run.comboOffer || {}; const kinds = run.comboOffer[key] || (run.comboOffer[key] = comboFormOptions(key)); save();
+  UI.modal(UI.comboFormHTML(key, kinds), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const k = kinds[+b.dataset.pick]; setComboForm(run, key, k); UI.closeModal(); SFX.play('level');
+    const c = possibleCombos(run).find(c => c.key === key); UI.toast(`${c.name} forged.${activeCombos(run).some(x => x.key === key) ? ' It fires during sieges.' : ' Click it in the Combos bar to switch it on.'}`);
+    TEL.event('comboForm', { key, kind: k }); changed();
+  }) || (s.querySelector('#cformLater').onclick = () => { run.comboLater = Object.assign({}, run.comboLater, { [key]: 1 }); UI.closeModal(); changed(); }), 'wide');
+}
 
 // ----- flow -----
 function startRun() {
@@ -7503,7 +7568,7 @@ G.act = function (act, arg) {
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
-    case 'combo': if (G.phase !== 'prep') return; toggleCombo(run, arg); SFX.play('click'); break;
+    case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();

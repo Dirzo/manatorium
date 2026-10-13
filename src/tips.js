@@ -86,6 +86,7 @@ function synTipHTML(k) {
   return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
 }
 function comboTipHTML(key) {
-  const C = COMBOS[key]; if (!C) return ''; const [a, b] = key.split('+'), on = activeCombos(G.run).some(c => c.key === key);
-  return `<b><span style="color:${ELEMENTS[a].col}">${ELEMENTS[a].name}</span> + <span style="color:${ELEMENTS[b].col}">${ELEMENTS[b].name}</span>: ${esc(C[0])}</b><p>${esc(C[2])}</p><p class="note">${on ? 'On. Fires during sieges.' : 'Off. Click between sieges to switch it on.'}</p>`;
+  const c = possibleCombos(G.run).find(c => c.key === key); if (!c) return ''; const [a, b] = key.split('+'), act = activeCombos(G.run).find(x => x.key === key);
+  const st = c.unpicked ? 'New pair. Click between sieges to choose what it becomes.' : act ? (act.slot === 'castle' ? 'On, in the castle slot. Fires during sieges.' : 'On. Fires during sieges.') : c.castle ? 'Off. Click between sieges to put it in the castle slot.' : 'Off. Click between sieges to switch it on.';
+  return `<b><span style="color:${ELEMENTS[a].col}">${ELEMENTS[a].name}</span> + <span style="color:${ELEMENTS[b].col}">${ELEMENTS[b].name}</span>: ${esc(c.name)}</b><p>${esc(c.desc)}</p><p class="note">${st}</p>`;
 }

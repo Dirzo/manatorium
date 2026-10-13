@@ -51,7 +51,8 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .brand { display: flex; flex-direction: column; line-height: 1; margin-right: 6px; }
 .brand h1 { font-size: 24px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink), 3px 3px 0 #c2410c; letter-spacing: 0.04em; }
 .brand span { font-family: var(--f-display); font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
-.siegeinfo { display: flex; flex-direction: column; min-width: 150px; flex: 0 0 auto; }
+.siegeinfo { display: flex; flex-direction: column; min-width: 96px; flex: 0 1 auto; overflow: hidden; }
+.siegeinfo b, .siegeinfo small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .siegeinfo b { font-family: var(--f-display); font-size: 18px; font-weight: 600; }
 .siegeinfo small { color: var(--muted); font-size: 12px; }
 .siegeinfo small.boss { color: var(--rose); font-family: var(--f-display); letter-spacing: 0.06em; }
@@ -983,3 +984,10 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .hero .logo h1::after { content: attr(data-t); position: absolute; inset: 0; color: transparent; text-shadow: none; -webkit-background-clip: text; background-clip: text; background-image: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.85) 50%, transparent 58%); background-size: 250% 100%; background-position: 120% 0; animation: shine 5s ease-in-out 1.6s infinite; pointer-events: none; }
 @keyframes shine { 0%, 70% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
 @media (prefers-reduced-motion: reduce) { #title.enter * { animation: none !important; } .hero .logo h1::after, .scrollcue, .in-gate span { animation: none; } }
+
+/* combo forms + castle combo slot */
+.syb.combo.cslot, .trait.combo.cslot { outline: 2px dashed var(--gold); outline-offset: 1px; }
+.syb.combo.new::after, .trait.combo.new::after { content: '!'; position: absolute; top: -6px; right: -6px; width: 15px; height: 15px; border-radius: 50%; background: var(--rose); color: #fff; font: 700 11px/15px var(--f-display, sans-serif); text-align: center; border: 2px solid var(--ink); }
+.syb.combo, .trait.combo { position: relative; }
+.ecard.cform .cglyph { display: grid; place-items: center; background: radial-gradient(circle, var(--ec2), var(--ec) 70%); }
+.ecard.cform .cglyph span { font-size: 40px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
