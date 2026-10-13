@@ -94,6 +94,19 @@ function castlePreviewURL(el) {
   const crop = document.createElement('canvas'); crop.width = 110; crop.height = 240; crop.getContext('2d').drawImage(c, 0, 0, 110, 240, 0, 0, 110, 240);
   Object.assign(R, saved); return crop.toDataURL();
 }
+// the castle alone, trimmed to its visible pixels (playtest menu thumbnails)
+const CASTLE_THUMBS = {};
+function castleThumbURL(el) {
+  if (CASTLE_THUMBS[el]) return CASTLE_THUMBS[el];
+  const saved = { castleKey: R.castleKey, castle: R.castle, castleFlags: R.castleFlags, castleTorches: R.castleTorches, castleGlow: R.castleGlow }; R.castleKey = null;
+  const c = buildCastle({ tech: {}, castleEl: el, maxhpMul: 1, stats: { bosses: [] } }); Object.assign(R, saved);
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 20) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const sh = typeof castleShape === 'function' && castleShape({ castleEl: el, stats: { bosses: [] } }); if (sh) y1 = Math.min(y1, sh.baseY + 1); // drop the palisade below the keep
+  if (x1 < x0) return castlePreviewURL(el);
+  const t = document.createElement('canvas'); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1; t.getContext('2d').drawImage(c, x0, y0, t.width, t.height, 0, 0, t.width, t.height);
+  return CASTLE_THUMBS[el] = t.toDataURL();
+}
 // one 5×5 trophy per conquered horde, hung on the keep's trophy ledge
 const TROPHIES = [
   ['y.y.y', 'yyyyy', 'yryry', 'yyyyy', '.....'], ['.www.', 'w...w', 'wgggw', 'wgggw', '.www.'], ['.bbb.', 'bkbkb', 'bbbbb', '.b.b.', '.....'], ['.rrr.', 'rwrrr', '.rrr.', '..k..', '..k..'],

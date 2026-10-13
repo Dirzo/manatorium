@@ -155,3 +155,30 @@ function summarizeBots(results) {
   }
   return out;
 }
+
+// ----- playtest setup: a bot plays a run up to the siege you pick, so the roster, items, tech and gold look like a real run there.
+// A lost siege doesn't stop it (the bot is waved through), so it always arrives. Call playtestStep once per siege.
+function playtestStart(meta, target, style, el) {
+  const run = newRun(meta); run.playtest = true; if (el) run.castleEl = el;
+  const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
+  draft(); return { run, meta, style, target, draft, losses: 0 };
+}
+function playtestStep(P) {
+  const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
+  botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+  for (const h of run.roster) if (!h.place) autoPlace(run, h);
+  const B = startBattle(run, meta); botBattle(B, 1 / 20, 420);
+  if (B.done !== 'victory') { P.losses++; if (B.bossUnit && B.bossUnit.alive) B.bossKilled = B.bossUnit.def.boss;
+    for (const e of B.enemies) e.alive = false; B.queue = []; run.castle.hp = Math.max(run.castle.hp, run.castle.max * 0.6); B.done = 'victory'; }
+  const rep = finishSiege(run, meta, B);
+  if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+  for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
+  if (run.roster.length < 2) draft();
+  botBuyDrafts(run, draft);
+  if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
+  run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
+  resolveEncounter(run, meta, pick(drawEncounter(run).opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
+  if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null; run.mods = {};
+  botGiveItems(run, style); for (const h of run.roster) if (!h.place) autoPlace(run, h);
+  return run.siege >= P.target;
+}

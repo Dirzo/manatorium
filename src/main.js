@@ -342,7 +342,8 @@ function showTitle() {
     <div class="parade">${parade}</div>
     <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small></div>
     <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
-      <button class="btn ${has ? '' : 'primary'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button></div>
+      <button class="btn ${has ? '' : 'primary'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
+      <button class="btn" id="tPlaytest">Playtest menu</button></div>
     <div class="records"><span>Highest keep: <b>${G.meta.best} floors</b></span><span>Runs: <b>${G.meta.runs}</b></span><span>Diamonds: <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
@@ -356,6 +357,7 @@ function showTitle() {
   const t = $('title');
   wireLedger();
   $('tFs').onclick = () => UI.fullscreen();
+  $('tPlaytest').onclick = () => { SFX.init(); showPlaytest(); };
   const c = $('tContinue'); if (c) c.onclick = () => { SFX.init(); G.paused = false; $('title').hidden = true; resumeRun(); };
   let armed = false;
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
@@ -404,6 +406,42 @@ function wireLedger() {
     G.meta.diamonds -= c; G.meta.spec[cls] = { path, rank: (cur.rank || 0) + 1 }; SFX.init(); SFX.play('level'); TEL.event('spec', { cls, path, rank: G.meta.spec[cls].rank }); save(); redraw(); });
   L.querySelectorAll('[data-spath]').forEach(b => b.onclick = () => { const [cls, path] = b.dataset.spath.split(':'); const cur = G.meta.spec[cls]; if (!cur || !cur.rank) return; cur.path = path; SFX.init(); SFX.play('click'); save(); redraw(); });
 }
+// ----- playtest menu: jump to any siege with any castle. A bot plays the sieges before it. -----
+const PT = { siege: 15, el: null, hz: '', gold: 0, style: 'balanced' };
+function showPlaytest() {
+  UI.modal(UI.playtestHTML(PT), s => {
+    const sync = () => { s.querySelector('#ptSiegeV').textContent = PT.siege; s.querySelector('#ptSiegeInfo').textContent = UI.siegeBlurb(PT.siege); };
+    s.querySelector('#ptSiege').oninput = e => { PT.siege = +e.target.value; sync(); };
+    s.querySelectorAll('[data-ptsiege]').forEach(b => b.onclick = () => { PT.siege = +b.dataset.ptsiege; s.querySelector('#ptSiege').value = PT.siege; sync(); });
+    s.querySelectorAll('[data-ptel]').forEach(b => b.onclick = () => { PT.el = b.dataset.ptel || null; s.querySelectorAll('[data-ptel]').forEach(x => x.classList.toggle('on', x === b)); SFX.play('click'); });
+    s.querySelector('#ptHz').onchange = e => PT.hz = e.target.value; s.querySelector('#ptGold').onchange = e => PT.gold = +e.target.value; s.querySelector('#ptStyle').onchange = e => PT.style = e.target.value;
+    s.querySelector('#ptCancel').onclick = () => UI.closeModal();
+    s.querySelector('#ptGo').onclick = () => startPlaytest(s);
+    sync();
+  }, 'wide');
+}
+function startPlaytest(s) {
+  const go = s.querySelector('#ptGo'), msg = s.querySelector('#ptMsg'); go.disabled = true; s.querySelector('#ptCancel').disabled = true;
+  const P = playtestStart(G.meta, PT.siege, PT.style, PT.el);
+  // mute effects while the bot plays: no banners, sounds or shakes from sieges nobody is watching
+  const saved = {}; for (const k in FX) if (typeof FX[k] === 'function') { saved[k] = FX[k]; FX[k] = () => {}; }
+  const unmute = () => Object.assign(FX, saved);
+  const tick = () => {
+    let done = false; try { const t0 = performance.now(); do { done = playtestStep(P); } while (!done && performance.now() - t0 < 120); }
+    catch (e) { unmute(); go.disabled = false; msg.textContent = 'The bot tripped: ' + e.message; console.error(e); return; }
+    msg.textContent = done ? 'Ready.' : `The bot is playing siege ${P.run.siege} of ${PT.siege}…`;
+    if (!done) return setTimeout(tick, 0);
+    unmute(); for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
+    const run = P.run; run.gold += PT.gold; if (PT.hz) run.mods.hz = PT.hz; R.castleKey = null; R.bg = {};
+    G.run = run; G.hasRun = true; G.B = null; G.selected = run.roster[0] && run.roster[0].uid; UI.pendingGold = 0; G.lastEnc = []; G.paused = false;
+    TEL.runStart(run); TEL.event('playtest', { siege: PT.siege, el: run.castleEl, hz: PT.hz, gold: PT.gold, style: PT.style, losses: P.losses });
+    $('title').hidden = true; UI.closeModal();
+    if (PT.siege === 1) { G.phase = 'prep'; changed(); toPrep(); return; }
+    toPrep(); UI.banner(`Playtest: siege ${run.siege}`, run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : FACTIONS[factionIndex(run.siege)].name);
+  };
+  msg.textContent = 'The bot is getting started…'; setTimeout(tick, 30);
+}
+
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);

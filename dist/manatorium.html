@@ -909,6 +909,21 @@ button[data-tip] { cursor: pointer; }
 .rflist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; }
 .rf { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 2px solid var(--ink); background: var(--panel-2); border-radius: 5px; padding: 6px 8px; box-shadow: 0 3px 0 var(--ink); }
 .rf:hover { background: #3d4d99; } .rf img { width: 32px; height: 32px; } .rf b { display: block; font-family: var(--f-display); color: var(--gold); font-size: 14px; } .rf span { font-size: 12px; color: var(--muted); }
+
+/* playtest menu */
+.pt { display: grid; gap: 14px; margin-top: 10px; }
+.ptrow { display: grid; gap: 6px; } .ptrow > b { font-family: var(--f-display); color: var(--gold); font-size: 15px; }
+.ptrow input[type=range] { width: 100%; accent-color: var(--gold); }
+.ptjumps { display: flex; flex-wrap: wrap; gap: 4px; }
+.ptcastles { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.ptc { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; border: 2px solid var(--ink); border-radius: 5px; background: var(--panel-2); box-shadow: 0 3px 0 var(--ink); }
+.ptc img { height: 76px; width: auto; max-width: 100%; object-fit: contain; }
+.ptc small { font-size: 11px; color: var(--muted); } .ptc:hover { background: #3d4d99; }
+.ptc.on { border-color: var(--gold); background: color-mix(in srgb, var(--ec, #ffd84a) 30%, var(--panel-2)); } .ptc.on small { color: var(--gold); }
+.ptq { height: 70px; display: grid; place-items: center; font-family: var(--f-display); font-size: 32px; color: var(--muted); }
+.ptsel { display: flex; flex-wrap: wrap; gap: 12px; } .ptsel label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.ptsel select { background: var(--panel-2); color: var(--text, #fff); border: 2px solid var(--ink); border-radius: 4px; padding: 4px 6px; font: inherit; font-size: 14px; }
+body:has(#title:not([hidden])) .modal { z-index: 40; }
 </style>
 <div id="app">
   <header class="hud">
@@ -4746,6 +4761,19 @@ function castlePreviewURL(el) {
   const crop = document.createElement('canvas'); crop.width = 110; crop.height = 240; crop.getContext('2d').drawImage(c, 0, 0, 110, 240, 0, 0, 110, 240);
   Object.assign(R, saved); return crop.toDataURL();
 }
+// the castle alone, trimmed to its visible pixels (playtest menu thumbnails)
+const CASTLE_THUMBS = {};
+function castleThumbURL(el) {
+  if (CASTLE_THUMBS[el]) return CASTLE_THUMBS[el];
+  const saved = { castleKey: R.castleKey, castle: R.castle, castleFlags: R.castleFlags, castleTorches: R.castleTorches, castleGlow: R.castleGlow }; R.castleKey = null;
+  const c = buildCastle({ tech: {}, castleEl: el, maxhpMul: 1, stats: { bosses: [] } }); Object.assign(R, saved);
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 20) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const sh = typeof castleShape === 'function' && castleShape({ castleEl: el, stats: { bosses: [] } }); if (sh) y1 = Math.min(y1, sh.baseY + 1); // drop the palisade below the keep
+  if (x1 < x0) return castlePreviewURL(el);
+  const t = document.createElement('canvas'); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1; t.getContext('2d').drawImage(c, x0, y0, t.width, t.height, 0, 0, t.width, t.height);
+  return CASTLE_THUMBS[el] = t.toDataURL();
+}
 // one 5×5 trophy per conquered horde, hung on the keep's trophy ledge
 const TROPHIES = [
   ['y.y.y', 'yyyyy', 'yryry', 'yyyyy', '.....'], ['.www.', 'w...w', 'wgggw', 'wgggw', '.www.'], ['.bbb.', 'bkbkb', 'bbbbb', '.b.b.', '.....'], ['.rrr.', 'rwrrr', '.rrr.', '..k..', '..k..'],
@@ -5823,6 +5851,33 @@ function summarizeBots(results) {
   return out;
 }
 
+// ----- playtest setup: a bot plays a run up to the siege you pick, so the roster, items, tech and gold look like a real run there.
+// A lost siege doesn't stop it (the bot is waved through), so it always arrives. Call playtestStep once per siege.
+function playtestStart(meta, target, style, el) {
+  const run = newRun(meta); run.playtest = true; if (el) run.castleEl = el;
+  const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
+  draft(); return { run, meta, style, target, draft, losses: 0 };
+}
+function playtestStep(P) {
+  const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
+  botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+  for (const h of run.roster) if (!h.place) autoPlace(run, h);
+  const B = startBattle(run, meta); botBattle(B, 1 / 20, 420);
+  if (B.done !== 'victory') { P.losses++; if (B.bossUnit && B.bossUnit.alive) B.bossKilled = B.bossUnit.def.boss;
+    for (const e of B.enemies) e.alive = false; B.queue = []; run.castle.hp = Math.max(run.castle.hp, run.castle.max * 0.6); B.done = 'victory'; }
+  const rep = finishSiege(run, meta, B);
+  if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+  for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
+  if (run.roster.length < 2) draft();
+  botBuyDrafts(run, draft);
+  if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
+  run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
+  resolveEncounter(run, meta, pick(drawEncounter(run).opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
+  if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null; run.mods = {};
+  botGiveItems(run, style); for (const h of run.roster) if (!h.place) autoPlace(run, h);
+  return run.siege >= P.target;
+}
+
 // ===== Hover tips: classes, elements, abilities, rarity =====
 // Power = Attack × Ability power × signature power (signature power grows 7% a level from level 5)
 const CLASS_REC = {
@@ -6501,6 +6556,23 @@ const UI = {
       ${enc.boon ? '<p class="boonnote">Every choice here is good. Pick what your keep needs.</p>' : ''}
       <div class="opts ${enc.boon ? 'boon' : ''}">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b><span class="etags">${encTags(o.fx).map(t => `<i class="et ${t.k}">${esc(t.s)}</i>`).join('')}</span>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
   },
+  siegeBlurb(s) { const F = FACTIONS[factionIndex(s)]; return isBossSiege(s) ? `${F.name} · ${ENEMIES[bossFor(s)].name}${s === FINAL_SIEGE ? ' (final boss)' : ''}` : `${F.name} · siege ${(s - 1) % 5 + 1} of 5`; },
+  playtestHTML(P) {
+    const els = [['', 'Run picks', null], ...EL_KEYS.map(e => [e, ELEMENTS[e].name, castleThumbURL(e)])];
+    const jumps = [1, 5, 10, 15, 20, 25, 29, 30, 35, 40, 45, 50];
+    return `<span class="eyebrow">Playtest</span><h2>Jump to any siege</h2>
+      <p class="lede">A bot plays every siege before the one you pick, so your champions, items, tech and gold look like a real run there. It never loses on the way. Playtest runs earn no diamonds or achievements.</p>
+      <div class="pt">
+        <div class="ptrow"><b>Start at siege <span id="ptSiegeV"></span></b><input type="range" id="ptSiege" min="1" max="${FINAL_SIEGE}" value="${P.siege}"><span id="ptSiegeInfo" class="muted"></span>
+          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ☠' : ''}</button>`).join('')}</div></div>
+        <div class="ptrow"><b>Castle</b><div class="ptcastles">${els.map(([e, n, url]) => `<button class="ptc ${(P.el || '') === e ? 'on' : ''}" data-ptel="${e}" ${e ? `style="--ec:${ELEMENTS[e].col}"` : ''}>${url ? `<img class="px" src="${url}" alt="">` : '<span class="ptq">?</span>'}<small>${esc(n)}</small></button>`).join('')}</div>
+          <small class="muted">"Run picks" leaves it to the bot at siege ${CASTLE_SIEGE}. Picking one gives you that castle from the start.</small></div>
+        <div class="ptsel"><label>Field hazard<select id="ptHz"><option value="">None</option>${Object.entries(HAZARDS).map(([k, z]) => `<option value="${k}" ${P.hz === k ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}</select></label>
+          <label>Bonus gold<select id="ptGold">${[0, 300, 1000, 5000].map(g => `<option value="${g}" ${P.gold === g ? 'selected' : ''}>${g ? '+' + g : 'None'}</option>`).join('')}</select></label>
+          <label>Bot builds like<select id="ptStyle">${['balanced', 'brawler', 'arcanist', 'bulwark', 'crit'].map(k => `<option value="${k}" ${P.style === k ? 'selected' : ''}>${esc(BOT_STYLES[k].name)}</option>`).join('')}</select></label></div>
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px"><span id="ptMsg" class="muted"></span><span class="row"><button class="btn" id="ptCancel">Back</button><button class="btn primary" id="ptGo">Start playtest</button></span></div>`;
+  },
   // a hazard's field preview: a tiny painted strip plus what it does
   hazardCard(id) { const z = HAZARDS[id]; return `<div class="hzcard" style="--hz:${z.col}"><img class="px" src="${hazardThumbURL(id)}" alt=""><div><b>${esc(z.name)}</b><span>${esc(z.desc)}</span><small>Only for the next siege.</small></div></div>`; },
   reforgeHTML(run, list, title) {
@@ -6734,9 +6806,10 @@ const FLOOR_H = 18; let TW = 240;
 
 function startTower() {
   const run = G.run, N = run.siege - 1;
-  const ach = grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
+  const pt = !!run.playtest; // playtest runs earn nothing and set no records
+  const ach = pt ? [] : grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
   const earned = diamondsForRun(run) + achDia;
-  G.meta.diamonds += earned - achDia; const prevBest = G.meta.best; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N;
+  const prevBest = G.meta.best; if (!pt) { G.meta.diamonds += earned - achDia; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N; }
   G.hasRun = false;
   const mvpId = Object.entries(run.stats.dmgByHero).sort((a, b) => b[1] - a[1])[0];
   const climber = mvpId ? mvpId[0] : (run.roster[0] && run.roster[0].id) || 'brann';
@@ -7251,7 +7324,8 @@ function showTitle() {
     <div class="parade">${parade}</div>
     <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small></div>
     <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
-      <button class="btn ${has ? '' : 'primary'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button></div>
+      <button class="btn ${has ? '' : 'primary'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
+      <button class="btn" id="tPlaytest">Playtest menu</button></div>
     <div class="records"><span>Highest keep: <b>${G.meta.best} floors</b></span><span>Runs: <b>${G.meta.runs}</b></span><span>Diamonds: <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
@@ -7265,6 +7339,7 @@ function showTitle() {
   const t = $('title');
   wireLedger();
   $('tFs').onclick = () => UI.fullscreen();
+  $('tPlaytest').onclick = () => { SFX.init(); showPlaytest(); };
   const c = $('tContinue'); if (c) c.onclick = () => { SFX.init(); G.paused = false; $('title').hidden = true; resumeRun(); };
   let armed = false;
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
@@ -7313,6 +7388,42 @@ function wireLedger() {
     G.meta.diamonds -= c; G.meta.spec[cls] = { path, rank: (cur.rank || 0) + 1 }; SFX.init(); SFX.play('level'); TEL.event('spec', { cls, path, rank: G.meta.spec[cls].rank }); save(); redraw(); });
   L.querySelectorAll('[data-spath]').forEach(b => b.onclick = () => { const [cls, path] = b.dataset.spath.split(':'); const cur = G.meta.spec[cls]; if (!cur || !cur.rank) return; cur.path = path; SFX.init(); SFX.play('click'); save(); redraw(); });
 }
+// ----- playtest menu: jump to any siege with any castle. A bot plays the sieges before it. -----
+const PT = { siege: 15, el: null, hz: '', gold: 0, style: 'balanced' };
+function showPlaytest() {
+  UI.modal(UI.playtestHTML(PT), s => {
+    const sync = () => { s.querySelector('#ptSiegeV').textContent = PT.siege; s.querySelector('#ptSiegeInfo').textContent = UI.siegeBlurb(PT.siege); };
+    s.querySelector('#ptSiege').oninput = e => { PT.siege = +e.target.value; sync(); };
+    s.querySelectorAll('[data-ptsiege]').forEach(b => b.onclick = () => { PT.siege = +b.dataset.ptsiege; s.querySelector('#ptSiege').value = PT.siege; sync(); });
+    s.querySelectorAll('[data-ptel]').forEach(b => b.onclick = () => { PT.el = b.dataset.ptel || null; s.querySelectorAll('[data-ptel]').forEach(x => x.classList.toggle('on', x === b)); SFX.play('click'); });
+    s.querySelector('#ptHz').onchange = e => PT.hz = e.target.value; s.querySelector('#ptGold').onchange = e => PT.gold = +e.target.value; s.querySelector('#ptStyle').onchange = e => PT.style = e.target.value;
+    s.querySelector('#ptCancel').onclick = () => UI.closeModal();
+    s.querySelector('#ptGo').onclick = () => startPlaytest(s);
+    sync();
+  }, 'wide');
+}
+function startPlaytest(s) {
+  const go = s.querySelector('#ptGo'), msg = s.querySelector('#ptMsg'); go.disabled = true; s.querySelector('#ptCancel').disabled = true;
+  const P = playtestStart(G.meta, PT.siege, PT.style, PT.el);
+  // mute effects while the bot plays: no banners, sounds or shakes from sieges nobody is watching
+  const saved = {}; for (const k in FX) if (typeof FX[k] === 'function') { saved[k] = FX[k]; FX[k] = () => {}; }
+  const unmute = () => Object.assign(FX, saved);
+  const tick = () => {
+    let done = false; try { const t0 = performance.now(); do { done = playtestStep(P); } while (!done && performance.now() - t0 < 120); }
+    catch (e) { unmute(); go.disabled = false; msg.textContent = 'The bot tripped: ' + e.message; console.error(e); return; }
+    msg.textContent = done ? 'Ready.' : `The bot is playing siege ${P.run.siege} of ${PT.siege}…`;
+    if (!done) return setTimeout(tick, 0);
+    unmute(); for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
+    const run = P.run; run.gold += PT.gold; if (PT.hz) run.mods.hz = PT.hz; R.castleKey = null; R.bg = {};
+    G.run = run; G.hasRun = true; G.B = null; G.selected = run.roster[0] && run.roster[0].uid; UI.pendingGold = 0; G.lastEnc = []; G.paused = false;
+    TEL.runStart(run); TEL.event('playtest', { siege: PT.siege, el: run.castleEl, hz: PT.hz, gold: PT.gold, style: PT.style, losses: P.losses });
+    $('title').hidden = true; UI.closeModal();
+    if (PT.siege === 1) { G.phase = 'prep'; changed(); toPrep(); return; }
+    toPrep(); UI.banner(`Playtest: siege ${run.siege}`, run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : FACTIONS[factionIndex(run.siege)].name);
+  };
+  msg.textContent = 'The bot is getting started…'; setTimeout(tick, 30);
+}
+
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);

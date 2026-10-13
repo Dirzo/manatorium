@@ -584,6 +584,23 @@ const UI = {
       ${enc.boon ? '<p class="boonnote">Every choice here is good. Pick what your keep needs.</p>' : ''}
       <div class="opts ${enc.boon ? 'boon' : ''}">${enc.opts.map((o, i) => `<button class="opt" data-opt="${i}"><b>${esc(o.label)}</b><span class="etags">${encTags(o.fx).map(t => `<i class="et ${t.k}">${esc(t.s)}</i>`).join('')}</span>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('')}</div>`;
   },
+  siegeBlurb(s) { const F = FACTIONS[factionIndex(s)]; return isBossSiege(s) ? `${F.name} · ${ENEMIES[bossFor(s)].name}${s === FINAL_SIEGE ? ' (final boss)' : ''}` : `${F.name} · siege ${(s - 1) % 5 + 1} of 5`; },
+  playtestHTML(P) {
+    const els = [['', 'Run picks', null], ...EL_KEYS.map(e => [e, ELEMENTS[e].name, castleThumbURL(e)])];
+    const jumps = [1, 5, 10, 15, 20, 25, 29, 30, 35, 40, 45, 50];
+    return `<span class="eyebrow">Playtest</span><h2>Jump to any siege</h2>
+      <p class="lede">A bot plays every siege before the one you pick, so your champions, items, tech and gold look like a real run there. It never loses on the way. Playtest runs earn no diamonds or achievements.</p>
+      <div class="pt">
+        <div class="ptrow"><b>Start at siege <span id="ptSiegeV"></span></b><input type="range" id="ptSiege" min="1" max="${FINAL_SIEGE}" value="${P.siege}"><span id="ptSiegeInfo" class="muted"></span>
+          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ☠' : ''}</button>`).join('')}</div></div>
+        <div class="ptrow"><b>Castle</b><div class="ptcastles">${els.map(([e, n, url]) => `<button class="ptc ${(P.el || '') === e ? 'on' : ''}" data-ptel="${e}" ${e ? `style="--ec:${ELEMENTS[e].col}"` : ''}>${url ? `<img class="px" src="${url}" alt="">` : '<span class="ptq">?</span>'}<small>${esc(n)}</small></button>`).join('')}</div>
+          <small class="muted">"Run picks" leaves it to the bot at siege ${CASTLE_SIEGE}. Picking one gives you that castle from the start.</small></div>
+        <div class="ptsel"><label>Field hazard<select id="ptHz"><option value="">None</option>${Object.entries(HAZARDS).map(([k, z]) => `<option value="${k}" ${P.hz === k ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}</select></label>
+          <label>Bonus gold<select id="ptGold">${[0, 300, 1000, 5000].map(g => `<option value="${g}" ${P.gold === g ? 'selected' : ''}>${g ? '+' + g : 'None'}</option>`).join('')}</select></label>
+          <label>Bot builds like<select id="ptStyle">${['balanced', 'brawler', 'arcanist', 'bulwark', 'crit'].map(k => `<option value="${k}" ${P.style === k ? 'selected' : ''}>${esc(BOT_STYLES[k].name)}</option>`).join('')}</select></label></div>
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:12px"><span id="ptMsg" class="muted"></span><span class="row"><button class="btn" id="ptCancel">Back</button><button class="btn primary" id="ptGo">Start playtest</button></span></div>`;
+  },
   // a hazard's field preview: a tiny painted strip plus what it does
   hazardCard(id) { const z = HAZARDS[id]; return `<div class="hzcard" style="--hz:${z.col}"><img class="px" src="${hazardThumbURL(id)}" alt=""><div><b>${esc(z.name)}</b><span>${esc(z.desc)}</span><small>Only for the next siege.</small></div></div>`; },
   reforgeHTML(run, list, title) {

@@ -4,9 +4,10 @@ const FLOOR_H = 18; let TW = 240;
 
 function startTower() {
   const run = G.run, N = run.siege - 1;
-  const ach = grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
+  const pt = !!run.playtest; // playtest runs earn nothing and set no records
+  const ach = pt ? [] : grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
   const earned = diamondsForRun(run) + achDia;
-  G.meta.diamonds += earned - achDia; const prevBest = G.meta.best; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N;
+  const prevBest = G.meta.best; if (!pt) { G.meta.diamonds += earned - achDia; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N; }
   G.hasRun = false;
   const mvpId = Object.entries(run.stats.dmgByHero).sort((a, b) => b[1] - a[1])[0];
   const climber = mvpId ? mvpId[0] : (run.roster[0] && run.roster[0].id) || 'brann';
