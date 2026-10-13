@@ -1,0 +1,74 @@
+<meta charset="utf-8">
+<title>Siege of Legends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@700&display=swap">
+<style>/*CSS*/</style>
+<div id="app">
+  <header class="hud">
+    <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
+    <div class="siegeinfo"><b id="siegeName">Siege 1</b><small id="siegeSub">Goblin Warband</small></div>
+    <nav class="rail" aria-label="Castle facilities">
+      <button id="nav-guild" data-page="guild" title="Guild"><img class="px" alt="">Guild</button>
+      <button id="nav-armory" data-page="armory" title="Armory"><img class="px" alt="">Armory</button>
+      <button id="nav-hall" data-page="hall" title="Artificers' Hall"><img class="px" alt="">Artificers' Hall</button>
+      <div class="hint" id="railHint">Facilities open between sieges.</div>
+    </nav>
+    <div class="castlebar"><small><span id="castleLabel">Castle</span><span id="castleTxt" class="num">1000 / 1000</span></small><div class="bar"><i id="castleFill" style="width:100%"></i></div></div>
+    <div class="purse">
+      <div class="coinbox" id="goldBox" title="Gold"><img class="px" id="goldIcon" alt=""><span id="gold" class="num">0</span></div>
+      <div class="coinbox" title="Diamonds, kept between runs" hidden><img class="px" id="diaIcon" alt=""><span id="diamonds" class="num">0</span></div>
+    </div>
+    <div class="controls">
+      <div class="speed" role="group" aria-label="Game speed"><button id="sp1" aria-pressed="true">1×</button><button id="sp2" aria-pressed="false">2×</button><button id="sp4" aria-pressed="false">4×</button></div>
+      <button class="btn hammerbtn" id="hammerBtn" disabled><span class="cdfill" id="hammerCd"></span><img class="px" id="hammerIcon" alt="">Sky Hammer <kbd>Q</kbd></button>
+      <button class="btn powerbtn" id="powerBtn" hidden disabled><span class="cdfill" id="powerCd"></span><span id="powerName">Power</span> <kbd>E</kbd></button>
+      <button class="btn go" id="beginBtn">Begin siege <kbd>Space</kbd></button>
+      <span id="recBadge" class="recb" hidden></span>
+      <button class="btn ghost small" id="soundBtn" aria-pressed="true">Sound on</button>
+      <button class="btn ghost small" id="menuBtn">Keep menu</button>
+      <button class="btn ghost small" id="fsBtn" title="Fullscreen (F)">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="arena-wrap" id="arenaWrap">
+      <canvas id="arena" width="480" height="270" aria-label="Castle arena"></canvas>
+      <span class="arena-tag l">Courtyard</span><span class="arena-tag r" id="hordeTag">← Enemies enter here</span>
+      <div id="prepHint">Drag heroes to position them, then begin the siege.</div>
+      <div id="banner"></div>
+      <aside class="drawer" id="drawer" aria-label="Facility">
+        <header><button class="btn small" id="drawerBack">← Back</button><div style="flex:1;min-width:0"><h2 id="drawerTitle">Guild</h2><p id="drawerSub"></p></div></header>
+        <div class="body" id="drawerBody"></div>
+      </aside>
+    </div>
+    <aside class="intel" id="intel" aria-label="Siege intel"><button class="intab" id="intelTab" aria-expanded="true" title="Scout report and battle stats"><span>Scouts &amp; stats</span></button><div id="intelMain" class="intelmain"></div></aside>
+  </div>
+
+  <section class="roster" id="roster">
+    <button class="pull" id="rosterPull" aria-expanded="true" title="Show or hide champions (C)"><span>▼</span></button>
+    <header>
+      <h2 id="rosterTitle">Roster</h2>
+      <div class="syn" id="synChips"></div>
+      <div id="statsChart" class="statschart" hidden></div>
+      <button class="btn small ghost" id="rosterToggle" aria-expanded="true">Hide</button>
+    </header>
+    <div class="rbody">
+      <div class="cards" id="rosterCards"></div>
+      <div class="inspector" id="inspector"></div>
+      <div class="team" id="teamPanel"></div>
+    </div>
+  </section>
+</div>
+
+<div id="fxlayer"></div>
+<div id="tip" role="tooltip" hidden></div>
+<img id="ghost" class="px" alt="" hidden>
+<div id="toast" aria-live="polite"></div>
+<div id="coach" role="dialog" aria-live="polite" hidden></div>
+<div id="notes" hidden></div>
+
+<div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+<div id="title" hidden></div>
+<div id="tower" hidden><canvas id="towerCv"></canvas><button class="btn small" id="towerSkip">Skip</button><div id="towerPanel"></div></div>
+<script>/*JS*/</script>

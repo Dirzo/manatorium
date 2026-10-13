@@ -1,0 +1,204 @@
+// ===== Run & meta state (no DOM) =====
+let uidN = 1;
+const nuid = () => 'u' + (uidN++) + Math.random().toString(36).slice(2, 5);
+
+function newMeta() { return { diamonds: 0, ranks: {}, best: 0, runs: 0, totalFloors: 0, seen: {} }; }
+
+function rafterSlots(run) { return run.tech.rafters1 ? (run.tech.rafters2 ? 3 : 1) : 0; }
+function castleMaxFor(run, meta) { return Math.round(1000 * (1 + 0.15 * (meta.ranks.masonry || 0)) * (run.tech.walls1 ? 1.25 : 1) * (run.tech.walls2 ? 1.35 : 1) * (run.tech.bastion ? 1.3 : 1) * (run.mods.maxhp || 1) * (run.maxhpMul || 1) * castleGrowth(run)); }
+// every boss slain makes the keep bigger: +30% max HP each, compounding
+function castleGrowth(run) { return Math.pow(1.3, castleTier(run)); }
+function castleTier(run) { return run.stats && run.stats.bosses ? run.stats.bosses.length : 0; }
+
+function newRun(meta) {
+  const run = { v: 2, runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), startedAt: Date.now(), siege: 1, gold: 0, roster: [], stash: [], tech: {}, discovered: {}, castleEl: null,
+    vet: meta.ranks.veterans || 0, mods: {}, castle: { hp: 0, max: 0 }, stats: { kills: 0, gold: 0, bosses: [], dmgByHero: {}, deaths: 0, drafts: [], loot: [], encounters: [], techs: [] }, history: [], diamondsFound: 0,
+    phase: 'draft', draftRerolls: 0, lootRerolls: 0, maxhpMul: 1 };
+  run.castle.max = castleMaxFor(run, meta); run.castle.hp = run.castle.max;
+  return run;
+}
+
+// ----- heroes -----
+function rollStats() { return { ad: randi(1, 10), ap: randi(1, 10), def: randi(1, 10) }; }
+function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length === 1 ? 'partner' : 'reinforce'; }
+function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
+function draftOptions(run, meta, focus) {
+  const kind = draftKind(run), n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
+  for (let i = 0; i < n; i++) {
+    let t = kind === 'starter' ? 1 : kind === 'partner' ? (Math.random() < 0.7 ? 1 : 2) : run.siege <= 6 ? (Math.random() < 0.5 ? 1 : 2) : (Math.random() < 0.55 ? 2 : 3);
+    let cands = HEROES.filter(h => h.tier === t && !own.has(h.id) && !out.some(o => o.id === h.id));
+    if (!cands.length) cands = HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id));
+    if (!cands.length) break;
+    out.push({ id: pick(cands).id, rolls: rollStats(), temper: rollTemper() });
+  }
+  // a focused search guarantees one card of the class or race you asked for
+  if (focus && out.length) { const fits = HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
+    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = { id: pick(fits).id, rolls: rollStats(), temper: rollTemper() }; }
+  return out;
+}
+function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
+function joinLevel(run) { const v = run.vet || 0; if (run.roster.length < 2) return 1 + v; const avg = run.roster.reduce((a, h) => a + h.level, 0) / run.roster.length; return Math.max(1, Math.floor(avg * 0.75)) + v; }
+function addDraftedHero(run, opt) {
+  const h = { uid: nuid(), id: opt.id, level: joinLevel(run), xp: 0, rolls: Object.assign({}, opt.rolls), temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
+  run.roster.push(h); autoPlace(run, h);
+  run.stats.drafts.push({ s: run.siege, id: opt.id, rolls: opt.rolls, kind: draftKind(run) });
+  return h;
+}
+function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
+function needsElement(h) { return h.level >= ELEMENT_LEVEL && !h.el; }
+function elementOptions(run, meta, h) {
+  const n = 3 + (run.tech.lab ? 1 : 0), have = heroElements(run, h);
+  return EL_KEYS.filter(e => !have.includes(e)).sort(() => Math.random() - 0.5).slice(0, n);
+}
+function castleOptions(run) {
+  const mine = [...new Set(run.roster.flatMap(h => heroElements(run, h)))].sort(() => Math.random() - 0.5).slice(0, 3);
+  const rest = EL_KEYS.filter(e => !mine.includes(e)).sort(() => Math.random() - 0.5);
+  while (mine.length < 3) mine.push(rest.shift());
+  return mine;
+}
+
+// placement
+function cellFree(run, c, r, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'grid' && h.place.c === c && h.place.r === r); }
+function rafterFree(run, i, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'rafter' && h.place.i === i); }
+function isRangedHero(id) { const d = HERO_BY_ID[id]; return CLASS_BASE[d.cls].range > 40; }
+function autoPlace(run, h) {
+  const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
+  if (ranged) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
+  const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
+  const rows = [3, 2, 4, 1, 5, 0];
+  for (const c of cols) for (const r of rows) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
+}
+
+// ----- items -----
+function makeItem(parts, el) { return { uid: nuid(), parts: parts.slice(), el: el || null, holder: null }; }
+function randomFinished() { const a = pick(COMP_KEYS), b = pick(COMP_KEYS); return makeItem(itemKey(a, b).split('+')); }
+function lootOptions(run, meta) {
+  const n = 3 + (run.tech.scav ? 1 : 0), boss = isBossSiege(run.siege - 1), out = [];
+  for (let i = 0; i < n; i++) {
+    if (boss) { let key, tries = 0; do { key = itemKey(pick(COMP_KEYS), pick(COMP_KEYS)); } while (out.some(o => o.parts.join('+') === key) && ++tries < 50); out.push({ parts: key.split('+') }); }
+    else { const k = Math.random() < 0.05 && !out.some(o => o.parts[0] === 'spatula') ? 'spatula' : pick(COMP_KEYS.filter(c => !out.some(o => o.parts[0] === c))); out.push({ parts: [k] }); }
+  }
+  return out;
+}
+function lootRerollCost(run) { return 12 + 8 * run.lootRerolls; }
+function takeLoot(run, opt) { const it = makeItem(opt.parts); if (it.parts.length === 2 && it.parts.includes('spatula')) it.el = pick(EL_KEYS); run.stash.push(it); run.stats.loot.push({ s: run.siege - 1, parts: it.parts }); return it; }
+function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.holder); if (h) h.items = h.items.filter(u => u !== it.uid); it.holder = null; }
+// give an item to a hero; two components on one hero fuse into a finished item
+function giveItem(run, it, h) {
+  if (it.holder === h.uid) return { ok: true };
+  if (it.parts.length === 1) {
+    const partner = heroItems(run, h).find(x => x.parts.length === 1);
+    if (partner) {
+      unequipItem(run, it); unequipItem(run, partner);
+      run.stash = run.stash.filter(x => x !== it && x !== partner);
+      const parts = itemKey(partner.parts[0], it.parts[0]).split('+');
+      const have = heroElements(run, h);
+      const fused = makeItem(parts, parts.includes('spatula') && parts[0] !== parts[1] ? pick(EL_KEYS.filter(e => !have.includes(e))) : null);
+      run.stash.push(fused); fused.holder = h.uid; h.items.push(fused.uid);
+      return { fused };
+    }
+  }
+  if (h.items.length >= ITEM_SLOTS) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries ${ITEM_SLOTS} items.` };
+  unequipItem(run, it); h.items.push(it.uid); it.holder = h.uid; return { ok: true };
+}
+const UNFORGE_COST = 30;
+function unforgeItem(run, it) {
+  if (it.parts.length < 2) return { err: 'Components cannot be split.' };
+  if (run.gold < UNFORGE_COST) return { err: `Splitting costs ${UNFORGE_COST} gold.` };
+  run.gold -= UNFORGE_COST; unequipItem(run, it); run.stash = run.stash.filter(x => x !== it);
+  for (const p of it.parts) run.stash.push(makeItem([p]));
+  return { ok: true };
+}
+
+// ----- Artificers' Hall -----
+function techState(run, id) {
+  const T = TECH[id];
+  if (run.tech[id]) return 'done';
+  if (T.secret && !run.discovered[id]) return 'hidden';
+  if (run.siege < techOpensAt(id)) return 'soon';
+  if (T.req.every(r => run.tech[r])) return 'open';
+  return 'locked';
+}
+function buyTech(run, meta, id) {
+  const T = TECH[id], st = techState(run, id);
+  if (st === 'done') return { err: 'Already built.' };
+  if (st === 'hidden') return { err: 'Nobody knows how to build that yet.' };
+  if (st === 'locked') return { err: `Needs ${T.req.filter(r => !run.tech[r]).map(r => TECH[r].name).join(' and ')} first.` };
+  if (run.gold < T.cost) return { err: `You need ${T.cost - run.gold} more gold.` };
+  run.gold -= T.cost; run.tech[id] = 1; run.stats.techs.push({ s: run.siege, id });
+  if (['walls1', 'walls2', 'bastion'].includes(id)) { const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp = Math.min(run.castle.max, run.castle.hp + (run.castle.max - old)); }
+  if (id === 'rafters1' || id === 'rafters2') { const ranged = run.roster.filter(h => isRangedHero(h.id) && h.place && h.place.type === 'grid'); for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { const h = ranged.shift(); if (h) h.place = { type: 'rafter', i }; } }
+  return { ok: true };
+}
+function repairCost(run) { return 25 + 4 * run.siege; }
+function repairCastle(run) { const c = repairCost(run); if (run.castle.hp >= run.castle.max) return { err: 'The walls are already whole.' }; if (run.gold < c) return { err: `Masons charge ${c} gold.` }; run.gold -= c; const a = Math.round(run.castle.max * 0.2); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); return { ok: true, a }; }
+
+// ----- encounters -----
+function resolveEncounter(run, meta, fxs) {
+  const out = [], levels = [];
+  for (const fx of fxs.split(',')) {
+    const [k, arg] = fx.split(':'); const n = +arg;
+    switch (k) {
+      case 'gold': { const g = n > 0 ? Math.round(n * goldMul(run.siege)) : n; run.gold = Math.max(0, run.gold + g); out.push(g >= 0 ? `+${g} gold` : `${g} gold`); break; }
+      case 'pay': if (run.gold < n) { out.push(`You only have ${run.gold} gold. The dragon is unimpressed and keeps the box.`); return { out, levels }; } run.gold -= n; out.push(`−${n} gold`); break;
+      case 'comp': { const key = arg === 'any' ? pick(COMP_KEYS) : arg; run.stash.push(makeItem([key])); out.push(`Got a ${COMPONENTS[key].name}. Hand it out in the Armory.`); break; }
+      case 'item': { const it = randomFinished(); run.stash.push(it); out.push(`Got ${itemName(it)}. Hand it out in the Armory.`); break; }
+      case 'xpAll': for (const h of run.roster) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); } out.push(`Every hero gains ${Math.round(n * (1 + 0.1 * run.siege))} XP.`); break;
+      case 'xpOne': { const h = pick(run.roster); if (h) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} gains ${v} XP.`); } break; }
+      case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold as an apology.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
+      case 'mod': run.mods[arg] = true; if (arg === 'bossmad') out.push('The boss is coming in a rage.'); break;
+      case 'mood': run.mood = (run.mood || 0) + n; out.push(n > 0 ? 'They will remember that kindly.' : 'They will remember that.'); break;
+      case 'bossdeal': if ((run.mood || 0) >= 1) { run.mods.bosssoft = true; out.push('They accept. Their heart is not in this siege.'); } else if ((run.mood || 0) <= -1) { run.mods.bossmad = true; out.push('They laugh in your face. After everything you did? The boss is coming in a rage.'); } else out.push('They shrug. Nothing changes.'); break;
+      case 'recruit': { if (run.lastRecruit != null && run.siege - run.lastRecruit < RECRUIT_GAP) { const g = Math.round(35 * goldMul(run.siege)); run.gold += g; out.push(`The champion takes one look at your crowded barracks and leaves ${g} gold as an apology.`); break; } run.lastRecruit = run.siege;
+        if (run.roster.length < ROSTER_CAP && Math.random() < 0.8) { run.recruitFrom = 'encounter'; run.post.unshift('draft'); out.push('Three champions step forward. You get to pick one.'); break; } const os = run.roster.length < ROSTER_CAP ? draftOptions(run, meta) : []; const o = os[0]; if (!o) { const g = Math.round(40 * goldMul(run.siege)); run.gold += g; out.push(`Your keep is full, so they pay ${g} gold for the trouble instead.`); break; } const h = addDraftedHero(run, o); out.push(`${HERO_BY_ID[h.id].name} joins your keep at level ${h.level}!`); break; }
+      case 'heal': { const a = Math.round(run.castle.max * n / 100); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); out.push(`Castle repaired by ${a}.`); break; }
+      case 'maxhp': if (run.gold >= 50) { run.gold -= 50; run.maxhpMul *= 1.15; const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp += run.castle.max - old; out.push('Castle max HP +15%.'); } else out.push('You could not afford the masons. They leave, still eating your bread.'); break;
+      case 'diamonds': { const g = Math.round(20 * n * goldMul(run.siege)); run.gold += g; out.push(`+${g} gold`); break; } // diamonds only come from achievements now
+      case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +1 to every rolled stat.`); } break; }
+      case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { h.rolls.def = Math.min(10, h.rolls.def + 1); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled and gains +1 Defense from the experience.`); } break; }
+      case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
+      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon respects your hustle. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
+    }
+  }
+  const modText = { fewer: 'The next siege will be smaller.', curse: 'The next horde is angry about taxes.', chickens: 'Chickens. So many chickens. They are coming next siege.', partyhats: 'The next horde is wearing party hats.', giant: 'Your heroes will be ENORMOUS next siege.', tiny: 'The next horde will be tiny and zoomy.', inspire: 'Heroes +25% attack next siege.', tonic: 'Heroes start the next siege at full mana.', honked: 'The goose will be at the next siege.' };
+  for (const fx of fxs.split(',')) { const [k, a] = fx.split(':'); if (k === 'mod' && modText[a]) out.push(modText[a]); }
+  run.stats.encounters.push({ s: run.siege, fx: fxs });
+  return { out, levels };
+}
+
+// ----- siege end bookkeeping -----
+function finishSiege(run, meta, B) {
+  const s = run.siege; const bounty = Math.round(0.5 * (3 + s) * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0)));
+  run.gold += bounty;
+  const xpMul = 1 + (run.tech.drill ? 0.15 : 0) + (run.tech.college ? 0.25 : 0);
+  const survive = BAL.xpSurvive + BAL.xpSurviveS * s;
+  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
+  for (const u of B.heroes.filter(h => !h.temp)) {
+    const h = u.inst; const fromLv = h.level, fromXp = h.xp;
+    const gained = u.alive ? Math.round((u.xp + survive) * xpMul) : 0;
+    const lv = addXP(h, gained);
+    if (!u.alive) run.stats.deaths++;
+    const bs = heroBattleStats(B, u);
+    rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: u.alive,
+      xp: gained, lost: u.alive ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
+  }
+  run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
+  for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
+  for (const key of B.drops) run.stash.push(makeItem([key]));
+  if (run.tech.mimic && s % 3 === 0) { const key = pick(COMP_KEYS); run.stash.push(makeItem([key])); rep.mimic = key; }
+  run.stats.kills += B.kills; run.stats.gold += rep.gold;
+  const A = run.stats.ach = run.stats.ach || {}; for (const k in B.ach || {}) A[k] = (A[k] || 0) + B.ach[k];
+  if (B.bossKilled && run.mods.bossmad) A.mad = (A.mad || 0) + 1; if (B.bossKilled && run.mods.bosssoft) A.soft = (A.soft || 0) + 1;
+  A.maxGold = Math.max(A.maxGold || 0, run.gold); if (run.castle.hp >= run.castle.max) A.fullWalls = Math.max(A.fullWalls || 0, s); A.maxRoster = Math.max(A.maxRoster || 0, run.roster.length);
+  if (B.bossKilled) { run.stats.bosses.push({ siege: s, kind: B.bossKilled });
+    const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); const grow = run.castle.max - old, fix = Math.round(run.castle.max * 0.25);
+    run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
+  if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
+  run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
+  run.mods = {};
+  run.siege++; run.lootRerolls = 0;
+  return rep;
+}
+
+// diamonds only come from achievements (see achievements.js), never from playing a run
+function diamondsForRun(run) { return 0; }

@@ -1,0 +1,108 @@
+// ===== Bot agents: headless full runs with the real sim (Node tool + in-game Sim Lab) =====
+const BOT_STYLES = {
+  brawler:  { name: 'Brawler',  focus: 'ad',  comps: ['sword', 'bow', 'glove', 'belt'], techs: ['vault1', 'ballista1', 'walls1', 'drill', 'ballista2', 'scav', 'pulleys', 'trophy', 'wells', 'fountain', 'rafters1', 'vault2', 'college', 'ballista3', 'hammer2', 'walls2', 'kiln'], desc: 'Drafts high Attack rolls, stacks swords, bows and gloves.' },
+  arcanist: { name: 'Arcanist', focus: 'ap',  comps: ['rod', 'tear', 'rod', 'glove'],     techs: ['wells', 'vault1', 'resonance', 'lab', 'walls1', 'focus', 'prism', 'drill', 'ballista1', 'scav', 'aether', 'fountain', 'rafters1', 'college', 'trophy'], desc: 'Drafts high Ability power, rushes signatures and combos.' },
+  bulwark:  { name: 'Bulwark',  focus: 'def', comps: ['vest', 'belt', 'cloak', 'tear'],   techs: ['walls1', 'fountain', 'vault1', 'rafters1', 'ballista1', 'walls2', 'drill', 'rafters2', 'bastion', 'resonance', 'ballista2', 'scav', 'college'], desc: 'Drafts high Defense, builds walls and tanky items.' },
+  balanced: { name: 'Balanced', focus: null,  comps: null,                                 techs: ['vault1', 'walls1', 'wells', 'ballista1', 'drill', 'scav', 'fountain', 'resonance', 'lab', 'rafters1', 'pulleys', 'trophy', 'prism', 'focus', 'vault2', 'college', 'walls2', 'ballista2', 'aether'], desc: 'Takes the best total rolls and spreads its gold.' },
+  crit:     { name: 'Crit Ranger', focus: 'ad', cls: 'ranger', comps: ['glove', 'glove', 'bow', 'sword'], techs: ['rafters1', 'vault1', 'ballista1', 'walls1', 'drill', 'rafters2', 'scav', 'wells', 'fountain'], desc: 'Stacks crit on rangers and parks them in the rafters, like Cam\'s run.' },
+  chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
+};
+
+function botScoreOpt(style, o) {
+  const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
+  const r = o.rolls, sum = r.ad + r.ap + r.def;
+  return (S.focus ? r[S.focus] * 2.2 : 0) + sum + HERO_BY_ID[o.id].tier * 5 + (S.cls && HERO_BY_ID[o.id].cls === S.cls ? 12 : 0) + Math.random();
+}
+function botGiveItems(run, style) {
+  // hand every unheld item to the hero with the fewest items (prefer the one with a lone component so it fuses)
+  for (const it of run.stash.filter(x => !x.holder)) {
+    const heroes = run.roster.slice().sort((a, b) => b.level - a.level);
+    const fuse = it.parts.length === 1 && heroes.find(h => heroItems(run, h).some(x => x.parts.length === 1));
+    const target = fuse || heroes.find(h => h.items.length < ITEM_SLOTS);
+    if (target) giveItem(run, it, target);
+  }
+}
+function botShop(run, meta, style) {
+  const S = BOT_STYLES[style];
+  if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
+  for (let g = 0; g < 20; g++) {
+    let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
+    ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
+    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold >= TECH[k].cost);
+    if (!id || (style === 'chaos' && Math.random() < 0.3)) break;
+    buyTech(run, meta, id);
+  }
+  if (run.castle.hp < run.castle.max * 0.6) repairCastle(run);
+}
+function botPickLoot(run, style, opts) {
+  const S = BOT_STYLES[style];
+  if (!S.comps) return pick(opts);
+  return opts.slice().sort((a, b) => b.parts.filter(p => S.comps.includes(p)).length - a.parts.filter(p => S.comps.includes(p)).length)[0];
+}
+function botElement(run, style, h, opts) {
+  const S = BOT_STYLES[style];
+  if (!S.focus) { if (style === 'chaos') return pick(opts); const best = STAT_KEYS.slice().sort((a, b) => h.rolls[b] - h.rolls[a])[0]; return opts.find(e => ELEMENTS[e].style === best) || opts[0]; }
+  return opts.find(e => ELEMENTS[e].style === S.focus) || opts[0];
+}
+function botBattle(B, dt, maxT) {
+  let t = 0;
+  while (!B.done && t < maxT) {
+    stepBattle(B, dt); t += dt;
+    if (B.hammer.cd <= 0 && !B.hammer.pending) { const e = densest(B.enemies.filter(e => e.x < 360), 30); if (e) castHammer(B, e.x, e.y); }
+    if (B.run.castleEl && B.cpow.cd <= 0) { const e = densest(B.enemies, 40); if (e && (B.enemies.filter(x => x.alive).length > 5 || e.boss)) castCastlePower(B, e.x, e.y); }
+  }
+  if (!B.done) B.done = 'timeout';
+  return t;
+}
+// spends a diamond budget the way a typical player might: always the cheapest next upgrade, specs on a random path
+function botMeta(budget) {
+  const meta = newMeta(); meta.spec = {}; let left = budget;
+  for (let g = 0; g < 200; g++) {
+    const opts = [];
+    for (const [k, M] of Object.entries(META)) { const l = meta.ranks[k] || 0; if (l < M.max) opts.push({ c: M.cost(l), buy: () => { meta.ranks[k] = l + 1; } }); }
+    for (const cls of Object.keys(SPECS)) { const cur = meta.spec[cls] || { path: Math.random() < 0.5 ? 'a' : 'b', rank: 0 }; if (cur.rank < 3) opts.push({ c: SPEC_COST[cur.rank], buy: () => { meta.spec[cls] = { path: cur.path, rank: cur.rank + 1 }; } }); }
+    opts.sort((a, b) => a.c - b.c + (Math.random() - 0.5) * 6); const o = opts.find(o => o.c <= left); if (!o) break; left -= o.c; o.buy();
+  }
+  return meta;
+}
+// one full run. opts: { dt, maxSiege, onSiege }
+function botPlayRun(style, meta, opts = {}) {
+  const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
+  const run = newRun(meta); const log = [];
+  const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
+  draft();
+  let cause = 'cap';
+  while (run.siege <= maxSiege) {
+    botGiveItems(run, style); botShop(run, meta, style);
+    for (const h of run.roster) if (!h.place) autoPlace(run, h);
+    const B = startBattle(run, meta);
+    const t = botBattle(B, dt, 420);
+    if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
+    const rep = finishSiege(run, meta, B);
+    if (opts.onSiege) opts.onSiege(run, rep);
+    if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
+    log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
+    if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
+    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) draft();
+    if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
+    run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = st || pick(ENCOUNTERS); resolveEncounter(run, meta, pick(enc.opts).fx);
+    if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
+  }
+  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rolls: h.rolls, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+    techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
+}
+function summarizeBots(results) {
+  const by = {};
+  for (const r of results) (by[r.style] = by[r.style] || []).push(r);
+  const out = {};
+  for (const [k, rs] of Object.entries(by)) {
+    const reached = rs.map(r => r.reached).sort((a, b) => a - b);
+    const lvAt = s => { const v = rs.map(r => r.log.find(l => l.s === s)).filter(Boolean).map(l => Math.max(...l.lv)); return v.length ? +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : null; };
+    const causes = {}; for (const r of rs) causes[r.cause] = (causes[r.cause] || 0) + 1;
+    const els = {}; for (const r of rs) for (const h of r.heroes) if (h.el) els[h.el] = (els[h.el] || 0) + 1;
+    out[k] = { runs: rs.length, avg: +(reached.reduce((a, b) => a + b, 0) / rs.length).toFixed(1), median: reached[Math.floor(reached.length / 2)], best: reached[reached.length - 1], worst: reached[0],
+      lv5: lvAt(5), lv10: lvAt(10), lv15: lvAt(15), lv20: lvAt(20), causes, elements: els, reached };
+  }
+  return out;
+}

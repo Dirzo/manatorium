@@ -1,0 +1,12 @@
+{
+  "name": "siege-of-legends",
+  "version": "0.22.0",
+  "private": true,
+  "description": "Browser castle-defense auto battler, bundled into one HTML file.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs && cp dist/manatorium.html index.html",
+    "boss-odds": "node tools/boss-odds.mjs",
+    "item-scaling": "node tools/item-scaling.mjs"
+  }
+}
