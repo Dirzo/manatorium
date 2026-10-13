@@ -1,0 +1,9 @@
+{
+  // Cloudflare Workers static site: serves the single-file game from ./site
+  "name": "siege-of-legends",
+  "compatibility_date": "2026-09-27",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "single-page-application"
+  }
+}

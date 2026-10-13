@@ -10,6 +10,10 @@ Open `index.html` in any modern browser. The whole game is one self-contained fi
 
 Saves are kept in the browser's local storage.
 
+## Website (Cloudflare)
+
+`wrangler.jsonc` publishes `site/` as a static Cloudflare Worker named `siege-of-legends`. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler.
+
 ## Build
 
 The game is split into plain JavaScript files in `src/` and bundled into one HTML file:
@@ -19,7 +23,7 @@ node build.mjs        # writes dist/manatorium.html
 cp dist/manatorium.html index.html
 ```
 
-`npm run build` does both steps.
+`npm run build` does both steps and also refreshes `site/index.html`, which the website serves.
 
 | File | What it holds |
 | --- | --- |
