@@ -403,7 +403,7 @@ table.lab th { font-family: var(--f-display); color: var(--muted); font-weight: 
 @media (max-width: 860px) { .controls #notesBtn { display: none; } }
 .ecard .chip { align-self: flex-start; }
 .eorb.castle { height: 120px; border-radius: 6px; background: linear-gradient(var(--ec2), color-mix(in srgb, var(--ec) 40%, #222c5a)); overflow: hidden; align-items: end; }
-.eorb.castle img { width: 88px; height: 120px; animation: none; }
+.eorb.castle img { width: auto; height: 120px; max-width: 100%; object-fit: contain; animation: none; }
 body:has(#modal:not([hidden])) #coach, body:has(#notes:not([hidden])) #coach, body:has(#lab:not([hidden])) #coach, body:has(#title:not([hidden])) #coach { display: none; }
 body:has(#modal:not([hidden])) .spot, body:has(#title:not([hidden])) .spot { animation: none; box-shadow: none !important; }
 

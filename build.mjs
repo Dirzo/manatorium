@@ -1,10 +1,10 @@
 // Builds the single-file game: node build.mjs -> dist/manatorium.html
 import fs from 'fs';
-const src = new URL('./src/', import.meta.url).pathname;
-const read = f => fs.readFileSync(src + f, 'utf8');
-const js = ['data.js', 'sprites.js', 'itemart.js', 'sim.js', 'state.js', 'lore.js', 'achievements.js', 'fx.js', 'spellfx.js', 'render.js', 'simbot.js', 'tips.js', 'ui.js', 'telemetry.js', 'tower.js', 'main.js'].map(read).join('\n')
-  + '\nwindow.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? null);\n';
+const read = f => fs.readFileSync(new URL('./src/' + f, import.meta.url), 'utf8');
+const sources = Object.fromEntries(['fire', 'water', 'nature', 'ice', 'lightning', 'dark', 'light', 'void', 'salty', 'sweet', 'meat', 'treat'].map(el => [el, 'data:image/png;base64,' + fs.readFileSync(new URL('./assets/castles/' + el + (['fire','water','nature'].includes(el) ? '-16bit.png' : ['ice','meat','salty','light'].includes(el) ? '-16bit-v3.png' : '-16bit-v2.png'), import.meta.url)).toString('base64')]));
+const js = 'const CASTLE_ART_SOURCES = ' + JSON.stringify(sources) + ';\n' + ['data.js', 'sprites.js', 'itemart.js', 'sim.js', 'state.js', 'lore.js', 'achievements.js', 'fx.js', 'spellfx.js', 'render.js', 'castle.js', 'element-scenes.js', 'element-terrain.js', 'element-worlds.js', 'castle-art.js', 'simbot.js', 'tips.js', 'ui.js', 'telemetry.js', 'tower.js', 'main.js'].map(read).join('\n')
+  + '\nloadCastleArt().then(() => { window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? null); });\n';
 const html = read('shell.html').replace('/*CSS*/', () => read('style.css')).replace('/*JS*/', () => js);
-fs.mkdirSync(new URL('./dist/', import.meta.url).pathname, { recursive: true });
-fs.writeFileSync(new URL('./dist/manatorium.html', import.meta.url).pathname, html);
+for (const dir of ['dist', 'site']) fs.mkdirSync(new URL('./' + dir + '/', import.meta.url), { recursive: true });
+for (const file of ['dist/manatorium.html', 'index.html', 'site/index.html']) fs.writeFileSync(new URL('./' + file, import.meta.url), html);
 console.log('built', (html.length / 1024).toFixed(1) + ' KB');
