@@ -65,6 +65,8 @@ function fieldElements(run) {
   for (const h of placedHeroes(run)) for (const e of heroElements(run, h)) n[e] = (n[e] || 0) + 1;
   return n;
 }
+// element stacks also count the castle's element as one more carrier (only when a champion has it). Combos ignore the castle.
+function stackElements(run) { const n = fieldElements(run); if (run.castleEl && n[run.castleEl]) n[run.castleEl]++; return n; }
 // every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which
 const COMBO_SLOTS = 2;
 function possibleCombos(run) {
@@ -125,7 +127,7 @@ function heroStats(h, run, meta, syn) {
   for (const k in tc) if (tc[k] >= 2 && TEMPERS[k].team) TEMPERS[k].team(s);
   s.armor = Math.max(0, s.armor);
   // elements: power scales with the rolled stat that matches the element's playstyle
-  const fe = fieldElements(run);
+  const fe = stackElements(run);
   for (const e of heroElements(run, h)) {
     const E = ELEMENTS[e]; let p = (0.6 + 0.08 * R[E.style]) * sm; const nst = Math.min(4, fe[e] || 0);
     // element stacks: 2, 3 or 4 champions sharing an element power it up and boost their matching stat
@@ -598,6 +600,7 @@ function castCastlePower(B, x, y) {
     case 'ham': fireProj(B, { x: 40, y: 50, side: 'castle', facing: 1, z: 0 }, null, 'ham', 0, { tx: x, ty: y, fixed: true, speed: 160, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty }, 50)) { dealDamage(B, null, e, dmg * 2, { kind: 'combo' }); if (!e.boss) e.stun = Math.max(e.stun, 1.5); } for (const h of inRadius(B.heroes, { x: p.tx, y: p.ty }, 80)) healUnit(B, null, h, h.maxHp * 0.3); FX.explode(p.tx, p.ty, 50, ['#ff6a6a', '#ffd0b0', '#ffffff']); FX.shockwave(p.tx, p.ty, 90, '#ffd0b0'); FX.shake(8); FX.text(p.tx, p.ty - 30, 'HAM', '#ffd0b0', true, true); FX.sound('boom'); } }); break;
     case 'pinata': B.pinataT = 6; for (const e of live) dealDamage(B, null, e, dmg * 0.4, { kind: 'combo' }); for (let i = 0; i < 6; i++) FX.particles(rand(110, 460), rand(100, 240), 8, ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d'], { spread: 20, up: true }); FX.text(W / 2, 90, 'PIÑATA!', '#ffb02e', true, true); break;
   }
+  FX.castlePower(P.kind, x, y, cols, B);
   FX.combo(W / 2, 80, P.name, cols); FX.shake(6); FX.sound('hammer');
   return true;
 }
