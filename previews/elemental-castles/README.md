@@ -1,6 +1,6 @@
 # Elemental castles preview
 
-This work is parked on `feature/elemental-castles-preview` for review and future integration. The repository's default game branch is `claude/project-thread-ytj3kj`; no production deployment is part of this preview.
+This work is parked on `feature/elemental-castles-preview` for review and future integration. It incorporates the default branch through `89dc6dd` (castle power animations and element stack changes). The repository's default game branch is `claude/project-thread-ytj3kj`; no production deployment is part of this preview.
 
 Download or clone this branch and open [index.html](index.html) in Chrome. It links the standalone playable build, all twelve castles in actual combat, a horde selector, and before/after comparisons. GitHub displays the screenshots below directly; HTML previews require downloading the branch.
 

@@ -1,5 +1,7 @@
 # Siege of Legends
 
+**Elemental castle preview branch:** start with [the preview guide and gameplay screenshots](previews/elemental-castles/README.md). Download this branch and open `previews/elemental-castles/index.html` in Chrome to play and compare all twelve castles. Integration instructions are in that guide.
+
 A browser castle-defense auto battler. Draft champions, build items, and hold the castle against ten hordes over 50 sieges, ending with The Eternal Goose.
 
 ![The castle at 0, 2, 5 and 10 bosses slain](docs/castle-stages.png)
