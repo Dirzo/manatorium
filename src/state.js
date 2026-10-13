@@ -36,6 +36,8 @@ function draftOptions(run, meta, focus) {
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = { id: pick(fits).id, rolls: rollStats(), temper: rollTemper() }; }
   return out;
 }
+// after the free partner, every draft is bought in the Guild Hall and costs more each time
+function draftCost(run) { const n = run.paidDrafts || 0; return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
 function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
 function joinLevel(run) { const v = run.vet || 0; if (run.roster.length < 2) return 1 + v; const avg = run.roster.reduce((a, h) => a + h.level, 0) / run.roster.length; return Math.max(1, Math.floor(avg * 0.75)) + v; }
 function addDraftedHero(run, opt) {
@@ -113,10 +115,10 @@ function unforgeItem(run, it) {
 }
 
 // ----- Super Anvil -----
-function superAnvilOpen(run) { return run.siege >= SUPER_ANVIL_AT; }
+function superAnvilOpen(run) { return !!run.tech.superanvil; }
 function superForgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
 function forgeSuper(run, a, b) {
-  if (!superAnvilOpen(run)) return { err: `The Super Anvil opens after siege ${SUPER_ANVIL_AT - 1}.` };
+  if (!superAnvilOpen(run)) return { err: "Build the Super Anvil in the Artificers' Hall first." };
   if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
   if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
   const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);

@@ -886,6 +886,13 @@ button[data-tip] { cursor: pointer; }
 .sa-prev { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .3); }
 .sa-prev img { width: 48px; height: 48px; filter: drop-shadow(0 0 6px #b06cff); }
 .superanvil .cost img { width: 14px; height: 14px; }
+
+.card.buydraft { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 2px solid var(--gold); }
+.buydraft .dbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 150px; padding: 10px 14px; }
+.buydraft .dbtn b { font-size: 16px; }
+.buydraft .dbtn span { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.buydraft .dbtn .cost img { width: 14px; height: 14px; }
+.buydraft .dbtn[disabled] { opacity: .5; cursor: not-allowed; }
 </style>
 <div id="app">
   <header class="hud">
@@ -1139,7 +1146,6 @@ const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at
 
 // ===== Progression =====
 const VERSION = 'phase3.0';
-const DRAFT_AFTER = s => s === 1 || s === 4 || s === 8 || (s >= 10 && s % 5 === 0);   // partner before siege 2, a third before the first boss, a fourth at 8, then after every boss
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -1306,8 +1312,8 @@ const FINISHED = {
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
-// ===== Super Anvil: two finished items forge into one super item. Opens after the third boss (siege 15). =====
-const SUPER_ANVIL_AT = 16, SUPER_COST = 40;
+// ===== Super Anvil: two finished items forge into one super item. A Hall tech that opens at siege 29. =====
+const SUPER_COST = 40;
 const SUPERS = {
   sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
   bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
@@ -1336,7 +1342,7 @@ function itemDesc(it) {
 }
 const ITEM_SLOTS = 3;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
-const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15 };
+const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15, 5: 29 };
 const TECH_LATE_T1 = { wells: 3, vault1: 3 };
 function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T1[id] || TECH_OPENS[T.t] || 1; }
 
@@ -1355,6 +1361,7 @@ const TECH = {
   pulleys:  { name: 'Sky Hammer Pulleys', b: 1, t: 2, cost: 85,  req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
   ballista3:{ name: 'Piercing Bolts',     b: 1, t: 3, cost: 195, req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
   hammer2:  { name: 'Heavier Hammer',     b: 1, t: 3, cost: 180, req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 350, req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
   kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 300, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
   wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 45,  req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
   lab:      { name: 'Elemental Lab',      b: 2, t: 2, cost: 110, req: ['wells'],          desc: 'Element choices show 4 cards instead of 3.' },
@@ -3572,6 +3579,8 @@ function draftOptions(run, meta, focus) {
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = { id: pick(fits).id, rolls: rollStats(), temper: rollTemper() }; }
   return out;
 }
+// after the free partner, every draft is bought in the Guild Hall and costs more each time
+function draftCost(run) { const n = run.paidDrafts || 0; return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
 function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
 function joinLevel(run) { const v = run.vet || 0; if (run.roster.length < 2) return 1 + v; const avg = run.roster.reduce((a, h) => a + h.level, 0) / run.roster.length; return Math.max(1, Math.floor(avg * 0.75)) + v; }
 function addDraftedHero(run, opt) {
@@ -3649,10 +3658,10 @@ function unforgeItem(run, it) {
 }
 
 // ----- Super Anvil -----
-function superAnvilOpen(run) { return run.siege >= SUPER_ANVIL_AT; }
+function superAnvilOpen(run) { return !!run.tech.superanvil; }
 function superForgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
 function forgeSuper(run, a, b) {
-  if (!superAnvilOpen(run)) return { err: `The Super Anvil opens after siege ${SUPER_ANVIL_AT - 1}.` };
+  if (!superAnvilOpen(run)) return { err: "Build the Super Anvil in the Artificers' Hall first." };
   if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
   if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
   const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
@@ -4833,13 +4842,17 @@ function botGiveItems(run, style) {
     if (target) giveItem(run, it, target);
   }
 }
+// bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
+function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
+function botBuyDrafts(run, draft) { while (run.roster.length >= 2 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
+  const keep = run.roster.length < botRosterGoal(run.siege + 1) ? draftCost(run) : 0;
   for (let g = 0; g < 20; g++) {
     let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
     ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
-    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold >= TECH[k].cost);
+    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold - keep >= TECH[k].cost);
     if (!id || (style === 'chaos' && Math.random() < 0.3)) break;
     buyTech(run, meta, id);
   }
@@ -4884,7 +4897,7 @@ function botPlayRun(style, meta, opts = {}) {
   draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
-    botGiveItems(run, style); botShop(run, meta, style);
+    botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
@@ -4895,7 +4908,8 @@ function botPlayRun(style, meta, opts = {}) {
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) draft();
+    if (run.roster.length < 2) draft();
+    botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = st || pick(ENCOUNTERS); resolveEncounter(run, meta, pick(enc.opts).fx);
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
@@ -5342,8 +5356,10 @@ const UI = {
     body.querySelectorAll('details.hbranch').forEach(d => d.ontoggle = () => { UI.hallOpen[d.dataset.br] = d.open; });
   },
   guildHTML(run) {
-    let next = run.siege; while (!DRAFT_AFTER(next) && next < run.siege + 30) next++;
-    let h = `<div class="card"><span class="eyebrow">Next champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins before siege 2.' : next === 4 ? "A third champion joins after siege 4, before the first boss." : `A new champion can be drafted after siege ${next}.`} New champions arrive at about three quarters of your team's average level.</p></div>`;
+    const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
+    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins free after siege 1. ' : ''}Each draft costs more than the last, so save up between sieges. New champions arrive at about three quarters of your team's average level.</p>
+      <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
+      <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
     h += `<div class="group-title">Your champions</div>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
@@ -5390,7 +5406,7 @@ const UI = {
     return h + `</details>`;
   },
   superAnvilHTML(run) {
-    if (!superAnvilOpen(run)) return `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Opens after the siege ${SUPER_ANVIL_AT - 1} boss. Forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
+    if (!superAnvilOpen(run)) return run.siege < techOpensAt('superanvil') ? '' : `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Build it in the Artificers' Hall to forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
     const fin = superForgeable(run); UI.saSel = (UI.saSel || []).filter(u => fin.some(it => it.uid === u));
     let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
     if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
@@ -5519,7 +5535,7 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], tot = o.rolls.ad + o.rolls.ap + o.rolls.def, bs = bestStyle(o.rolls);
@@ -6021,13 +6037,14 @@ function startRun() {
 
 function showDraft() {
   const run = G.run; if (!run.pendingDraft) run.pendingDraft = draftOptions(run, G.meta);
-  const kind = run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
+  const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
       const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
       const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
       TEL.event('draft', { id: o.id, rolls: o.rolls, kind });
+      if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
     });
     const rr = s.querySelector('#draftReroll'); if (rr) rr.onclick = () => { const c = draftRerollCost(run); if (run.gold < c) return; run.gold -= c; run.draftRerolls++; run.pendingDraft = draftOptions(run, G.meta); SFX.play('click'); showDraft(); };
@@ -6078,7 +6095,7 @@ function endSiege() {
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) run.post.push('draft');
+    if (run.roster.length < 2) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -6170,10 +6187,11 @@ function toPrep() {
   changed();
   const run = G.run;
   if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall shows when the next champion arrives and how close each hero is to a signature or element.'), 600);
+  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
 }
 
 // ----- actions -----
@@ -6191,6 +6209,8 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
+    case 'buydraft': { if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+      run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
     case 'recipe': UI.recipeSel = UI.recipeSel === arg ? null : arg; UI.renderPage(); return;

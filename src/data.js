@@ -183,7 +183,6 @@ const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at
 
 // ===== Progression =====
 const VERSION = 'phase3.0';
-const DRAFT_AFTER = s => s === 1 || s === 4 || s === 8 || (s >= 10 && s % 5 === 0);   // partner before siege 2, a third before the first boss, a fourth at 8, then after every boss
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -350,8 +349,8 @@ const FINISHED = {
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
-// ===== Super Anvil: two finished items forge into one super item. Opens after the third boss (siege 15). =====
-const SUPER_ANVIL_AT = 16, SUPER_COST = 40;
+// ===== Super Anvil: two finished items forge into one super item. A Hall tech that opens at siege 29. =====
+const SUPER_COST = 40;
 const SUPERS = {
   sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
   bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
@@ -380,7 +379,7 @@ function itemDesc(it) {
 }
 const ITEM_SLOTS = 3;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
-const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15 };
+const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15, 5: 29 };
 const TECH_LATE_T1 = { wells: 3, vault1: 3 };
 function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T1[id] || TECH_OPENS[T.t] || 1; }
 
@@ -399,6 +398,7 @@ const TECH = {
   pulleys:  { name: 'Sky Hammer Pulleys', b: 1, t: 2, cost: 85,  req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
   ballista3:{ name: 'Piercing Bolts',     b: 1, t: 3, cost: 195, req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
   hammer2:  { name: 'Heavier Hammer',     b: 1, t: 3, cost: 180, req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 350, req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
   kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 300, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
   wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 45,  req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
   lab:      { name: 'Elemental Lab',      b: 2, t: 2, cost: 110, req: ['wells'],          desc: 'Element choices show 4 cards instead of 3.' },

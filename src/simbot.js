@@ -22,13 +22,17 @@ function botGiveItems(run, style) {
     if (target) giveItem(run, it, target);
   }
 }
+// bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
+function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
+function botBuyDrafts(run, draft) { while (run.roster.length >= 2 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
+  const keep = run.roster.length < botRosterGoal(run.siege + 1) ? draftCost(run) : 0;
   for (let g = 0; g < 20; g++) {
     let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
     ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
-    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold >= TECH[k].cost);
+    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold - keep >= TECH[k].cost);
     if (!id || (style === 'chaos' && Math.random() < 0.3)) break;
     buyTech(run, meta, id);
   }
@@ -73,7 +77,7 @@ function botPlayRun(style, meta, opts = {}) {
   draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
-    botGiveItems(run, style); botShop(run, meta, style);
+    botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
@@ -84,7 +88,8 @@ function botPlayRun(style, meta, opts = {}) {
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) draft();
+    if (run.roster.length < 2) draft();
+    botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = st || pick(ENCOUNTERS); resolveEncounter(run, meta, pick(enc.opts).fx);
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
