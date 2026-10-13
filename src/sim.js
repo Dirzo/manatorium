@@ -11,7 +11,7 @@ function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascend
 const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
-  swarm: 0.05, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
+  swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
 const HORDE_DIFF = [1.064, 1.029, 1.116, 1.494, 0.999, 0.534, 0.392, 0.216, 0.053, 0.028];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
@@ -52,10 +52,10 @@ function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x 
 function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id; }
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
-function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) if (it.el && !out.includes(it.el)) out.push(it.el); return out; }
+function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
 function effRolls(run, h) {
   let bonus = (h.mustache ? 1 : 0) + (run.tech.aether ? 1 : 0);
-  for (const it of heroItems(run, h)) if (it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
+  for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
   const r = {}; for (const k of STAT_KEYS) r[k] = Math.min(15, h.rolls[k] + bonus); return r;
 }
 // which elements are on the field, how many heroes carry each
@@ -144,7 +144,7 @@ function heroStats(h, run, meta, syn) {
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: components give stats; finished items give 125% of both parts plus a special
-  for (const it of heroItems(run, h)) {
+  for (const it0 of heroItems(run, h)) for (const it of it0.sub ? [it0, it0.sub] : [it0]) {
     const f = it.parts.length === 2 ? 1.6 : 1.3;
     for (const c of it.parts) switch (c) {
       case 'sword': s.atk *= 1 + 0.18 * f; break;
@@ -176,6 +176,16 @@ function heroStats(h, run, meta, syn) {
       }
     }
   }
+  for (const it of heroItems(run, h)) if (it.sup) { const sp = s.sp; switch (it.sup) {
+    case 'sword': s.atk *= 1.25; sp.cleave = sp.multishot = sp.execute = true; break;
+    case 'bow': s.as *= 1.25; sp.quicksilver = sp.multishot = true; s.storm = Math.max(s.storm || 0, 0.35); break;
+    case 'rod': s.ap *= 1.35; s.sigMul *= 1.2; sp.hex = sp.jeweled = sp.spellblade = true; break;
+    case 'tear': s.startMana += 0.3; sp.fountain = sp.teacup = sp.hummingbird = true; break;
+    case 'vest': s.armor += 80; s.reflect += 0.3; sp.gargoyle = true; break;
+    case 'cloak': s.dodge += 0.2; sp.bedsheet = sp.trickster = true; break;
+    case 'belt': s.hp *= 1.4; s.regen += 0.03; sp.sunfire = true; break;
+    case 'glove': s.crit += 0.3; sp.dice = sp.hearty = sp.execute = true; break;
+  } }
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
@@ -197,7 +207,7 @@ function genWave(s, mods) {
   if (cyc > 0) elites += 1;
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
-  const sw = swarmK(s); budget *= sw;
+  const sw = swarmK(s) * BAL.thin; budget *= sw;
   let guard = 0;
   while (budget > 0.5 && guard++ < 600 && list.length < BAL.maxSpawn) { const id = pick(pool); list.push(id); budget -= ENEMIES[id].cost; }
   if (mods.chickens) { for (let i = 0; i < list.length; i++) if (!ENEMIES[list[i]].elite && Math.random() < 0.35) list[i] = 'chicken'; for (let i = 0; i < 6; i++) list.push('chicken'); }
@@ -232,7 +242,7 @@ function startBattle(run, meta) {
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
-  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => it.parts.length === 2 && FINISHED[itemKey(...it.parts)][1] === 'chalice'));
+  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => [it, it.sub].some(x => x && x.parts.length === 2 && FINISHED[itemKey(...x.parts)][1] === 'chalice')));
   for (const h of placedHeroes(run)) {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, meta, syn);
     let pos, rafter = false;

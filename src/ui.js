@@ -122,6 +122,34 @@ const UI = {
     b.textContent = st === 'on' ? 'Recording playtest' : st === 'asking' ? 'Starting playtest mic…' : 'Logging playtest (mic off)';
     b.title = (st === 'on' ? 'Your mic and every click are saved with this run for Claude to review.' : 'Every click is saved with this run for Claude to review. The microphone is not available in this view.') + (TEL.ready ? '' : ' Saved on this device until the shared log connects.');
   },
+  // forge cutscene: the inputs fly onto an anvil, a hammer strikes, and the new item bursts out. Click to skip.
+  forge(o) {
+    const old = document.querySelector('.forgefx'); if (old) old.remove();
+    const sup = !!o.super, hits = sup ? 3 : 2, d = document.createElement('div');
+    d.className = 'forgefx' + (sup ? ' sup' : '');
+    d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
+      ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
+      <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
+      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+    document.body.appendChild(d);
+    // pixel anvil, violet and gold for the super anvil
+    const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
+    g.fillStyle = A[1]; g.fillRect(2, 2, 26, 5); g.fillRect(0, 2, 4, 3); g.fillStyle = A[2]; g.fillRect(2, 2, 26, 1); g.fillStyle = A[0]; g.fillRect(9, 7, 12, 6); g.fillRect(6, 13, 18, 3); g.fillStyle = A[3]; g.fillRect(4, 16, 22, 3);
+    if (sup) { g.fillStyle = '#ffcf3a'; g.fillRect(14, 9, 2, 2); g.fillRect(8, 14, 2, 1); g.fillRect(20, 14, 2, 1); }
+    const T = [], at = (ms, f) => T.push(setTimeout(f, ms)), base = 650, step = sup ? 330 : 300;
+    for (let i = 0; i < hits; i++) at(base + i * step, () => { d.classList.remove('hit'); void d.offsetWidth; d.classList.add('hit'); SFX.play('anvil'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 16 : 10, sup); });
+    const done = base + hits * step;
+    at(done, () => { d.classList.add('done'); SFX.play('forged'); if (sup) SFX.play('boom'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 40 : 22, sup, true); });
+    const close = () => { T.forEach(clearTimeout); d.classList.add('out'); setTimeout(() => d.remove(), 250); if (o.after) o.after(); };
+    at(done + (sup ? 2600 : 1700), close);
+    d.addEventListener('click', () => { if (!d.classList.contains('done')) { T.forEach(clearTimeout); T.length = 0; d.classList.add('done'); at(sup ? 1400 : 900, close); return; } close(); });
+  },
+  forgeSparks(el, n, sup, big) {
+    const cols = sup ? ['#ffcf3a', '#ffffff', '#b06cff', '#ff8af0'] : ['#ffcf3a', '#ffffff', '#ff9a3a'];
+    for (let i = 0; i < n; i++) { const s = document.createElement('i'), a = Math.random() * Math.PI * 2, r = (big ? 90 : 50) + Math.random() * (big ? 110 : 60);
+      s.className = 'ff-spark'; s.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8 - (big ? 0 : 30)}px;background:${cols[i % cols.length]};animation-duration:${0.4 + Math.random() * 0.5}s`;
+      el.appendChild(s); setTimeout(() => s.remove(), 1000); }
+  },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
   banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
   flyTo(src, el, sx, sy, done) {
@@ -330,6 +358,7 @@ const UI = {
       h += `</div></div>`;
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
+    h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
     for (const it of loose) {
@@ -347,6 +376,18 @@ const UI = {
     if (UI.recipeSel) { const F = FINISHED[UI.recipeSel], [a, b] = UI.recipeSel.split('+'); h += `<p class="rdesc"><b>${esc(F[0])}</b> = ${esc(COMPONENTS[a].name)} + ${esc(COMPONENTS[b].name)}. ${esc(F[2])}</p>`; }
     else h += `<p class="note">Tap a square to see what two components make. A Golden Ladle with any component makes a Crest: a second element.</p>`;
     return h + `</details>`;
+  },
+  superAnvilHTML(run) {
+    if (!superAnvilOpen(run)) return `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Opens after the siege ${SUPER_ANVIL_AT - 1} boss. Forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
+    const fin = superForgeable(run); UI.saSel = (UI.saSel || []).filter(u => fin.some(it => it.uid === u));
+    let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
+    if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
+    h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+    if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
+      h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
+    else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
+    return h + `</div>`;
   },
   hallHTML(run) {
     // one dropdown per branch. Built techs shrink to chips, ready ones glow, newly opened ones say NEW.

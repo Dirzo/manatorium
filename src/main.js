@@ -202,8 +202,14 @@ G.act = function (act, arg) {
   const sel = run.roster.find(h => h.uid === G.selected);
   switch (act) {
     case 'give': { const it = run.stash.find(x => x.uid === arg); if (!it || !sel) return; r = giveItem(run, it, sel); if (r.err) return UI.toast(r.err, true);
-      if (r.fused) { SFX.play('level'); UI.toast(`Fused into ${itemName(r.fused)}!`); const u = G.prepUnits.find(p => p.inst === sel); if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(r.fused), '#ffcf3a', true, true); } TEL.event('fuse', { parts: r.fused.parts }); }
+      if (r.fused) { const u = G.prepUnits.find(p => p.inst === sel), f = r.fused;
+        UI.forge({ inputs: [itemIconURL({ parts: [f.parts[0]] }), itemIconURL({ parts: [f.parts[1]] })], out: itemIconURL(f), name: itemName(f), sub: `for ${heroDisplayName(sel)}`,
+          after: () => { if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(f), '#ffcf3a', true, true); } } });
+        TEL.event('fuse', { parts: f.parts }); }
       else SFX.play('shield'); UI.coachDone('armory-give'); break; }
+    case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
+    case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
+      UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
     case 'recipe': UI.recipeSel = UI.recipeSel === arg ? null : arg; UI.renderPage(); return;

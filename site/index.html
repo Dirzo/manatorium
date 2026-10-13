@@ -829,6 +829,63 @@ button[data-tip] { cursor: pointer; }
 .dcard { position: relative; }
 .dcard.bestfit { box-shadow: 0 4px 0 var(--ink), 0 0 0 3px var(--mint); }
 .dcard .bfb { position: absolute; top: -10px; right: 10px; background: var(--mint); color: var(--ink); font-weight: 700; font-size: 12px; padding: 1px 8px; border: 2px solid var(--ink); border-radius: 10px; }
+
+/* forge cutscene (item combines and the Super Anvil) */
+.forgefx { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(12, 8, 24, .78); cursor: pointer; animation: ffIn .2s ease-out; }
+.forgefx.out { opacity: 0; transition: opacity .25s; }
+.ff-stage { position: relative; width: 320px; height: 330px; }
+.ff-anvil { position: absolute; left: 50%; top: 190px; width: 160px; height: 100px; transform: translateX(-50%); image-rendering: pixelated; }
+.ff-in { position: absolute; top: 120px; width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 0 6px #ffcf3a); }
+.ff-in0 { left: 50%; animation: ffInL .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+.ff-in1 { left: 50%; animation: ffInR .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+@keyframes ffInL { from { transform: translate(-260px, -40px) rotate(-200deg); } to { transform: translate(-58px, 26px) rotate(0); } }
+@keyframes ffInR { from { transform: translate(190px, -40px) rotate(200deg); } to { transform: translate(-14px, 26px) rotate(0); } }
+.forgefx.hit .ff-in { animation: none; transform: translate(-36px, 30px) scale(.82); }
+.forgefx.hit .ff-in1 { opacity: .85; }
+.ff-hammer { position: absolute; left: 50%; top: 40px; width: 64px; height: 30px; margin-left: 10px; background: linear-gradient(#c9cfe0, #7a8199); border: 3px solid #262a38; transform-origin: -40px 120%; transform: rotate(-50deg); opacity: 0; }
+.ff-hammer::after { content: ''; position: absolute; left: 22px; top: 27px; width: 10px; height: 80px; background: #8a5a2e; border: 3px solid #3a2414; }
+.forgefx.sup .ff-hammer { background: linear-gradient(#ffe680, #b06cff); }
+.forgefx.hit .ff-hammer { animation: ffHam .3s ease-in; }
+@keyframes ffHam { 0% { opacity: 1; transform: rotate(-60deg); } 55% { opacity: 1; transform: rotate(12deg); } 100% { opacity: 1; transform: rotate(-10deg); } }
+.forgefx.hit .ff-stage { animation: ffShake .18s; }
+@keyframes ffShake { 25% { transform: translate(4px, 3px); } 50% { transform: translate(-4px, -2px); } 75% { transform: translate(2px, 1px); } }
+.ff-spark { position: absolute; left: 50%; top: 175px; width: 6px; height: 6px; animation: ffSpark .7s ease-out forwards; }
+@keyframes ffSpark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.ff-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.forgefx.done .ff-flash { animation: ffFlash .45s ease-out; }
+@keyframes ffFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+.forgefx.done .ff-in, .forgefx.done .ff-hammer { display: none; }
+.ff-out { position: absolute; left: 50%; top: 70px; width: 120px; height: 120px; margin-left: -60px; image-rendering: pixelated; opacity: 0; transform: scale(.2); filter: drop-shadow(0 0 10px #ffcf3a); }
+.forgefx.sup .ff-out { filter: drop-shadow(0 0 14px #b06cff) drop-shadow(0 0 4px #ffcf3a); }
+.forgefx.done .ff-out { animation: ffPop .55s cubic-bezier(.3, 1.6, .5, 1) forwards, ffBob 1.6s .55s ease-in-out infinite; }
+@keyframes ffPop { to { opacity: 1; transform: scale(1); } }
+@keyframes ffBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.ff-rays { position: absolute; left: 50%; top: 130px; width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; opacity: 0;
+  background: repeating-conic-gradient(rgba(255, 207, 58, .35) 0 10deg, transparent 10deg 30deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); }
+.forgefx.sup .ff-rays { background: repeating-conic-gradient(rgba(176, 108, 255, .45) 0 8deg, rgba(255, 207, 58, .3) 8deg 14deg, transparent 14deg 26deg); }
+.forgefx.done .ff-rays { opacity: 1; transition: opacity .3s; animation: ffSpin 6s linear infinite; }
+@keyframes ffSpin { to { transform: rotate(360deg); } }
+.ff-name { position: absolute; left: -60px; right: -60px; top: 200px; z-index: 2; text-align: center; opacity: 0; transform: translateY(10px); }
+.forgefx.done .ff-name { opacity: 1; transform: none; transition: all .35s .25s; }
+.ff-name small { display: block; color: #c9c4e6; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+.ff-name b { display: block; color: #ffcf3a; font-size: 26px; text-shadow: 0 2px 0 #000; }
+.forgefx.sup .ff-name b { color: #e2c4ff; font-size: 30px; text-shadow: 0 0 10px #b06cff, 0 2px 0 #000; }
+.ff-name span { display: block; color: #fff; font-size: 13px; margin-top: 4px; }
+.forgefx.done .ff-anvil { opacity: .35; transition: opacity .4s; }
+.ff-skip { color: #8f88b3; font-size: 12px; margin-top: 8px; }
+@keyframes ffIn { from { opacity: 0; } }
+/* Super Anvil panel in the Armory */
+.superanvil { border: 2px solid #8a4fe0; background: linear-gradient(180deg, rgba(90, 40, 160, .25), rgba(30, 16, 60, .25)); border-radius: 10px; padding: 10px; margin: 6px 0 12px; }
+.superanvil.locked { opacity: .7; border-style: dashed; }
+.superanvil h4 { margin: 0 0 4px; color: #e2c4ff; }
+.sa-items { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.sa-it { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 8px; border: 2px solid transparent; background: rgba(0, 0, 0, .25); color: inherit; font: inherit; cursor: pointer; }
+.sa-it img { width: 32px; height: 32px; }
+.sa-it small { display: block; opacity: .7; }
+.sa-it.on { border-color: #ffcf3a; background: rgba(255, 207, 58, .12); }
+.sa-prev { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .3); }
+.sa-prev img { width: 48px; height: 48px; filter: drop-shadow(0 0 6px #b06cff); }
+.superanvil .cost img { width: 14px; height: 14px; }
 </style>
 <div id="app">
   <header class="hud">
@@ -1249,8 +1306,28 @@ const FINISHED = {
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
-function itemName(it) { if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
+// ===== Super Anvil: two finished items forge into one super item. Opens after the third boss (siege 15). =====
+const SUPER_ANVIL_AT = 16, SUPER_COST = 40;
+const SUPERS = {
+  sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
+  bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
+  rod: ['Starfall Crown', 'Ability power +35%. Signatures curse foes, can crit and power up the next attacks.'],
+  tear: ['Moonwell Chalice', 'Starts with +30% mana, gains mana every second and from every hit, and refunds mana after a signature.'],
+  vest: ['Castle-Heart Plate', '+80 armor, more for each foe nearby. Reflects 30% of melee damage.'],
+  cloak: ['Phantom Mantle', '+20% dodge. Foes that miss get spooked, and dodges counterattack.'],
+  belt: ["Giant's Heart", 'Max HP +40%. Regenerates 3% HP per second and burns foes nearby.'],
+  glove: ["Fortune's Grin", '+30% crit. Crits roll big, heal and finish weak foes.'],
+};
+// the super's flavour comes from the component the two items share most
+function superKind(a, b) {
+  const n = {}, all = [...a.parts, ...b.parts].filter(p => p !== 'spatula');
+  for (const p of all) n[p] = (n[p] || 0) + 1;
+  let best = all[0] || 'sword'; for (const p of all) if (n[p] > n[best]) best = p; return best;
+}
+function finishedName(parts, el) { const F = FINISHED[itemKey(...parts)]; return F[1] === 'emblem' ? `${ELEMENTS[el].name} Crest` : F[0]; }
+function itemName(it) { if (it.sup) return SUPERS[it.sup][0]; if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
 function itemDesc(it) {
+  if (it.sup) return `Super item: ${finishedName(it.parts, it.el)} + ${finishedName(it.sub.parts, it.sub.el)}, with both of their powers. ${SUPERS[it.sup][1]}`;
   if (it.parts.length < 2) return COMPONENTS[it.parts[0]].desc;
   const F = FINISHED[itemKey(...it.parts)];
   if (F[1] === 'emblem') return `The hero gains ${ELEMENTS[it.el].name} as a second element, plus ${COMPONENTS[it.parts.find(p => p !== 'spatula') || 'sword'].desc.toLowerCase()}.`;
@@ -1801,9 +1878,20 @@ function iconCanvas(name, px = 1) {
   ICON_CACHE[k] = c; return c;
 }
 function iconURL(name, px = 3) { return iconCanvas(name, px).toDataURL(); }
-function itemIconURL(it, px = 3) {
-  const k = 'it:' + it.parts.join('+') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
-  if (it.parts.length < 2) return (ICON_CACHE[k] = iconURL(COMPONENTS[it.parts[0]].glyph, px));
+// canvas for a component or finished item; super items layer two finished ones in a gem frame
+function itemIconCanvas(it, px = 3) {
+  const k = 'itc:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  if (it.sup) {
+    const c = document.createElement('canvas'); c.width = c.height = 16 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.fillStyle = '#2a1846'; g.fillRect(px, px, 14 * px, 14 * px);
+    g.fillStyle = '#b06cff'; g.fillRect(0, px, px, 14 * px); g.fillRect(15 * px, px, px, 14 * px); g.fillRect(px, 0, 14 * px, px); g.fillRect(px, 15 * px, 14 * px, px);
+    g.fillStyle = '#ffcf3a'; for (const [x, y] of [[0, 0], [15, 0], [0, 15], [15, 15], [1, 1], [14, 1], [1, 14], [14, 14]]) g.fillRect(x * px, y * px, px, px);
+    const a = itemIconCanvas({ parts: it.parts }, px), b = itemIconCanvas({ parts: it.sub.parts }, px);
+    g.drawImage(a, px, px, 11 * px, 11 * px); g.drawImage(b, 7 * px, 7 * px, 8 * px, 8 * px);
+    g.fillStyle = '#ffffff'; g.fillRect(13 * px, 2 * px, px, px); g.fillRect(2 * px, 13 * px, px, px); g.fillStyle = '#ffe680'; g.fillRect(12 * px, 2 * px, px, px); g.fillRect(13 * px, 3 * px, px, px);
+    return (ICON_CACHE[k] = c);
+  }
+  if (it.parts.length < 2) return (ICON_CACHE[k] = iconCanvas(COMPONENTS[it.parts[0]].glyph, px));
   const art = typeof ITEM_ART !== 'undefined' && ITEM_ART[itemKey(it.parts[0], it.parts[1])];
   if (art) {
     const g = new PixGrid(14, 14);
@@ -1811,13 +1899,17 @@ function itemIconURL(it, px = 3) {
     g.finish();
     const c = document.createElement('canvas'); c.width = c.height = 14 * px; const ctx = c.getContext('2d');
     for (let y = 0; y < 14; y++) for (let x = 0; x < 14; x++) { const col = g.get(x, y); if (col) { ctx.fillStyle = col; ctx.fillRect(x * px, y * px, px, px); } }
-    return (ICON_CACHE[k] = c.toDataURL());
+    return (ICON_CACHE[k] = c);
   }
   const a = iconCanvas(COMPONENTS[it.parts[0]].glyph, px), b = iconCanvas(COMPONENTS[it.parts[1]].glyph, px);
   const c = document.createElement('canvas'); c.width = c.height = 10 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.fillStyle = '#ffcf3a'; g.fillRect(0, 0, 10 * px, px); g.fillRect(0, 9 * px, 10 * px, px); g.fillRect(0, 0, px, 10 * px); g.fillRect(9 * px, 0, px, 10 * px);
   g.drawImage(a, px, px, 7 * px, 7 * px); g.drawImage(b, 4 * px, 4 * px, 6 * px, 6 * px);
-  return (ICON_CACHE[k] = c.toDataURL());
+  return (ICON_CACHE[k] = c);
+}
+function itemIconURL(it, px = 3) {
+  const k = 'it:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  return (ICON_CACHE[k] = itemIconCanvas(it, px).toDataURL());
 }
 function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
@@ -2519,7 +2611,7 @@ function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascend
 const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
-  swarm: 0.05, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
+  swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
 const HORDE_DIFF = [1.064, 1.029, 1.116, 1.494, 0.999, 0.534, 0.392, 0.216, 0.053, 0.028];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
@@ -2560,10 +2652,10 @@ function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x 
 function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id; }
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
-function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) if (it.el && !out.includes(it.el)) out.push(it.el); return out; }
+function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
 function effRolls(run, h) {
   let bonus = (h.mustache ? 1 : 0) + (run.tech.aether ? 1 : 0);
-  for (const it of heroItems(run, h)) if (it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
+  for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
   const r = {}; for (const k of STAT_KEYS) r[k] = Math.min(15, h.rolls[k] + bonus); return r;
 }
 // which elements are on the field, how many heroes carry each
@@ -2652,7 +2744,7 @@ function heroStats(h, run, meta, syn) {
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: components give stats; finished items give 125% of both parts plus a special
-  for (const it of heroItems(run, h)) {
+  for (const it0 of heroItems(run, h)) for (const it of it0.sub ? [it0, it0.sub] : [it0]) {
     const f = it.parts.length === 2 ? 1.6 : 1.3;
     for (const c of it.parts) switch (c) {
       case 'sword': s.atk *= 1 + 0.18 * f; break;
@@ -2684,6 +2776,16 @@ function heroStats(h, run, meta, syn) {
       }
     }
   }
+  for (const it of heroItems(run, h)) if (it.sup) { const sp = s.sp; switch (it.sup) {
+    case 'sword': s.atk *= 1.25; sp.cleave = sp.multishot = sp.execute = true; break;
+    case 'bow': s.as *= 1.25; sp.quicksilver = sp.multishot = true; s.storm = Math.max(s.storm || 0, 0.35); break;
+    case 'rod': s.ap *= 1.35; s.sigMul *= 1.2; sp.hex = sp.jeweled = sp.spellblade = true; break;
+    case 'tear': s.startMana += 0.3; sp.fountain = sp.teacup = sp.hummingbird = true; break;
+    case 'vest': s.armor += 80; s.reflect += 0.3; sp.gargoyle = true; break;
+    case 'cloak': s.dodge += 0.2; sp.bedsheet = sp.trickster = true; break;
+    case 'belt': s.hp *= 1.4; s.regen += 0.03; sp.sunfire = true; break;
+    case 'glove': s.crit += 0.3; sp.dice = sp.hearty = sp.execute = true; break;
+  } }
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
@@ -2705,7 +2807,7 @@ function genWave(s, mods) {
   if (cyc > 0) elites += 1;
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
-  const sw = swarmK(s); budget *= sw;
+  const sw = swarmK(s) * BAL.thin; budget *= sw;
   let guard = 0;
   while (budget > 0.5 && guard++ < 600 && list.length < BAL.maxSpawn) { const id = pick(pool); list.push(id); budget -= ENEMIES[id].cost; }
   if (mods.chickens) { for (let i = 0; i < list.length; i++) if (!ENEMIES[list[i]].elite && Math.random() < 0.35) list[i] = 'chicken'; for (let i = 0; i < 6; i++) list.push('chicken'); }
@@ -2740,7 +2842,7 @@ function startBattle(run, meta) {
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
-  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => it.parts.length === 2 && FINISHED[itemKey(...it.parts)][1] === 'chalice'));
+  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => [it, it.sub].some(x => x && x.parts.length === 2 && FINISHED[itemKey(...x.parts)][1] === 'chalice')));
   for (const h of placedHeroes(run)) {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, meta, syn);
     let pos, rafter = false;
@@ -3520,6 +3622,7 @@ function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.hold
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
   if (it.holder === h.uid) return { ok: true };
+  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries a super item. One each.` };
   if (it.parts.length === 1) {
     const partner = heroItems(run, h).find(x => x.parts.length === 1);
     if (partner) {
@@ -3540,8 +3643,26 @@ function unforgeItem(run, it) {
   if (it.parts.length < 2) return { err: 'Components cannot be split.' };
   if (run.gold < UNFORGE_COST) return { err: `Splitting costs ${UNFORGE_COST} gold.` };
   run.gold -= UNFORGE_COST; unequipItem(run, it); run.stash = run.stash.filter(x => x !== it);
+  if (it.sup) { const a = makeItem(it.parts, it.el), b = makeItem(it.sub.parts, it.sub.el); run.stash.push(a, b); return { ok: true }; }
   for (const p of it.parts) run.stash.push(makeItem([p]));
   return { ok: true };
+}
+
+// ----- Super Anvil -----
+function superAnvilOpen(run) { return run.siege >= SUPER_ANVIL_AT; }
+function superForgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
+function forgeSuper(run, a, b) {
+  if (!superAnvilOpen(run)) return { err: `The Super Anvil opens after siege ${SUPER_ANVIL_AT - 1}.` };
+  if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
+  if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
+  const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
+  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${HERO_BY_ID[holder.id].name.split(' ')[0]} already carries a super item. One each.` };
+  run.gold -= SUPER_COST; unequipItem(run, a); unequipItem(run, b);
+  run.stash = run.stash.filter(x => x !== a && x !== b);
+  const it = makeItem(a.parts, a.el); it.sub = { parts: b.parts.slice(), el: b.el || null }; it.sup = superKind(a, b);
+  run.stash.push(it);
+  if (holder) { holder.items.push(it.uid); it.holder = holder.uid; }
+  return { it, holder };
 }
 
 // ----- Artificers' Hall -----
@@ -3982,6 +4103,8 @@ const SFX = {
       case 'coin': T(988, 0.05, 'square', 0.06); T(1319, 0.09, 'square', 0.06, 1, 0.045); break;
       case 'kill': T(420, 0.09, 'square', 0.08, 0.4); N(0.08, 0.1, 1500); break;
       case 'boom': N(0.4, 0.4, 300, 0, 0.6); T(90, 0.3, 'sine', 0.3, 0.4); break;
+      case 'anvil': N(0.08, 0.3, 3200, 0, 2); T(1480, 0.35, 'triangle', 0.09, 1); T(2220, 0.25, 'sine', 0.05, 1); T(110, 0.12, 'square', 0.08, 0.5); break;
+      case 'forged': [523, 659, 784, 1047].forEach((f, i) => T(f, 0.18, 'square', 0.06, 1, i * 0.07)); T(1568, 0.5, 'triangle', 0.05, 1, 0.3); break;
       case 'hammer': N(0.6, 0.5, 200, 0, 0.5); T(70, 0.5, 'sine', 0.5, 0.4); T(140, 0.2, 'square', 0.12, 0.5); break;
       case 'whoosh': N(0.5, 0.15, 600, 0, 0.4); break;
       case 'quake': N(0.5, 0.35, 160, 0, 0.5); T(60, 0.4, 'sine', 0.35, 0.5); break;
@@ -5011,6 +5134,34 @@ const UI = {
     b.textContent = st === 'on' ? 'Recording playtest' : st === 'asking' ? 'Starting playtest mic…' : 'Logging playtest (mic off)';
     b.title = (st === 'on' ? 'Your mic and every click are saved with this run for Claude to review.' : 'Every click is saved with this run for Claude to review. The microphone is not available in this view.') + (TEL.ready ? '' : ' Saved on this device until the shared log connects.');
   },
+  // forge cutscene: the inputs fly onto an anvil, a hammer strikes, and the new item bursts out. Click to skip.
+  forge(o) {
+    const old = document.querySelector('.forgefx'); if (old) old.remove();
+    const sup = !!o.super, hits = sup ? 3 : 2, d = document.createElement('div');
+    d.className = 'forgefx' + (sup ? ' sup' : '');
+    d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
+      ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
+      <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
+      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+    document.body.appendChild(d);
+    // pixel anvil, violet and gold for the super anvil
+    const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
+    g.fillStyle = A[1]; g.fillRect(2, 2, 26, 5); g.fillRect(0, 2, 4, 3); g.fillStyle = A[2]; g.fillRect(2, 2, 26, 1); g.fillStyle = A[0]; g.fillRect(9, 7, 12, 6); g.fillRect(6, 13, 18, 3); g.fillStyle = A[3]; g.fillRect(4, 16, 22, 3);
+    if (sup) { g.fillStyle = '#ffcf3a'; g.fillRect(14, 9, 2, 2); g.fillRect(8, 14, 2, 1); g.fillRect(20, 14, 2, 1); }
+    const T = [], at = (ms, f) => T.push(setTimeout(f, ms)), base = 650, step = sup ? 330 : 300;
+    for (let i = 0; i < hits; i++) at(base + i * step, () => { d.classList.remove('hit'); void d.offsetWidth; d.classList.add('hit'); SFX.play('anvil'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 16 : 10, sup); });
+    const done = base + hits * step;
+    at(done, () => { d.classList.add('done'); SFX.play('forged'); if (sup) SFX.play('boom'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 40 : 22, sup, true); });
+    const close = () => { T.forEach(clearTimeout); d.classList.add('out'); setTimeout(() => d.remove(), 250); if (o.after) o.after(); };
+    at(done + (sup ? 2600 : 1700), close);
+    d.addEventListener('click', () => { if (!d.classList.contains('done')) { T.forEach(clearTimeout); T.length = 0; d.classList.add('done'); at(sup ? 1400 : 900, close); return; } close(); });
+  },
+  forgeSparks(el, n, sup, big) {
+    const cols = sup ? ['#ffcf3a', '#ffffff', '#b06cff', '#ff8af0'] : ['#ffcf3a', '#ffffff', '#ff9a3a'];
+    for (let i = 0; i < n; i++) { const s = document.createElement('i'), a = Math.random() * Math.PI * 2, r = (big ? 90 : 50) + Math.random() * (big ? 110 : 60);
+      s.className = 'ff-spark'; s.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8 - (big ? 0 : 30)}px;background:${cols[i % cols.length]};animation-duration:${0.4 + Math.random() * 0.5}s`;
+      el.appendChild(s); setTimeout(() => s.remove(), 1000); }
+  },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
   banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
   flyTo(src, el, sx, sy, done) {
@@ -5219,6 +5370,7 @@ const UI = {
       h += `</div></div>`;
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
+    h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
     for (const it of loose) {
@@ -5236,6 +5388,18 @@ const UI = {
     if (UI.recipeSel) { const F = FINISHED[UI.recipeSel], [a, b] = UI.recipeSel.split('+'); h += `<p class="rdesc"><b>${esc(F[0])}</b> = ${esc(COMPONENTS[a].name)} + ${esc(COMPONENTS[b].name)}. ${esc(F[2])}</p>`; }
     else h += `<p class="note">Tap a square to see what two components make. A Golden Ladle with any component makes a Crest: a second element.</p>`;
     return h + `</details>`;
+  },
+  superAnvilHTML(run) {
+    if (!superAnvilOpen(run)) return `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Opens after the siege ${SUPER_ANVIL_AT - 1} boss. Forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
+    const fin = superForgeable(run); UI.saSel = (UI.saSel || []).filter(u => fin.some(it => it.uid === u));
+    let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
+    if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
+    h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+    if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
+      h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
+    else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
+    return h + `</div>`;
   },
   hallHTML(run) {
     // one dropdown per branch. Built techs shrink to chips, ready ones glow, newly opened ones say NEW.
@@ -6019,8 +6183,14 @@ G.act = function (act, arg) {
   const sel = run.roster.find(h => h.uid === G.selected);
   switch (act) {
     case 'give': { const it = run.stash.find(x => x.uid === arg); if (!it || !sel) return; r = giveItem(run, it, sel); if (r.err) return UI.toast(r.err, true);
-      if (r.fused) { SFX.play('level'); UI.toast(`Fused into ${itemName(r.fused)}!`); const u = G.prepUnits.find(p => p.inst === sel); if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(r.fused), '#ffcf3a', true, true); } TEL.event('fuse', { parts: r.fused.parts }); }
+      if (r.fused) { const u = G.prepUnits.find(p => p.inst === sel), f = r.fused;
+        UI.forge({ inputs: [itemIconURL({ parts: [f.parts[0]] }), itemIconURL({ parts: [f.parts[1]] })], out: itemIconURL(f), name: itemName(f), sub: `for ${heroDisplayName(sel)}`,
+          after: () => { if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(f), '#ffcf3a', true, true); } } });
+        TEL.event('fuse', { parts: f.parts }); }
       else SFX.play('shield'); UI.coachDone('armory-give'); break; }
+    case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
+    case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
+      UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
     case 'recipe': UI.recipeSel = UI.recipeSel === arg ? null : arg; UI.renderPage(); return;

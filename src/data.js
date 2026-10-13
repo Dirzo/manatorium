@@ -350,8 +350,28 @@ const FINISHED = {
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
-function itemName(it) { if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
+// ===== Super Anvil: two finished items forge into one super item. Opens after the third boss (siege 15). =====
+const SUPER_ANVIL_AT = 16, SUPER_COST = 40;
+const SUPERS = {
+  sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
+  bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
+  rod: ['Starfall Crown', 'Ability power +35%. Signatures curse foes, can crit and power up the next attacks.'],
+  tear: ['Moonwell Chalice', 'Starts with +30% mana, gains mana every second and from every hit, and refunds mana after a signature.'],
+  vest: ['Castle-Heart Plate', '+80 armor, more for each foe nearby. Reflects 30% of melee damage.'],
+  cloak: ['Phantom Mantle', '+20% dodge. Foes that miss get spooked, and dodges counterattack.'],
+  belt: ["Giant's Heart", 'Max HP +40%. Regenerates 3% HP per second and burns foes nearby.'],
+  glove: ["Fortune's Grin", '+30% crit. Crits roll big, heal and finish weak foes.'],
+};
+// the super's flavour comes from the component the two items share most
+function superKind(a, b) {
+  const n = {}, all = [...a.parts, ...b.parts].filter(p => p !== 'spatula');
+  for (const p of all) n[p] = (n[p] || 0) + 1;
+  let best = all[0] || 'sword'; for (const p of all) if (n[p] > n[best]) best = p; return best;
+}
+function finishedName(parts, el) { const F = FINISHED[itemKey(...parts)]; return F[1] === 'emblem' ? `${ELEMENTS[el].name} Crest` : F[0]; }
+function itemName(it) { if (it.sup) return SUPERS[it.sup][0]; if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
 function itemDesc(it) {
+  if (it.sup) return `Super item: ${finishedName(it.parts, it.el)} + ${finishedName(it.sub.parts, it.sub.el)}, with both of their powers. ${SUPERS[it.sup][1]}`;
   if (it.parts.length < 2) return COMPONENTS[it.parts[0]].desc;
   const F = FINISHED[itemKey(...it.parts)];
   if (F[1] === 'emblem') return `The hero gains ${ELEMENTS[it.el].name} as a second element, plus ${COMPONENTS[it.parts.find(p => p !== 'spatula') || 'sword'].desc.toLowerCase()}.`;

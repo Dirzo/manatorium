@@ -86,6 +86,7 @@ function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.hold
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
   if (it.holder === h.uid) return { ok: true };
+  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries a super item. One each.` };
   if (it.parts.length === 1) {
     const partner = heroItems(run, h).find(x => x.parts.length === 1);
     if (partner) {
@@ -106,8 +107,26 @@ function unforgeItem(run, it) {
   if (it.parts.length < 2) return { err: 'Components cannot be split.' };
   if (run.gold < UNFORGE_COST) return { err: `Splitting costs ${UNFORGE_COST} gold.` };
   run.gold -= UNFORGE_COST; unequipItem(run, it); run.stash = run.stash.filter(x => x !== it);
+  if (it.sup) { const a = makeItem(it.parts, it.el), b = makeItem(it.sub.parts, it.sub.el); run.stash.push(a, b); return { ok: true }; }
   for (const p of it.parts) run.stash.push(makeItem([p]));
   return { ok: true };
+}
+
+// ----- Super Anvil -----
+function superAnvilOpen(run) { return run.siege >= SUPER_ANVIL_AT; }
+function superForgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
+function forgeSuper(run, a, b) {
+  if (!superAnvilOpen(run)) return { err: `The Super Anvil opens after siege ${SUPER_ANVIL_AT - 1}.` };
+  if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
+  if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
+  const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
+  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${HERO_BY_ID[holder.id].name.split(' ')[0]} already carries a super item. One each.` };
+  run.gold -= SUPER_COST; unequipItem(run, a); unequipItem(run, b);
+  run.stash = run.stash.filter(x => x !== a && x !== b);
+  const it = makeItem(a.parts, a.el); it.sub = { parts: b.parts.slice(), el: b.el || null }; it.sup = superKind(a, b);
+  run.stash.push(it);
+  if (holder) { holder.items.push(it.uid); it.holder = holder.uid; }
+  return { it, holder };
 }
 
 // ----- Artificers' Hall -----

@@ -360,9 +360,20 @@ function iconCanvas(name, px = 1) {
   ICON_CACHE[k] = c; return c;
 }
 function iconURL(name, px = 3) { return iconCanvas(name, px).toDataURL(); }
-function itemIconURL(it, px = 3) {
-  const k = 'it:' + it.parts.join('+') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
-  if (it.parts.length < 2) return (ICON_CACHE[k] = iconURL(COMPONENTS[it.parts[0]].glyph, px));
+// canvas for a component or finished item; super items layer two finished ones in a gem frame
+function itemIconCanvas(it, px = 3) {
+  const k = 'itc:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  if (it.sup) {
+    const c = document.createElement('canvas'); c.width = c.height = 16 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.fillStyle = '#2a1846'; g.fillRect(px, px, 14 * px, 14 * px);
+    g.fillStyle = '#b06cff'; g.fillRect(0, px, px, 14 * px); g.fillRect(15 * px, px, px, 14 * px); g.fillRect(px, 0, 14 * px, px); g.fillRect(px, 15 * px, 14 * px, px);
+    g.fillStyle = '#ffcf3a'; for (const [x, y] of [[0, 0], [15, 0], [0, 15], [15, 15], [1, 1], [14, 1], [1, 14], [14, 14]]) g.fillRect(x * px, y * px, px, px);
+    const a = itemIconCanvas({ parts: it.parts }, px), b = itemIconCanvas({ parts: it.sub.parts }, px);
+    g.drawImage(a, px, px, 11 * px, 11 * px); g.drawImage(b, 7 * px, 7 * px, 8 * px, 8 * px);
+    g.fillStyle = '#ffffff'; g.fillRect(13 * px, 2 * px, px, px); g.fillRect(2 * px, 13 * px, px, px); g.fillStyle = '#ffe680'; g.fillRect(12 * px, 2 * px, px, px); g.fillRect(13 * px, 3 * px, px, px);
+    return (ICON_CACHE[k] = c);
+  }
+  if (it.parts.length < 2) return (ICON_CACHE[k] = iconCanvas(COMPONENTS[it.parts[0]].glyph, px));
   const art = typeof ITEM_ART !== 'undefined' && ITEM_ART[itemKey(it.parts[0], it.parts[1])];
   if (art) {
     const g = new PixGrid(14, 14);
@@ -370,13 +381,17 @@ function itemIconURL(it, px = 3) {
     g.finish();
     const c = document.createElement('canvas'); c.width = c.height = 14 * px; const ctx = c.getContext('2d');
     for (let y = 0; y < 14; y++) for (let x = 0; x < 14; x++) { const col = g.get(x, y); if (col) { ctx.fillStyle = col; ctx.fillRect(x * px, y * px, px, px); } }
-    return (ICON_CACHE[k] = c.toDataURL());
+    return (ICON_CACHE[k] = c);
   }
   const a = iconCanvas(COMPONENTS[it.parts[0]].glyph, px), b = iconCanvas(COMPONENTS[it.parts[1]].glyph, px);
   const c = document.createElement('canvas'); c.width = c.height = 10 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.fillStyle = '#ffcf3a'; g.fillRect(0, 0, 10 * px, px); g.fillRect(0, 9 * px, 10 * px, px); g.fillRect(0, 0, px, 10 * px); g.fillRect(9 * px, 0, px, 10 * px);
   g.drawImage(a, px, px, 7 * px, 7 * px); g.drawImage(b, 4 * px, 4 * px, 6 * px, 6 * px);
-  return (ICON_CACHE[k] = c.toDataURL());
+  return (ICON_CACHE[k] = c);
+}
+function itemIconURL(it, px = 3) {
+  const k = 'it:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  return (ICON_CACHE[k] = itemIconCanvas(it, px).toDataURL());
 }
 function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
