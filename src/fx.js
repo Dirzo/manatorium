@@ -86,6 +86,8 @@ const SFX = {
       case 'coin': T(988, 0.05, 'square', 0.06); T(1319, 0.09, 'square', 0.06, 1, 0.045); break;
       case 'kill': T(420, 0.09, 'square', 0.08, 0.4); N(0.08, 0.1, 1500); break;
       case 'boom': N(0.4, 0.4, 300, 0, 0.6); T(90, 0.3, 'sine', 0.3, 0.4); break;
+      case 'anvil': N(0.08, 0.3, 3200, 0, 2); T(1480, 0.35, 'triangle', 0.09, 1); T(2220, 0.25, 'sine', 0.05, 1); T(110, 0.12, 'square', 0.08, 0.5); break;
+      case 'forged': [523, 659, 784, 1047].forEach((f, i) => T(f, 0.18, 'square', 0.06, 1, i * 0.07)); T(1568, 0.5, 'triangle', 0.05, 1, 0.3); break;
       case 'hammer': N(0.6, 0.5, 200, 0, 0.5); T(70, 0.5, 'sine', 0.5, 0.4); T(140, 0.2, 'square', 0.12, 0.5); break;
       case 'whoosh': N(0.5, 0.15, 600, 0, 0.4); break;
       case 'quake': N(0.5, 0.35, 160, 0, 0.5); T(60, 0.4, 'sine', 0.35, 0.5); break;

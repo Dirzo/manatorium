@@ -28,7 +28,7 @@ Object.assign(FX, {
 });
 
 function stepSpellFX(dt) {
-  stepSigVFX(dt);
+  stepSigVFX(dt); stepCastleVFX(dt);
   for (const s of FXS.spells) { s.t += dt;
     if (s.kind === 'smoke' && s.t > 0) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= 0.97; s.s *= 1 + 0.6 * dt; }
     if (s.kind === 'arrow' && s.t >= s.life && !s.landed) { s.landed = true;
@@ -84,6 +84,7 @@ function drawSpellFX(ctx, k, ox, oy, B) {
   }
   ctx.globalAlpha = 1;
   drawSigVFX(ctx, k, ox, oy, B);
+  drawCastleVFX(ctx, k, ox, oy, B);
 }
 
 // ===== Signature projectiles: each hero throws something of its own that swells in flight and bursts on impact =====
@@ -190,4 +191,118 @@ function drawSigVFX(ctx, k, ox, oy, B) {
       ctx.strokeStyle = i ? s.col : '#ffffff'; ctx.lineWidth = 2 * k; ctx.beginPath(); ctx.moveTo(x - L / 2 + i * 5 * k, y - L / 2); ctx.lineTo(x + L / 2 + i * 5 * k, y + L / 2); ctx.stroke(); } }
   }
   ctx.globalAlpha = 1;
+}
+
+// ===== Castle powers: a big, readable moment for each element =====
+// Every cast lights the keep, tints the field in the element's color and then plays its own show on the hi-res pass.
+const CP_SRC = { x: 52, y: 70 };   // roughly the top of the keep
+Object.assign(FX, {
+  castlePower(kind, x, y, cols, B) {
+    const live = B ? B.enemies.filter(e => e.alive) : [];
+    FXS.spells.push({ kind: 'cpTint', col: cols[0], t: 0, life: 1.1 });
+    FXS.spells.push({ kind: 'cpKeep', col: cols[0], col2: cols[1], t: 0, life: 0.9 });
+    FX.particles(CP_SRC.x, CP_SRC.y, 30, cols, { spread: 16, up: true, grav: -20 });
+    FX.shake(8); FX.flash(cols[0], 0.25);
+    switch (kind) {
+      case 'execute': FXS.spells.push({ kind: 'cpTint', col: '#1a0a2a', t: 0, life: 1.2 }); live.slice(0, 40).forEach((e, i) => FXS.spells.push({ kind: 'cpHand', u: e, x: e.x, y: e.y, t: -0.04 * (i % 10), life: 0.9, fn: () => FX.particles(e.x, e.y - 10, 10, ['#c05aff', '#2a1446', '#ffffff'], { spread: 10, up: true }) })); break;
+      case 'beam': for (let i = 0; i < 5; i++) FXS.spells.push({ kind: 'cpLance', y: GRID.y + 2 + i * 30, col: cols[0], t: -i * 0.05, life: 0.75 }); break;
+      case 'bolts': FXS.spells.push({ kind: 'cpCoil', col: cols[0], t: 0, life: 1.1 }); for (let i = 0; i < 14 && live.length; i++) { const e = pick(live); FXS.spells.push({ kind: 'cpZap', u: e, x: e.x, y: e.y, col: cols[0], t: -0.05 * i, life: 0.22, fn: () => FX.blast(e.x, e.y, 14, ['#ffffff', '#e8f8ff', cols[0], cols[1]], 1, { shards: 4 }) }); } break;
+      case 'firewave': case 'flood': { const w = B && B.waves[B.waves.length - 1]; if (w) FXS.spells.push({ kind: kind === 'flood' ? 'cpCrest' : 'cpFlame', w, t: 0, life: w.life }); break; }
+      case 'freeze': FXS.spells.push({ kind: 'cpFrost', t: 0, life: 2.6 }); live.slice(0, 60).forEach(e => FXS.spells.push({ kind: 'cpIce', u: e, t: -Math.random() * 0.12, life: e.boss ? 0.8 : 2.5 })); break;
+      case 'roots': live.filter(e => e.x < CASTLE_X + 200).slice(0, 40).forEach((e, i) => { for (let j = 0; j < 3; j++) FXS.spells.push({ kind: 'cpVine', x: e.x + (j - 1) * 5, y: e.y + 2, h: rand(14, 22), t: -0.03 * i - j * 0.05, life: 2 }); });
+        if (B) B.heroes.filter(h => h.alive).forEach((h, i) => FX.skyRay(h.x, h.y, '#7cf09a', i * 0.05)); break;
+      case 'vortex': FXS.spells.push({ kind: 'cpHole', x, y, t: 0, life: 1.3 }); break;
+      case 'salt': FXS.spells.push({ kind: 'cpCannon', col: '#ffffff', t: 0, life: 0.6 }, { kind: 'cpStream', col: '#ffffff', col2: '#c9d8f0', t: 0, life: 0.7 });
+        live.slice(0, 30).forEach((e, i) => FXS.spells.push({ kind: 'cpLater', t: -0.15 - i * 0.012, life: 0.01, fn: () => { FX.blast(e.x, e.y, 12, ['#ffffff', '#ffffff', '#e8eef8', '#9aa8c8'], 0.8, { shards: 5 }); } })); break;
+      case 'candy': live.slice(0, 30).forEach((e, i) => { const c = pick(['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a']); FX.fly(CP_SRC.x, CP_SRC.y, e.x, e.y - 4, 'disc', c, '#ffffff', 1.8, 0.5, i * 0.02); FXS.spells.push({ kind: 'cpLater', t: -0.5 - i * 0.02, life: 0.01, fn: () => FX.blast(e.x, e.y, 10, ['#ffffff', c, c, '#ffffff'], 0.8, { shards: 4 }) }); FXS.decals.push({ kind: 'mark', x: e.x, y: e.y, r: 8, col: c, t: -0.5, life: 4 }); }); FXS.spells.push({ kind: 'cpCannon', col: '#ff8ad8', t: 0, life: 0.5 }); break;
+      case 'ham': FXS.spells.push({ kind: 'cpCannon', col: '#ffd0b0', t: 0, life: 0.5 }); break;
+      case 'pinata': FXS.spells.push({ kind: 'cpPinata', x: W / 2 + 30, y: 120, t: 0, life: 0.9, burst: false }); break;
+    }
+  },
+});
+
+function stepCastleVFX(dt) {
+  for (const s of FXS.spells) {
+    if (s.fn && !s.fired && s.t >= 0) { s.fired = true; s.fn(); }
+    if (s.kind === 'cpPinata' && !s.burst && s.t > 0.55) { s.burst = true; const cs = ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d', '#ffffff'];
+      FX.blast(s.x, s.y, 30, cs, 2, { shards: 20 }); for (let i = 0; i < 5; i++) FX.particles(s.x + rand(-30, 30), s.y + rand(-10, 10), 16, cs, { spread: 30, up: true, grav: 60 });
+      for (let i = 0; i < 18; i++) FX.fly(s.x, s.y, rand(GRID.x + 20, W - 20), rand(GRID.y + 10, GRID.y + GRID.rows * GRID.cell), 'disc', '#ffcf3a', '#fff3a0', 0.6, rand(0.35, 0.6), 0); FX.shake(8); }
+    if (s.kind === 'cpIce' && s.t + dt >= s.life && !s.done && s.u.alive) { s.done = true; FX.particles(s.u.x, s.u.y - 8, 10, ['#e8f8ff', '#9ad8ff', '#ffffff'], { spread: 10, up: true, grav: 120 }); }
+  }
+}
+
+function drawCastleVFX(ctx, k, ox, oy, B) {
+  const X = x => x * k + ox, Y = y => y * k + oy, now = FXS.clock;
+  for (const s of FXS.spells) { if (s.t < 0 || s.kind.slice(0, 2) !== 'cp') continue; const kk = Math.min(1, s.t / s.life), fade = 1 - kk;
+    ctx.save();
+    switch (s.kind) {
+      case 'cpTint': { ctx.globalAlpha = 0.28 * fade * fade; ctx.fillStyle = s.col; ctx.fillRect(X(0), Y(0), W * k, H * k); break; }
+      case 'cpKeep': { // the keep blazes and shoots a column of light into the sky
+        const x = X(CP_SRC.x), y = Y(CP_SRC.y), up = Math.min(1, s.t / 0.12), r = 46 * k * (0.6 + 0.6 * up);
+        let gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, s.col2 || s.col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = fade; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        const w = 18 * k * fade; gr = ctx.createLinearGradient(0, Y(-10), 0, y); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, s.col);
+        ctx.globalAlpha = 0.8 * fade; ctx.fillStyle = gr; ctx.fillRect(x - w / 2, Y(-10), w, y - Y(-10)); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - w / 6, Y(-10), w / 3, y - Y(-10)); break; }
+      case 'cpHand': { // a shadow hand bursts from the ground and closes over the foe
+        const x = X(s.u.alive ? s.u.x : s.x), y = Y(s.u.alive ? s.u.y : s.y) + 2 * k, rise = Math.min(1, s.t / 0.25), h = 40 * k * rise * (kk > 0.7 ? (1 - kk) / 0.3 : 1), grip = Math.min(1, Math.max(0, (s.t - 0.25) / 0.2));
+        ctx.globalAlpha = 0.5; ctx.fillStyle = '#1a0a2a'; ctx.beginPath(); ctx.ellipse(x, y, 10 * k, 3.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1; ctx.fillStyle = '#2a1446'; ctx.fillRect(x - 3.5 * k, y - h * 0.6, 7 * k, h * 0.6);
+        ctx.strokeStyle = '#2a1446'; ctx.lineWidth = 2.6 * k; ctx.lineCap = 'round';
+        for (let f = 0; f < 4; f++) { const bx = x + (f - 1.5) * 3 * k, by = y - h * 0.6, a = -Math.PI / 2 + (f - 1.5) * (0.5 - 0.45 * grip); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a) * h * 0.5, by + Math.sin(a) * h * 0.5); ctx.stroke(); }
+        ctx.fillStyle = '#c05aff'; ctx.globalAlpha = 0.9 * fade; ctx.fillRect(x - 1.5 * k, y - h * 0.5, 1.2 * k, 1.2 * k); ctx.fillRect(x + 1 * k, y - h * 0.5, 1.2 * k, 1.2 * k); break; }
+      case 'cpLance': { // a holy lance sweeps out from the wall along one lane
+        const grow = Math.min(1, s.t / 0.15), x0 = X(CASTLE_X), x1 = X(CASTLE_X) + (W - CASTLE_X + 20) * k * grow, y = Y(s.y), th = 14 * k * (kk < 0.2 ? kk / 0.2 : 1 - (kk - 0.2) / 0.8);
+        const gr = ctx.createLinearGradient(0, y - th, 0, y + th); gr.addColorStop(0, 'rgba(255,240,170,0)'); gr.addColorStop(0.35, s.col); gr.addColorStop(0.5, '#ffffff'); gr.addColorStop(0.65, s.col); gr.addColorStop(1, 'rgba(255,240,170,0)');
+        ctx.globalAlpha = 0.95; ctx.fillStyle = gr; ctx.fillRect(x0, y - th, x1 - x0, th * 2);
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x1, y, th * 0.9, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpCoil': { // the towers crackle with arcs before the bolts fly
+        ctx.strokeStyle = s.col; ctx.lineWidth = 2 * k; ctx.globalAlpha = fade;
+        for (let i = 0; i < 5; i++) { let px = X(CP_SRC.x + rand(-20, 20)), py = Y(CP_SRC.y - 20); ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 4; j++) { px += rand(-8, 8) * k; py -= rand(4, 10) * k; ctx.lineTo(px, py); } ctx.stroke(); }
+        ctx.globalAlpha = 0.5 * fade; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(X(CP_SRC.x), Y(CP_SRC.y - 20), 22 * k * (1 + 0.2 * Math.sin(now * 50)), 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpFlame': case 'cpCrest': { const w = s.w; if (!w || w.t >= w.life) break; const x = X(w.x), flood = s.kind === 'cpCrest', top = Y(GRID.y - 12), bot = Y(GRID.y + GRID.rows * GRID.cell + 10);
+        for (let yy = top; yy < bot; yy += 7 * k) { const n = Math.sin(yy * 0.05 + now * 14), hgt = (flood ? 26 : 30) * k * (0.7 + 0.3 * n);
+          if (flood) { // a curling wall of water with foam on the lip
+            ctx.globalAlpha = 0.85; ctx.fillStyle = '#2a7ad8'; ctx.beginPath(); ctx.moveTo(x - 30 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 6 * k, yy - hgt, x + 8 * k, yy - hgt * 0.7); ctx.quadraticCurveTo(x + 2 * k, yy - hgt * 0.3, x + 4 * k, yy + 4 * k); ctx.fill();
+            ctx.fillStyle = '#5fd3ff'; ctx.beginPath(); ctx.moveTo(x - 16 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 2 * k, yy - hgt * 0.8, x + 8 * k, yy - hgt * 0.7); ctx.lineTo(x + 2 * k, yy + 4 * k); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + 6 * k, yy - hgt * 0.72, 3 * k, 0, Math.PI * 2); ctx.fill(); }
+          else { // tall flame tongues riding the wave front
+            const gr = ctx.createLinearGradient(0, yy - hgt, 0, yy + 4 * k); gr.addColorStop(0, 'rgba(255,61,45,0)'); gr.addColorStop(0.3, '#ff3d2d'); gr.addColorStop(0.6, '#ff8a2a'); gr.addColorStop(1, '#fff3a0');
+            ctx.globalAlpha = 0.9; ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x - 14 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 4 * k + n * 4 * k, yy - hgt, x + 2 * k, yy - hgt * 1.1); ctx.quadraticCurveTo(x + 6 * k, yy - hgt * 0.4, x + 8 * k, yy + 4 * k); ctx.fill(); } }
+        if (Math.random() < 0.8) FX.particles(w.x + rand(-6, 6), rand(GRID.y, GRID.y + GRID.rows * GRID.cell), 3, flood ? ['#ffffff', '#bff4ff'] : ['#ffd23a', '#ff8a2a'], { spread: 6, up: true });
+        break; }
+      case 'cpFrost': { const a = 0.35 * (kk < 0.1 ? kk / 0.1 : fade); ctx.globalAlpha = a; ctx.fillStyle = '#bfeeff'; ctx.fillRect(X(CASTLE_X), Y(GRID.y - 20), (W - CASTLE_X) * k, (GRID.rows * GRID.cell + 40) * k);
+        ctx.globalAlpha = a * 1.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k; for (let i = 0; i < 8; i++) { const cx = X(CASTLE_X + 20 + i * 45), cy = Y(GRID.y + 8 + (i % 3) * 50); for (let j = 0; j < 3; j++) { const ang = j * Math.PI / 3; ctx.beginPath(); ctx.moveTo(cx - Math.cos(ang) * 6 * k, cy - Math.sin(ang) * 6 * k); ctx.lineTo(cx + Math.cos(ang) * 6 * k, cy + Math.sin(ang) * 6 * k); ctx.stroke(); } } break; }
+      case 'cpIce': { const u = s.u; if (!u.alive) break; const sz = (u.boss ? 30 : 16) * (u.scale || 1) * k, x = X(u.x), y = Y(u.y) + 2 * k, grow = Math.min(1, s.t / 0.12);
+        ctx.globalAlpha = 0.55 * (kk > 0.85 ? (1 - kk) / 0.15 : 1); ctx.fillStyle = '#9ad8ff'; ctx.fillRect(x - sz / 2 * grow, y - sz * grow, sz * grow, sz * grow);
+        ctx.globalAlpha *= 1.4; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5 * k; ctx.strokeRect(x - sz / 2 * grow, y - sz * grow, sz * grow, sz * grow); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - sz / 2 * grow + 2 * k, y - sz * grow + 2 * k, sz * 0.25, 2 * k); break; }
+      case 'cpVine': { const up = kk < 0.1 ? kk / 0.1 : kk > 0.8 ? (1 - kk) / 0.2 : 1, x = X(s.x), y = Y(s.y), h = s.h * k * up, sw = Math.sin(now * 6 + s.x) * 3 * k;
+        ctx.strokeStyle = '#2a7a3a'; ctx.lineWidth = 3 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + sw * 2, y - h * 0.5, x + sw, y - h); ctx.stroke();
+        ctx.strokeStyle = '#7cf09a'; ctx.lineWidth = 1.2 * k; ctx.stroke(); ctx.fillStyle = '#9be05a'; ctx.beginPath(); ctx.ellipse(x + sw * 1.5 + 2 * k, y - h * 0.55, 2.5 * k, 1.2 * k, -0.5, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpHole': { // a black hole: grows, spins its accretion ring, then collapses with a pop
+        const x = X(s.x), y = Y(s.y), sz = (kk < 0.2 ? kk / 0.2 : kk > 0.8 ? (1 - kk) / 0.2 : 1) * 34 * k;
+        for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.7 - i * 0.18; ctx.strokeStyle = ['#ff5dd8', '#a86ad8', '#5a2a9e'][i]; ctx.lineWidth = (4 - i) * k; ctx.beginPath(); ctx.ellipse(x, y, sz * (1.3 + i * 0.35), sz * (0.45 + i * 0.12), now * (3 + i), 0, Math.PI * 1.6); ctx.stroke(); }
+        ctx.globalAlpha = 1; const gr = ctx.createRadialGradient(x, y, 0, x, y, sz); gr.addColorStop(0, '#000000'); gr.addColorStop(0.7, '#0a0014'); gr.addColorStop(1, 'rgba(168,106,216,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill();
+        if (Math.random() < 0.7) { const a = rand(0, 6.28), r = rand(40, 70); FXS.parts.push({ x: s.x + Math.cos(a) * r, y: s.y + Math.sin(a) * r * 0.5, vx: -Math.cos(a) * r * 2, vy: -Math.sin(a) * r, life: 0.5, t: 0, color: pick(['#ff5dd8', '#a86ad8', '#ffffff']), size: 1, grav: 0 }); }
+        break; }
+      case 'cpZap': { const x = X(s.u.alive ? s.u.x : s.x), y = Y(s.u.alive ? s.u.y : s.y) - 8 * k; let px = x + rand(-20, 20) * k, py = Y(-10);
+        ctx.globalAlpha = fade; ctx.strokeStyle = s.col; ctx.lineWidth = 4 * k; ctx.lineJoin = 'miter'; ctx.beginPath(); ctx.moveTo(px, py); const n = 6; for (let i = 1; i <= n; i++) { const f = i / n; ctx.lineTo(px + (x - px) * f + (i < n ? rand(-9, 9) * k : 0), py + (y - py) * f); } ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5 * k; ctx.stroke(); break; }
+      case 'cpStream': { // a fat arc of salt pouring from the wall across the field
+        const grow = Math.min(1, s.t / 0.25), x0 = X(CASTLE_X), y0 = Y(CP_SRC.y + 30), x1 = X(CASTLE_X + (W - CASTLE_X) * grow), y1 = Y(GRID.y + 60);
+        ctx.globalAlpha = 0.85 * fade; ctx.strokeStyle = s.col2; ctx.lineWidth = 22 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, Y(10), x1, y1); ctx.stroke();
+        ctx.strokeStyle = s.col; ctx.lineWidth = 10 * k; ctx.stroke();
+        for (let i = 0; i < 6; i++) FXS.parts.push({ x: CASTLE_X + rand(0, (W - CASTLE_X) * grow), y: rand(20, 60), vx: rand(-10, 10), vy: rand(60, 120), life: rand(0.4, 0.8), t: 0, color: pick(['#ffffff', '#e8eef8']), size: 2, grav: 120 });
+        break; }
+      case 'cpCannon': { // muzzle blast from the wall
+        const x = X(CASTLE_X + 4), y = Y(CP_SRC.y + 30), r = 26 * k * (0.5 + kk); ctx.globalAlpha = fade; const gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, s.col); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpPinata': { if (s.burst) break; // a piñata swings down on a rope, then bursts
+        const drop = Math.min(1, s.t / 0.3), x = X(s.x) + Math.sin(now * 12) * 6 * k * drop, y = Y(s.y) - (1 - drop) * 140 * k, cs = ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d'];
+        ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = k; ctx.beginPath(); ctx.moveTo(X(s.x), Y(-10)); ctx.lineTo(x, y - 14 * k); ctx.stroke();
+        for (let i = 0; i < 5; i++) { ctx.fillStyle = cs[i]; ctx.fillRect(x - 16 * k, y - 14 * k + i * 4 * k, 26 * k, 4 * k); }
+        ctx.fillStyle = cs[0]; ctx.fillRect(x + 8 * k, y - 22 * k, 8 * k, 10 * k); ctx.fillRect(x + 10 * k, y - 28 * k, 2 * k, 6 * k);
+        for (const lx of [-13, -6, 2, 8]) { ctx.fillStyle = cs[(lx + 13) % 5 | 0]; ctx.fillRect(x + lx * k, y + 6 * k, 3 * k, 8 * k); }
+        ctx.fillStyle = '#1a1a2a'; ctx.fillRect(x + 12 * k, y - 20 * k, 2 * k, 2 * k); break; }
+    }
+    ctx.restore();
+  }
 }

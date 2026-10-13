@@ -122,6 +122,34 @@ const UI = {
     b.textContent = st === 'on' ? 'Recording playtest' : st === 'asking' ? 'Starting playtest mic…' : 'Logging playtest (mic off)';
     b.title = (st === 'on' ? 'Your mic and every click are saved with this run for Claude to review.' : 'Every click is saved with this run for Claude to review. The microphone is not available in this view.') + (TEL.ready ? '' : ' Saved on this device until the shared log connects.');
   },
+  // forge cutscene: the inputs fly onto an anvil, a hammer strikes, and the new item bursts out. Click to skip.
+  forge(o) {
+    const old = document.querySelector('.forgefx'); if (old) old.remove();
+    const sup = !!o.super, hits = sup ? 3 : 2, d = document.createElement('div');
+    d.className = 'forgefx' + (sup ? ' sup' : '');
+    d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
+      ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
+      <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
+      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+    document.body.appendChild(d);
+    // pixel anvil, violet and gold for the super anvil
+    const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
+    g.fillStyle = A[1]; g.fillRect(2, 2, 26, 5); g.fillRect(0, 2, 4, 3); g.fillStyle = A[2]; g.fillRect(2, 2, 26, 1); g.fillStyle = A[0]; g.fillRect(9, 7, 12, 6); g.fillRect(6, 13, 18, 3); g.fillStyle = A[3]; g.fillRect(4, 16, 22, 3);
+    if (sup) { g.fillStyle = '#ffcf3a'; g.fillRect(14, 9, 2, 2); g.fillRect(8, 14, 2, 1); g.fillRect(20, 14, 2, 1); }
+    const T = [], at = (ms, f) => T.push(setTimeout(f, ms)), base = 650, step = sup ? 330 : 300;
+    for (let i = 0; i < hits; i++) at(base + i * step, () => { d.classList.remove('hit'); void d.offsetWidth; d.classList.add('hit'); SFX.play('anvil'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 16 : 10, sup); });
+    const done = base + hits * step;
+    at(done, () => { d.classList.add('done'); SFX.play('forged'); if (sup) SFX.play('boom'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 40 : 22, sup, true); });
+    const close = () => { T.forEach(clearTimeout); d.classList.add('out'); setTimeout(() => d.remove(), 250); if (o.after) o.after(); };
+    at(done + (sup ? 2600 : 1700), close);
+    d.addEventListener('click', () => { if (!d.classList.contains('done')) { T.forEach(clearTimeout); T.length = 0; d.classList.add('done'); at(sup ? 1400 : 900, close); return; } close(); });
+  },
+  forgeSparks(el, n, sup, big) {
+    const cols = sup ? ['#ffcf3a', '#ffffff', '#b06cff', '#ff8af0'] : ['#ffcf3a', '#ffffff', '#ff9a3a'];
+    for (let i = 0; i < n; i++) { const s = document.createElement('i'), a = Math.random() * Math.PI * 2, r = (big ? 90 : 50) + Math.random() * (big ? 110 : 60);
+      s.className = 'ff-spark'; s.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8 - (big ? 0 : 30)}px;background:${cols[i % cols.length]};animation-duration:${0.4 + Math.random() * 0.5}s`;
+      el.appendChild(s); setTimeout(() => s.remove(), 1000); }
+  },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
   banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
   flyTo(src, el, sx, sy, done) {
@@ -259,9 +287,9 @@ const UI = {
       if (b === 'taken') return `<b>${esc(nm)}: damage taken ${fmt(r.taken)}</b>${list(r.tsrc, TSRC_ORDER, r.taken)}${r.tsrc.shield > 0.5 ? `<div class="tl"><i style="background:${STAT_SRC.shield.col}"></i><span>${STAT_SRC.shield.name}</span><b>${fmt(r.tsrc.shield)}</b><small></small></div>` : ''}`;
       if (b === 'ccT') return `<b>${esc(nm)}: crowd control ${(r.ccT || 0).toFixed(1)}s</b>${list(r.cc, ['stun', 'taunt', 'slow'], r.ccT, 's')}<p class="note">Seconds foes spent stunned, frozen or taunted by this champion. Slows count at half.</p>`;
     }
-    if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (fieldElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
+    if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (stackElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
       const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
-      return `<b>${E.name} stack <small>${n} on the field</small></b><p>Champions who share an element power each other up.</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${Math.min(n, 4) === v ? 'on' : n > v ? 'past' : ''}"><b>${v}</b><span>${E.name} power ×${EL_STACK.mul[i]} and +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}</span></div>`).join('')}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
+      return `<b>${E.name} stack <small>${n} on the field</small></b><p>Champions who share an element power each other up.</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${Math.min(n, 4) === v ? 'on' : n > v ? 'past' : ''}"><b>${v}</b><span>${E.name} power ×${EL_STACK.mul[i]} and +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
     if (kind === 'help' && a === 'els') return `<b>Element stacks</b><p>Two, three or four champions with the same element (crests count) multiply that element's power and boost their matching stat.</p>`;
     if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
       return `<b>${T.icon} ${T.name} <small>${T.side === 'good' ? 'good-guy energy' : 'bad-guy energy'}</small></b><p><span style="color:var(--mint)">▲ ${esc(T.up)}</span><br><span style="color:var(--rose)">▼ ${esc(T.down)}</span></p><div class="ttier ${n >= 2 ? 'on' : ''}"><b>2</b><span><i>${esc(T.pair)}:</i> ${esc(T.pdesc)}</span></div><p class="note">${n >= 2 ? 'Pair active: ' + who.join(' + ') : n === 1 ? `Place a second ${T.name} champion to unlock the pair bonus. Now: ${who[0]}.` : `Two ${T.name} champions on the field unlock the pair bonus.`}</p>`; }
@@ -302,8 +330,10 @@ const UI = {
     body.querySelectorAll('details.hbranch').forEach(d => d.ontoggle = () => { UI.hallOpen[d.dataset.br] = d.open; });
   },
   guildHTML(run) {
-    let next = run.siege; while (!DRAFT_AFTER(next) && next < run.siege + 30) next++;
-    let h = `<div class="card"><span class="eyebrow">Next champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins before siege 2.' : next === 4 ? "A third champion joins after siege 4, before the first boss." : `A new champion can be drafted after siege ${next}.`} New champions arrive at about three quarters of your team's average level.</p></div>`;
+    const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
+    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins free after siege 1. ' : ''}Each draft costs more than the last, so save up between sieges. New champions arrive at about three quarters of your team's average level.</p>
+      <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
+      <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
     h += `<div class="group-title">Your champions</div>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
@@ -330,6 +360,7 @@ const UI = {
       h += `</div></div>`;
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
+    h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
     for (const it of loose) {
@@ -347,6 +378,18 @@ const UI = {
     if (UI.recipeSel) { const F = FINISHED[UI.recipeSel], [a, b] = UI.recipeSel.split('+'); h += `<p class="rdesc"><b>${esc(F[0])}</b> = ${esc(COMPONENTS[a].name)} + ${esc(COMPONENTS[b].name)}. ${esc(F[2])}</p>`; }
     else h += `<p class="note">Tap a square to see what two components make. A Golden Ladle with any component makes a Crest: a second element.</p>`;
     return h + `</details>`;
+  },
+  superAnvilHTML(run) {
+    if (!superAnvilOpen(run)) return run.siege < techOpensAt('superanvil') ? '' : `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Build it in the Artificers' Hall to forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
+    const fin = superForgeable(run); UI.saSel = (UI.saSel || []).filter(u => fin.some(it => it.uid === u));
+    let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
+    if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
+    h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+    if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
+      h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
+    else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
+    return h + `</div>`;
   },
   hallHTML(run) {
     // one dropdown per branch. Built techs shrink to chips, ready ones glow, newly opened ones say NEW.
@@ -391,7 +434,7 @@ const UI = {
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
     for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
-    const fe = fieldElements(run); let elb = '';
+    const fe = stackElements(run); let elb = '';
     for (const e of EL_KEYS) { const n = fe[e] || 0; if (!n) continue; const t = n >= 2; elb += `<div class="syb elst ${t ? 'on' : ''}" style="--rc:${ELEMENTS[e].col};--ec:${ELEMENTS[e].col};--ec2:${ELEMENTS[e].col2}" data-tip="els:${e}" aria-label="${ELEMENTS[e].name} ${n}"><span class="orb"></span><b class="cnt">${n}</b><span class="pips">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('')}</span></div>`; }
     const tc = temperCounts(run); let tmb = '';
     for (const k in tc) { const T = TEMPERS[k]; if (tc[k] >= 2) tmb += `<div class="syb tmp on ${T.side}" data-tip="tmp:${k}" aria-label="${esc(T.pair)}"><span class="glyph">${T.icon}</span><b class="cnt">${tc[k]}</b></div>`; }
@@ -466,7 +509,7 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], tot = o.rolls.ad + o.rolls.ap + o.rolls.def, bs = bestStyle(o.rolls);

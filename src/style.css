@@ -824,3 +824,67 @@ button[data-tip] { cursor: pointer; }
 .dcard { position: relative; }
 .dcard.bestfit { box-shadow: 0 4px 0 var(--ink), 0 0 0 3px var(--mint); }
 .dcard .bfb { position: absolute; top: -10px; right: 10px; background: var(--mint); color: var(--ink); font-weight: 700; font-size: 12px; padding: 1px 8px; border: 2px solid var(--ink); border-radius: 10px; }
+
+/* forge cutscene (item combines and the Super Anvil) */
+.forgefx { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(12, 8, 24, .78); cursor: pointer; animation: ffIn .2s ease-out; }
+.forgefx.out { opacity: 0; transition: opacity .25s; }
+.ff-stage { position: relative; width: 320px; height: 330px; }
+.ff-anvil { position: absolute; left: 50%; top: 190px; width: 160px; height: 100px; transform: translateX(-50%); image-rendering: pixelated; }
+.ff-in { position: absolute; top: 120px; width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 0 6px #ffcf3a); }
+.ff-in0 { left: 50%; animation: ffInL .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+.ff-in1 { left: 50%; animation: ffInR .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+@keyframes ffInL { from { transform: translate(-260px, -40px) rotate(-200deg); } to { transform: translate(-58px, 26px) rotate(0); } }
+@keyframes ffInR { from { transform: translate(190px, -40px) rotate(200deg); } to { transform: translate(-14px, 26px) rotate(0); } }
+.forgefx.hit .ff-in { animation: none; transform: translate(-36px, 30px) scale(.82); }
+.forgefx.hit .ff-in1 { opacity: .85; }
+.ff-hammer { position: absolute; left: 50%; top: 40px; width: 64px; height: 30px; margin-left: 10px; background: linear-gradient(#c9cfe0, #7a8199); border: 3px solid #262a38; transform-origin: -40px 120%; transform: rotate(-50deg); opacity: 0; }
+.ff-hammer::after { content: ''; position: absolute; left: 22px; top: 27px; width: 10px; height: 80px; background: #8a5a2e; border: 3px solid #3a2414; }
+.forgefx.sup .ff-hammer { background: linear-gradient(#ffe680, #b06cff); }
+.forgefx.hit .ff-hammer { animation: ffHam .3s ease-in; }
+@keyframes ffHam { 0% { opacity: 1; transform: rotate(-60deg); } 55% { opacity: 1; transform: rotate(12deg); } 100% { opacity: 1; transform: rotate(-10deg); } }
+.forgefx.hit .ff-stage { animation: ffShake .18s; }
+@keyframes ffShake { 25% { transform: translate(4px, 3px); } 50% { transform: translate(-4px, -2px); } 75% { transform: translate(2px, 1px); } }
+.ff-spark { position: absolute; left: 50%; top: 175px; width: 6px; height: 6px; animation: ffSpark .7s ease-out forwards; }
+@keyframes ffSpark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.ff-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.forgefx.done .ff-flash { animation: ffFlash .45s ease-out; }
+@keyframes ffFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+.forgefx.done .ff-in, .forgefx.done .ff-hammer { display: none; }
+.ff-out { position: absolute; left: 50%; top: 70px; width: 120px; height: 120px; margin-left: -60px; image-rendering: pixelated; opacity: 0; transform: scale(.2); filter: drop-shadow(0 0 10px #ffcf3a); }
+.forgefx.sup .ff-out { filter: drop-shadow(0 0 14px #b06cff) drop-shadow(0 0 4px #ffcf3a); }
+.forgefx.done .ff-out { animation: ffPop .55s cubic-bezier(.3, 1.6, .5, 1) forwards, ffBob 1.6s .55s ease-in-out infinite; }
+@keyframes ffPop { to { opacity: 1; transform: scale(1); } }
+@keyframes ffBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.ff-rays { position: absolute; left: 50%; top: 130px; width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; opacity: 0;
+  background: repeating-conic-gradient(rgba(255, 207, 58, .35) 0 10deg, transparent 10deg 30deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); }
+.forgefx.sup .ff-rays { background: repeating-conic-gradient(rgba(176, 108, 255, .45) 0 8deg, rgba(255, 207, 58, .3) 8deg 14deg, transparent 14deg 26deg); }
+.forgefx.done .ff-rays { opacity: 1; transition: opacity .3s; animation: ffSpin 6s linear infinite; }
+@keyframes ffSpin { to { transform: rotate(360deg); } }
+.ff-name { position: absolute; left: -60px; right: -60px; top: 200px; z-index: 2; text-align: center; opacity: 0; transform: translateY(10px); }
+.forgefx.done .ff-name { opacity: 1; transform: none; transition: all .35s .25s; }
+.ff-name small { display: block; color: #c9c4e6; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+.ff-name b { display: block; color: #ffcf3a; font-size: 26px; text-shadow: 0 2px 0 #000; }
+.forgefx.sup .ff-name b { color: #e2c4ff; font-size: 30px; text-shadow: 0 0 10px #b06cff, 0 2px 0 #000; }
+.ff-name span { display: block; color: #fff; font-size: 13px; margin-top: 4px; }
+.forgefx.done .ff-anvil { opacity: .35; transition: opacity .4s; }
+.ff-skip { color: #8f88b3; font-size: 12px; margin-top: 8px; }
+@keyframes ffIn { from { opacity: 0; } }
+/* Super Anvil panel in the Armory */
+.superanvil { border: 2px solid #8a4fe0; background: linear-gradient(180deg, rgba(90, 40, 160, .25), rgba(30, 16, 60, .25)); border-radius: 10px; padding: 10px; margin: 6px 0 12px; }
+.superanvil.locked { opacity: .7; border-style: dashed; }
+.superanvil h4 { margin: 0 0 4px; color: #e2c4ff; }
+.sa-items { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.sa-it { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 8px; border: 2px solid transparent; background: rgba(0, 0, 0, .25); color: inherit; font: inherit; cursor: pointer; }
+.sa-it img { width: 32px; height: 32px; }
+.sa-it small { display: block; opacity: .7; }
+.sa-it.on { border-color: #ffcf3a; background: rgba(255, 207, 58, .12); }
+.sa-prev { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .3); }
+.sa-prev img { width: 48px; height: 48px; filter: drop-shadow(0 0 6px #b06cff); }
+.superanvil .cost img { width: 14px; height: 14px; }
+
+.card.buydraft { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 2px solid var(--gold); }
+.buydraft .dbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 150px; padding: 10px 14px; }
+.buydraft .dbtn b { font-size: 16px; }
+.buydraft .dbtn span { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.buydraft .dbtn .cost img { width: 14px; height: 14px; }
+.buydraft .dbtn[disabled] { opacity: .5; cursor: not-allowed; }

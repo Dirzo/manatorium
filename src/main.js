@@ -40,13 +40,14 @@ function startRun() {
 
 function showDraft() {
   const run = G.run; if (!run.pendingDraft) run.pendingDraft = draftOptions(run, G.meta);
-  const kind = run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
+  const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
       const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
       const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
       TEL.event('draft', { id: o.id, rolls: o.rolls, kind });
+      if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
     });
     const rr = s.querySelector('#draftReroll'); if (rr) rr.onclick = () => { const c = draftRerollCost(run); if (run.gold < c) return; run.gold -= c; run.draftRerolls++; run.pendingDraft = draftOptions(run, G.meta); SFX.play('click'); showDraft(); };
@@ -97,7 +98,7 @@ function endSiege() {
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) run.post.push('draft');
+    if (run.roster.length < 2) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -189,10 +190,11 @@ function toPrep() {
   changed();
   const run = G.run;
   if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall shows when the next champion arrives and how close each hero is to a signature or element.'), 600);
+  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
 }
 
 // ----- actions -----
@@ -202,8 +204,16 @@ G.act = function (act, arg) {
   const sel = run.roster.find(h => h.uid === G.selected);
   switch (act) {
     case 'give': { const it = run.stash.find(x => x.uid === arg); if (!it || !sel) return; r = giveItem(run, it, sel); if (r.err) return UI.toast(r.err, true);
-      if (r.fused) { SFX.play('level'); UI.toast(`Fused into ${itemName(r.fused)}!`); const u = G.prepUnits.find(p => p.inst === sel); if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(r.fused), '#ffcf3a', true, true); } TEL.event('fuse', { parts: r.fused.parts }); }
+      if (r.fused) { const u = G.prepUnits.find(p => p.inst === sel), f = r.fused;
+        UI.forge({ inputs: [itemIconURL({ parts: [f.parts[0]] }), itemIconURL({ parts: [f.parts[1]] })], out: itemIconURL(f), name: itemName(f), sub: `for ${heroDisplayName(sel)}`,
+          after: () => { if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(f), '#ffcf3a', true, true); } } });
+        TEL.event('fuse', { parts: f.parts }); }
       else SFX.play('shield'); UI.coachDone('armory-give'); break; }
+    case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
+    case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
+      UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
+    case 'buydraft': { if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+      run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
     case 'recipe': UI.recipeSel = UI.recipeSel === arg ? null : arg; UI.renderPage(); return;

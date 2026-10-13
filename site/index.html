@@ -829,6 +829,70 @@ button[data-tip] { cursor: pointer; }
 .dcard { position: relative; }
 .dcard.bestfit { box-shadow: 0 4px 0 var(--ink), 0 0 0 3px var(--mint); }
 .dcard .bfb { position: absolute; top: -10px; right: 10px; background: var(--mint); color: var(--ink); font-weight: 700; font-size: 12px; padding: 1px 8px; border: 2px solid var(--ink); border-radius: 10px; }
+
+/* forge cutscene (item combines and the Super Anvil) */
+.forgefx { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(12, 8, 24, .78); cursor: pointer; animation: ffIn .2s ease-out; }
+.forgefx.out { opacity: 0; transition: opacity .25s; }
+.ff-stage { position: relative; width: 320px; height: 330px; }
+.ff-anvil { position: absolute; left: 50%; top: 190px; width: 160px; height: 100px; transform: translateX(-50%); image-rendering: pixelated; }
+.ff-in { position: absolute; top: 120px; width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 0 6px #ffcf3a); }
+.ff-in0 { left: 50%; animation: ffInL .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+.ff-in1 { left: 50%; animation: ffInR .6s cubic-bezier(.5, 0, .6, 1.3) forwards; }
+@keyframes ffInL { from { transform: translate(-260px, -40px) rotate(-200deg); } to { transform: translate(-58px, 26px) rotate(0); } }
+@keyframes ffInR { from { transform: translate(190px, -40px) rotate(200deg); } to { transform: translate(-14px, 26px) rotate(0); } }
+.forgefx.hit .ff-in { animation: none; transform: translate(-36px, 30px) scale(.82); }
+.forgefx.hit .ff-in1 { opacity: .85; }
+.ff-hammer { position: absolute; left: 50%; top: 40px; width: 64px; height: 30px; margin-left: 10px; background: linear-gradient(#c9cfe0, #7a8199); border: 3px solid #262a38; transform-origin: -40px 120%; transform: rotate(-50deg); opacity: 0; }
+.ff-hammer::after { content: ''; position: absolute; left: 22px; top: 27px; width: 10px; height: 80px; background: #8a5a2e; border: 3px solid #3a2414; }
+.forgefx.sup .ff-hammer { background: linear-gradient(#ffe680, #b06cff); }
+.forgefx.hit .ff-hammer { animation: ffHam .3s ease-in; }
+@keyframes ffHam { 0% { opacity: 1; transform: rotate(-60deg); } 55% { opacity: 1; transform: rotate(12deg); } 100% { opacity: 1; transform: rotate(-10deg); } }
+.forgefx.hit .ff-stage { animation: ffShake .18s; }
+@keyframes ffShake { 25% { transform: translate(4px, 3px); } 50% { transform: translate(-4px, -2px); } 75% { transform: translate(2px, 1px); } }
+.ff-spark { position: absolute; left: 50%; top: 175px; width: 6px; height: 6px; animation: ffSpark .7s ease-out forwards; }
+@keyframes ffSpark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.ff-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.forgefx.done .ff-flash { animation: ffFlash .45s ease-out; }
+@keyframes ffFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+.forgefx.done .ff-in, .forgefx.done .ff-hammer { display: none; }
+.ff-out { position: absolute; left: 50%; top: 70px; width: 120px; height: 120px; margin-left: -60px; image-rendering: pixelated; opacity: 0; transform: scale(.2); filter: drop-shadow(0 0 10px #ffcf3a); }
+.forgefx.sup .ff-out { filter: drop-shadow(0 0 14px #b06cff) drop-shadow(0 0 4px #ffcf3a); }
+.forgefx.done .ff-out { animation: ffPop .55s cubic-bezier(.3, 1.6, .5, 1) forwards, ffBob 1.6s .55s ease-in-out infinite; }
+@keyframes ffPop { to { opacity: 1; transform: scale(1); } }
+@keyframes ffBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.ff-rays { position: absolute; left: 50%; top: 130px; width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; opacity: 0;
+  background: repeating-conic-gradient(rgba(255, 207, 58, .35) 0 10deg, transparent 10deg 30deg); -webkit-mask: radial-gradient(circle, #000 20%, transparent 70%); mask: radial-gradient(circle, #000 20%, transparent 70%); }
+.forgefx.sup .ff-rays { background: repeating-conic-gradient(rgba(176, 108, 255, .45) 0 8deg, rgba(255, 207, 58, .3) 8deg 14deg, transparent 14deg 26deg); }
+.forgefx.done .ff-rays { opacity: 1; transition: opacity .3s; animation: ffSpin 6s linear infinite; }
+@keyframes ffSpin { to { transform: rotate(360deg); } }
+.ff-name { position: absolute; left: -60px; right: -60px; top: 200px; z-index: 2; text-align: center; opacity: 0; transform: translateY(10px); }
+.forgefx.done .ff-name { opacity: 1; transform: none; transition: all .35s .25s; }
+.ff-name small { display: block; color: #c9c4e6; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+.ff-name b { display: block; color: #ffcf3a; font-size: 26px; text-shadow: 0 2px 0 #000; }
+.forgefx.sup .ff-name b { color: #e2c4ff; font-size: 30px; text-shadow: 0 0 10px #b06cff, 0 2px 0 #000; }
+.ff-name span { display: block; color: #fff; font-size: 13px; margin-top: 4px; }
+.forgefx.done .ff-anvil { opacity: .35; transition: opacity .4s; }
+.ff-skip { color: #8f88b3; font-size: 12px; margin-top: 8px; }
+@keyframes ffIn { from { opacity: 0; } }
+/* Super Anvil panel in the Armory */
+.superanvil { border: 2px solid #8a4fe0; background: linear-gradient(180deg, rgba(90, 40, 160, .25), rgba(30, 16, 60, .25)); border-radius: 10px; padding: 10px; margin: 6px 0 12px; }
+.superanvil.locked { opacity: .7; border-style: dashed; }
+.superanvil h4 { margin: 0 0 4px; color: #e2c4ff; }
+.sa-items { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.sa-it { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 8px; border: 2px solid transparent; background: rgba(0, 0, 0, .25); color: inherit; font: inherit; cursor: pointer; }
+.sa-it img { width: 32px; height: 32px; }
+.sa-it small { display: block; opacity: .7; }
+.sa-it.on { border-color: #ffcf3a; background: rgba(255, 207, 58, .12); }
+.sa-prev { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .3); }
+.sa-prev img { width: 48px; height: 48px; filter: drop-shadow(0 0 6px #b06cff); }
+.superanvil .cost img { width: 14px; height: 14px; }
+
+.card.buydraft { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 2px solid var(--gold); }
+.buydraft .dbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 150px; padding: 10px 14px; }
+.buydraft .dbtn b { font-size: 16px; }
+.buydraft .dbtn span { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.buydraft .dbtn .cost img { width: 14px; height: 14px; }
+.buydraft .dbtn[disabled] { opacity: .5; cursor: not-allowed; }
 </style>
 <div id="app">
   <header class="hud">
@@ -1118,7 +1182,6 @@ const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at
 
 // ===== Progression =====
 const VERSION = 'phase3.0';
-const DRAFT_AFTER = s => s === 1 || s === 4 || s === 8 || (s >= 10 && s % 5 === 0);   // partner before siege 2, a third before the first boss, a fourth at 8, then after every boss
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -1285,8 +1348,28 @@ const FINISHED = {
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
-function itemName(it) { if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
+// ===== Super Anvil: two finished items forge into one super item. A Hall tech that opens at siege 29. =====
+const SUPER_COST = 40;
+const SUPERS = {
+  sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
+  bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
+  rod: ['Starfall Crown', 'Ability power +35%. Signatures curse foes, can crit and power up the next attacks.'],
+  tear: ['Moonwell Chalice', 'Starts with +30% mana, gains mana every second and from every hit, and refunds mana after a signature.'],
+  vest: ['Castle-Heart Plate', '+80 armor, more for each foe nearby. Reflects 30% of melee damage.'],
+  cloak: ['Phantom Mantle', '+20% dodge. Foes that miss get spooked, and dodges counterattack.'],
+  belt: ["Giant's Heart", 'Max HP +40%. Regenerates 3% HP per second and burns foes nearby.'],
+  glove: ["Fortune's Grin", '+30% crit. Crits roll big, heal and finish weak foes.'],
+};
+// the super's flavour comes from the component the two items share most
+function superKind(a, b) {
+  const n = {}, all = [...a.parts, ...b.parts].filter(p => p !== 'spatula');
+  for (const p of all) n[p] = (n[p] || 0) + 1;
+  let best = all[0] || 'sword'; for (const p of all) if (n[p] > n[best]) best = p; return best;
+}
+function finishedName(parts, el) { const F = FINISHED[itemKey(...parts)]; return F[1] === 'emblem' ? `${ELEMENTS[el].name} Crest` : F[0]; }
+function itemName(it) { if (it.sup) return SUPERS[it.sup][0]; if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
 function itemDesc(it) {
+  if (it.sup) return `Super item: ${finishedName(it.parts, it.el)} + ${finishedName(it.sub.parts, it.sub.el)}, with both of their powers. ${SUPERS[it.sup][1]}`;
   if (it.parts.length < 2) return COMPONENTS[it.parts[0]].desc;
   const F = FINISHED[itemKey(...it.parts)];
   if (F[1] === 'emblem') return `The hero gains ${ELEMENTS[it.el].name} as a second element, plus ${COMPONENTS[it.parts.find(p => p !== 'spatula') || 'sword'].desc.toLowerCase()}.`;
@@ -1295,7 +1378,7 @@ function itemDesc(it) {
 }
 const ITEM_SLOTS = 3;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
-const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15 };
+const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15, 5: 29 };
 const TECH_LATE_T1 = { wells: 3, vault1: 3 };
 function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T1[id] || TECH_OPENS[T.t] || 1; }
 
@@ -1314,6 +1397,7 @@ const TECH = {
   pulleys:  { name: 'Sky Hammer Pulleys', b: 1, t: 2, cost: 85,  req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
   ballista3:{ name: 'Piercing Bolts',     b: 1, t: 3, cost: 195, req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
   hammer2:  { name: 'Heavier Hammer',     b: 1, t: 3, cost: 180, req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 350, req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
   kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 300, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
   wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 45,  req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
   lab:      { name: 'Elemental Lab',      b: 2, t: 2, cost: 110, req: ['wells'],          desc: 'Element choices show 4 cards instead of 3.' },
@@ -1837,9 +1921,20 @@ function iconCanvas(name, px = 1) {
   ICON_CACHE[k] = c; return c;
 }
 function iconURL(name, px = 3) { return iconCanvas(name, px).toDataURL(); }
-function itemIconURL(it, px = 3) {
-  const k = 'it:' + it.parts.join('+') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
-  if (it.parts.length < 2) return (ICON_CACHE[k] = iconURL(COMPONENTS[it.parts[0]].glyph, px));
+// canvas for a component or finished item; super items layer two finished ones in a gem frame
+function itemIconCanvas(it, px = 3) {
+  const k = 'itc:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  if (it.sup) {
+    const c = document.createElement('canvas'); c.width = c.height = 16 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.fillStyle = '#2a1846'; g.fillRect(px, px, 14 * px, 14 * px);
+    g.fillStyle = '#b06cff'; g.fillRect(0, px, px, 14 * px); g.fillRect(15 * px, px, px, 14 * px); g.fillRect(px, 0, 14 * px, px); g.fillRect(px, 15 * px, 14 * px, px);
+    g.fillStyle = '#ffcf3a'; for (const [x, y] of [[0, 0], [15, 0], [0, 15], [15, 15], [1, 1], [14, 1], [1, 14], [14, 14]]) g.fillRect(x * px, y * px, px, px);
+    const a = itemIconCanvas({ parts: it.parts }, px), b = itemIconCanvas({ parts: it.sub.parts }, px);
+    g.drawImage(a, px, px, 11 * px, 11 * px); g.drawImage(b, 7 * px, 7 * px, 8 * px, 8 * px);
+    g.fillStyle = '#ffffff'; g.fillRect(13 * px, 2 * px, px, px); g.fillRect(2 * px, 13 * px, px, px); g.fillStyle = '#ffe680'; g.fillRect(12 * px, 2 * px, px, px); g.fillRect(13 * px, 3 * px, px, px);
+    return (ICON_CACHE[k] = c);
+  }
+  if (it.parts.length < 2) return (ICON_CACHE[k] = iconCanvas(COMPONENTS[it.parts[0]].glyph, px));
   const art = typeof ITEM_ART !== 'undefined' && ITEM_ART[itemKey(it.parts[0], it.parts[1])];
   if (art) {
     const g = new PixGrid(14, 14);
@@ -1847,13 +1942,17 @@ function itemIconURL(it, px = 3) {
     g.finish();
     const c = document.createElement('canvas'); c.width = c.height = 14 * px; const ctx = c.getContext('2d');
     for (let y = 0; y < 14; y++) for (let x = 0; x < 14; x++) { const col = g.get(x, y); if (col) { ctx.fillStyle = col; ctx.fillRect(x * px, y * px, px, px); } }
-    return (ICON_CACHE[k] = c.toDataURL());
+    return (ICON_CACHE[k] = c);
   }
   const a = iconCanvas(COMPONENTS[it.parts[0]].glyph, px), b = iconCanvas(COMPONENTS[it.parts[1]].glyph, px);
   const c = document.createElement('canvas'); c.width = c.height = 10 * px; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.fillStyle = '#ffcf3a'; g.fillRect(0, 0, 10 * px, px); g.fillRect(0, 9 * px, 10 * px, px); g.fillRect(0, 0, px, 10 * px); g.fillRect(9 * px, 0, px, 10 * px);
   g.drawImage(a, px, px, 7 * px, 7 * px); g.drawImage(b, 4 * px, 4 * px, 6 * px, 6 * px);
-  return (ICON_CACHE[k] = c.toDataURL());
+  return (ICON_CACHE[k] = c);
+}
+function itemIconURL(it, px = 3) {
+  const k = 'it:' + it.parts.join('+') + (it.sup ? '|' + it.sub.parts.join('+') : '') + px; if (ICON_CACHE[k]) return ICON_CACHE[k];
+  return (ICON_CACHE[k] = itemIconCanvas(it, px).toDataURL());
 }
 function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
@@ -2555,9 +2654,9 @@ function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascend
 const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
-  swarm: 0.05, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
+  swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
-const HORDE_DIFF = [1.064, 1.029, 1.116, 1.494, 0.999, 0.534, 0.392, 0.216, 0.053, 0.028];
+const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 function hpMul(s) { return Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
 function atkMul(s) { return Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
@@ -2596,10 +2695,10 @@ function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x 
 function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id; }
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
-function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) if (it.el && !out.includes(it.el)) out.push(it.el); return out; }
+function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
 function effRolls(run, h) {
   let bonus = (h.mustache ? 1 : 0) + (run.tech.aether ? 1 : 0);
-  for (const it of heroItems(run, h)) if (it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
+  for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
   const r = {}; for (const k of STAT_KEYS) r[k] = Math.min(15, h.rolls[k] + bonus); return r;
 }
 // which elements are on the field, how many heroes carry each
@@ -2609,6 +2708,8 @@ function fieldElements(run) {
   for (const h of placedHeroes(run)) for (const e of heroElements(run, h)) n[e] = (n[e] || 0) + 1;
   return n;
 }
+// element stacks also count the castle's element as one more carrier (only when a champion has it). Combos ignore the castle.
+function stackElements(run) { const n = fieldElements(run); if (run.castleEl && n[run.castleEl]) n[run.castleEl]++; return n; }
 // every element pair on the field could form a combo, but only COMBO_SLOTS of them fire: the player picks which
 const COMBO_SLOTS = 2;
 function possibleCombos(run) {
@@ -2669,7 +2770,7 @@ function heroStats(h, run, meta, syn) {
   for (const k in tc) if (tc[k] >= 2 && TEMPERS[k].team) TEMPERS[k].team(s);
   s.armor = Math.max(0, s.armor);
   // elements: power scales with the rolled stat that matches the element's playstyle
-  const fe = fieldElements(run);
+  const fe = stackElements(run);
   for (const e of heroElements(run, h)) {
     const E = ELEMENTS[e]; let p = (0.6 + 0.08 * R[E.style]) * sm; const nst = Math.min(4, fe[e] || 0);
     // element stacks: 2, 3 or 4 champions sharing an element power it up and boost their matching stat
@@ -2688,7 +2789,7 @@ function heroStats(h, run, meta, syn) {
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: components give stats; finished items give 125% of both parts plus a special
-  for (const it of heroItems(run, h)) {
+  for (const it0 of heroItems(run, h)) for (const it of it0.sub ? [it0, it0.sub] : [it0]) {
     const f = it.parts.length === 2 ? 1.6 : 1.3;
     for (const c of it.parts) switch (c) {
       case 'sword': s.atk *= 1 + 0.18 * f; break;
@@ -2720,6 +2821,16 @@ function heroStats(h, run, meta, syn) {
       }
     }
   }
+  for (const it of heroItems(run, h)) if (it.sup) { const sp = s.sp; switch (it.sup) {
+    case 'sword': s.atk *= 1.25; sp.cleave = sp.multishot = sp.execute = true; break;
+    case 'bow': s.as *= 1.25; sp.quicksilver = sp.multishot = true; s.storm = Math.max(s.storm || 0, 0.35); break;
+    case 'rod': s.ap *= 1.35; s.sigMul *= 1.2; sp.hex = sp.jeweled = sp.spellblade = true; break;
+    case 'tear': s.startMana += 0.3; sp.fountain = sp.teacup = sp.hummingbird = true; break;
+    case 'vest': s.armor += 80; s.reflect += 0.3; sp.gargoyle = true; break;
+    case 'cloak': s.dodge += 0.2; sp.bedsheet = sp.trickster = true; break;
+    case 'belt': s.hp *= 1.4; s.regen += 0.03; sp.sunfire = true; break;
+    case 'glove': s.crit += 0.3; sp.dice = sp.hearty = sp.execute = true; break;
+  } }
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
@@ -2741,7 +2852,7 @@ function genWave(s, mods) {
   if (cyc > 0) elites += 1;
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
-  const sw = swarmK(s); budget *= sw;
+  const sw = swarmK(s) * BAL.thin; budget *= sw;
   let guard = 0;
   while (budget > 0.5 && guard++ < 600 && list.length < BAL.maxSpawn) { const id = pick(pool); list.push(id); budget -= ENEMIES[id].cost; }
   if (mods.chickens) { for (let i = 0; i < list.length; i++) if (!ENEMIES[list[i]].elite && Math.random() < 0.35) list[i] = 'chicken'; for (let i = 0; i < 6; i++) list.push('chicken'); }
@@ -2776,7 +2887,7 @@ function startBattle(run, meta) {
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
-  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => it.parts.length === 2 && FINISHED[itemKey(...it.parts)][1] === 'chalice'));
+  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => [it, it.sub].some(x => x && x.parts.length === 2 && FINISHED[itemKey(...x.parts)][1] === 'chalice')));
   for (const h of placedHeroes(run)) {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, meta, syn);
     let pos, rafter = false;
@@ -3132,6 +3243,7 @@ function castCastlePower(B, x, y) {
     case 'ham': fireProj(B, { x: 40, y: 50, side: 'castle', facing: 1, z: 0 }, null, 'ham', 0, { tx: x, ty: y, fixed: true, speed: 160, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty }, 50)) { dealDamage(B, null, e, dmg * 2, { kind: 'combo' }); if (!e.boss) e.stun = Math.max(e.stun, 1.5); } for (const h of inRadius(B.heroes, { x: p.tx, y: p.ty }, 80)) healUnit(B, null, h, h.maxHp * 0.3); FX.explode(p.tx, p.ty, 50, ['#ff6a6a', '#ffd0b0', '#ffffff']); FX.shockwave(p.tx, p.ty, 90, '#ffd0b0'); FX.shake(8); FX.text(p.tx, p.ty - 30, 'HAM', '#ffd0b0', true, true); FX.sound('boom'); } }); break;
     case 'pinata': B.pinataT = 6; for (const e of live) dealDamage(B, null, e, dmg * 0.4, { kind: 'combo' }); for (let i = 0; i < 6; i++) FX.particles(rand(110, 460), rand(100, 240), 8, ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d'], { spread: 20, up: true }); FX.text(W / 2, 90, 'PIÑATA!', '#ffb02e', true, true); break;
   }
+  FX.castlePower(P.kind, x, y, cols, B);
   FX.combo(W / 2, 80, P.name, cols); FX.shake(6); FX.sound('hammer');
   return true;
 }
@@ -3506,6 +3618,8 @@ function draftOptions(run, meta, focus) {
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = { id: pick(fits).id, rolls: rollStats(), temper: rollTemper() }; }
   return out;
 }
+// after the free partner, every draft is bought in the Guild Hall and costs more each time
+function draftCost(run) { const n = run.paidDrafts || 0; return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
 function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
 function joinLevel(run) { const v = run.vet || 0; if (run.roster.length < 2) return 1 + v; const avg = run.roster.reduce((a, h) => a + h.level, 0) / run.roster.length; return Math.max(1, Math.floor(avg * 0.75)) + v; }
 function addDraftedHero(run, opt) {
@@ -3556,6 +3670,7 @@ function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.hold
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
   if (it.holder === h.uid) return { ok: true };
+  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries a super item. One each.` };
   if (it.parts.length === 1) {
     const partner = heroItems(run, h).find(x => x.parts.length === 1);
     if (partner) {
@@ -3576,8 +3691,26 @@ function unforgeItem(run, it) {
   if (it.parts.length < 2) return { err: 'Components cannot be split.' };
   if (run.gold < UNFORGE_COST) return { err: `Splitting costs ${UNFORGE_COST} gold.` };
   run.gold -= UNFORGE_COST; unequipItem(run, it); run.stash = run.stash.filter(x => x !== it);
+  if (it.sup) { const a = makeItem(it.parts, it.el), b = makeItem(it.sub.parts, it.sub.el); run.stash.push(a, b); return { ok: true }; }
   for (const p of it.parts) run.stash.push(makeItem([p]));
   return { ok: true };
+}
+
+// ----- Super Anvil -----
+function superAnvilOpen(run) { return !!run.tech.superanvil; }
+function superForgeable(run) { return run.stash.filter(it => it.parts.length === 2 && !it.sup); }
+function forgeSuper(run, a, b) {
+  if (!superAnvilOpen(run)) return { err: "Build the Super Anvil in the Artificers' Hall first." };
+  if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
+  if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
+  const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
+  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${HERO_BY_ID[holder.id].name.split(' ')[0]} already carries a super item. One each.` };
+  run.gold -= SUPER_COST; unequipItem(run, a); unequipItem(run, b);
+  run.stash = run.stash.filter(x => x !== a && x !== b);
+  const it = makeItem(a.parts, a.el); it.sub = { parts: b.parts.slice(), el: b.el || null }; it.sup = superKind(a, b);
+  run.stash.push(it);
+  if (holder) { holder.items.push(it.uid); it.holder = holder.uid; }
+  return { it, holder };
 }
 
 // ----- Artificers' Hall -----
@@ -4018,6 +4151,8 @@ const SFX = {
       case 'coin': T(988, 0.05, 'square', 0.06); T(1319, 0.09, 'square', 0.06, 1, 0.045); break;
       case 'kill': T(420, 0.09, 'square', 0.08, 0.4); N(0.08, 0.1, 1500); break;
       case 'boom': N(0.4, 0.4, 300, 0, 0.6); T(90, 0.3, 'sine', 0.3, 0.4); break;
+      case 'anvil': N(0.08, 0.3, 3200, 0, 2); T(1480, 0.35, 'triangle', 0.09, 1); T(2220, 0.25, 'sine', 0.05, 1); T(110, 0.12, 'square', 0.08, 0.5); break;
+      case 'forged': [523, 659, 784, 1047].forEach((f, i) => T(f, 0.18, 'square', 0.06, 1, i * 0.07)); T(1568, 0.5, 'triangle', 0.05, 1, 0.3); break;
       case 'hammer': N(0.6, 0.5, 200, 0, 0.5); T(70, 0.5, 'sine', 0.5, 0.4); T(140, 0.2, 'square', 0.12, 0.5); break;
       case 'whoosh': N(0.5, 0.15, 600, 0, 0.4); break;
       case 'quake': N(0.5, 0.35, 160, 0, 0.5); T(60, 0.4, 'sine', 0.35, 0.5); break;
@@ -4097,7 +4232,7 @@ Object.assign(FX, {
 });
 
 function stepSpellFX(dt) {
-  stepSigVFX(dt);
+  stepSigVFX(dt); stepCastleVFX(dt);
   for (const s of FXS.spells) { s.t += dt;
     if (s.kind === 'smoke' && s.t > 0) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= 0.97; s.s *= 1 + 0.6 * dt; }
     if (s.kind === 'arrow' && s.t >= s.life && !s.landed) { s.landed = true;
@@ -4153,6 +4288,7 @@ function drawSpellFX(ctx, k, ox, oy, B) {
   }
   ctx.globalAlpha = 1;
   drawSigVFX(ctx, k, ox, oy, B);
+  drawCastleVFX(ctx, k, ox, oy, B);
 }
 
 // ===== Signature projectiles: each hero throws something of its own that swells in flight and bursts on impact =====
@@ -4259,6 +4395,120 @@ function drawSigVFX(ctx, k, ox, oy, B) {
       ctx.strokeStyle = i ? s.col : '#ffffff'; ctx.lineWidth = 2 * k; ctx.beginPath(); ctx.moveTo(x - L / 2 + i * 5 * k, y - L / 2); ctx.lineTo(x + L / 2 + i * 5 * k, y + L / 2); ctx.stroke(); } }
   }
   ctx.globalAlpha = 1;
+}
+
+// ===== Castle powers: a big, readable moment for each element =====
+// Every cast lights the keep, tints the field in the element's color and then plays its own show on the hi-res pass.
+const CP_SRC = { x: 52, y: 70 };   // roughly the top of the keep
+Object.assign(FX, {
+  castlePower(kind, x, y, cols, B) {
+    const live = B ? B.enemies.filter(e => e.alive) : [];
+    FXS.spells.push({ kind: 'cpTint', col: cols[0], t: 0, life: 1.1 });
+    FXS.spells.push({ kind: 'cpKeep', col: cols[0], col2: cols[1], t: 0, life: 0.9 });
+    FX.particles(CP_SRC.x, CP_SRC.y, 30, cols, { spread: 16, up: true, grav: -20 });
+    FX.shake(8); FX.flash(cols[0], 0.25);
+    switch (kind) {
+      case 'execute': FXS.spells.push({ kind: 'cpTint', col: '#1a0a2a', t: 0, life: 1.2 }); live.slice(0, 40).forEach((e, i) => FXS.spells.push({ kind: 'cpHand', u: e, x: e.x, y: e.y, t: -0.04 * (i % 10), life: 0.9, fn: () => FX.particles(e.x, e.y - 10, 10, ['#c05aff', '#2a1446', '#ffffff'], { spread: 10, up: true }) })); break;
+      case 'beam': for (let i = 0; i < 5; i++) FXS.spells.push({ kind: 'cpLance', y: GRID.y + 2 + i * 30, col: cols[0], t: -i * 0.05, life: 0.75 }); break;
+      case 'bolts': FXS.spells.push({ kind: 'cpCoil', col: cols[0], t: 0, life: 1.1 }); for (let i = 0; i < 14 && live.length; i++) { const e = pick(live); FXS.spells.push({ kind: 'cpZap', u: e, x: e.x, y: e.y, col: cols[0], t: -0.05 * i, life: 0.22, fn: () => FX.blast(e.x, e.y, 14, ['#ffffff', '#e8f8ff', cols[0], cols[1]], 1, { shards: 4 }) }); } break;
+      case 'firewave': case 'flood': { const w = B && B.waves[B.waves.length - 1]; if (w) FXS.spells.push({ kind: kind === 'flood' ? 'cpCrest' : 'cpFlame', w, t: 0, life: w.life }); break; }
+      case 'freeze': FXS.spells.push({ kind: 'cpFrost', t: 0, life: 2.6 }); live.slice(0, 60).forEach(e => FXS.spells.push({ kind: 'cpIce', u: e, t: -Math.random() * 0.12, life: e.boss ? 0.8 : 2.5 })); break;
+      case 'roots': live.filter(e => e.x < CASTLE_X + 200).slice(0, 40).forEach((e, i) => { for (let j = 0; j < 3; j++) FXS.spells.push({ kind: 'cpVine', x: e.x + (j - 1) * 5, y: e.y + 2, h: rand(14, 22), t: -0.03 * i - j * 0.05, life: 2 }); });
+        if (B) B.heroes.filter(h => h.alive).forEach((h, i) => FX.skyRay(h.x, h.y, '#7cf09a', i * 0.05)); break;
+      case 'vortex': FXS.spells.push({ kind: 'cpHole', x, y, t: 0, life: 1.3 }); break;
+      case 'salt': FXS.spells.push({ kind: 'cpCannon', col: '#ffffff', t: 0, life: 0.6 }, { kind: 'cpStream', col: '#ffffff', col2: '#c9d8f0', t: 0, life: 0.7 });
+        live.slice(0, 30).forEach((e, i) => FXS.spells.push({ kind: 'cpLater', t: -0.15 - i * 0.012, life: 0.01, fn: () => { FX.blast(e.x, e.y, 12, ['#ffffff', '#ffffff', '#e8eef8', '#9aa8c8'], 0.8, { shards: 5 }); } })); break;
+      case 'candy': live.slice(0, 30).forEach((e, i) => { const c = pick(['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a']); FX.fly(CP_SRC.x, CP_SRC.y, e.x, e.y - 4, 'disc', c, '#ffffff', 1.8, 0.5, i * 0.02); FXS.spells.push({ kind: 'cpLater', t: -0.5 - i * 0.02, life: 0.01, fn: () => FX.blast(e.x, e.y, 10, ['#ffffff', c, c, '#ffffff'], 0.8, { shards: 4 }) }); FXS.decals.push({ kind: 'mark', x: e.x, y: e.y, r: 8, col: c, t: -0.5, life: 4 }); }); FXS.spells.push({ kind: 'cpCannon', col: '#ff8ad8', t: 0, life: 0.5 }); break;
+      case 'ham': FXS.spells.push({ kind: 'cpCannon', col: '#ffd0b0', t: 0, life: 0.5 }); break;
+      case 'pinata': FXS.spells.push({ kind: 'cpPinata', x: W / 2 + 30, y: 120, t: 0, life: 0.9, burst: false }); break;
+    }
+  },
+});
+
+function stepCastleVFX(dt) {
+  for (const s of FXS.spells) {
+    if (s.fn && !s.fired && s.t >= 0) { s.fired = true; s.fn(); }
+    if (s.kind === 'cpPinata' && !s.burst && s.t > 0.55) { s.burst = true; const cs = ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d', '#ffffff'];
+      FX.blast(s.x, s.y, 30, cs, 2, { shards: 20 }); for (let i = 0; i < 5; i++) FX.particles(s.x + rand(-30, 30), s.y + rand(-10, 10), 16, cs, { spread: 30, up: true, grav: 60 });
+      for (let i = 0; i < 18; i++) FX.fly(s.x, s.y, rand(GRID.x + 20, W - 20), rand(GRID.y + 10, GRID.y + GRID.rows * GRID.cell), 'disc', '#ffcf3a', '#fff3a0', 0.6, rand(0.35, 0.6), 0); FX.shake(8); }
+    if (s.kind === 'cpIce' && s.t + dt >= s.life && !s.done && s.u.alive) { s.done = true; FX.particles(s.u.x, s.u.y - 8, 10, ['#e8f8ff', '#9ad8ff', '#ffffff'], { spread: 10, up: true, grav: 120 }); }
+  }
+}
+
+function drawCastleVFX(ctx, k, ox, oy, B) {
+  const X = x => x * k + ox, Y = y => y * k + oy, now = FXS.clock;
+  for (const s of FXS.spells) { if (s.t < 0 || s.kind.slice(0, 2) !== 'cp') continue; const kk = Math.min(1, s.t / s.life), fade = 1 - kk;
+    ctx.save();
+    switch (s.kind) {
+      case 'cpTint': { ctx.globalAlpha = 0.28 * fade * fade; ctx.fillStyle = s.col; ctx.fillRect(X(0), Y(0), W * k, H * k); break; }
+      case 'cpKeep': { // the keep blazes and shoots a column of light into the sky
+        const x = X(CP_SRC.x), y = Y(CP_SRC.y), up = Math.min(1, s.t / 0.12), r = 46 * k * (0.6 + 0.6 * up);
+        let gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, s.col2 || s.col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = fade; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        const w = 18 * k * fade; gr = ctx.createLinearGradient(0, Y(-10), 0, y); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, s.col);
+        ctx.globalAlpha = 0.8 * fade; ctx.fillStyle = gr; ctx.fillRect(x - w / 2, Y(-10), w, y - Y(-10)); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - w / 6, Y(-10), w / 3, y - Y(-10)); break; }
+      case 'cpHand': { // a shadow hand bursts from the ground and closes over the foe
+        const x = X(s.u.alive ? s.u.x : s.x), y = Y(s.u.alive ? s.u.y : s.y) + 2 * k, rise = Math.min(1, s.t / 0.25), h = 40 * k * rise * (kk > 0.7 ? (1 - kk) / 0.3 : 1), grip = Math.min(1, Math.max(0, (s.t - 0.25) / 0.2));
+        ctx.globalAlpha = 0.5; ctx.fillStyle = '#1a0a2a'; ctx.beginPath(); ctx.ellipse(x, y, 10 * k, 3.5 * k, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1; ctx.fillStyle = '#2a1446'; ctx.fillRect(x - 3.5 * k, y - h * 0.6, 7 * k, h * 0.6);
+        ctx.strokeStyle = '#2a1446'; ctx.lineWidth = 2.6 * k; ctx.lineCap = 'round';
+        for (let f = 0; f < 4; f++) { const bx = x + (f - 1.5) * 3 * k, by = y - h * 0.6, a = -Math.PI / 2 + (f - 1.5) * (0.5 - 0.45 * grip); ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a) * h * 0.5, by + Math.sin(a) * h * 0.5); ctx.stroke(); }
+        ctx.fillStyle = '#c05aff'; ctx.globalAlpha = 0.9 * fade; ctx.fillRect(x - 1.5 * k, y - h * 0.5, 1.2 * k, 1.2 * k); ctx.fillRect(x + 1 * k, y - h * 0.5, 1.2 * k, 1.2 * k); break; }
+      case 'cpLance': { // a holy lance sweeps out from the wall along one lane
+        const grow = Math.min(1, s.t / 0.15), x0 = X(CASTLE_X), x1 = X(CASTLE_X) + (W - CASTLE_X + 20) * k * grow, y = Y(s.y), th = 14 * k * (kk < 0.2 ? kk / 0.2 : 1 - (kk - 0.2) / 0.8);
+        const gr = ctx.createLinearGradient(0, y - th, 0, y + th); gr.addColorStop(0, 'rgba(255,240,170,0)'); gr.addColorStop(0.35, s.col); gr.addColorStop(0.5, '#ffffff'); gr.addColorStop(0.65, s.col); gr.addColorStop(1, 'rgba(255,240,170,0)');
+        ctx.globalAlpha = 0.95; ctx.fillStyle = gr; ctx.fillRect(x0, y - th, x1 - x0, th * 2);
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x1, y, th * 0.9, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpCoil': { // the towers crackle with arcs before the bolts fly
+        ctx.strokeStyle = s.col; ctx.lineWidth = 2 * k; ctx.globalAlpha = fade;
+        for (let i = 0; i < 5; i++) { let px = X(CP_SRC.x + rand(-20, 20)), py = Y(CP_SRC.y - 20); ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 4; j++) { px += rand(-8, 8) * k; py -= rand(4, 10) * k; ctx.lineTo(px, py); } ctx.stroke(); }
+        ctx.globalAlpha = 0.5 * fade; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(X(CP_SRC.x), Y(CP_SRC.y - 20), 22 * k * (1 + 0.2 * Math.sin(now * 50)), 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpFlame': case 'cpCrest': { const w = s.w; if (!w || w.t >= w.life) break; const x = X(w.x), flood = s.kind === 'cpCrest', top = Y(GRID.y - 12), bot = Y(GRID.y + GRID.rows * GRID.cell + 10);
+        for (let yy = top; yy < bot; yy += 7 * k) { const n = Math.sin(yy * 0.05 + now * 14), hgt = (flood ? 26 : 30) * k * (0.7 + 0.3 * n);
+          if (flood) { // a curling wall of water with foam on the lip
+            ctx.globalAlpha = 0.85; ctx.fillStyle = '#2a7ad8'; ctx.beginPath(); ctx.moveTo(x - 30 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 6 * k, yy - hgt, x + 8 * k, yy - hgt * 0.7); ctx.quadraticCurveTo(x + 2 * k, yy - hgt * 0.3, x + 4 * k, yy + 4 * k); ctx.fill();
+            ctx.fillStyle = '#5fd3ff'; ctx.beginPath(); ctx.moveTo(x - 16 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 2 * k, yy - hgt * 0.8, x + 8 * k, yy - hgt * 0.7); ctx.lineTo(x + 2 * k, yy + 4 * k); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + 6 * k, yy - hgt * 0.72, 3 * k, 0, Math.PI * 2); ctx.fill(); }
+          else { // tall flame tongues riding the wave front
+            const gr = ctx.createLinearGradient(0, yy - hgt, 0, yy + 4 * k); gr.addColorStop(0, 'rgba(255,61,45,0)'); gr.addColorStop(0.3, '#ff3d2d'); gr.addColorStop(0.6, '#ff8a2a'); gr.addColorStop(1, '#fff3a0');
+            ctx.globalAlpha = 0.9; ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x - 14 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 4 * k + n * 4 * k, yy - hgt, x + 2 * k, yy - hgt * 1.1); ctx.quadraticCurveTo(x + 6 * k, yy - hgt * 0.4, x + 8 * k, yy + 4 * k); ctx.fill(); } }
+        if (Math.random() < 0.8) FX.particles(w.x + rand(-6, 6), rand(GRID.y, GRID.y + GRID.rows * GRID.cell), 3, flood ? ['#ffffff', '#bff4ff'] : ['#ffd23a', '#ff8a2a'], { spread: 6, up: true });
+        break; }
+      case 'cpFrost': { const a = 0.35 * (kk < 0.1 ? kk / 0.1 : fade); ctx.globalAlpha = a; ctx.fillStyle = '#bfeeff'; ctx.fillRect(X(CASTLE_X), Y(GRID.y - 20), (W - CASTLE_X) * k, (GRID.rows * GRID.cell + 40) * k);
+        ctx.globalAlpha = a * 1.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k; for (let i = 0; i < 8; i++) { const cx = X(CASTLE_X + 20 + i * 45), cy = Y(GRID.y + 8 + (i % 3) * 50); for (let j = 0; j < 3; j++) { const ang = j * Math.PI / 3; ctx.beginPath(); ctx.moveTo(cx - Math.cos(ang) * 6 * k, cy - Math.sin(ang) * 6 * k); ctx.lineTo(cx + Math.cos(ang) * 6 * k, cy + Math.sin(ang) * 6 * k); ctx.stroke(); } } break; }
+      case 'cpIce': { const u = s.u; if (!u.alive) break; const sz = (u.boss ? 30 : 16) * (u.scale || 1) * k, x = X(u.x), y = Y(u.y) + 2 * k, grow = Math.min(1, s.t / 0.12);
+        ctx.globalAlpha = 0.55 * (kk > 0.85 ? (1 - kk) / 0.15 : 1); ctx.fillStyle = '#9ad8ff'; ctx.fillRect(x - sz / 2 * grow, y - sz * grow, sz * grow, sz * grow);
+        ctx.globalAlpha *= 1.4; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5 * k; ctx.strokeRect(x - sz / 2 * grow, y - sz * grow, sz * grow, sz * grow); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - sz / 2 * grow + 2 * k, y - sz * grow + 2 * k, sz * 0.25, 2 * k); break; }
+      case 'cpVine': { const up = kk < 0.1 ? kk / 0.1 : kk > 0.8 ? (1 - kk) / 0.2 : 1, x = X(s.x), y = Y(s.y), h = s.h * k * up, sw = Math.sin(now * 6 + s.x) * 3 * k;
+        ctx.strokeStyle = '#2a7a3a'; ctx.lineWidth = 3 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + sw * 2, y - h * 0.5, x + sw, y - h); ctx.stroke();
+        ctx.strokeStyle = '#7cf09a'; ctx.lineWidth = 1.2 * k; ctx.stroke(); ctx.fillStyle = '#9be05a'; ctx.beginPath(); ctx.ellipse(x + sw * 1.5 + 2 * k, y - h * 0.55, 2.5 * k, 1.2 * k, -0.5, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpHole': { // a black hole: grows, spins its accretion ring, then collapses with a pop
+        const x = X(s.x), y = Y(s.y), sz = (kk < 0.2 ? kk / 0.2 : kk > 0.8 ? (1 - kk) / 0.2 : 1) * 34 * k;
+        for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.7 - i * 0.18; ctx.strokeStyle = ['#ff5dd8', '#a86ad8', '#5a2a9e'][i]; ctx.lineWidth = (4 - i) * k; ctx.beginPath(); ctx.ellipse(x, y, sz * (1.3 + i * 0.35), sz * (0.45 + i * 0.12), now * (3 + i), 0, Math.PI * 1.6); ctx.stroke(); }
+        ctx.globalAlpha = 1; const gr = ctx.createRadialGradient(x, y, 0, x, y, sz); gr.addColorStop(0, '#000000'); gr.addColorStop(0.7, '#0a0014'); gr.addColorStop(1, 'rgba(168,106,216,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill();
+        if (Math.random() < 0.7) { const a = rand(0, 6.28), r = rand(40, 70); FXS.parts.push({ x: s.x + Math.cos(a) * r, y: s.y + Math.sin(a) * r * 0.5, vx: -Math.cos(a) * r * 2, vy: -Math.sin(a) * r, life: 0.5, t: 0, color: pick(['#ff5dd8', '#a86ad8', '#ffffff']), size: 1, grav: 0 }); }
+        break; }
+      case 'cpZap': { const x = X(s.u.alive ? s.u.x : s.x), y = Y(s.u.alive ? s.u.y : s.y) - 8 * k; let px = x + rand(-20, 20) * k, py = Y(-10);
+        ctx.globalAlpha = fade; ctx.strokeStyle = s.col; ctx.lineWidth = 4 * k; ctx.lineJoin = 'miter'; ctx.beginPath(); ctx.moveTo(px, py); const n = 6; for (let i = 1; i <= n; i++) { const f = i / n; ctx.lineTo(px + (x - px) * f + (i < n ? rand(-9, 9) * k : 0), py + (y - py) * f); } ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5 * k; ctx.stroke(); break; }
+      case 'cpStream': { // a fat arc of salt pouring from the wall across the field
+        const grow = Math.min(1, s.t / 0.25), x0 = X(CASTLE_X), y0 = Y(CP_SRC.y + 30), x1 = X(CASTLE_X + (W - CASTLE_X) * grow), y1 = Y(GRID.y + 60);
+        ctx.globalAlpha = 0.85 * fade; ctx.strokeStyle = s.col2; ctx.lineWidth = 22 * k; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, Y(10), x1, y1); ctx.stroke();
+        ctx.strokeStyle = s.col; ctx.lineWidth = 10 * k; ctx.stroke();
+        for (let i = 0; i < 6; i++) FXS.parts.push({ x: CASTLE_X + rand(0, (W - CASTLE_X) * grow), y: rand(20, 60), vx: rand(-10, 10), vy: rand(60, 120), life: rand(0.4, 0.8), t: 0, color: pick(['#ffffff', '#e8eef8']), size: 2, grav: 120 });
+        break; }
+      case 'cpCannon': { // muzzle blast from the wall
+        const x = X(CASTLE_X + 4), y = Y(CP_SRC.y + 30), r = 26 * k * (0.5 + kk); ctx.globalAlpha = fade; const gr = ctx.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, s.col); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); break; }
+      case 'cpPinata': { if (s.burst) break; // a piñata swings down on a rope, then bursts
+        const drop = Math.min(1, s.t / 0.3), x = X(s.x) + Math.sin(now * 12) * 6 * k * drop, y = Y(s.y) - (1 - drop) * 140 * k, cs = ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d'];
+        ctx.strokeStyle = '#c9b48a'; ctx.lineWidth = k; ctx.beginPath(); ctx.moveTo(X(s.x), Y(-10)); ctx.lineTo(x, y - 14 * k); ctx.stroke();
+        for (let i = 0; i < 5; i++) { ctx.fillStyle = cs[i]; ctx.fillRect(x - 16 * k, y - 14 * k + i * 4 * k, 26 * k, 4 * k); }
+        ctx.fillStyle = cs[0]; ctx.fillRect(x + 8 * k, y - 22 * k, 8 * k, 10 * k); ctx.fillRect(x + 10 * k, y - 28 * k, 2 * k, 6 * k);
+        for (const lx of [-13, -6, 2, 8]) { ctx.fillStyle = cs[(lx + 13) % 5 | 0]; ctx.fillRect(x + lx * k, y + 6 * k, 3 * k, 8 * k); }
+        ctx.fillStyle = '#1a1a2a'; ctx.fillRect(x + 12 * k, y - 20 * k, 2 * k, 2 * k); break; }
+    }
+    ctx.restore();
+  }
 }
 
 // ===== Arena renderer =====
@@ -5228,11 +5478,11 @@ function drawArtCastle(run) {
 
 // ===== Bot agents: headless full runs with the real sim (Node tool + in-game Sim Lab) =====
 const BOT_STYLES = {
-  brawler:  { name: 'Brawler',  focus: 'ad',  comps: ['sword', 'bow', 'glove', 'belt'], techs: ['vault1', 'ballista1', 'walls1', 'drill', 'ballista2', 'scav', 'pulleys', 'trophy', 'wells', 'fountain', 'rafters1', 'vault2', 'college', 'ballista3', 'hammer2', 'walls2', 'kiln'], desc: 'Drafts high Attack rolls, stacks swords, bows and gloves.' },
-  arcanist: { name: 'Arcanist', focus: 'ap',  comps: ['rod', 'tear', 'rod', 'glove'],     techs: ['wells', 'vault1', 'resonance', 'lab', 'walls1', 'focus', 'prism', 'drill', 'ballista1', 'scav', 'aether', 'fountain', 'rafters1', 'college', 'trophy'], desc: 'Drafts high Ability power, rushes signatures and combos.' },
-  bulwark:  { name: 'Bulwark',  focus: 'def', comps: ['vest', 'belt', 'cloak', 'tear'],   techs: ['walls1', 'fountain', 'vault1', 'rafters1', 'ballista1', 'walls2', 'drill', 'rafters2', 'bastion', 'resonance', 'ballista2', 'scav', 'college'], desc: 'Drafts high Defense, builds walls and tanky items.' },
-  balanced: { name: 'Balanced', focus: null,  comps: null,                                 techs: ['vault1', 'walls1', 'wells', 'ballista1', 'drill', 'scav', 'fountain', 'resonance', 'lab', 'rafters1', 'pulleys', 'trophy', 'prism', 'focus', 'vault2', 'college', 'walls2', 'ballista2', 'aether'], desc: 'Takes the best total rolls and spreads its gold.' },
-  crit:     { name: 'Crit Ranger', focus: 'ad', cls: 'ranger', comps: ['glove', 'glove', 'bow', 'sword'], techs: ['rafters1', 'vault1', 'ballista1', 'walls1', 'drill', 'rafters2', 'scav', 'wells', 'fountain'], desc: 'Stacks crit on rangers and parks them in the rafters, like Cam\'s run.' },
+  brawler:  { name: 'Brawler',  focus: 'ad',  comps: ['sword', 'bow', 'glove', 'belt'], techs: ['vault1', 'ballista1', 'walls1', 'drill', 'ballista2', 'scav', 'pulleys', 'trophy', 'wells', 'fountain', 'rafters1', 'vault2', 'college', 'ballista3', 'hammer2', 'walls2', 'kiln', 'superanvil'], desc: 'Drafts high Attack rolls, stacks swords, bows and gloves.' },
+  arcanist: { name: 'Arcanist', focus: 'ap',  comps: ['rod', 'tear', 'rod', 'glove'],     techs: ['wells', 'vault1', 'resonance', 'lab', 'walls1', 'focus', 'prism', 'drill', 'ballista1', 'scav', 'aether', 'fountain', 'rafters1', 'college', 'trophy', 'superanvil'], desc: 'Drafts high Ability power, rushes signatures and combos.' },
+  bulwark:  { name: 'Bulwark',  focus: 'def', comps: ['vest', 'belt', 'cloak', 'tear'],   techs: ['walls1', 'fountain', 'vault1', 'rafters1', 'ballista1', 'walls2', 'drill', 'rafters2', 'bastion', 'resonance', 'ballista2', 'scav', 'college', 'superanvil'], desc: 'Drafts high Defense, builds walls and tanky items.' },
+  balanced: { name: 'Balanced', focus: null,  comps: null,                                 techs: ['vault1', 'walls1', 'wells', 'ballista1', 'drill', 'scav', 'fountain', 'resonance', 'lab', 'rafters1', 'pulleys', 'trophy', 'prism', 'focus', 'vault2', 'college', 'walls2', 'ballista2', 'aether', 'superanvil'], desc: 'Takes the best total rolls and spreads its gold.' },
+  crit:     { name: 'Crit Ranger', focus: 'ad', cls: 'ranger', comps: ['glove', 'glove', 'bow', 'sword'], techs: ['rafters1', 'vault1', 'ballista1', 'walls1', 'drill', 'rafters2', 'scav', 'wells', 'fountain', 'superanvil'], desc: 'Stacks crit on rangers and parks them in the rafters, like Cam\'s run.' },
   chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
 };
 
@@ -5241,31 +5491,79 @@ function botScoreOpt(style, o) {
   const r = o.rolls, sum = r.ad + r.ap + r.def;
   return (S.focus ? r[S.focus] * 2.2 : 0) + sum + HERO_BY_ID[o.id].tier * 5 + (S.cls && HERO_BY_ID[o.id].cls === S.cls ? 12 : 0) + Math.random();
 }
+// ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
+const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
+function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : h.rolls.ap > h.rolls.ad + 2 ? 'ap' : 'ad'; }
+function botFin(run, h) { return heroItems(run, h).filter(i => i.parts.length === 2).length; }
+function botCarryScore(run, style, h) {
+  const S = BOT_STYLES[style], k = botKind(h), d = HERO_BY_ID[h.id];
+  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (k === 'ap' ? h.rolls.ap : h.rolls.ad) + d.tier * 4 + (S.cls && d.cls === S.cls ? 30 : 0)
+    + (S.focus === 'ap' && k === 'ap' ? 15 : 0) + (S.focus === 'ad' && (k === 'ad' || k === 'ranger') ? 10 : 0)
+    + (h.uid === run.botCarry ? 8 : 0) + botFin(run, h) * 6;
+}
+// carry first, then everyone else by how good a carry they would be
+function botItemOrder(run, style) {
+  const o = run.roster.slice().sort((a, b) => botCarryScore(run, style, b) - botCarryScore(run, style, a));
+  run.botCarry = o[0] && o[0].uid; return o;
+}
+function botPairScore(h, a, b) { const w = CARRY_COMPS[botKind(h)]; return (w.includes(a) ? 2 : 0) + (w.includes(b) ? 2 : 0) + (a === b && w.includes(a) ? 0.5 : 0) + (a === 'spatula' || b === 'spatula' ? 1 : 0); }
 function botGiveItems(run, style) {
-  // hand every unheld item to the hero with the fewest items (prefer the one with a lone component so it fuses)
-  for (const it of run.stash.filter(x => !x.holder)) {
-    const heroes = run.roster.slice().sort((a, b) => b.level - a.level);
-    const fuse = it.parts.length === 1 && heroes.find(h => heroItems(run, h).some(x => x.parts.length === 1));
-    const target = fuse || heroes.find(h => h.items.length < ITEM_SLOTS);
-    if (target) giveItem(run, it, target);
+  if (style === 'chaos') {
+    for (const it of run.stash.filter(x => !x.holder)) {
+      const heroes = run.roster.slice().sort((a, b) => b.level - a.level);
+      const fuse = it.parts.length === 1 && heroes.find(h => heroItems(run, h).some(x => x.parts.length === 1));
+      const target = fuse || heroes.find(h => h.items.length < ITEM_SLOTS);
+      if (target) giveItem(run, it, target);
+    }
+    return;
+  }
+  const order = botItemOrder(run, style), loose = () => run.stash.filter(x => !x.holder);
+  // finished items go to the first hero in line with a free slot
+  for (const it of loose().filter(x => x.parts.length === 2)) { const h = order.find(h => h.items.length < ITEM_SLOTS); if (h) giveItem(run, it, h); }
+  // components: complete half-built items first, then hand out whole pairs so they fuse at once
+  for (const h of order) {
+    let comps = loose().filter(x => x.parts.length === 1);
+    const lone = heroItems(run, h).find(x => x.parts.length === 1);
+    if (lone && comps.length) { const best = comps.slice().sort((x, y) => botPairScore(h, lone.parts[0], y.parts[0]) - botPairScore(h, lone.parts[0], x.parts[0]))[0]; giveItem(run, best, h); comps = loose().filter(x => x.parts.length === 1); }
+    while (comps.length >= 2 && h.items.length < ITEM_SLOTS) {
+      let bp = null, bs = -1;
+      for (let i = 0; i < comps.length; i++) for (let j = i + 1; j < comps.length; j++) { const sc = botPairScore(h, comps[i].parts[0], comps[j].parts[0]); if (sc > bs) { bs = sc; bp = [comps[i], comps[j]]; } }
+      giveItem(run, bp[0], h); giveItem(run, bp[1], h); comps = loose().filter(x => x.parts.length === 1);
+    }
+  }
+  // a single leftover component waits on the first hero with room, ready to fuse next time
+  for (const it of loose().filter(x => x.parts.length === 1)) { const h = order.find(h => h.items.length < ITEM_SLOTS && !heroItems(run, h).some(x => x.parts.length === 1)); if (h) giveItem(run, it, h); }
+  // late game: the carry forges its two best finished items into a super item
+  const c = order[0];
+  if (c && superAnvilOpen(run) && run.gold >= SUPER_COST + 20 && !heroItems(run, c).some(x => x.sup)) {
+    const fin = heroItems(run, c).filter(x => x.parts.length === 2 && !x.sup);
+    if (fin.length >= 2) { fin.sort((x, y) => botPairScore(c, ...y.parts) - botPairScore(c, ...x.parts)); forgeSuper(run, fin[0], fin[1]); }
   }
 }
+// bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
+function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
+function botBuyDrafts(run, draft) { while (run.roster.length >= 2 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
+  const keep = run.roster.length < botRosterGoal(run.siege + 1) ? draftCost(run) : 0;
   for (let g = 0; g < 20; g++) {
     let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
     ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
-    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold >= TECH[k].cost);
+    const id = ids.find(k => TECH[k] && techState(run, k) === 'open' && run.gold - keep >= TECH[k].cost);
     if (!id || (style === 'chaos' && Math.random() < 0.3)) break;
     buyTech(run, meta, id);
   }
   if (run.castle.hp < run.castle.max * 0.6) repairCastle(run);
 }
 function botPickLoot(run, style, opts) {
-  const S = BOT_STYLES[style];
-  if (!S.comps) return pick(opts);
-  return opts.slice().sort((a, b) => b.parts.filter(p => S.comps.includes(p)).length - a.parts.filter(p => S.comps.includes(p)).length)[0];
+  if (style === 'chaos') return pick(opts);
+  // shop for the first hero in line who still needs finished items
+  const order = botItemOrder(run, style), h = order.find(h => botFin(run, h) < ITEM_SLOTS) || order[0];
+  if (!h) return opts[0];
+  const w = CARRY_COMPS[botKind(h)], lone = heroItems(run, h).find(x => x.parts.length === 1) || run.stash.find(x => !x.holder && x.parts.length === 1);
+  const sc = o => o.parts.length === 2 ? botPairScore(h, ...o.parts) + 3 : (w.includes(o.parts[0]) ? 2 : 0) + (lone ? botPairScore(h, lone.parts[0], o.parts[0]) * 0.5 : 0) + Math.random() * 0.1;
+  return opts.slice().sort((a, b) => sc(b) - sc(a))[0];
 }
 function botElement(run, style, h, opts) {
   const S = BOT_STYLES[style];
@@ -5301,7 +5599,7 @@ function botPlayRun(style, meta, opts = {}) {
   draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
-    botGiveItems(run, style); botShop(run, meta, style);
+    botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
@@ -5312,7 +5610,8 @@ function botPlayRun(style, meta, opts = {}) {
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) draft();
+    if (run.roster.length < 2) draft();
+    botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = st || pick(ENCOUNTERS); resolveEncounter(run, meta, pick(enc.opts).fx);
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
@@ -5551,6 +5850,34 @@ const UI = {
     b.textContent = st === 'on' ? 'Recording playtest' : st === 'asking' ? 'Starting playtest mic…' : 'Logging playtest (mic off)';
     b.title = (st === 'on' ? 'Your mic and every click are saved with this run for Claude to review.' : 'Every click is saved with this run for Claude to review. The microphone is not available in this view.') + (TEL.ready ? '' : ' Saved on this device until the shared log connects.');
   },
+  // forge cutscene: the inputs fly onto an anvil, a hammer strikes, and the new item bursts out. Click to skip.
+  forge(o) {
+    const old = document.querySelector('.forgefx'); if (old) old.remove();
+    const sup = !!o.super, hits = sup ? 3 : 2, d = document.createElement('div');
+    d.className = 'forgefx' + (sup ? ' sup' : '');
+    d.innerHTML = `<div class="ff-stage"><div class="ff-rays"></div><canvas class="ff-anvil px" width="32" height="20"></canvas>
+      ${o.inputs.map((u, i) => `<img class="px ff-in ff-in${i}" src="${u}" alt="">`).join('')}
+      <div class="ff-hammer"></div><div class="ff-flash"></div><img class="px ff-out" src="${o.out}" alt="">
+      <div class="ff-name"><small>${sup ? 'Super item forged' : 'Item combined'}</small><b>${esc(o.name)}</b>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</div></div><p class="ff-skip">Click to continue</p>`;
+    document.body.appendChild(d);
+    // pixel anvil, violet and gold for the super anvil
+    const g = d.querySelector('.ff-anvil').getContext('2d'), A = sup ? ['#5b2a9e', '#8a4fe0', '#ffcf3a', '#2a1846'] : ['#4a4f63', '#7a8199', '#c9cfe0', '#262a38'];
+    g.fillStyle = A[1]; g.fillRect(2, 2, 26, 5); g.fillRect(0, 2, 4, 3); g.fillStyle = A[2]; g.fillRect(2, 2, 26, 1); g.fillStyle = A[0]; g.fillRect(9, 7, 12, 6); g.fillRect(6, 13, 18, 3); g.fillStyle = A[3]; g.fillRect(4, 16, 22, 3);
+    if (sup) { g.fillStyle = '#ffcf3a'; g.fillRect(14, 9, 2, 2); g.fillRect(8, 14, 2, 1); g.fillRect(20, 14, 2, 1); }
+    const T = [], at = (ms, f) => T.push(setTimeout(f, ms)), base = 650, step = sup ? 330 : 300;
+    for (let i = 0; i < hits; i++) at(base + i * step, () => { d.classList.remove('hit'); void d.offsetWidth; d.classList.add('hit'); SFX.play('anvil'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 16 : 10, sup); });
+    const done = base + hits * step;
+    at(done, () => { d.classList.add('done'); SFX.play('forged'); if (sup) SFX.play('boom'); UI.forgeSparks(d.querySelector('.ff-stage'), sup ? 40 : 22, sup, true); });
+    const close = () => { T.forEach(clearTimeout); d.classList.add('out'); setTimeout(() => d.remove(), 250); if (o.after) o.after(); };
+    at(done + (sup ? 2600 : 1700), close);
+    d.addEventListener('click', () => { if (!d.classList.contains('done')) { T.forEach(clearTimeout); T.length = 0; d.classList.add('done'); at(sup ? 1400 : 900, close); return; } close(); });
+  },
+  forgeSparks(el, n, sup, big) {
+    const cols = sup ? ['#ffcf3a', '#ffffff', '#b06cff', '#ff8af0'] : ['#ffcf3a', '#ffffff', '#ff9a3a'];
+    for (let i = 0; i < n; i++) { const s = document.createElement('i'), a = Math.random() * Math.PI * 2, r = (big ? 90 : 50) + Math.random() * (big ? 110 : 60);
+      s.className = 'ff-spark'; s.style.cssText = `--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.8 - (big ? 0 : 30)}px;background:${cols[i % cols.length]};animation-duration:${0.4 + Math.random() * 0.5}s`;
+      el.appendChild(s); setTimeout(() => s.remove(), 1000); }
+  },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
   banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
   flyTo(src, el, sx, sy, done) {
@@ -5688,9 +6015,9 @@ const UI = {
       if (b === 'taken') return `<b>${esc(nm)}: damage taken ${fmt(r.taken)}</b>${list(r.tsrc, TSRC_ORDER, r.taken)}${r.tsrc.shield > 0.5 ? `<div class="tl"><i style="background:${STAT_SRC.shield.col}"></i><span>${STAT_SRC.shield.name}</span><b>${fmt(r.tsrc.shield)}</b><small></small></div>` : ''}`;
       if (b === 'ccT') return `<b>${esc(nm)}: crowd control ${(r.ccT || 0).toFixed(1)}s</b>${list(r.cc, ['stun', 'taunt', 'slow'], r.ccT, 's')}<p class="note">Seconds foes spent stunned, frozen or taunted by this champion. Slows count at half.</p>`;
     }
-    if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (fieldElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
+    if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (stackElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
       const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
-      return `<b>${E.name} stack <small>${n} on the field</small></b><p>Champions who share an element power each other up.</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${Math.min(n, 4) === v ? 'on' : n > v ? 'past' : ''}"><b>${v}</b><span>${E.name} power ×${EL_STACK.mul[i]} and +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}</span></div>`).join('')}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
+      return `<b>${E.name} stack <small>${n} on the field</small></b><p>Champions who share an element power each other up.</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${Math.min(n, 4) === v ? 'on' : n > v ? 'past' : ''}"><b>${v}</b><span>${E.name} power ×${EL_STACK.mul[i]} and +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
     if (kind === 'help' && a === 'els') return `<b>Element stacks</b><p>Two, three or four champions with the same element (crests count) multiply that element's power and boost their matching stat.</p>`;
     if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
       return `<b>${T.icon} ${T.name} <small>${T.side === 'good' ? 'good-guy energy' : 'bad-guy energy'}</small></b><p><span style="color:var(--mint)">▲ ${esc(T.up)}</span><br><span style="color:var(--rose)">▼ ${esc(T.down)}</span></p><div class="ttier ${n >= 2 ? 'on' : ''}"><b>2</b><span><i>${esc(T.pair)}:</i> ${esc(T.pdesc)}</span></div><p class="note">${n >= 2 ? 'Pair active: ' + who.join(' + ') : n === 1 ? `Place a second ${T.name} champion to unlock the pair bonus. Now: ${who[0]}.` : `Two ${T.name} champions on the field unlock the pair bonus.`}</p>`; }
@@ -5731,8 +6058,10 @@ const UI = {
     body.querySelectorAll('details.hbranch').forEach(d => d.ontoggle = () => { UI.hallOpen[d.dataset.br] = d.open; });
   },
   guildHTML(run) {
-    let next = run.siege; while (!DRAFT_AFTER(next) && next < run.siege + 30) next++;
-    let h = `<div class="card"><span class="eyebrow">Next champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins before siege 2.' : next === 4 ? "A third champion joins after siege 4, before the first boss." : `A new champion can be drafted after siege ${next}.`} New champions arrive at about three quarters of your team's average level.</p></div>`;
+    const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
+    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins free after siege 1. ' : ''}Each draft costs more than the last, so save up between sieges. New champions arrive at about three quarters of your team's average level.</p>
+      <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
+      <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
     h += `<div class="group-title">Your champions</div>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
@@ -5759,6 +6088,7 @@ const UI = {
       h += `</div></div>`;
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
+    h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
     for (const it of loose) {
@@ -5776,6 +6106,18 @@ const UI = {
     if (UI.recipeSel) { const F = FINISHED[UI.recipeSel], [a, b] = UI.recipeSel.split('+'); h += `<p class="rdesc"><b>${esc(F[0])}</b> = ${esc(COMPONENTS[a].name)} + ${esc(COMPONENTS[b].name)}. ${esc(F[2])}</p>`; }
     else h += `<p class="note">Tap a square to see what two components make. A Golden Ladle with any component makes a Crest: a second element.</p>`;
     return h + `</details>`;
+  },
+  superAnvilHTML(run) {
+    if (!superAnvilOpen(run)) return run.siege < techOpensAt('superanvil') ? '' : `<div class="superanvil locked"><h4>Super Anvil</h4><p class="note">Build it in the Artificers' Hall to forge two finished items into one super item that keeps both powers and adds a new one.</p></div>`;
+    const fin = superForgeable(run); UI.saSel = (UI.saSel || []).filter(u => fin.some(it => it.uid === u));
+    let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
+    if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
+    h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+    if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
+      h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
+    else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
+    return h + `</div>`;
   },
   hallHTML(run) {
     // one dropdown per branch. Built techs shrink to chips, ready ones glow, newly opened ones say NEW.
@@ -5820,7 +6162,7 @@ const UI = {
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
     for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
-    const fe = fieldElements(run); let elb = '';
+    const fe = stackElements(run); let elb = '';
     for (const e of EL_KEYS) { const n = fe[e] || 0; if (!n) continue; const t = n >= 2; elb += `<div class="syb elst ${t ? 'on' : ''}" style="--rc:${ELEMENTS[e].col};--ec:${ELEMENTS[e].col};--ec2:${ELEMENTS[e].col2}" data-tip="els:${e}" aria-label="${ELEMENTS[e].name} ${n}"><span class="orb"></span><b class="cnt">${n}</b><span class="pips">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('')}</span></div>`; }
     const tc = temperCounts(run); let tmb = '';
     for (const k in tc) { const T = TEMPERS[k]; if (tc[k] >= 2) tmb += `<div class="syb tmp on ${T.side}" data-tip="tmp:${k}" aria-label="${esc(T.pair)}"><span class="glyph">${T.icon}</span><b class="cnt">${tc[k]}</b></div>`; }
@@ -5895,7 +6237,7 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], tot = o.rolls.ad + o.rolls.ap + o.rolls.def, bs = bestStyle(o.rolls);
@@ -6397,13 +6739,14 @@ function startRun() {
 
 function showDraft() {
   const run = G.run; if (!run.pendingDraft) run.pendingDraft = draftOptions(run, G.meta);
-  const kind = run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
+  const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
       const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
       const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
       TEL.event('draft', { id: o.id, rolls: o.rolls, kind });
+      if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
     });
     const rr = s.querySelector('#draftReroll'); if (rr) rr.onclick = () => { const c = draftRerollCost(run); if (run.gold < c) return; run.gold -= c; run.draftRerolls++; run.pendingDraft = draftOptions(run, G.meta); SFX.play('click'); showDraft(); };
@@ -6454,7 +6797,7 @@ function endSiege() {
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (DRAFT_AFTER(rep.siege) && run.roster.length < ROSTER_CAP) run.post.push('draft');
+    if (run.roster.length < 2) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -6546,10 +6889,11 @@ function toPrep() {
   changed();
   const run = G.run;
   if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall shows when the next champion arrives and how close each hero is to a signature or element.'), 600);
+  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
 }
 
 // ----- actions -----
@@ -6559,8 +6903,16 @@ G.act = function (act, arg) {
   const sel = run.roster.find(h => h.uid === G.selected);
   switch (act) {
     case 'give': { const it = run.stash.find(x => x.uid === arg); if (!it || !sel) return; r = giveItem(run, it, sel); if (r.err) return UI.toast(r.err, true);
-      if (r.fused) { SFX.play('level'); UI.toast(`Fused into ${itemName(r.fused)}!`); const u = G.prepUnits.find(p => p.inst === sel); if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(r.fused), '#ffcf3a', true, true); } TEL.event('fuse', { parts: r.fused.parts }); }
+      if (r.fused) { const u = G.prepUnits.find(p => p.inst === sel), f = r.fused;
+        UI.forge({ inputs: [itemIconURL({ parts: [f.parts[0]] }), itemIconURL({ parts: [f.parts[1]] })], out: itemIconURL(f), name: itemName(f), sub: `for ${heroDisplayName(sel)}`,
+          after: () => { if (u) { FX.particles(u.x, u.y - 8, 24, ['#ffcf3a', '#ffffff'], { spread: 18, up: true }); FX.text(u.x, u.y - 26, itemName(f), '#ffcf3a', true, true); } } });
+        TEL.event('fuse', { parts: f.parts }); }
       else SFX.play('shield'); UI.coachDone('armory-give'); break; }
+    case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
+    case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
+      UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
+    case 'buydraft': { if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+      run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
     case 'recipe': UI.recipeSel = UI.recipeSel === arg ? null : arg; UI.renderPage(); return;
