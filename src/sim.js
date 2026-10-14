@@ -8,15 +8,17 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.5, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
 const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
-function hpMul(s) { return Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
-function atkMul(s) { return Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
+// foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
+function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
+function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
+function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
@@ -71,8 +73,18 @@ function stackElements(run) { const n = fieldElements(run); if (run.castleEl && 
 // An elemental castle counts as an element for combos and opens a 3rd slot that only takes combos with the castle's element (Cam).
 const COMBO_SLOTS = 2;
 function comboSlots(run) { return COMBO_SLOTS + (run.castleEl ? 1 : 0); }
+// a combo needs COMBO_NEED champions of EACH of its two elements on the field (Cam: fewer, earned combos). The castle counts as one.
+const COMBO_NEED = 2;
+function comboCounts(run) { const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1; return n; }
+// pairs that are started but not finished, for the synergy list: [{key, a, b, na, nb, name}]
+function nearCombos(run) {
+  const n = comboCounts(run), ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const a = ks[i], b = ks[j]; if (n[a] >= COMBO_NEED && n[b] >= COMBO_NEED) continue;
+    const key = comboKey(a, b), I = comboFormInfo(key, forms[key]); if (I) out.push({ key, a, b, na: n[a], nb: n[b], name: forms[key] ? I.name : null, missing: Math.max(0, COMBO_NEED - n[a]) + Math.max(0, COMBO_NEED - n[b]) }); }
+  return out.sort((x, y) => x.missing - y.missing);
+}
 function possibleCombos(run) {
-  const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1;
+  const n = comboCounts(run); for (const k in n) if (n[k] < COMBO_NEED) delete n[k];
   const ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
   for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), I = comboFormInfo(key, forms[key]);
     if (I) out.push({ key, a: ks[i], b: ks[j], name: I.name, kind: I.kind, desc: I.desc, sig: I.sig, castle: !!run.castleEl && (ks[i] === run.castleEl || ks[j] === run.castleEl), unpicked: !forms[key] }); }
@@ -919,8 +931,9 @@ function stepEnemy(B, u, dt) {
     if (u.def.kind === 'healer') { const a = B.enemies.filter(e => e.alive && e !== u && e.hp < e.maxHp * 0.8 && dist(e, u) < u.range).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     if (!u.target) {
       if (u.flying) u.target = nearest(heroes, u, u.range + 30, h => h.rafter) || nearest(heroes, u, Math.max(u.range, 20) + 6);
-      else if (u.range > 40) u.target = nearest(heroes, u, u.range + 4);
-      else u.target = nearest(heroes, u, 24 + 8 * (u.scale - 1), h => !h.rafter);
+      // the horde hunts heroes first and only hits the wall when none are close (Cam: combat is about keeping heroes alive)
+      else if (u.range > 40) u.target = nearest(heroes, u, u.range + BAL.huntRanged);
+      else u.target = nearest(heroes, u, BAL.huntMelee + 8 * (u.scale - 1), h => !h.rafter);
     }
   }
   const t = u.target;

@@ -996,6 +996,9 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .syb.combo, .trait.combo { position: relative; }
 .ecard.cform .cglyph { display: grid; place-items: center; background: radial-gradient(circle, var(--ec2), var(--ec) 70%); }
 .ecard.cform .cglyph span { font-size: 40px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+
+.syb.combo.nearc { opacity: .45; filter: saturate(.6); cursor: help; }
+.syb.combo.nearc .cnt { position: absolute; right: -4px; bottom: -4px; }
 </style>
 <div id="app">
   <header class="hud">
@@ -2844,15 +2847,17 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.5, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
 const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
-function hpMul(s) { return Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
-function atkMul(s) { return Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
+// foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
+function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
+function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
+function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
@@ -2907,8 +2912,18 @@ function stackElements(run) { const n = fieldElements(run); if (run.castleEl && 
 // An elemental castle counts as an element for combos and opens a 3rd slot that only takes combos with the castle's element (Cam).
 const COMBO_SLOTS = 2;
 function comboSlots(run) { return COMBO_SLOTS + (run.castleEl ? 1 : 0); }
+// a combo needs COMBO_NEED champions of EACH of its two elements on the field (Cam: fewer, earned combos). The castle counts as one.
+const COMBO_NEED = 2;
+function comboCounts(run) { const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1; return n; }
+// pairs that are started but not finished, for the synergy list: [{key, a, b, na, nb, name}]
+function nearCombos(run) {
+  const n = comboCounts(run), ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const a = ks[i], b = ks[j]; if (n[a] >= COMBO_NEED && n[b] >= COMBO_NEED) continue;
+    const key = comboKey(a, b), I = comboFormInfo(key, forms[key]); if (I) out.push({ key, a, b, na: n[a], nb: n[b], name: forms[key] ? I.name : null, missing: Math.max(0, COMBO_NEED - n[a]) + Math.max(0, COMBO_NEED - n[b]) }); }
+  return out.sort((x, y) => x.missing - y.missing);
+}
 function possibleCombos(run) {
-  const n = fieldElements(run); if (run.castleEl) n[run.castleEl] = (n[run.castleEl] || 0) + 1;
+  const n = comboCounts(run); for (const k in n) if (n[k] < COMBO_NEED) delete n[k];
   const ks = Object.keys(n).sort((a, b) => EL_KEYS.indexOf(a) - EL_KEYS.indexOf(b)), out = [], forms = run.comboForm || {};
   for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const key = comboKey(ks[i], ks[j]), I = comboFormInfo(key, forms[key]);
     if (I) out.push({ key, a: ks[i], b: ks[j], name: I.name, kind: I.kind, desc: I.desc, sig: I.sig, castle: !!run.castleEl && (ks[i] === run.castleEl || ks[j] === run.castleEl), unpicked: !forms[key] }); }
@@ -3755,8 +3770,9 @@ function stepEnemy(B, u, dt) {
     if (u.def.kind === 'healer') { const a = B.enemies.filter(e => e.alive && e !== u && e.hp < e.maxHp * 0.8 && dist(e, u) < u.range).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     if (!u.target) {
       if (u.flying) u.target = nearest(heroes, u, u.range + 30, h => h.rafter) || nearest(heroes, u, Math.max(u.range, 20) + 6);
-      else if (u.range > 40) u.target = nearest(heroes, u, u.range + 4);
-      else u.target = nearest(heroes, u, 24 + 8 * (u.scale - 1), h => !h.rafter);
+      // the horde hunts heroes first and only hits the wall when none are close (Cam: combat is about keeping heroes alive)
+      else if (u.range > 40) u.target = nearest(heroes, u, u.range + BAL.huntRanged);
+      else u.target = nearest(heroes, u, BAL.huntMelee + 8 * (u.scale - 1), h => !h.rafter);
     }
   }
   const t = u.target;
@@ -6405,8 +6421,10 @@ const UI = {
     if (kind === 'tier') return tierTipHTML(+a);
     if (kind === 'syn') return synTipHTML(a);
     if (kind === 'combo') return comboTipHTML(key.slice(6));
+    if (kind === 'ncombo') { const c = nearCombos(G.run).find(c => c.key === key.slice(7)); if (!c) return ''; const A = ELEMENTS[c.a], Bc = ELEMENTS[c.b];
+      return `<b><span style="color:${A.col}">${A.name}</span> + <span style="color:${Bc.col}">${Bc.name}</span>${c.name ? ': ' + esc(c.name) : ''}</b><p>${A.name} ${Math.min(c.na, 2)}/2 · ${Bc.name} ${Math.min(c.nb, 2)}/2</p><p class="note">Place ${c.missing} more champion${c.missing > 1 ? 's' : ''} with these elements to unlock this combo.</p>`; }
     if (kind === 'help' && a === 'tmp') return `<b>Temperament pairs</b><p>Every champion has a temperament, half good-guy and half bad-guy energy. Two champions with the same one on the field unlock its pair bonus.</p>`;
-    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Every pair of different elements on the field could form a combo, but only ${COMBO_SLOTS} fire. The first time a pair appears you choose which version of it to forge. Click a combo between sieges to switch it on.</p><p class="note">An elemental castle counts as an element and opens a 3rd slot for combos that include it.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
+    if (kind === 'help') return a === 'combo' ? `<b>Element combos</b><p>Put <b>2 champions of one element</b> and <b>2 of another</b> on the field to unlock their combo. The first time a pair unlocks you choose which version of it to forge. Only ${COMBO_SLOTS} combos fire; click one between sieges to switch it on.</p><p class="note">An elemental castle counts as one champion of its element and opens a 3rd slot for combos that include it. Dim chips show combos you're building; the number is how many champions are missing.</p>` : `<b>Team bonuses</b><p>Place heroes of the same race or class to switch on a bonus. The dots show how many you need for each level.</p>`;
     if (kind === 'txt') { const [t, d] = key.slice(4).split('|'); return `<b>${esc(t)}</b><p>${esc(d || '')}</p>`; }
     if (kind === 'stat') return statTipHTML(a);
     return '';
@@ -6548,7 +6566,9 @@ const UI = {
     if (bon) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:bonus">Bonuses</span>${bon}</div>`;
     if (elb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:els">Elements</span>${elb}</div>`;
     if (tmb) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:tmp">Pairs</span>${tmb}</div>`;
-    if (all.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
+    const nearC = nearCombos(run).filter(c => c.missing <= 2).slice(0, 4);
+    for (const c of nearC) com += `<span class="syb combo nearc" data-tip="ncombo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" aria-label="${ELEMENTS[c.a].name} ${c.na}/2 and ${ELEMENTS[c.b].name} ${c.nb}/2"><span class="orb"></span><b class="cnt">${c.missing}</b></span>`;
+    if (all.length || nearC.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
@@ -6569,7 +6589,8 @@ const UI = {
           : `<span class="near tmpn ${T.side}" data-tip="tmp:${k}"><span class="syb tmp ${T.side}"><span class="glyph">${T.icon}</span></span><b>${T.name}</b><small>1/2</small></span>`; });
       const on = rows.filter(r => r.startsWith('<div')), off = rows.filter(r => !r.startsWith('<div'));
       if (rows.length) tp += `<section class="tsec"><h4>Temperaments <b>${on.length}</b></h4>${on.length ? `<div class="tgrid">${on.join('')}</div>` : ''}${off.length ? `<div class="nears"><small>${on.length ? 'Unpaired' : 'Pair two of the same for a bonus'}</small>${off.join('')}</div>` : ''}</section>`; }
-    if (all.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4><div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div></section>`;
+    { const nr = nearCombos(run).slice(0, 8), nrHTML = nr.length ? `<div class="nears"><small>Combos you're building (2 champions of each element)</small>${nr.map(c => `<span class="near" data-tip="ncombo:${c.key}" style="--rc:${ELEMENTS[c.a].col}"><span class="syb combo" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}"><span class="orb"></span></span><b>${ELEMENTS[c.a].name} ${Math.min(c.na, 2)}/2 + ${ELEMENTS[c.b].name} ${Math.min(c.nb, 2)}/2</b></span>`).join('')}</div>` : '';
+    if (all.length || nr.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4>${all.length ? '' : '<p class="note">No combos yet. Place 2 champions of one element and 2 of another.</p>'}<div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div>${nrHTML}</section>`; }
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     for (const hr of run.roster) {

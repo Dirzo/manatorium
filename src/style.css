@@ -991,3 +991,6 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .syb.combo, .trait.combo { position: relative; }
 .ecard.cform .cglyph { display: grid; place-items: center; background: radial-gradient(circle, var(--ec2), var(--ec) 70%); }
 .ecard.cform .cglyph span { font-size: 40px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+
+.syb.combo.nearc { opacity: .45; filter: saturate(.6); cursor: help; }
+.syb.combo.nearc .cnt { position: absolute; right: -4px; bottom: -4px; }
