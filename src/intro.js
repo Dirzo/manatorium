@@ -25,7 +25,7 @@ function introWorld() {
 }
 
 // the path: along the road, then up the drawbridge to the gate
-const GATE = { x: 59, y: 204 }, RAMP = { x: 92, y: 226 };
+const GATE = { x: 59, y: 204 }, RAMP = { x: 80, y: 226 };
 function pathPos(x) { if (x > RAMP.x) return { x, y: 229 }; const k = Math.min(1, (RAMP.x - x) / (RAMP.x - GATE.x)); return { x, y: 229 + (GATE.y - 229) * k }; }
 
 function startIntro(done) {

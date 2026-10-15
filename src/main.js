@@ -46,7 +46,7 @@ function startRun() {
   G.run = newRun(G.meta); G.meta.runs++;
   G.hasRun = true; G.B = null; G.selected = null; UI.pendingGold = 0; G.lastEnc = [];
   $('title').hidden = true; $('tower').hidden = true; UI.closeModal(); G.paused = false;
-  G.phase = 'draft'; G.run.post = ['draft'];
+  G.phase = 'draft'; G.run.post = Array(START_LEGENDS).fill('draft');
   TEL.runStart(G.run);
   changed();
   nextPost();
@@ -60,7 +60,7 @@ function showDraft() {
       const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
       const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
-      TEL.event('draft', { id: o.id, rolls: o.rolls, kind });
+      TEL.event('draft', { id: o.id, rarity: o.rarity || 0, kind });
       if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
     });
@@ -112,7 +112,8 @@ function endSiege() {
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (run.roster.length < 2) run.post.push('draft');
+    // every legend fell: one free recruit so the keep is never empty
+    if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -371,8 +372,8 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
-      <div><b>Draft a champion</b>Pick 1 of 3 with randomly rolled Attack, Ability power and Defense. A partner joins before siege 2, a third before the first boss, then more every other boss.</div>
-      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A hero who falls loses that siege's experience.</div>
+      <div><b>Recruit legends</b>Start with 2 legends at level 1. Every card rolls a rarity, from Common to God, and each boss you beat opens a rarer tier. Each rarity is +25% power, a bigger body and a stronger signature.</div>
+      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A legend who falls in a siege is gone for good.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. At level 7 each hero awakens an element; mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, climb the Artificers' tech tree, and at siege 15 your castle turns elemental.</div>
     </div></div>`;

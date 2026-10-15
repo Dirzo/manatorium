@@ -999,6 +999,28 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 
 .syb.combo.nearc { opacity: .45; filter: saturate(.6); cursor: help; }
 .syb.combo.nearc .cnt { position: absolute; right: -4px; bottom: -4px; }
+
+/* ===== Rarity (Common to God) ===== */
+.rar { display: inline-block; font-family: var(--f-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 3px; border: 1px solid var(--ink); color: #10122a; text-transform: uppercase; background: var(--rc); box-shadow: 0 0 0 1px var(--rc2) inset; }
+.rar.r5 { background: linear-gradient(90deg, #fff3a0, #ffb0e8, #a8f0ff, #fff3a0); background-size: 200% 100%; animation: godshine 3s linear infinite; }
+@keyframes godshine { to { background-position: 200% 0; } }
+.dport .rar { position: absolute; top: 4px; right: 6px; }
+.dcard.rar-card { border-color: var(--rc); }
+.dcard.rar-card.r3, .dcard.rar-card.r4, .dcard.rar-card.r5 { box-shadow: 0 0 14px -2px var(--rc), inset 0 0 0 1px var(--rc); }
+.dcard.rar-card .dport { background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--rc) 35%, transparent), transparent 70%); }
+.rperk { font-size: 12px; color: var(--rc); margin: 4px 0 0; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 6px; font-family: var(--f-display); font-size: 14px; }
+.trio span { background: var(--ink); border-radius: 4px; padding: 2px 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.trio small { font-size: 10px; color: var(--muted); }
+.trio .st-ad { color: #ffb08a; } .trio .st-ap { color: #c9a8ff; } .trio .st-def { color: #8ef0c0; }
+b.sv { color: var(--gold); }
+.hcard.rar-c { border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
+.hcard.rar-c.r0 { border-color: var(--ink); }
+.hcard .rtag { position: absolute; left: 2px; bottom: 2px; font-family: var(--f-display); font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10122a; background: var(--rc); border-radius: 2px; padding: 0 3px; }
+.fallen { background: color-mix(in srgb, var(--rose) 14%, transparent); border: 1px solid var(--rose); border-radius: 6px; padding: 6px 10px; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.fallen > b { color: var(--rose); font-family: var(--f-display); }
+.fallen span { display: inline-flex; align-items: center; gap: 4px; } .fallen img { width: 28px; height: 28px; }
+.fallen > small { flex-basis: 100%; color: var(--muted); }
 </style>
 <div id="app">
   <header class="hud">
@@ -1137,63 +1159,103 @@ const CLASS_BASE = {
   mage:      { hp: 260, atk: 25, as: 0.75, range: 104, spd: 24, armor: 5, mana: 70 },
   cleric:    { hp: 300, atk: 23, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
 };
-const TIER_MUL = [0, 1, 1.4, 1.95];
-const TIER_COST = [0, 25, 55, 110];
+// base ability power per class (AP scales with level and rarity like attack does)
+const CLASS_AP = { guardian: 16, berserker: 14, rogue: 16, ranger: 16, mage: 30, cleric: 28 };
+
+// ===== Rarity (Cam 2026-10-15): no rolled stats. Every legend is rolled at a rarity when drafted.
+// Each step is +25% power on top of level, a little bigger on the field, and a stronger signature.
+const RARITY = [
+  { key: 'common',    name: 'Common',    col: '#b9c2cc', col2: '#6f7a86' },
+  { key: 'rare',      name: 'Rare',      col: '#5fb0ff', col2: '#2a5aa8' },
+  { key: 'epic',      name: 'Epic',      col: '#b97bff', col2: '#5a2aa8' },
+  { key: 'mythic',    name: 'Mythic',    col: '#ff5d8f', col2: '#8a1a4a' },
+  { key: 'legendary', name: 'Legendary', col: '#ffb030', col2: '#a8601a' },
+  { key: 'god',       name: 'God',       col: '#fff3a0', col2: '#ff7ad8' },
+];
+const RARITY_STEP = 0.25;
+function rarityMul(r) { return 1 + RARITY_STEP * (r || 0); }
+function raritySize(r) { return 1 + 0.06 * (r || 0); }
+// what each rarity adds to a legend's signature, on top of +25% power per step
+const RARITY_PERKS = [
+  '',
+  'Signature one rank higher: bigger area or more targets.',
+  'Signature two ranks higher. Starts every siege with 35% mana.',
+  'Signature three ranks higher, 35% mana at the start, and it echoes: a second cast at 50% power.',
+  'Signature four ranks higher, echoes at 75% power, costs 25% less mana.',
+  'Signature five ranks higher, echoes at full power, costs 25% less mana, and starts every siege ready to cast.',
+];
+// draft odds by bosses defeated, shaped like TFT shop odds by level: one new rarity opens per boss.
+// After the first boss (siege 6 onward) a card is Rare 25% of the time.
+const RARITY_ODDS = [
+  [100, 0, 0, 0, 0, 0],
+  [75, 25, 0, 0, 0, 0],
+  [55, 30, 15, 0, 0, 0],
+  [45, 33, 20, 2, 0, 0],
+  [30, 40, 25, 4, 1, 0],
+  [19, 30, 35, 12, 3, 1],
+  [15, 25, 32, 20, 6, 2],
+  [10, 20, 28, 28, 11, 3],
+  [5, 12, 22, 35, 20, 6],
+  [1, 5, 15, 40, 28, 11],
+];
+function rarityOdds(bosses) { return RARITY_ODDS[Math.max(0, Math.min(RARITY_ODDS.length - 1, bosses || 0))]; }
+function rollRarity(bosses) { const o = rarityOdds(bosses); let x = Math.random() * 100; for (let i = 0; i < o.length; i++) { x -= o[i]; if (x < 0) return i; } return 0; }
+const START_LEGENDS = 2;
 
 // Sprite palettes
 const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', orc2: '#a7d94a', bone: '#f1ecdc', toad: '#56c46a', toad2: '#ff8f3a', fur: '#c98a4a', fur2: '#e8e1d0', gob: '#8fd14f', blue: '#7fb4ff' };
 
 const HEROES = [
   // tier 1
-  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground, stunning foes for 1.5s and gaining a 25% HP shield.',
+  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground for {0}, stunning foes for 1.5s, and gains a shield of {1}.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
-  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd for 320% attack in an area.', proj: 'fire',
+  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd, dealing {0} in an area.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
-  { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for 200% attack.',
+  { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for {0}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'hood', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff' } },
-  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s, 6 waves of 70% attack.', proj: 'arrow',
+  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s: 6 volleys of {0} each.', proj: 'arrow',
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
-  { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for 60% attack.',
+  { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for {0}.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains +60 armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains {0} armor.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
-  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing 35% of their max HP.', proj: 'heal',
+  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing each for {0}.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
-  { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for 450% attack.',
+  { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for {0}.',
     spr: { head: 'beast', skin: SK.fur, snout: '#f3dcc0', hat: 'bandana', armor: '#5a4a8c', armor2: '#3a2f61', cloth: '#ff5d8f', weapon: 'daggers', metal: '#ffffff' } },
   // tier 2
-  { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing 280% attack and knocking enemies back.',
+  { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing {0} and knocking enemies back.',
     spr: { head: 'dwarf', skin: SK.tan, hair: '#ff8f3a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#3a64c9', weapon: 'hammer', metal: '#cfd6e6' } },
-  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for 230% attack each.', proj: 'spark',
+  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for {0} each.', proj: 'spark',
     spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hairStyle: 'long', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff' } },
-  { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for 30% max HP and clears poison and stuns.', proj: 'heal',
+  { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for {0} and clears poison and stuns.', proj: 'heal',
     spr: { head: 'human', skin: SK.brown, hair: '#2a1a12', hairStyle: 'bun', hat: 'none', armor: '#f4f1ff', armor2: '#b8b0e0', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffe066' } },
-  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for 380% attack and knocks foes back.', proj: 'bullet',
+  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for {0} and knocks foes back.', proj: 'bullet',
     spr: { head: 'dwarf', skin: SK.pale, hair: '#ffd166', hat: 'none', hairStyle: 'bun', armor: '#4fae9c', armor2: '#2a6e64', cloth: '#7a4b2a', weapon: 'cannon', metal: '#5a5a6e' } },
-  { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls that fight until the siege ends.', proj: 'soul',
+  { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls with {0} HP and {1} attack that fight until the siege ends.', proj: 'soul',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
-  { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing 300% attack.', proj: 'spit',
+  { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing {0}.', proj: 'spit',
     spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'spear', metal: '#e6f0ff' } },
-  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies +35% attack for 4s.',
+  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies {0} attack for 4s.',
     spr: { head: 'beast', skin: '#8a5a32', snout: '#d9b48a', hat: 'none', ears: 'round', armor: '#6aa84f', armor2: '#3f7030', cloth: '#ffd84a', weapon: 'shield', metal: '#d9c38a' } },
-  { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for 12% max HP.', proj: 'heal',
+  { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for {0}.', proj: 'heal',
     spr: { head: 'orc', skin: SK.orc2, hair: '#ffffff', hairStyle: 'long', hat: 'none', armor: '#c94a7a', armor2: '#7a2a4a', cloth: '#ffd84a', weapon: 'totem', gem: '#ff5d8f' } },
   // tier 3
-  { id: 'aurelle', name: 'Queen Aurelle', race: 'human', cls: 'ranger', tier: 3, ability: 'sunlance', aName: 'Sunlance', aDesc: 'Fires a beam of sunlight across the whole field for 420% attack to every enemy in the line.', proj: 'arrowGold',
+  { id: 'aurelle', name: 'Queen Aurelle', race: 'human', cls: 'ranger', tier: 3, ability: 'sunlance', aName: 'Sunlance', aDesc: 'Fires a beam of sunlight across the whole field, dealing {0} to every enemy in the line.', proj: 'arrowGold',
     spr: { head: 'human', skin: SK.pale, hair: '#ffcf3a', hairStyle: 'long', hat: 'crown', armor: '#ffffff', armor2: '#d0c8ff', cloth: '#ff5d8f', weapon: 'bow', cape: '#7a4ae0' } },
-  { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, ability: 'rampage', aName: 'Rampage', aDesc: 'Charges through the enemy line, hitting everything in the way for 220% attack, then fights 40% faster for 4s.',
+  { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, ability: 'rampage', aName: 'Rampage', aDesc: 'Charges through the enemy line, hitting everything in the way for {0}, then fights 40% faster for 4s.',
     spr: { head: 'beast', skin: '#9a5a2a', snout: '#e8c49a', hat: 'horns', hornCol: '#f1ecdc', ears: 'round', armor: '#7a4a2a', armor2: '#4a2a1a', cloth: '#e8434d', weapon: 'axe', metal: '#d8dde8', cape: '#5a3a8c' } },
-  { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, ability: 'earthsplitter', aName: 'Earthsplitter', aDesc: 'Leaps into the biggest crowd and slams for 500% attack, stunning for 1s.',
+  { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, ability: 'earthsplitter', aName: 'Earthsplitter', aDesc: 'Leaps into the biggest crowd and slams for {0}, stunning for 1s.',
     spr: { head: 'orc', skin: '#4faa3a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'hammer', metal: '#ffcf3a', cape: '#e8434d' } },
-  { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, ability: 'deathMark', aName: 'Death Mark', aDesc: 'Marks 4 enemies. After 1.5s each mark bursts for 600% attack.',
+  { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, ability: 'deathMark', aName: 'Death Mark', aDesc: 'Marks 4 enemies. After 1.5s each mark bursts for {0}.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
-  { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for 260% attack, pushing every enemy back and slowing them.', proj: 'bubble',
+  { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for {0}, pushing every enemy back and slowing them.', proj: 'bubble',
     spr: { head: 'toad', skin: '#4a9e8f', belly: '#cfeedd', hat: 'wizard', armor: '#5a4ab0', armor2: '#352a7a', cloth: '#7cf0ff', weapon: 'staff', gem: '#5fd3ff' } },
-  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for 40% of their max HP.',
+  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for {0}.',
     spr: { head: 'dwarf', skin: SK.brown, hair: '#e8e8f0', hat: 'helm', plume: '#5fd3ff', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffcf3a', weapon: 'shield', metal: '#ffcf3a' } },
-  { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for 25% max HP.', proj: 'heal',
+  { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for {0}.', proj: 'heal',
     spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hairStyle: 'long', hat: 'crown', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff' } },
-  { id: 'kodo', name: 'Kodo Stormhorn', race: 'beast', cls: 'mage', tier: 3, ability: 'stampede', aName: 'Stampede', aDesc: 'Spirit beasts charge across the field, dealing 350% attack to everything they trample.', proj: 'spark',
+  { id: 'kodo', name: 'Kodo Stormhorn', race: 'beast', cls: 'mage', tier: 3, ability: 'stampede', aName: 'Stampede', aDesc: 'Spirit beasts charge across the field, dealing {0} to everything they trample.', proj: 'spark',
     spr: { head: 'beast', skin: '#6a6a8a', snout: '#c8c8e0', hat: 'horns', hornCol: '#ffe9b0', armor: '#2f4fb8', armor2: '#1f3080', cloth: '#ffd84a', weapon: 'totem', gem: '#7cf0ff' } },
 ];
 const HERO_BY_ID = Object.fromEntries(HEROES.map(h => [h.id, h]));
@@ -1295,7 +1357,7 @@ const STAT_KEYS = ['ad', 'ap', 'def'];
 const STAT_NAME = { ad: 'Attack', ap: 'Ability power', def: 'Defense' };
 
 // ===== Elements =====
-// style: which rolled stat powers the element (ad | ap | def)
+// style: which stat the element boosts (ad | ap | def)
 const ELEMENTS = {
   dark:      { name: 'Dark',      col: '#8a5ad8', col2: '#2a1a4a', style: 'ad',  title: 'the Umbral',      desc: 'Heals 18% of damage dealt. Finishes off non-boss foes under 10% HP.' },
   light:     { name: 'Light',     col: '#fff3b0', col2: '#ffcf3a', style: 'ap',  title: 'the Radiant',     desc: '+15% crit. Signatures also heal every ally 10%. Hits blind foes so they miss 25%.' },
@@ -1478,7 +1540,7 @@ const FINISHED = {
   'belt+belt': ["Big Belt Energy", 'titan', '+60% more HP. Grows the hero.'],
   'belt+glove': ['Hearty Mitts', 'hearty', 'Crits heal 4% max HP.'],
   'glove+glove': ['Lucky Dice', 'dice', '+30% crit. Crits deal a random 1.2× to 2.6×.'],
-  'spatula+spatula': ['Ladle of Destiny', 'destiny', '+2 to every rolled stat. Flips burgers and fate.'],
+  'spatula+spatula': ['Ladle of Destiny', 'destiny', '+10% attack, ability power and HP. Flips burgers and fate.'],
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
@@ -1538,7 +1600,7 @@ const TECH = {
   resonance:{ name: 'Resonance Coils',    b: 2, t: 2, cost: 115, req: ['wells'],          desc: 'Element combos are 30% stronger.' },
   prism:    { name: 'Prism Array',        b: 2, t: 3, cost: 215, req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
   focus:    { name: 'Signature Focus',    b: 2, t: 3, cost: 195, req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
-  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, req: ['prism', 'focus'], desc: 'Every hero gains +1 to all rolled stats.' },
+  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
   vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 30,  req: [],                 desc: '+15% gold from kills.' },
   scav:     { name: 'Scavengers',         b: 3, t: 2, cost: 85,  req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
   drill:    { name: 'Drill Yard',         b: 3, t: 2, cost: 90, req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
@@ -1585,7 +1647,58 @@ const SPECS = {
   rogue:     { a: { name: 'Assassin', desc: r => `Rogue signatures are ${40 * r}% stronger and one rank higher.` },
                b: { name: 'Shadow Clones', ability: 'shadowClones', desc: r => `Rogues cast Shadow Clones instead: two shadow copies join the fight for the rest of the siege. Power ${100 + 25 * (r - 1)}%.` } },
 };
-const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero for {0} and blasts nearby foes back for {1}, stunning them.', bloodFrenzy: 'Heals {0}, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane for {0}. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd for {0}.', massRez: 'Every fallen hero gets back up and the whole team heals for {0}.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+
+// ===== Signature scalings (Cam 2026-10-15): every number on a signature comes from AD, AP and HP, so items matter.
+// ad/ap: share of attack damage / ability power, hp: share of the caster's max HP, thp: share of the target's max HP.
+const SIG_SCALE = {
+  shieldBash: [{ ad: 0.6, hp: 0.05 }, { hp: 0.25, ap: 1 }],
+  fireball: [{ ad: 0.5, ap: 2.4 }],
+  bladeDance: [{ ad: 1.8, ap: 0.4 }],
+  arrowRain: [{ ad: 0.6, ap: 0.2 }],
+  whirlwind: [{ ad: 0.5, hp: 0.015 }],
+  boneWall: [{ base: 40, ap: 1.5 }],
+  lilySplash: [{ ap: 3.5, thp: 0.1 }],
+  pounce: [{ ad: 4, ap: 0.8 }],
+  quake: [{ ad: 2.4, hp: 0.04 }],
+  chainLightning: [{ ad: 0.3, ap: 1.7 }],
+  dawnMend: [{ ap: 2.5, thp: 0.12 }],
+  cannonball: [{ ad: 3.2, ap: 0.8 }],
+  raiseDead: [{ ap: 6, hp: 0.15 }, { ap: 0.45, ad: 0.15 }],
+  tongueLash: [{ ad: 2.4, ap: 1 }],
+  thunderRoar: [{ base: 25, ap: 0.7, pct: true }],
+  warDrums: [{ ap: 1.2, thp: 0.06 }],
+  sunlance: [{ ad: 3.6, ap: 1 }],
+  rampage: [{ ad: 1.8, hp: 0.04 }],
+  earthsplitter: [{ ad: 4.2, hp: 0.08 }],
+  deathMark: [{ ad: 5, ap: 2 }],
+  greatFlood: [{ ad: 0.4, ap: 1.9 }],
+  runicAegis: [{ hp: 0.2, ap: 1.5 }],
+  bloom: [{ ap: 2, thp: 0.12 }],
+  stampede: [{ ad: 0.5, ap: 2.5 }],
+  aegisDome: [{ hp: 0.18, ap: 1.5 }, { ad: 0.6, hp: 0.06 }],
+  bloodFrenzy: [{ hp: 0.3 }],
+  hawkStrike: [{ ad: 2.7, ap: 0.8 }],
+  meteor: [{ ad: 0.8, ap: 4.3 }],
+  massRez: [{ ap: 1.5, thp: 0.1 }],
+  shadowClones: [{ ap: 1 }],
+};
+// the caster-side value of a scaling line (target-HP shares are added per target by the ability)
+function scaleValue(c, st, maxHp) { return (c.base || 0) + (c.ad || 0) * (st.atk || 0) + (c.ap || 0) * (st.apv || 0) + (c.hp || 0) * (maxHp || st.hp || 0); }
+function scaleParts(c) {
+  const out = [], pc = v => Math.round(v * 100) + '%';
+  if (c.ad) out.push(pc(c.ad) + ' AD'); if (c.ap) out.push(pc(c.ap) + ' AP'); if (c.hp) out.push(pc(c.hp) + ' max HP');
+  return out.join(' + ');
+}
+// "84 (50% AD + 240% AP)" with stats, the bare scaling without
+function scaleText(c, st) {
+  const parts = scaleParts(c), thp = c.thp ? Math.round(c.thp * 100) + '% of their max HP' : '';
+  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return (v != null ? '+' + v + '%' : '+' + c.base + '%') + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
+  if (!st) return [c.base ? String(c.base) : '', parts, thp].filter(Boolean).join(' + ');
+  const v = Math.round(scaleValue(c, st) * (st.sigMul || 1));
+  return `<b class="sv">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
+}
+function abilityText(ab, desc, st) { const S = SIG_SCALE[ab] || []; return String(desc || '').replace(/\{(\d)\}/g, (m, i) => S[+i] ? scaleText(S[+i], st) : m); }
 
 // ===== Field hazards: a card can change the battlefield for the next siege only =====
 // kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
@@ -1676,7 +1789,7 @@ const ENCOUNTERS = [
   { id: 'groupchat', title: "The Horde's Group Chat Leaked", text: '214 unread messages. Mostly memes. One says "everyone attack the left side lol".',
     opts: [{ label: 'Read the plans', fx: 'mod:fewer,xpAll:15', sub: 'Next siege is smaller. Heroes +15 XP from laughing.' }, { label: 'Reply with a meme', fx: 'mod:partyhats', sub: 'The horde is distracted. They arrive wearing party hats.' }] },
   { id: 'painter', title: 'The Royal Portrait Painter', text: '"Hold still. Look heroic. No, MORE heroic." Your champion has been posing for six hours.',
-    opts: [{ label: 'Add a mustache', fx: 'mustache', sub: 'A random hero grows a magnificent mustache: +1 to every rolled stat' }, { label: 'Sell the painting', fx: 'gold:55', sub: '+55 gold. It was a bad painting.' }] },
+    opts: [{ label: 'Add a mustache', fx: 'mustache', sub: 'A random hero grows a magnificent mustache: +5% attack, ability power and HP' }, { label: 'Sell the painting', fx: 'gold:55', sub: '+55 gold. It was a bad painting.' }] },
   { id: 'trebuchet', title: 'Package Delivered by Mistake', text: 'A crate addressed to "The Other Castle" arrived. It contains a single, very golden spatula.',
     opts: [{ label: 'Keep it', fx: 'comp:spatula', sub: 'A Golden Ladle. It combines into elemental crests.' }, { label: 'Return to sender', fx: 'gold:60', sub: '+60 gold. The courier is very generous' }] },
   { id: 'intern', title: 'The Necromancy Intern', text: '"I was told to raise the dead but I raised dinner." The roast chicken is walking around. It seems happy.',
@@ -1749,7 +1862,7 @@ const TEMPERS = {
 const TEMPER_KEYS = Object.keys(TEMPERS);
 function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEYS.length)]; }
 
-const NAMES_TIER = ['', 'Common', 'Rare', 'Epic'];
+
 
 const LOOT_AFTER = s => s % 3 === 0 || s % 5 === 0;   // a component every third siege, and after bosses
 const ROSTER_CAP = 8;
@@ -2847,7 +2960,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.5, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.0, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
@@ -2894,11 +3007,13 @@ function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
-function effRolls(run, h) {
+// flat power bonuses that used to be +1 rolls: mustache, Aether Engine, double Golden Ladle (+2)
+function heroBonusPts(run, h) {
   let bonus = (h.mustache ? 1 : 0) + (run.tech.aether ? 1 : 0);
   for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
-  const r = {}; for (const k of STAT_KEYS) r[k] = Math.min(15, h.rolls[k] + bonus); return r;
+  return bonus;
 }
+function heroRarity(h) { return h.rarity || 0; }
 // which elements are on the field, how many heroes carry each
 const EL_STACK = { at: [2, 3, 4], mul: [1.4, 1.8, 2.2], stat: [0.1, 0.2, 0.3] };
 function fieldElements(run) {
@@ -2956,16 +3071,18 @@ function sellHero(run, h) {
 function trinityActive(run) { const st = new Set(Object.keys(fieldElements(run)).map(e => ELEMENTS[e].style)); return st.size >= 3; }
 
 function heroStats(h, run, meta, syn) {
-  const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], tm = TIER_MUL[d.tier], lm = heroLevelMul(h.level), R = effRolls(run, h);
+  const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], rar = heroRarity(h), tm = rarityMul(rar), lm = heroLevelMul(h.level), bp = 1 + 0.05 * heroBonusPts(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
   const sm = 1 + 0.15 * (meta.ranks.banners || 0);
-  // low rolls hurt less (Cam: any starter should clear siege 1); a roll of 10 is unchanged
-  const adM = 0.82 + 0.048 * R.ad, apM = 0.82 + 0.048 * R.ap, defM = 0.85 + 0.04 * R.def;
-  const s = { hp: b.hp * tm * lm * gm * defM, atk: b.atk * tm * lm * gm * adM, as: b.as, range: b.range, spd: b.spd, armor: b.armor + (d.tier - 1) * 5 + R.def * 2, mana: b.mana,
+  // no rolled stats any more: rarity (tm) and level (lm) set a legend's power
+  const adM = 1.1 * bp, defM = 1.07 * bp;
+  const s = { hp: b.hp * tm * lm * gm * defM, atk: b.atk * tm * lm * gm * adM, as: b.as, range: b.range, spd: b.spd, armor: b.armor + 11 + 4 * rar, mana: b.mana * (rar >= 4 ? 0.75 : 1),
     crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, startMana: 0, manaGain: 1, revive: 0, storm: 0, frost: 0, midas: 0,
-    ap: (1 + 0.15 * (meta.ranks.codex || 0)) * apM, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
-    sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: 1, rolls: R, dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
+    ap: (1 + 0.15 * (meta.ranks.codex || 0)) * bp, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
+    sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: raritySize(rar), rarity: rar, echo: [0, 0, 0, 0.5, 0.75, 1][rar], dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
   if (run.tech.focus) s.sigMul *= 1.25;
+  if (s.rank > 0) s.rank += rar; // rarer legends cast a higher-ranked signature
+  if (rar >= 2) s.startMana += rar >= 5 ? 1 : 0.35;
   s.ability = d.ability; s.aName = d.aName; s.aDesc = d.aDesc;
   const sp = meta.spec && meta.spec[d.cls];
   if (sp && sp.rank) { const P = SPECS[d.cls][sp.path];
@@ -2990,7 +3107,7 @@ function heroStats(h, run, meta, syn) {
   // elements: power scales with the rolled stat that matches the element's playstyle
   const fe = stackElements(run);
   for (const e of heroElements(run, h)) {
-    const E = ELEMENTS[e]; let p = (0.6 + 0.08 * R[E.style]) * sm; const nst = Math.min(4, fe[e] || 0);
+    const E = ELEMENTS[e]; let p = 1.04 * sm; const nst = Math.min(4, fe[e] || 0);
     // element stacks: 2, 3 or 4 champions sharing an element power it up and boost their matching stat
     if (nst >= 2) { p *= EL_STACK.mul[nst - 2]; const b = EL_STACK.stat[nst - 2]; if (E.style === 'ad') s.atk *= 1 + b; else if (E.style === 'ap') s.ap *= 1 + b; else s.hp *= 1 + b; }
     s.el[e] = p;
@@ -3053,6 +3170,8 @@ function heroStats(h, run, meta, syn) {
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
   s.hp = Math.round(s.hp); s.atk = Math.round(s.atk);
+  // ability power as a number, so signatures can show and scale with it (st.ap stays the multiplier)
+  s.apv = Math.round(CLASS_AP[d.cls] * tm * lm * gm * 1.1 * s.ap);
   return s;
 }
 
@@ -3361,66 +3480,70 @@ function damageCastle(B, dmg, src) {
 // ----- signatures (hero abilities) -----
 // r = extra rank (0 at level 5, grows at 8/12/16/20). S(u) = signature power.
 const S = u => u.st.atk * Math.max(0.3, u.st.ap) * Math.max(0.3, u.st.sigMul);
+// signature numbers from SIG_SCALE: AD, AP and HP shares, times signature power and the echo multiplier
+function AB(u, i = 0) { const c = (SIG_SCALE[u.st.ability || u.def.ability] || [])[i]; if (!c) return S(u); return scaleValue(c, u.st, u.maxHp) * Math.max(0.3, u.st.sigMul) * (u.abMul || 1); }
+// heals and shields that also take a share of the target's max HP
+function ABH(u, i, t) { const c = (SIG_SCALE[u.st.ability || u.def.ability] || [])[i] || {}; return AB(u, i) + (c.thp || 0) * t.maxHp * Math.max(0.3, u.st.sigMul) * (u.abMul || 1); }
 const RK = u => Math.max(0, u.st.rank - 1);
 const ABILITIES = {
-  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u); u.shield += u.maxHp * (0.25 + 0.05 * r); guardTaunt(B, u, 2);
-    fireProj(B, u, t, 'orb', 0, { speed: 260, vfx: { shape: 'disc', col: '#ffe066', col2: '#fff7c0', pw }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, S(u) * 1.2, { sig: true }); e.stun = Math.max(e.stun, 1.5 + 0.2 * r); }
+  shieldBash(B, u) { const r = RK(u), rad = 34 * (1 + 0.12 * r), t = nearest(B.enemies, u, 170); if (!t) return false; const pw = sigPower(u), D = AB(u); u.shield += AB(u, 1) + u.maxHp * 0.05 * r; guardTaunt(B, u, 2);
+    fireProj(B, u, t, 'orb', 0, { speed: 260, vfx: { shape: 'disc', col: '#ffe066', col2: '#fff7c0', pw }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, D, { sig: true }); e.stun = Math.max(e.stun, 1.5 + 0.2 * r); }
       FX.blast(p.tx, p.ty + 6, rad, ['#ffffff', '#fff3a0', '#ffe066', '#c99a2a'], pw); FX.sound('bash'); } }); FX.sound('whoosh'); },
   fireball(B, u) { const r = RK(u), rad = 30 * (1 + 0.12 * r); const c = densest(B.enemies, 28, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false;
-    const pw = sigPower(u); fireProj(B, u, c, 'fireBig', 0, { speed: 170, pw, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) dealDamage(B, u, e, S(u) * 3.2, { sig: true }); FX.fireburst(p.tx, p.ty + 6, rad, pw); FX.sound('boom'); } }); FX.sound('cast'); },
-  bladeDance(B, u) { const r = RK(u); const ts = B.enemies.filter(e => e.alive && dist(e, u) < 130 + 15 * r).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, 4 + r); if (!ts.length) return false; u.dash = { ts, i: 0, t: 0, mul: 2 }; FX.sound('dash'); },
-  arrowRain(B, u) { const r = RK(u); const c = densest(B.enemies, 30, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false; B.zones.push({ type: 'arrows', x: c.x, y: c.y, r: 32 * (1 + 0.12 * r), n: 6 + 2 * r, every: 0.3, t: 0, src: u, dmg: S(u) * 0.7, pw: sigPower(u) }); FX.launch(u.x + 4, u.y - 14 - (u.z || 0), 8 + 2 * r); FX.sound('cast'); },
-  whirlwind(B, u) { u.spin = 2 + 0.4 * RK(u); u.spinTick = 0; FX.sound('whirl'); },
-  boneWall(B, u) { const r = RK(u); guardTaunt(B, u, 3 + 0.5 * r); u.armorBuff = 60 + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
-  lilySplash(B, u) { const r = RK(u); const allies = B.heroes.filter(h => h.alive && h.hp < h.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3 + r); if (!allies.length) return false; for (const a of allies) fireProj(B, u, a, 'heal', a.maxHp * (0.35 + 0.05 * r) * Math.max(0.5, u.st.ap * u.st.sigMul), { speed: 160, vfx: { shape: 'lily', col: '#7cf0ff', col2: '#ffffff', pw: sigPower(u) } }); FX.particles(u.x, u.y - 14, 20, '#7cf0ff', { spread: 26, up: true }); FX.sound('heal'); },
-  pounce(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < 170).sort((a, b) => b.x - a.x)[0]; if (!t) return false; const r = RK(u); u.leap = { sx: u.x, sy: u.y, tx: t.x - 8, ty: t.y, t: 0, dur: 0.35, h: 30, onLand: () => { dealDamage(B, u, t, S(u) * (4.5 + 0.5 * r), { sig: true }); FX.claws(t.x, t.y - 10, '#ff9a3a'); for (const e of inRadius(B.enemies, t, 18 + 4 * r)) if (e !== t) dealDamage(B, u, e, S(u) * 1.2, { sig: true }); FX.particles(t.x, t.y - 8, 24, '#ff5d8f', { spread: 30 }); FX.shockwave(t.x, t.y, 40, '#ff5d8f'); FX.shake(4); FX.sound('slash'); } }; },
-  rampage(B, u) { const r = RK(u); const t = B.enemies.filter(e => e.alive && !e.onRafter && dist(e, u) < 120 + 10 * r).sort((a, b) => b.x - a.x)[0]; if (!t) return false;
+    const pw = sigPower(u), D = AB(u); fireProj(B, u, c, 'fireBig', 0, { speed: 170, pw, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) dealDamage(B, u, e, D, { sig: true }); FX.fireburst(p.tx, p.ty + 6, rad, pw); FX.sound('boom'); } }); FX.sound('cast'); },
+  bladeDance(B, u) { const r = RK(u); const ts = B.enemies.filter(e => e.alive && dist(e, u) < 130 + 15 * r).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, 4 + r); if (!ts.length) return false; u.dash = { ts, i: 0, t: 0, dmg: AB(u) }; FX.sound('dash'); },
+  arrowRain(B, u) { const r = RK(u); const c = densest(B.enemies, 30, u, u.st.range * 1.4) || nearest(B.enemies, u); if (!c) return false; B.zones.push({ type: 'arrows', x: c.x, y: c.y, r: 32 * (1 + 0.12 * r), n: 6 + 2 * r, every: 0.3, t: 0, src: u, dmg: AB(u), pw: sigPower(u) }); FX.launch(u.x + 4, u.y - 14 - (u.z || 0), 8 + 2 * r); FX.sound('cast'); },
+  whirlwind(B, u) { u.spin = 2 + 0.4 * RK(u); u.spinTick = 0; u.spinDmg = AB(u); FX.sound('whirl'); },
+  boneWall(B, u) { const r = RK(u); guardTaunt(B, u, 3 + 0.5 * r); u.armorBuff = AB(u) + 20 * r; u.armorBuffT = 4; for (let i = 0; i < 9 + r; i++) { const a = -1.2 + i * 2.4 / (8 + r); FX.spikes(u.x + 14 + Math.cos(a) * 40, u.y + Math.sin(a) * 30, '#f1ecdc', i * 0.03); } FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.shake(4); FX.sound('bash'); },
+  lilySplash(B, u) { const r = RK(u); const allies = B.heroes.filter(h => h.alive && h.hp < h.maxHp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, 3 + r); if (!allies.length) return false; for (const a of allies) fireProj(B, u, a, 'heal', ABH(u, 0, a) * (1 + 0.14 * r), { speed: 160, vfx: { shape: 'lily', col: '#7cf0ff', col2: '#ffffff', pw: sigPower(u) } }); FX.particles(u.x, u.y - 14, 20, '#7cf0ff', { spread: 26, up: true }); FX.sound('heal'); },
+  pounce(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < 170).sort((a, b) => b.x - a.x)[0]; if (!t) return false; const r = RK(u), D = AB(u); u.leap = { sx: u.x, sy: u.y, tx: t.x - 8, ty: t.y, t: 0, dur: 0.35, h: 30, onLand: () => { dealDamage(B, u, t, D * (1 + 0.11 * r), { sig: true }); FX.claws(t.x, t.y - 10, '#ff9a3a'); for (const e of inRadius(B.enemies, t, 18 + 4 * r)) if (e !== t) dealDamage(B, u, e, D * 0.27, { sig: true }); FX.particles(t.x, t.y - 8, 24, '#ff5d8f', { spread: 30 }); FX.shockwave(t.x, t.y, 40, '#ff5d8f'); FX.shake(4); FX.sound('slash'); } }; },
+  rampage(B, u) { const r = RK(u); const t = B.enemies.filter(e => e.alive && !e.onRafter && dist(e, u) < 120 + 10 * r).sort((a, b) => b.x - a.x)[0]; if (!t) return false; const D = AB(u);
     const sx = u.x, sy = u.y; u.leap = { sx, sy, tx: t.x + 10, ty: t.y, t: 0, dur: 0.4, h: 6, onLand: () => { const dx = t.x + 10 - sx, dy = t.y - sy, L2 = dx * dx + dy * dy || 1;
-      for (const e of B.enemies) if (e.alive && !e.onRafter) { const f = clamp(((e.x - sx) * dx + (e.y - sy) * dy) / L2, 0, 1), px = sx + f * dx, py = sy + f * dy; if (Math.hypot(e.x - px, e.y - py) < 14 + 2 * r) { dealDamage(B, u, e, S(u) * (2.2 + 0.25 * r), { sig: true }); e.stun = Math.max(e.stun || 0, 0.4); } }
+      for (const e of B.enemies) if (e.alive && !e.onRafter) { const f = clamp(((e.x - sx) * dx + (e.y - sy) * dy) / L2, 0, 1), px = sx + f * dx, py = sy + f * dy; if (Math.hypot(e.x - px, e.y - py) < 14 + 2 * r) { dealDamage(B, u, e, D * (1 + 0.11 * r), { sig: true }); e.stun = Math.max(e.stun || 0, 0.4); } }
       u.buffAs = Math.max(u.buffAs, 0.4 + 0.05 * r); u.buffAsT = 4; FX.blast(u.x, u.y, 26, ['#ffffff', '#ffd0a0', '#ff9a3a', '#8a5a2a'], sigPower(u)); FX.claws(u.x + 6, u.y - 10, '#ff3d3d'); FX.sound('quake'); } }; FX.sound('roar'); },
-  quake(B, u) { const r = RK(u); B.waves.push({ type: 'quake', x: u.x, y: u.y, vx: 170, life: 0.75 + 0.15 * r, t: 0, src: u, dmg: S(u) * 2.8, hit: new Set(), kb: 24, h: 20 + 4 * r }); FX.shake(6); FX.sound('quake'); },
-  chainLightning(B, u) { const t = nearest(B.enemies, u, u.st.range * 1.4); if (!t) return false; const pw = sigPower(u);
-    fireProj(B, u, t, 'orb', 0, { speed: 300, vfx: { shape: 'bolt', col: '#5fd3ff', col2: '#bff4ff', pw }, onLand: p => { const f = p.tgt && p.tgt.alive ? p.tgt : nearest(B.enemies, { x: p.tx, y: p.ty }, 60); if (f) chainLightning(B, u, f, S(u) * 2.3, 6 + RK(u), '#bff4ff');
+  quake(B, u) { const r = RK(u); B.waves.push({ type: 'quake', x: u.x, y: u.y, vx: 170, life: 0.75 + 0.15 * r, t: 0, src: u, dmg: AB(u), hit: new Set(), kb: 24, h: 20 + 4 * r }); FX.shake(6); FX.sound('quake'); },
+  chainLightning(B, u) { const t = nearest(B.enemies, u, u.st.range * 1.4); if (!t) return false; const pw = sigPower(u), D = AB(u);
+    fireProj(B, u, t, 'orb', 0, { speed: 300, vfx: { shape: 'bolt', col: '#5fd3ff', col2: '#bff4ff', pw }, onLand: p => { const f = p.tgt && p.tgt.alive ? p.tgt : nearest(B.enemies, { x: p.tx, y: p.ty }, 60); if (f) chainLightning(B, u, f, D, 6 + RK(u), '#bff4ff');
       FX.blast(p.tx, p.ty + 4, 18, ['#ffffff', '#bff4ff', '#5fd3ff', '#2a5aa8'], pw, { shards: 4 }); FX.flash('#bff4ff', 0.12); } }); FX.sound('zap'); },
-  dawnMend(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, h.maxHp * (0.3 + 0.04 * r) * Math.max(0.5, u.st.ap * u.st.sigMul)); h.poison = []; h.stun = 0; FX.skyRay(h.x, h.y, '#ffe066', rand(0, 0.15)); } FX.flash('#fff3b0', 0.12); FX.sound('heal'); },
-  cannonball(B, u) { const r = RK(u), rad = 26 * (1 + 0.12 * r); const t = nearest(B.enemies, u, u.st.range * 1.5); if (!t) return false; const pw = sigPower(u); fireProj(B, u, t, 'orb', 0, { speed: 230, arc: 0.3 * dist(u, t), fixed: true, vfx: { shape: 'cannon', col: '#4a4a5e', col2: '#a8a8c0', pw, size: 1.2 }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, S(u) * 3.8, { sig: true }); if (!e.boss) e.x += 20; } FX.blast(p.tx, p.ty + 6, rad * 1.2, ['#ffffff', '#ffde3a', '#ff8a2a', '#3a3a4e'], pw, { shards: 12 }); FX.sound('boom'); } }); FX.particles(u.x + 10, u.y - 12, 14, ['#ffffff', '#c8c8d8'], { spread: 8, up: true, grav: -20 }); FX.sound('cannon'); },
+  dawnMend(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.13 * r)); h.poison = []; h.stun = 0; FX.skyRay(h.x, h.y, '#ffe066', rand(0, 0.15)); } FX.flash('#fff3b0', 0.12); FX.sound('heal'); },
+  cannonball(B, u) { const r = RK(u), rad = 26 * (1 + 0.12 * r); const t = nearest(B.enemies, u, u.st.range * 1.5); if (!t) return false; const pw = sigPower(u), D = AB(u); fireProj(B, u, t, 'orb', 0, { speed: 230, arc: 0.3 * dist(u, t), fixed: true, vfx: { shape: 'cannon', col: '#4a4a5e', col2: '#a8a8c0', pw, size: 1.2 }, onLand: p => { for (const e of inRadius(B.enemies, { x: p.tx, y: p.ty + 8 }, rad)) { dealDamage(B, u, e, D, { sig: true }); if (!e.boss) e.x += 20; } FX.blast(p.tx, p.ty + 6, rad * 1.2, ['#ffffff', '#ffde3a', '#ff8a2a', '#3a3a4e'], pw, { shards: 12 }); FX.sound('boom'); } }); FX.particles(u.x + 10, u.y - 12, 14, ['#ffffff', '#c8c8d8'], { spread: 8, up: true, grav: -20 }); FX.sound('cannon'); },
   raiseDead(B, u) { const r = RK(u); const n = B.heroes.filter(h => h.alive && h.temp && h.owner === u).length; const k = Math.min(2 + Math.floor(r / 2), 4 + r - n); if (k <= 0) return false;
     for (let i = 0; i < k; i++) { summonThrall(B, u, 1 + 0.1 * r, 'thrall'); const th = B.heroes[B.heroes.length - 1]; FX.fly(u.x, u.y - 14, th.x, th.y - 6, 'skull', '#9dff6a', '#e8ffd0', sigPower(u), 0.35, i * 0.08); FX.spikes(th.x - 4, th.y, '#f1ecdc', 0.3); FX.spikes(th.x + 4, th.y, '#f1ecdc', 0.33); } FX.sound('summon'); },
   tongueLash(B, u) { const t = B.enemies.filter(e => e.alive && dist(e, u) < u.st.range * 1.3).sort((a, b) => b.hp - a.hp)[0]; if (!t) return false;
-    FX.beam(u.x + 6, u.y - 10, t.x, t.y - 8 - t.z, '#ff7aa8', 3, 0.3); if (!t.boss) { t.x = u.x + 22; t.y = u.y; t.z = 0; } t.stun = 2 + 0.3 * RK(u); dealDamage(B, u, t, S(u) * 3, { sig: true }); FX.blast(t.x, t.y - 2, 12, ['#ffffff', '#ffb0cc', '#ff7aa8', '#8a2a4a'], sigPower(u), { shards: 4 }); FX.sound('slurp'); },
-  thunderRoar(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.buffAtk = 0.35 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
-  warDrums(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { h.buffAs = 0.45 + 0.05 * r; h.buffAsT = 4; healUnit(B, u, h, h.maxHp * 0.12 * Math.max(0.5, u.st.ap * u.st.sigMul), true); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 14, 'note', '#ff5d8f', '#ffffff', sigPower(u), 0.4, rand(0, 0.2)); } FX.text(u.x, u.y - 26, 'BOOM BOOM', '#ff5d8f', true); FX.sound('drums'); },
-  sunlance(B, u) { const t = nearest(B.enemies, u, 999); if (!t) return false; const y = t.y - 8 - t.z, sy = u.y - 12 - (u.z || 0), w = 13 + 2 * RK(u);
-    for (const e of B.enemies) if (e.alive && e.x > u.x && Math.abs((e.y - 8 - e.z) - lerpY(u.x, sy, t.x, y, e.x)) < w) dealDamage(B, u, e, S(u) * 4.2, { sig: true });
+    FX.beam(u.x + 6, u.y - 10, t.x, t.y - 8 - t.z, '#ff7aa8', 3, 0.3); if (!t.boss) { t.x = u.x + 22; t.y = u.y; t.z = 0; } t.stun = 2 + 0.3 * RK(u); dealDamage(B, u, t, AB(u), { sig: true }); FX.blast(t.x, t.y - 2, 12, ['#ffffff', '#ffb0cc', '#ff7aa8', '#8a2a4a'], sigPower(u), { shards: 4 }); FX.sound('slurp'); },
+  thunderRoar(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.buffAtk = AB(u) / 100 + 0.05 * r; h.buffAtkT = 4; } FX.roar(u.x + 8, u.y - 10, '#ffd84a', sigPower(u)); FX.shake(5); FX.text(u.x, u.y - 26, 'ROAR!', '#ffd84a', true); FX.sound('roar'); },
+  warDrums(B, u) { const r = RK(u); for (const h of B.heroes) if (h.alive) { h.buffAs = 0.45 + 0.05 * r; h.buffAsT = 4; healUnit(B, u, h, ABH(u, 0, h), true); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 14, 'note', '#ff5d8f', '#ffffff', sigPower(u), 0.4, rand(0, 0.2)); } FX.text(u.x, u.y - 26, 'BOOM BOOM', '#ff5d8f', true); FX.sound('drums'); },
+  sunlance(B, u) { const t = nearest(B.enemies, u, 999); if (!t) return false; const D = AB(u); const y = t.y - 8 - t.z, sy = u.y - 12 - (u.z || 0), w = 13 + 2 * RK(u);
+    for (const e of B.enemies) if (e.alive && e.x > u.x && Math.abs((e.y - 8 - e.z) - lerpY(u.x, sy, t.x, y, e.x)) < w) dealDamage(B, u, e, D, { sig: true });
     const ex = W + 20, ey = lerpY(u.x, sy, t.x, y, ex); FX.beam(u.x + 6, sy, ex, ey, '#fff3b0', 9, 0.6); FX.blast(t.x, t.y - 4, 16, ['#ffffff', '#fff3b0', '#ffd84a', '#c99a2a'], sigPower(u), { shards: 5 }); FX.flash('#fff3b0', 0.3); FX.shake(5); FX.sound('beam'); },
-  earthsplitter(B, u) { const r = RK(u), rad = 40 * (1 + 0.12 * r); const c = densest(B.enemies, 38, u, 200) || nearest(B.enemies, u); if (!c) return false;
-    u.leap = { sx: u.x, sy: u.y, tx: c.x - 6, ty: c.y, t: 0, dur: 0.45, h: 50, onLand: () => { for (const e of inRadius(B.enemies, u, rad)) { dealDamage(B, u, e, S(u) * 5, { sig: true }); e.stun = Math.max(e.stun, 1); } FX.blast(u.x, u.y, rad, ['#ffffff', '#ffcf3a', '#c9a35a', '#5a4a2a'], sigPower(u), { shards: 16 }); FX.shake(6); FX.sound('quake'); } }; },
-  deathMark(B, u) { const ts = B.enemies.filter(e => e.alive).sort((a, b) => b.hp - a.hp).slice(0, 4 + RK(u)); if (!ts.length) return false; const pw = sigPower(u); for (const e of ts) fireProj(B, u, e, 'orb', 0, { speed: 340, vfx: { shape: 'dagger', col: '#8a5aff', col2: '#ff3d6e', pw, size: 0.9 }, onLand: p => { if (e.alive) { B.marks.push({ e, t: 1.5, src: u, dmg: S(u) * 6 }); FX.claws(e.x, e.y - 10, '#8a5aff'); } } }); FX.sound('mark'); },
-  greatFlood(B, u) { B.waves.push({ type: 'flood', x: CASTLE_X, vx: 240, life: 1.7, t: 0, src: u, dmg: S(u) * (2.6 + 0.3 * RK(u)), hit: new Set(), kb: 40 }); FX.sound('flood'); },
-  runicAegis(B, u) { const pw = sigPower(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.4 + 0.05 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
-  bloom(B, u) { const dead = B.heroes.filter(h => !h.alive && !h.temp).sort((a, b) => b.def.tier - a.def.tier)[0];
+  earthsplitter(B, u) { const r = RK(u), rad = 40 * (1 + 0.12 * r); const c = densest(B.enemies, 38, u, 200) || nearest(B.enemies, u); if (!c) return false; const D = AB(u);
+    u.leap = { sx: u.x, sy: u.y, tx: c.x - 6, ty: c.y, t: 0, dur: 0.45, h: 50, onLand: () => { for (const e of inRadius(B.enemies, u, rad)) { dealDamage(B, u, e, D, { sig: true }); e.stun = Math.max(e.stun, 1); } FX.blast(u.x, u.y, rad, ['#ffffff', '#ffcf3a', '#c9a35a', '#5a4a2a'], sigPower(u), { shards: 16 }); FX.shake(6); FX.sound('quake'); } }; },
+  deathMark(B, u) { const ts = B.enemies.filter(e => e.alive).sort((a, b) => b.hp - a.hp).slice(0, 4 + RK(u)); if (!ts.length) return false; const pw = sigPower(u), D = AB(u); for (const e of ts) fireProj(B, u, e, 'orb', 0, { speed: 340, vfx: { shape: 'dagger', col: '#8a5aff', col2: '#ff3d6e', pw, size: 0.9 }, onLand: p => { if (e.alive) { B.marks.push({ e, t: 1.5, src: u, dmg: D }); FX.claws(e.x, e.y - 10, '#8a5aff'); } } }); FX.sound('mark'); },
+  greatFlood(B, u) { B.waves.push({ type: 'flood', x: CASTLE_X, vx: 240, life: 1.7, t: 0, src: u, dmg: AB(u) * (1 + 0.115 * RK(u)), hit: new Set(), kb: 40 }); FX.sound('flood'); },
+  runicAegis(B, u) { const pw = sigPower(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += AB(u) * (1 + 0.12 * RK(u)); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'rune', '#5fd3ff', '#bff4ff', pw, 0.4, rand(0, 0.12)); } FX.particles(u.x, u.y - 14, 12, ['#5fd3ff', '#ffffff'], { spread: 8, up: true }); FX.sound('shield'); },
+  bloom(B, u) { const dead = B.heroes.filter(h => !h.alive && !h.temp).sort((a, b) => (b.inst ? heroRarity(b.inst) : 0) - (a.inst ? heroRarity(a.inst) : 0))[0];
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
-    for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, h.maxHp * (0.25 + 0.04 * RK(u)) * Math.max(0.5, u.st.ap * u.st.sigMul)); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
-  stampede(B, u) { const n = 4 + RK(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: S(u) * 3.5, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
+    for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.16 * RK(u))); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
+  stampede(B, u) { const n = 4 + RK(u), D = AB(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
   // ----- class spec signatures (meta) -----
-  aegisDome(B, u) { const r = RK(u), P = Math.max(0.5, u.st.ap * u.st.sigMul); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += h.maxHp * (0.35 + 0.04 * r) * P; }
-    for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, S(u) * 1.5, { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
-  bloodFrenzy(B, u) { const r = RK(u); healUnit(B, u, u, u.maxHp * 0.3, true); u.buffAs = Math.max(u.buffAs, 1 + 0.1 * r); u.buffAsT = 5; u.buffAtk = Math.max(u.buffAtk, 0.5 + 0.05 * r); u.buffAtkT = 5; FX.particles(u.x, u.y - 8, 24, ['#ff3d3d', '#ffffff'], { spread: 16, up: true }); FX.sound('roar'); },
-  hawkStrike(B, u) { const t = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!t) return false; const y = t.y;
-    for (const e of B.enemies) if (e.alive && Math.abs(e.y - y) < 16 + 2 * RK(u)) { dealDamage(B, u, e, S(u) * 3.2, { sig: true }); e.curseT = Math.max(e.curseT, 5); }
+  aegisDome(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += AB(u) * (1 + 0.11 * r); }
+    for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, AB(u, 1), { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
+  bloodFrenzy(B, u) { const r = RK(u); healUnit(B, u, u, AB(u), true); u.buffAs = Math.max(u.buffAs, 1 + 0.1 * r); u.buffAsT = 5; u.buffAtk = Math.max(u.buffAtk, 0.5 + 0.05 * r); u.buffAtkT = 5; FX.particles(u.x, u.y - 8, 24, ['#ff3d3d', '#ffffff'], { spread: 16, up: true }); FX.sound('roar'); },
+  hawkStrike(B, u) { const t = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!t) return false; const y = t.y, D = AB(u);
+    for (const e of B.enemies) if (e.alive && Math.abs(e.y - y) < 16 + 2 * RK(u)) { dealDamage(B, u, e, D, { sig: true }); e.curseT = Math.max(e.curseT, 5); }
     FX.fly(CASTLE_X, y - 14, W + 20, y - 10, 'hawk', '#c99a5a', '#ffe7a0', sigPower(u), 0.45); FX.beam(CASTLE_X, y - 12, W + 10, y - 8, '#ffe7a0', 3, 0.45); FX.sound('beam'); },
-  meteor(B, u) { const c = densest(B.enemies, 40, u, 999) || nearest(B.enemies, u, 999); if (!c) return false; const rad = 46 + 5 * RK(u), dmg = S(u) * 6;
+  meteor(B, u) { const c = densest(B.enemies, 40, u, 999) || nearest(B.enemies, u, 999); if (!c) return false; const rad = 46 + 5 * RK(u), dmg = AB(u);
     B.zones.push({ type: 'telegraph', x: c.x, y: c.y, r: rad, t: 0, dur: 0.9, meteor: true, friendly: true, onEnd: z => { for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, dmg, { sig: true }); e.stun = Math.max(e.stun, 0.8); } FX.fireburst(z.x, z.y, z.r * 0.8, sigPower(u) + 0.6); FX.sound('boom'); } }); },
   massRez(B, u) { let n = 0; for (const h of B.heroes) { if (!h.alive && !h.temp) { h.alive = true; h.hp = h.maxHp * (0.4 + 0.05 * RK(u)); h.stun = 0; h.poison = []; n++; FX.text(h.x, h.y - 24, 'RISE', '#fff3b0', true); FX.skyRay(h.x, h.y, '#fff3b0'); } }
-    for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.2 * Math.max(0.5, u.st.ap * u.st.sigMul)); FX.flash('#fff3b0', 0.25); FX.sound('heal'); },
+    for (const h of B.heroes) if (h.alive) healUnit(B, u, h, ABH(u, 0, h)); FX.flash('#fff3b0', 0.25); FX.sound('heal'); },
   shadowClones(B, u) { const mine = B.heroes.filter(h => h.alive && h.temp && h.owner === u).length; if (mine >= 2) { u.buffAtk = Math.max(u.buffAtk, 0.4); u.buffAtkT = 4; return; }
     for (let i = mine; i < 2; i++) summonThrall(B, u, 0.6 + 0.08 * RK(u), u.key, { name: 'Shadow', col: '#8a5aff' }); FX.sound('summon'); },
 };
 function lerpY(x0, y0, x1, y1, x) { return x1 === x0 ? y0 : y0 + (y1 - y0) * (x - x0) / (x1 - x0); }
 
 function summonThrall(B, u, mul, key, opts = {}) {
-  const lv = u.inst ? u.inst.level : 1, ap = u.st ? Math.max(0.5, u.st.ap) : 1;
-  const st = { hp: 200 * heroLevelMul(lv) * ap * mul, atk: 18 * heroLevelMul(lv) * ap * mul, as: 1, range: 14, spd: 30, armor: 15, mana: 999, crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, manaGain: 0, ap: 1, sp: {}, el: {}, sigOn: false, regen: 0 };
+  const lv = u.inst ? u.inst.level : 1, ap = u.st ? Math.max(0.5, u.st.ap) : 1, dead = u.st && (u.st.ability || u.def.ability) === 'raiseDead';
+  const st = { hp: (dead ? AB(u, 0) : 200 * heroLevelMul(lv) * ap) * mul, atk: (dead ? AB(u, 1) : 18 * heroLevelMul(lv) * ap) * mul, as: 1, range: 14, spd: 30, armor: 15, mana: 999, crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, manaGain: 0, ap: 1, sp: {}, el: {}, sigOn: false, regen: 0 };
   const p = { x: (u.x || GRID.x) + 14 + rand(0, 10), y: clamp((u.y || GRID.y + 60) + rand(-16, 16), GRID.y, GRID.y + GRID.rows * GRID.cell) };
   B.heroes.push(makeUnit('hero', { def: { cls: 'berserker', race: 'skeleton', name: opts.name || 'Thrall' }, key, temp: true, owner: u.inst ? u : null, x: p.x, y: p.y, hx: p.x, hy: p.y, maxHp: st.hp, hp: st.hp, st, maxMana: 999, name: opts.name || 'Thrall' }));
   FX.particles(p.x, p.y - 4, 14, opts.col || '#9dff6a', { spread: 16, up: true });
@@ -3640,6 +3763,7 @@ function stepBattle(B, dt) {
   B.waves = B.waves.filter(w => !w.dead);
   for (const m of B.marks) { m.t -= dt; if (m.t <= 0) { m.dead = true; if (m.e.alive) { dealDamage(B, m.src, m.e, m.dmg, { sig: true }); FX.explode(m.e.x, m.e.y - 8 - m.e.z, 18, ['#ff3d6e', '#2a1f3a', '#ffffff']); FX.sound('slash'); } } }
   B.marks = B.marks.filter(m => !m.dead);
+  if (B.echoes && B.echoes.length) { for (const E of B.echoes) { E.t -= dt; if (E.t <= 0 && (!E.u.alive || E.t < -3 || castEcho(B, E))) E.done = true; } B.echoes = B.echoes.filter(E => !E.done); }
   B.enemies = B.enemies.filter(e => e.alive || (e.deadT = (e.deadT || 0) + dt) < 0.01);
   if (!B.done && !B.queue.length && !B.enemies.some(e => e.alive)) B.done = 'victory';
 }
@@ -3681,6 +3805,8 @@ function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(
 function castSignature(B, u) {
   DTAG = 'ability'; let ok; try { ok = ABILITIES[u.st.ability || u.def.ability](B, u); } finally { DTAG = null; }
   if (ok === false) return false;
+  // Mythic and rarer legends echo their signature a moment later
+  if (u.st.echo && !u.echoing) (B.echoes = B.echoes || []).push({ u, t: 0.9, mul: u.st.echo });
   if (B.ach) B.ach.sigs++;
   u.mana = u.st.sp.teacup ? u.maxMana * 0.4 : 0; u.atkT = 0.35;
   const E = u.st.el, ecol = u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#fff1a8';
@@ -3695,12 +3821,19 @@ function castSignature(B, u) {
   return true;
 }
 
+function castEcho(B, E) {
+  const u = E.u; if (u.leap || u.dash || u.spin > 0 || u.stun > 0) return false;
+  u.echoing = true; u.abMul = E.mul; DTAG = 'ability'; let ok;
+  try { ok = ABILITIES[u.st.ability || u.def.ability](B, u); } finally { DTAG = null; u.abMul = 1; u.echoing = false; }
+  if (ok !== false) { FX.text(u.x, u.y - 28, 'ECHO', RARITY[u.st.rarity || 0].col, true); FX.castSpark(u, RARITY[u.st.rarity || 0].col); }
+  return true;
+}
 function stepHero(B, u, dt) {
   u.moving = false;
   if (u.leap) { const L = u.leap; L.t += dt; const k = Math.min(1, L.t / L.dur); u.x = L.sx + (L.tx - L.sx) * k; u.y = L.sy + (L.ty - L.sy) * k; u.z = Math.sin(k * Math.PI) * L.h; if (k >= 1) { u.z = 0; u.leap = null; L.onLand(); } return; }
-  if (u.dash) { const D = u.dash; D.t -= dt; if (D.t <= 0) { const e = D.ts[D.i]; if (e && e.alive) { FX.afterimage(u); u.x = e.x - 6; u.y = e.y; dealDamage(B, u, e, S(u) * D.mul, { sig: true }); FX.slash(e.x, e.y - 8, 1, '#ffffff', true); FX.sound('slash'); } D.i++; D.t = 0.11; if (D.i >= D.ts.length) u.dash = null; } return; }
+  if (u.dash) { const D = u.dash; D.t -= dt; if (D.t <= 0) { const e = D.ts[D.i]; if (e && e.alive) { FX.afterimage(u); u.x = e.x - 6; u.y = e.y; dealDamage(B, u, e, D.dmg != null ? D.dmg : S(u) * D.mul, { sig: true }); FX.slash(e.x, e.y - 8, 1, '#ffffff', true); FX.sound('slash'); } D.i++; D.t = 0.11; if (D.i >= D.ts.length) u.dash = null; } return; }
   if (u.stun > 0) return;
-  if (u.spin > 0) { u.spin -= dt; u.spinTick -= dt; u.atkT = 0.1; if (u.spinTick <= 0) { u.spinTick = 0.25; for (const e of inRadius(B.enemies, u, 28 + 3 * RK(u))) dealDamage(B, u, e, S(u) * 0.6, { sig: true }); FX.ring(u.x, u.y - 6, 26, '#ffffff'); } const t = nearest(B.enemies, u, 140); if (t) moveToward(u, t.x, t.y, u.st.spd * 0.8, dt); return; }
+  if (u.spin > 0) { u.spin -= dt; u.spinTick -= dt; u.atkT = 0.1; if (u.spinTick <= 0) { u.spinTick = 0.25; for (const e of inRadius(B.enemies, u, 28 + 3 * RK(u))) dealDamage(B, u, e, u.spinDmg || S(u) * 0.6, { sig: true }); FX.ring(u.x, u.y - 6, 26, '#ffffff'); } const t = nearest(B.enemies, u, 140); if (t) moveToward(u, t.x, t.y, u.st.spd * 0.8, dt); return; }
   if (!u.temp && u.st.sigOn && u.mana >= u.maxMana && B.enemies.some(e => e.alive)) {
     if (castSignature(B, u)) return;
     u.mana = u.maxMana * 0.8;
@@ -3864,31 +3997,34 @@ function newRun(meta) {
 }
 
 // ----- heroes -----
-function rollStats() { return { ad: randi(1, 10), ap: randi(1, 10), def: randi(1, 10) }; }
-function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length === 1 ? 'partner' : 'reinforce'; }
+// Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
+function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
+function draftBosses(run) { return castleTier(run); }
+function draftCard(id, run) { return { id, rarity: rollRarity(draftBosses(run)), temper: rollTemper() }; }
 function draftOptions(run, meta, focus) {
-  const kind = draftKind(run), n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
+  const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
   for (let i = 0; i < n; i++) {
-    let t = kind === 'starter' ? 1 : kind === 'partner' ? (Math.random() < 0.7 ? 1 : 2) : run.siege <= 6 ? (Math.random() < 0.5 ? 1 : 2) : (Math.random() < 0.55 ? 2 : 3);
-    let cands = HEROES.filter(h => h.tier === t && !own.has(h.id) && !out.some(o => o.id === h.id));
-    if (!cands.length) cands = HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id));
+    let cands = HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id));
     if (!cands.length) break;
-    out.push({ id: pick(cands).id, rolls: rollStats(), temper: rollTemper() });
+    out.push(draftCard(pick(cands).id, run));
   }
   // a focused search guarantees one card of the class or race you asked for
   if (focus && out.length) { const fits = HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
-    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = { id: pick(fits).id, rolls: rollStats(), temper: rollTemper() }; }
+    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run); }
   return out;
 }
-// after the free partner, every draft is bought in the Guild Hall and costs more each time
-function draftCost(run) { const n = run.paidDrafts || 0; return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
+// the first two legends are free; after that each draft costs more the bigger the roster is (losing legends makes it cheaper again)
+function draftCost(run) { const n = Math.max(0, run.roster.length - START_LEGENDS); return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
 function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
-function joinLevel(run) { const v = run.vet || 0; if (run.roster.length < 2) return 1 + v; const avg = run.roster.reduce((a, h) => a + h.level, 0) / run.roster.length; return Math.max(1, Math.floor(avg * 0.75)) + v; }
+// every legend starts at level 1 (Cam); the Veterans meta upgrade still adds its levels
+function joinLevel(run) { return 1 + (run.vet || 0); }
+// legends behind the team's best level learn twice as fast, so a late recruit can catch up
+function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.level)); return h.level < top - 1 ? 2 : 1; }
 function addDraftedHero(run, opt) {
-  const h = { uid: nuid(), id: opt.id, level: joinLevel(run), xp: 0, rolls: Object.assign({}, opt.rolls), temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
+  const h = { uid: nuid(), id: opt.id, rarity: opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h);
-  run.stats.drafts.push({ s: run.siege, id: opt.id, rolls: opt.rolls, kind: draftKind(run) });
+  run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
   return h;
 }
 function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
@@ -4033,8 +4169,8 @@ function resolveEncounter(run, meta, fxs) {
       case 'heal': { const a = Math.round(run.castle.max * n / 100); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); out.push(`Castle repaired by ${a}.`); break; }
       case 'maxhp': if (run.gold >= 50) { run.gold -= 50; run.maxhpMul *= 1.15; const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp += run.castle.max - old; out.push('Castle max HP +15%.'); } else out.push('You could not afford the masons. They leave, still eating your bread.'); break;
       case 'diamonds': { const g = Math.round(20 * n * goldMul(run.siege)); run.gold += g; out.push(`+${g} gold`); break; } // diamonds only come from achievements now
-      case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +1 to every rolled stat.`); } break; }
-      case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { h.rolls.def = Math.min(10, h.rolls.def + 1); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled and gains +1 Defense from the experience.`); } break; }
+      case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +5% attack, ability power and HP.`); } break; }
+      case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { const l = addXP(h, Math.round(30 * (1 + 0.1 * run.siege))); if (l) levels.push([h, l]); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled, but learns something. +${Math.round(30 * (1 + 0.1 * run.siege))} XP.`); } break; }
       case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
       case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon respects your hustle. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
     }
@@ -4054,13 +4190,19 @@ function finishSiege(run, meta, B) {
   const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
-    const gained = u.alive ? Math.round((u.xp + survive) * xpMul) : 0;
+    const gained = u.alive ? Math.round((u.xp + survive) * xpMul * catchUpMul(run, h)) : 0;
     const lv = addXP(h, gained);
     if (!u.alive) run.stats.deaths++;
     const bs = heroBattleStats(B, u);
     rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: u.alive,
       xp: gained, lost: u.alive ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
   }
+  // permadeath (Cam 2026-10-15): a legend who falls in a siege is gone for good; their items go back to the stash
+  rep.fallen = [];
+  for (const u of B.heroes.filter(h => !h.temp && !h.alive)) { const h = u.inst; if (!run.roster.includes(h)) continue;
+    for (const it of run.stash) if (it.holder === h.uid) it.holder = null; h.items = [];
+    run.roster = run.roster.filter(x => x !== h); rep.fallen.push({ uid: h.uid, id: h.id, rarity: heroRarity(h), level: h.level, name: heroDisplayName(h) });
+    (run.stats.fallen = run.stats.fallen || []).push({ s, id: h.id, rarity: heroRarity(h), lv: h.level }); }
   run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
   for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
   for (const key of B.drops) run.stash.push(makeItem([key]));
@@ -4939,6 +5081,12 @@ function drawUnit(g, u, t, opts = {}) {
   const x = Math.round(u.x), y = Math.round(u.y - (u.z || 0) + bob);
   // shadow
   g.fillStyle = 'rgba(26,18,48,0.28)'; const sw = Math.round(8 * sc); g.fillRect(Math.round(u.x) - sw / 2, Math.round(u.y), sw, 2); g.fillRect(Math.round(u.x) - sw / 2 + 1, Math.round(u.y) - 1, sw - 2, 1);
+  // rarity: a coloured ring at the feet, glowing for Mythic and up
+  const rr = u.inst && u.inst.rarity; if (rr && u.alive !== false) { const rc = RARITY[rr].col, rw = Math.round(10 * sc) + 2, uy = Math.round(u.y);
+    g.save(); g.globalAlpha = rr >= 3 ? 0.65 + 0.3 * Math.sin(t * 5 + (u.phase || 0)) : 0.75; g.fillStyle = rc;
+    g.fillRect(x - rw / 2 + 2, uy + 1, rw - 4, 1); g.fillRect(x - rw / 2 + 2, uy - 3, rw - 4, 1); g.fillRect(x - rw / 2, uy - 2, 1, 3); g.fillRect(x + rw / 2 - 1, uy - 2, 1, 3);
+    if (rr >= 5 && Math.random() < 0.15) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round((Math.random() - 0.5) * rw), y - Math.round(Math.random() * size), 1, 1); }
+    g.restore(); }
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
   const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : S.frames[fr];
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
@@ -5334,10 +5482,12 @@ function buildCastle(run) {
   tower(82, 112 - Math.min(tier, 4), 16, 221, tier >= 6);
   if (tier >= 4) flag(15, 109 - Math.min(tier, 4) - 16 - Math.min(8, tier), '#b84b65');
   for (const x of [46, 73]) { p(x, 181, 2, 7, '#64462d'); R.castleTorches.push({ x, y: 179 }); }
-  // Drawbridge points towards the battlefield and joins the road.
-  poly([[50, 214], [69, 214], [92, 185], [79, 185]], OUTLINE);
-  poly([[52, 214], [68, 214], [90, 186], [79, 186]], '#986b43');
-  for (let i = 0; i < 6; i++) { const y = 190 + i * 4, x = 77 - i * 3; p(x, y, 13, 1, '#cd9a5f'); }
+  // Drawbridge is lowered: it lies flat from the gate threshold down onto the ground.
+  poly([[48, 212], [71, 212], [91, 237], [66, 237]], OUTLINE);
+  poly([[50, 213], [69, 213], [88, 235], [68, 235]], '#986b43');
+  for (let y = 215; y < 235; y += 3) { const k = (y - 213) / 22; p(50 + 18 * k + 1, y, 19, 1, '#cd9a5f'); }
+  poly([[69, 213], [71, 213], [91, 236], [88, 236]], '#64462d');
+  p(66, 236, 25, 2, '#64462d');
   // Lower lane defenses retain the existing collision boundary.
   for (let y = 232; y < H; y += 8) {
     p(89, y - 9, 9, 15, OUTLINE); p(90, y - 8, 7, 13, '#85603d'); p(90, y - 8, 2, 13, '#b78751');
@@ -5837,16 +5987,17 @@ const BOT_STYLES = {
 
 function botScoreOpt(style, o) {
   const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
-  const r = o.rolls, sum = r.ad + r.ap + r.def;
-  return (S.focus ? r[S.focus] * 2.2 : 0) + sum + HERO_BY_ID[o.id].tier * 5 + (S.cls && HERO_BY_ID[o.id].cls === S.cls ? 12 : 0) + Math.random();
+  const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
+  return (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
-function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : h.rolls.ap > h.rolls.ad + 2 ? 'ap' : 'ad'; }
+function botKindOf(c) { return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ad' : c === 'guardian' ? 'def' : 'ad'; }
+function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : 'ad'; }
 function botFin(run, h) { return heroItems(run, h).filter(i => i.parts.length === 2).length; }
 function botCarryScore(run, style, h) {
   const S = BOT_STYLES[style], k = botKind(h), d = HERO_BY_ID[h.id];
-  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (k === 'ap' ? h.rolls.ap : h.rolls.ad) + d.tier * 4 + (S.cls && d.cls === S.cls ? 30 : 0)
+  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (h.rarity || 0) * 8 + (S.cls && d.cls === S.cls ? 30 : 0)
     + (S.focus === 'ap' && k === 'ap' ? 15 : 0) + (S.focus === 'ad' && (k === 'ad' || k === 'ranger') ? 10 : 0)
     + (h.uid === run.botCarry ? 8 : 0) + botFin(run, h) * 6;
 }
@@ -5891,7 +6042,7 @@ function botGiveItems(run, style) {
 }
 // bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
 function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
-function botBuyDrafts(run, draft) { while (run.roster.length >= 2 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
+function botBuyDrafts(run, draft) { while (run.roster.length >= 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
@@ -5916,7 +6067,7 @@ function botPickLoot(run, style, opts) {
 }
 function botElement(run, style, h, opts) {
   const S = BOT_STYLES[style];
-  if (!S.focus) { if (style === 'chaos') return pick(opts); const best = STAT_KEYS.slice().sort((a, b) => h.rolls[b] - h.rolls[a])[0]; return opts.find(e => ELEMENTS[e].style === best) || opts[0]; }
+  if (!S.focus) { if (style === 'chaos') return pick(opts); const best = botKindOf(HERO_BY_ID[h.id].cls); return opts.find(e => ELEMENTS[e].style === best) || opts[0]; }
   return opts.find(e => ELEMENTS[e].style === S.focus) || opts[0];
 }
 function botBattle(B, dt, maxT) {
@@ -5945,7 +6096,7 @@ function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
   const run = newRun(meta); const log = [];
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
-  draft();
+  for (let i = 0; i < START_LEGENDS; i++) draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
@@ -5959,13 +6110,13 @@ function botPlayRun(style, meta, opts = {}) {
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-    if (run.roster.length < 2) draft();
+    if (!run.roster.length) draft();
     botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
   }
-  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rolls: h.rolls, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {
@@ -5988,7 +6139,7 @@ function summarizeBots(results) {
 function playtestStart(meta, target, style, el) {
   const run = newRun(meta); run.playtest = true; if (el) run.castleEl = el;
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
-  draft(); return { run, meta, style, target, draft, losses: 0 };
+  for (let i = 0; i < START_LEGENDS; i++) draft(); return { run, meta, style, target, draft, losses: 0 };
 }
 function playtestStep(P) {
   const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
@@ -6000,7 +6151,7 @@ function playtestStep(P) {
   const rep = finishSiege(run, meta, B);
   if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-  if (run.roster.length < 2) draft();
+  if (!run.roster.length) draft();
   botBuyDrafts(run, draft);
   if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
   run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
@@ -6011,47 +6162,14 @@ function playtestStep(P) {
 }
 
 // ===== Hover tips: classes, elements, abilities, rarity =====
-// Power = Attack × Ability power × signature power (signature power grows 7% a level from level 5)
+// Signatures scale with AD, AP and HP (SIG_SCALE in data.js) times signature power (grows 7% a level from level 5)
 const CLASS_REC = {
-  guardian: { stats: ['def', 'ap'], why: 'Defense keeps a Guardian standing at the front. Ability power makes their shields and stuns land harder.' },
-  berserker: { stats: ['ad', 'ap'], why: 'Attack drives every swing. Their signatures hit for Attack × Ability power, so Ability power is a strong second.' },
-  rogue: { stats: ['ad', 'ap'], why: 'Rogues live on fast, heavy hits. Ability power multiplies their dash and mark damage.' },
-  ranger: { stats: ['ad', 'ap'], why: 'Attack powers every arrow, including Volley extras. Ability power multiplies their signature.' },
-  mage: { stats: ['ap', 'ad'], why: 'Mage damage comes from signatures, which hit for Attack × Ability power. Ability power also feeds their summons.' },
-  cleric: { stats: ['ap', 'def'], why: 'Every heal and shield scales with Ability power. Defense keeps the healer alive.' },
-};
-// kind: dmg (Power), heal (target max HP × Ability power × signature power), rank (rank only), summon, buff
-const ABILITY_SCALE = {
-  shieldBash: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2s. 120% Power to nearby foes and a 1.5s stun (+0.2s per rank). Shields itself for 25% of max HP (+5% per rank).' },
-  fireball: { rec: ['ap', 'ad'], txt: '320% Power in an area. Each rank widens the blast 12%.' },
-  bladeDance: { rec: ['ad', 'ap'], txt: '200% Power per dash. Hits 4 foes, +1 per rank.' },
-  arrowRain: { rec: ['ad', 'ap'], txt: '6 volleys of 70% Power, +2 volleys per rank.' },
-  rampage: { rec: ['ad', 'def'], txt: 'Charges the farthest foe in reach (120 range, +10 per rank) for 220% Power (+25% per rank) to everything in the path, stuns them briefly, then +40% attack speed for 4s.' },
-  whirlwind: { rec: ['ad', 'ap'], txt: 'Spins for 2s (+0.4s per rank), hitting for 60% Power four times a second.' },
-  boneWall: { rec: ['def'], txt: 'Taunts foes in a wide circle for 3s (+0.5s per rank) and gains 60 armor (+20 per rank). Scales with rank, not Power.' },
-  lilySplash: { rec: ['ap', 'def'], txt: 'Heals the 3 most hurt allies (+1 per rank) for 35% of their max HP (+5% per rank) × Ability power × signature power.' },
-  pounce: { rec: ['ad', 'ap'], txt: '450% Power to the furthest foe (+50% per rank) and 120% Power around it.' },
-  quake: { rec: ['ad', 'ap'], txt: '280% Power shockwave with knockback. Each rank makes it longer and taller.' },
-  chainLightning: { rec: ['ap', 'ad'], txt: '230% Power that jumps to 6 foes, +1 per rank.' },
-  dawnMend: { rec: ['ap'], txt: 'Heals every hero 30% of max HP (+4% per rank) × Ability power × signature power, and clears poison and stuns.' },
-  cannonball: { rec: ['ad', 'ap'], txt: '380% Power blast that knocks foes back. Each rank widens it 12%.' },
-  raiseDead: { rec: ['ap'], txt: 'Raises 2 thralls (+1 every 2 ranks). Thrall HP and attack scale with level and Ability power.' },
-  tongueLash: { rec: ['ad', 'ap'], txt: '300% Power to the toughest foe in range, pulls it in and stuns 2s (+0.3s per rank).' },
-  thunderRoar: { rec: ['def'], txt: 'Taunts foes in a wide circle for 2.5s and gives every hero +35% attack (+5% per rank) for 4s. Scales with rank, not Power.' },
-  warDrums: { rec: ['ap'], txt: 'Every hero gets +45% attack speed (+5% per rank) and heals 12% of max HP × Ability power × signature power.' },
-  sunlance: { rec: ['ap', 'ad'], txt: '420% Power to every foe in a line. Each rank widens the beam.' },
-  earthsplitter: { rec: ['ad', 'ap'], txt: '500% Power slam with a 1s stun. Each rank widens it 12%.' },
-  deathMark: { rec: ['ad', 'ap'], txt: 'Marks the 4 toughest foes (+1 per rank). Each mark bursts for 600% Power after 1.5s.' },
-  greatFlood: { rec: ['ap', 'ad'], txt: 'A wave across the whole field for 260% Power (+30% per rank) with knockback.' },
-  runicAegis: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2.5s. Shields every hero for 40% of their max HP (+5% per rank) × Ability power × signature power.' },
-  bloom: { rec: ['ap'], txt: 'Revives the best fallen hero at 60% HP, then heals everyone 25% of max HP (+4% per rank) × Ability power × signature power.' },
-  stampede: { rec: ['ap', 'ad'], txt: '4 spirit beasts (+1 per rank), each hitting for 350% Power.' },
-  aegisDome: { rec: ['ap', 'def'], txt: 'Taunts foes in a wide circle for 2.5s. Shields everyone for 35% of max HP (+4% per rank) × Ability power × signature power, and blasts nearby foes for 150% Power with a stun.' },
-  bloodFrenzy: { rec: ['ad'], txt: 'Heals 30% of max HP, then +100% attack speed (+10% per rank) and +50% attack for 5s. Scales with Attack, not Ability power.' },
-  hawkStrike: { rec: ['ad', 'ap'], txt: '320% Power to a whole lane. Foes hit take 20% more damage for 5s.' },
-  meteor: { rec: ['ap', 'ad'], txt: '600% Power after a short warning, with a stun. Each rank widens it.' },
-  massRez: { rec: ['ap'], txt: 'Revives every fallen hero at 40% HP (+5% per rank) and heals everyone 20% of max HP × Ability power × signature power.' },
-  shadowClones: { rec: ['ap'], txt: 'Two shadow copies at 60% thrall strength (+8% per rank). They scale with level and Ability power.' },
+  guardian: { stats: ['def', 'ap'], why: 'HP and armor keep a Guardian standing at the front, and their slams and shields scale with max HP. Ability power adds to their shields.' },
+  berserker: { stats: ['ad', 'ap'], why: 'Attack damage drives every swing and most of their signature damage. Max HP adds a little to their slams.' },
+  rogue: { stats: ['ad', 'ap'], why: 'Rogues live on fast, heavy hits. Their dashes and marks scale mostly with Attack damage, with some Ability power.' },
+  ranger: { stats: ['ad', 'ap'], why: 'Attack damage powers every arrow, including Volley extras, and most of their signature. Ability power adds a little.' },
+  mage: { stats: ['ap', 'ad'], why: 'Mage damage comes from signatures, which scale mostly with Ability power. Ability power also feeds their summons.' },
+  cleric: { stats: ['ap', 'def'], why: 'Every heal scales with Ability power plus a share of the target\'s max HP. Defense keeps the healer alive.' },
 };
 const EL_SCALE = {
   dark: 'Lifesteal 18% × element power.', light: 'Crit +15% × element power. Signature heals 10% max HP × element power.', lightning: 'Attack speed +30% × element power. Arcs hit for 60% attack × element power.',
@@ -6064,30 +6182,29 @@ function clsTipHTML(c) {
   const C = CLASSES[c], R = CLASS_REC[c]; if (!C) return '';
   const heroes = HEROES.filter(d => d.cls === c);
   return `<b>${C.icon} ${esc(C.name)}</b><p>${esc(CLASS_ROLE[c] || '')}</p><div class="trec">Best stats: ${R.stats.map(statLine).join(' then ')}</div><p class="note">${esc(R.why)}</p>
-    <div class="tsub">Signatures</div>${heroes.map(d => `<div class="tab"><b>${esc(d.aName)}</b> <small>${esc(d.name)}</small><span>${esc(ABILITY_SCALE[d.ability] ? ABILITY_SCALE[d.ability].txt : d.aDesc)}</span></div>`).join('')}
-    <p class="note">Power = Attack × Ability power × signature power. Signature power starts at level ${SIG_LEVEL} and grows 7% a level. Ranks come at levels 8, 12, 16 and 20.</p>`;
+    <div class="tsub">Signatures</div>${heroes.map(d => `<div class="tab"><b>${esc(d.aName)}</b> <small>${esc(d.name)}</small><span>${abilityText(d.ability, d.aDesc, null)}</span></div>`).join('')}
+    <p class="note">Signature numbers scale with AD, AP and HP, times signature power. Signature power starts at level ${SIG_LEVEL} and grows 7% a level. Ranks come at levels 8, 12, 16 and 20, and rarer legends get extra ranks.</p>`;
 }
 function abilityTipHTML(ab) {
-  const A = ABILITY_SCALE[ab]; if (!A) return '';
-  const d = HEROES.find(x => x.ability === ab), nm = d ? d.aName : Object.values(SPECS).map(s => s.b).find(b => b.ability === ab)?.name || ab;
-  return `<b>${esc(nm)}</b><div class="trec">Scales with: ${A.rec.map(statLine).join(' and ')}</div><p>${esc(A.txt)}</p><p class="note">Power = Attack × Ability power × signature power (grows 7% a level from level ${SIG_LEVEL}). Ranks at levels 8, 12, 16 and 20.</p>`;
+  const d = HEROES.find(x => x.ability === ab), alt = Object.values(SPECS).map(s => s.b).find(b => b.ability === ab), nm = d ? d.aName : alt ? alt.name : ab;
+  const desc = d ? d.aDesc : SPEC_ADESC[ab] || '', lines = (SIG_SCALE[ab] || []).map(scaleParts).filter(Boolean);
+  return `<b>${esc(nm)}</b>${lines.length ? `<div class="trec">Scales with: ${lines.join(' · ')}</div>` : ''}<p>${abilityText(ab, desc, null)}</p><p class="note">Items that add Attack damage, Ability power or HP raise these numbers directly. Signature power grows 7% a level from level ${SIG_LEVEL}. Ranks at levels 8, 12, 16 and 20 add targets or area, and rarer legends get extra ranks.</p>`;
 }
 function elTipHTML(e) {
   const E = ELEMENTS[e]; if (!E) return '';
   const base = { ad: '+20% attack', ap: '+25% Ability power', def: '+20% HP and +15 armor' }[E.style];
   return `<b style="color:${E.col}">${esc(E.name)}</b><p>${esc(E.desc)}</p><div class="trec">Best stat: ${statLine(E.style)}</div>
-    <p>Element power is 60% plus 8% per point of the hero's ${esc(STAT_NAME[E.style])} roll (a 10 roll gives 140%). Two or more ${esc(E.name)} heroes on the field multiply it by 1.4.</p>
+    <p>Element power starts at 104%. Two or more ${esc(E.name)} heroes on the field multiply it by 1.4.</p>
     <p>Every ${esc(E.name)} hero gets ${base} × element power. ${esc(EL_SCALE[e] || '')}</p>`;
 }
-function tierTipHTML(t) {
-  const why = ['', 'Common champions have standard base stats. Your first champion is always Common.',
-    'This champion is Rare: 40% more base HP and attack than a Common one, plus 5 armor. Rare champions show up in drafts from your second champion on.',
-    'This champion is Epic: 95% more base HP and attack than a Common one, plus 10 armor. Epic champions only show up in drafts after siege 6.'][t];
-  return `<b>${NAMES_TIER[t]}</b><p>${why}</p><p class="note">Rarity only changes base stats. Rolls, items and elements stack on top.</p>`;
+function rarityTipHTML(r) {
+  const Rr = RARITY[r]; if (!Rr) return '';
+  const opens = r === 0 ? 'Always in the draft.' : `Shows up in drafts once you have beaten ${r} boss${r > 1 ? 'es' : ''}.`;
+  return `<b style="color:${Rr.col}">${Rr.name}</b><p>${r ? `+${Math.round(RARITY_STEP * 100 * r)}% HP, attack and ability power over a Common legend of the same level, and ${Math.round((raritySize(r) - 1) * 100)}% bigger.` : 'Standard power for its level.'}</p>${RARITY_PERKS[r] ? `<p>${esc(RARITY_PERKS[r])}</p>` : ''}<p class="note">${opens} Every legend starts at level 1.</p>`;
 }
 function statTipHTML(st) {
-  const t = { ad: 'Attack damage powers basic hits and every Power-based signature.', ap: 'Ability power multiplies signature damage, heals and shields, and summon strength.', def: 'Defense adds HP and armor so the hero survives longer.' }[st];
-  return `<b>${STYLE_NAME[st]}</b><p>${t}</p>`;
+  const t = { ad: 'Attack damage powers basic hits and the AD share of every signature. Swords raise it.', ap: 'Ability power drives the AP share of signatures, heals, shields and summons. Rods raise it.', def: 'Max HP keeps a legend alive, and some signatures (slams, shields) scale with it. Belts raise HP, vests add armor.' }[st];
+  return `<b>${st === 'def' ? 'Health' : STYLE_NAME[st]}</b><p>${t}</p><p class="note">Level and rarity raise all three. Each rarity step is +25%.</p>`;
 }
 
 function synTipHTML(k) {
@@ -6117,7 +6234,7 @@ const raceChip = r => `<span class="chip race" style="background:${RACES[r].colo
 const elChip = e => e ? `<span class="chip el" data-tip="el:${e}" style="--ec:${ELEMENTS[e].col}">${ELEMENTS[e].name}</span>` : '';
 const styleChip = st => `<span class="chip st-${st}" data-tip="stat:${st}">${STYLE_NAME[st]}</span>`;
 const clsChip = c => `<span class="chip" data-tip="cls:${c}">${CLASSES[c].icon} ${CLASSES[c].name}</span>`;
-const tierBadge = t => `<span class="stars t${t}" data-tip="tier:${t}">${NAMES_TIER[t]}</span>`;
+const rarityBadge = r => `<span class="rar r${r || 0}" style="--rc:${RARITY[r || 0].col};--rc2:${RARITY[r || 0].col2}" data-tip="rar:${r || 0}">${RARITY[r || 0].name}</span>`;
 
 // ----- drafting with your team in view: what you own, and what each card would add -----
 function teamCounts(run) { const c = {}, r = {}; for (const h of run.roster) { const d = HERO_BY_ID[h.id]; c[d.cls] = (c[d.cls] || 0) + 1; r[d.race] = (r[d.race] || 0) + 1; } return { c, r }; }
@@ -6198,10 +6315,10 @@ const VISITORS = {
   tinker: { head: 'dwarf', skin: SK.tan, hair: '#c8c8d8', hat: 'bandana', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#ffd84a', weapon: 'hammer', metal: '#cfd6e6' },
 };
 
-const rollBars = (r, base) => `<div class="rolls">${STAT_KEYS.map(k => `<div class="rb st-${k}"><span>${k === 'ad' ? 'AD' : k === 'ap' ? 'AP' : 'DEF'}</span><i><b style="width:${Math.min(100, r[k] * 10)}%"></b></i><em>${r[k]}${base && r[k] !== base[k] ? `<small>+${r[k] - base[k]}</small>` : ''}</em></div>`).join('')}</div>`;
+// AD / AP / HP at a glance, the three numbers signatures scale with
+const statTrio = st => `<div class="trio"><span class="st-ad" data-tip="stat:ad"><small>AD</small>${fmt(st.atk)}</span><span class="st-ap" data-tip="stat:ap"><small>AP</small>${fmt(st.apv)}</span><span class="st-def" data-tip="stat:def"><small>HP</small>${fmt(st.hp)}</span></div>`;
 const xpBar = h => `<div class="xpbar" title="${Math.floor(h.xp)} / ${xpNeed(h.level)} XP"><i style="width:${Math.min(100, 100 * h.xp / xpNeed(h.level))}%"></i></div>`;
 const CLASS_ROLE = { guardian: 'Front-line tank. Soaks hits and protects allies.', berserker: 'Front-line bruiser. Big melee damage.', rogue: 'Fast melee assassin. Dives the back line.', ranger: 'Ranged attacker. Steady damage from afar.', mage: 'Ranged caster. Damage from spells and signatures.', cleric: 'Ranged healer. Heals hurt allies, zaps foes otherwise.' };
-const bestStyle = r => STAT_KEYS.slice().sort((a, b) => r[b] - r[a])[0];
 
 // where damage, healing and damage taken come from, for the battle stats tips
 const STAT_SRC = {
@@ -6418,7 +6535,7 @@ const UI = {
     if (kind === 'cls') return clsTipHTML(a);
     if (kind === 'el') return elTipHTML(a);
     if (kind === 'ab') return abilityTipHTML(a);
-    if (kind === 'tier') return tierTipHTML(+a);
+    if (kind === 'rar') return rarityTipHTML(+a);
     if (kind === 'syn') return synTipHTML(a);
     if (kind === 'combo') return comboTipHTML(key.slice(6));
     if (kind === 'ncombo') { const c = nearCombos(G.run).find(c => c.key === key.slice(7)); if (!c) return ''; const A = ELEMENTS[c.a], Bc = ELEMENTS[c.b];
@@ -6455,19 +6572,19 @@ const UI = {
   },
   guildHTML(run) {
     const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
-    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins free after siege 1. ' : ''}Each draft costs more than the last, so save up between sieges. New champions arrive at about three quarters of your team's average level.</p>
+    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">Each card rolls a rarity: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Beat bosses to open rarer legends. New legends start at level 1 and learn twice as fast while they catch up. The bigger your keep, the more a draft costs; legends who fall are gone for good.</p>
       <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
       <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
     h += `<div class="group-title">Your champions</div>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : !hr.el ? (hr.level < ELEMENT_LEVEL ? `Element choice at level ${ELEMENT_LEVEL}` : 'Element choice pending') : `Signature rank ${st.rank}`;
-      h += `<div class="card recruit"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><div><h4>${esc(heroDisplayName(hr))} ${tierBadge(d.tier)}</h4><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(hr.el)}${temperChip(heroTemper(hr))}</div>
-        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${rollBars(effRolls(run, hr), hr.rolls)}</div><span></span></div>`;
+      h += `<div class="card recruit"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><div><h4>${esc(heroDisplayName(hr))} ${rarityBadge(hr.rarity)}</h4><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(hr.el)}${temperChip(heroTemper(hr))}</div>
+        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div><span></span></div>`;
     }
     h += `<div class="group-title">Champion codex</div><div class="codex">`;
     for (const d of HEROES) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span>${esc(d.name.split(' ')[0])}</span></div>`; }
-    return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20.</p>`;
+    return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20. Rarer legends start ranks ahead.</p>`;
   },
   armoryHTML(run) {
     let sel = run.roster.find(h => h.uid === G.selected);
@@ -6596,9 +6713,9 @@ const UI = {
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
-      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · XP lost</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
-      h += `<div class="hcard ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, level ${hr.level}" ${hr.el ? `style="--ec:${ELEMENTS[hr.el].col}"` : ''}>
-        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}</div>
+      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
+      h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
+        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
         <div class="hmeta"><span class="cg" data-tip="cls:${d.cls}">${CLASSES[d.cls].icon}</span><span class="cg tg ${TEMPERS[heroTemper(hr)].side}" data-tip="tmp:${heroTemper(hr)}">${TEMPERS[heroTemper(hr)].icon}</span>${hr.el ? `<span class="eg" data-tip="el:${hr.el}" style="--ec:${ELEMENTS[hr.el].col}"></span>` : ''}${heroItems(run, hr).map(it => `<img class="px hi" src="${itemIconURL(it, 2)}" alt="" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}">`).join('')}</div>
         ${u ? `<div class="live"><i style="width:${Math.max(0, 100 * u.hp / u.maxHp)}%;${u.alive ? '' : 'background:var(--rose)'}"></i></div>` : ''}${pend}</div>`;
@@ -6612,15 +6729,14 @@ const UI = {
   },
   renderInspector() {
     const run = G.run, h = run.roster.find(x => x.uid === G.selected), el = $('inspector');
-    if (!h) { el._html = null; el.innerHTML = `<h3>Pick a champion</h3><p class="note">Click a card or a hero on the field to see their rolls, signature and items. Drag cards onto the field to place them.</p>`; return; }
+    if (!h) { el._html = null; el.innerHTML = `<h3>Pick a champion</h3><p class="note">Click a card or a hero on the field to see their rarity, signature and items. Drag cards onto the field to place them.</p>`; return; }
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, G.meta);
     const its = heroItems(run, h);
-    const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${esc(st.aDesc)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
-      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${esc(st.aDesc)}</p><p class="note">${st.rank < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
-    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${tierBadge(d.tier)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
-      ${rollBars(st.rolls, h.rolls)}
-      <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack</small><span>${fmt(st.atk)}</span></div><div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div>
-      <div><small>Ability</small><span>${Math.round(st.ap * 100)}%</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
+    const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
+      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
+    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
+      <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
+      <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
@@ -6636,14 +6752,14 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
-    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], tot = o.rolls.ad + o.rolls.ap + o.rolls.def, bs = bestStyle(o.rolls);
-      h += `<button class="dcard ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="">${tierBadge(d.tier)}</div>
-        <h3>${esc(d.name)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${rollBars(o.rolls)}<div class="dtot"><span>Roll total <b>${tot}</b></span>${styleChip(bs)}</div>
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${esc(alt ? SPEC_ADESC[alt.ability] : d.aDesc)}</p>`; })()}</button>`; });
-    h += `</div><div class="row between"><span class="note">Attack powers basic hits, Ability power powers signatures, Defense powers HP and armor. Elements later scale with the matching roll.</span>
+    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
+      h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
+        <h3>${esc(d.name)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}</button>`; });
+    h += `</div><div class="row between"><span class="note">Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
@@ -6664,12 +6780,11 @@ const UI = {
     return h + `<div class="row" style="justify-content:flex-end"><button class="btn small" id="lootReroll" ${G.run.gold < cost ? 'disabled' : ''}>Reroll ${COST(cost)}</button></div>`;
   },
   elementHTML(hr, opts) {
-    const r = effRolls(G.run, hr);
-    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its power scales with the matching roll, and different elements across your heroes form combos.</p>${rollBars(r)}</div></div><div class="elcards">`;
-    opts.forEach((e, i) => { const E = ELEMENTS[e], p = 0.6 + 0.08 * r[E.style];
+    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
+    opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
-        <small>Power ${Math.round(p * 100)}% from ${STAT_NAME[E.style]} ${r[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
+        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
   },
   comboFormHTML(key, kinds) {
@@ -6687,11 +6802,12 @@ const UI = {
     const max = Math.max(1, ...rep.heroes.map(h => Math.max(h.dmg, h.heal)));
     const mvp = rep.heroes.slice().sort((a, b) => (b.dmg + b.heal) - (a.dmg + a.heal))[0];
     let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} held</h2>`;
+    if (rep.fallen && rep.fallen.length) h += `<div class="fallen"><b>${rep.fallen.length > 1 ? 'Legends lost' : 'A legend is lost'}</b>${rep.fallen.map(f => `<span><img class="px" src="${portrait('h:' + f.id)}" alt="">${esc(f.name)} <small style="color:${RARITY[f.rarity || 0].col}">${RARITY[f.rarity || 0].name} · Lv ${f.level}</small></span>`).join('')}${!G.run.roster.length ? '<small>Every legend fell. The Guild sends one recruit for free.</small>' : ''}</div>`;
     h += `<div class="tiles"><div class="tile"><small>Gold</small><span style="color:var(--gold)">+${fmt(rep.gold)}</span></div><div class="tile"><small>Foes slain</small><span>${rep.kills}</span></div><div class="tile"><small>Castle damage</small><span style="color:${rep.castleLost > 0 ? 'var(--rose)' : 'var(--mint)'}">${fmt(Math.max(0, rep.castleLost))}</span></div>${rep.drops.length ? `<div class="tile"><small>Item drops</small><span>${rep.drops.map(k => `<img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt="${esc(COMPONENTS[k].name)}" style="width:20px;height:20px">`).join('')}</span></div>` : ''}${rep.castleGrow ? `<div class="tile grow"><small>Keep grows</small><span style="color:var(--gold)">${fmt(rep.castleGrow.from)} → ${fmt(rep.castleGrow.to)}</span></div>` : ''}${rep.bossFled ? `<div class="tile"><small>Boss got away</small><span style="color:var(--rose)">${esc(rep.bossFled)}</span></div>` : ''}${rep.fled ? `<div class="tile"><small>Broke through</small><span style="color:var(--rose)">${rep.fled}</span></div>` : ''}${rep.repaired ? `<div class="tile"><small>Fountain</small><span style="color:var(--mint)">+${fmt(rep.repaired)}</span></div>` : ''}</div>`;
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
       h += `<div class="xrow ${hr.alive ? '' : 'dead'}"><img class="px" src="${portrait(inst ? heroSpriteKey(inst) : 'h:' + hr.id)}" alt=""><div><b>${esc(inst ? heroDisplayName(inst) : HERO_BY_ID[hr.id].name)}</b>
-        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Lost ${hr.lost} XP.</span>`}
+        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
         <div class="xpbar big" data-from="${hr.levels ? 0 : Math.min(100, 100 * hr.fromXp / xpNeed(hr.fromLv))}" data-to="${Math.min(100, 100 * hr.toXp / xpNeed(hr.toLv))}"><i></i></div></div>
         <div class="lvl">${hr.levels ? `<span class="lvup">LEVEL UP</span><b>Lv ${hr.fromLv} → ${hr.toLv}</b>` : `<b>Lv ${hr.toLv}</b>`}</div></div>`; }
     h += `</div><div class="eyebrow" style="margin-top:8px">Battle stats${mvp ? ` · MVP ${esc(HERO_BY_ID[mvp.id].name)}` : ''}</div>${UI.statsChartHTML(rep.heroes, 'Hover a bar', true)}`;
@@ -6782,7 +6898,7 @@ const TEL = {
   },
   add(col, data) { if (!this.db) { this.keepLocal(col, data); return Promise.resolve(null); } return this.db.collection(col).add(data).catch(e => { this.keepLocal(col, data); return null; }); },
 
-  heroSummary(run) { return run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el || null, rolls: h.rolls, items: heroItems(run, h).map(it => it.parts.join('+')), placed: !!h.place })); },
+  heroSummary(run) { return run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el || null, rarity: h.rarity || 0, items: heroItems(run, h).map(it => it.parts.join('+')), placed: !!h.place })); },
   runStart(run) {
     this.cur = { runId: run.runId, events: [] };
     this.write('playtests/' + run.runId, { runId: run.runId, by: this.me, build: VERSION, startedAt: new Date(run.startedAt).toISOString(), status: 'live', reached: 1, sieges: [], heroes: [], device: { w: innerWidth, h: innerHeight, touch: 'ontouchstart' in window, ua: navigator.userAgent.slice(0, 120) } });
@@ -7155,7 +7271,7 @@ function introWorld() {
 }
 
 // the path: along the road, then up the drawbridge to the gate
-const GATE = { x: 59, y: 204 }, RAMP = { x: 92, y: 226 };
+const GATE = { x: 59, y: 204 }, RAMP = { x: 80, y: 226 };
 function pathPos(x) { if (x > RAMP.x) return { x, y: 229 }; const k = Math.min(1, (RAMP.x - x) / (RAMP.x - GATE.x)); return { x, y: 229 + (GATE.y - 229) * k }; }
 
 function startIntro(done) {
@@ -7378,7 +7494,7 @@ function startRun() {
   G.run = newRun(G.meta); G.meta.runs++;
   G.hasRun = true; G.B = null; G.selected = null; UI.pendingGold = 0; G.lastEnc = [];
   $('title').hidden = true; $('tower').hidden = true; UI.closeModal(); G.paused = false;
-  G.phase = 'draft'; G.run.post = ['draft'];
+  G.phase = 'draft'; G.run.post = Array(START_LEGENDS).fill('draft');
   TEL.runStart(G.run);
   changed();
   nextPost();
@@ -7392,7 +7508,7 @@ function showDraft() {
       const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
       const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
-      TEL.event('draft', { id: o.id, rolls: o.rolls, kind });
+      TEL.event('draft', { id: o.id, rarity: o.rarity || 0, kind });
       if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
     });
@@ -7444,7 +7560,8 @@ function endSiege() {
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (run.roster.length < 2) run.post.push('draft');
+    // every legend fell: one free recruit so the keep is never empty
+    if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -7703,8 +7820,8 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
-      <div><b>Draft a champion</b>Pick 1 of 3 with randomly rolled Attack, Ability power and Defense. A partner joins before siege 2, a third before the first boss, then more every other boss.</div>
-      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A hero who falls loses that siege's experience.</div>
+      <div><b>Recruit legends</b>Start with 2 legends at level 1. Every card rolls a rarity, from Common to God, and each boss you beat opens a rarer tier. Each rarity is +25% power, a bigger body and a stronger signature.</div>
+      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A legend who falls in a siege is gone for good.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. At level 7 each hero awakens an element; mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, climb the Artificers' tech tree, and at siege 15 your castle turns elemental.</div>
     </div></div>`;

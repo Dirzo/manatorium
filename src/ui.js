@@ -12,7 +12,7 @@ const raceChip = r => `<span class="chip race" style="background:${RACES[r].colo
 const elChip = e => e ? `<span class="chip el" data-tip="el:${e}" style="--ec:${ELEMENTS[e].col}">${ELEMENTS[e].name}</span>` : '';
 const styleChip = st => `<span class="chip st-${st}" data-tip="stat:${st}">${STYLE_NAME[st]}</span>`;
 const clsChip = c => `<span class="chip" data-tip="cls:${c}">${CLASSES[c].icon} ${CLASSES[c].name}</span>`;
-const tierBadge = t => `<span class="stars t${t}" data-tip="tier:${t}">${NAMES_TIER[t]}</span>`;
+const rarityBadge = r => `<span class="rar r${r || 0}" style="--rc:${RARITY[r || 0].col};--rc2:${RARITY[r || 0].col2}" data-tip="rar:${r || 0}">${RARITY[r || 0].name}</span>`;
 
 // ----- drafting with your team in view: what you own, and what each card would add -----
 function teamCounts(run) { const c = {}, r = {}; for (const h of run.roster) { const d = HERO_BY_ID[h.id]; c[d.cls] = (c[d.cls] || 0) + 1; r[d.race] = (r[d.race] || 0) + 1; } return { c, r }; }
@@ -93,10 +93,10 @@ const VISITORS = {
   tinker: { head: 'dwarf', skin: SK.tan, hair: '#c8c8d8', hat: 'bandana', armor: '#8a5a3a', armor2: '#5a3a22', cloth: '#ffd84a', weapon: 'hammer', metal: '#cfd6e6' },
 };
 
-const rollBars = (r, base) => `<div class="rolls">${STAT_KEYS.map(k => `<div class="rb st-${k}"><span>${k === 'ad' ? 'AD' : k === 'ap' ? 'AP' : 'DEF'}</span><i><b style="width:${Math.min(100, r[k] * 10)}%"></b></i><em>${r[k]}${base && r[k] !== base[k] ? `<small>+${r[k] - base[k]}</small>` : ''}</em></div>`).join('')}</div>`;
+// AD / AP / HP at a glance, the three numbers signatures scale with
+const statTrio = st => `<div class="trio"><span class="st-ad" data-tip="stat:ad"><small>AD</small>${fmt(st.atk)}</span><span class="st-ap" data-tip="stat:ap"><small>AP</small>${fmt(st.apv)}</span><span class="st-def" data-tip="stat:def"><small>HP</small>${fmt(st.hp)}</span></div>`;
 const xpBar = h => `<div class="xpbar" title="${Math.floor(h.xp)} / ${xpNeed(h.level)} XP"><i style="width:${Math.min(100, 100 * h.xp / xpNeed(h.level))}%"></i></div>`;
 const CLASS_ROLE = { guardian: 'Front-line tank. Soaks hits and protects allies.', berserker: 'Front-line bruiser. Big melee damage.', rogue: 'Fast melee assassin. Dives the back line.', ranger: 'Ranged attacker. Steady damage from afar.', mage: 'Ranged caster. Damage from spells and signatures.', cleric: 'Ranged healer. Heals hurt allies, zaps foes otherwise.' };
-const bestStyle = r => STAT_KEYS.slice().sort((a, b) => r[b] - r[a])[0];
 
 // where damage, healing and damage taken come from, for the battle stats tips
 const STAT_SRC = {
@@ -313,7 +313,7 @@ const UI = {
     if (kind === 'cls') return clsTipHTML(a);
     if (kind === 'el') return elTipHTML(a);
     if (kind === 'ab') return abilityTipHTML(a);
-    if (kind === 'tier') return tierTipHTML(+a);
+    if (kind === 'rar') return rarityTipHTML(+a);
     if (kind === 'syn') return synTipHTML(a);
     if (kind === 'combo') return comboTipHTML(key.slice(6));
     if (kind === 'ncombo') { const c = nearCombos(G.run).find(c => c.key === key.slice(7)); if (!c) return ''; const A = ELEMENTS[c.a], Bc = ELEMENTS[c.b];
@@ -350,19 +350,19 @@ const UI = {
   },
   guildHTML(run) {
     const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
-    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">${run.roster.length < 2 ? 'Your partner joins free after siege 1. ' : ''}Each draft costs more than the last, so save up between sieges. New champions arrive at about three quarters of your team's average level.</p>
+    let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">Each card rolls a rarity: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Beat bosses to open rarer legends. New legends start at level 1 and learn twice as fast while they catch up. The bigger your keep, the more a draft costs; legends who fall are gone for good.</p>
       <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
       <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
     h += `<div class="group-title">Your champions</div>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : !hr.el ? (hr.level < ELEMENT_LEVEL ? `Element choice at level ${ELEMENT_LEVEL}` : 'Element choice pending') : `Signature rank ${st.rank}`;
-      h += `<div class="card recruit"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><div><h4>${esc(heroDisplayName(hr))} ${tierBadge(d.tier)}</h4><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(hr.el)}${temperChip(heroTemper(hr))}</div>
-        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${rollBars(effRolls(run, hr), hr.rolls)}</div><span></span></div>`;
+      h += `<div class="card recruit"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><div><h4>${esc(heroDisplayName(hr))} ${rarityBadge(hr.rarity)}</h4><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(hr.el)}${temperChip(heroTemper(hr))}</div>
+        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div><span></span></div>`;
     }
     h += `<div class="group-title">Champion codex</div><div class="codex">`;
     for (const d of HEROES) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span>${esc(d.name.split(' ')[0])}</span></div>`; }
-    return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20.</p>`;
+    return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20. Rarer legends start ranks ahead.</p>`;
   },
   armoryHTML(run) {
     let sel = run.roster.find(h => h.uid === G.selected);
@@ -491,9 +491,9 @@ const UI = {
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
-      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · XP lost</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
-      h += `<div class="hcard ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, level ${hr.level}" ${hr.el ? `style="--ec:${ELEMENTS[hr.el].col}"` : ''}>
-        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}</div>
+      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
+      h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
+        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
         <div class="hmeta"><span class="cg" data-tip="cls:${d.cls}">${CLASSES[d.cls].icon}</span><span class="cg tg ${TEMPERS[heroTemper(hr)].side}" data-tip="tmp:${heroTemper(hr)}">${TEMPERS[heroTemper(hr)].icon}</span>${hr.el ? `<span class="eg" data-tip="el:${hr.el}" style="--ec:${ELEMENTS[hr.el].col}"></span>` : ''}${heroItems(run, hr).map(it => `<img class="px hi" src="${itemIconURL(it, 2)}" alt="" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}">`).join('')}</div>
         ${u ? `<div class="live"><i style="width:${Math.max(0, 100 * u.hp / u.maxHp)}%;${u.alive ? '' : 'background:var(--rose)'}"></i></div>` : ''}${pend}</div>`;
@@ -507,15 +507,14 @@ const UI = {
   },
   renderInspector() {
     const run = G.run, h = run.roster.find(x => x.uid === G.selected), el = $('inspector');
-    if (!h) { el._html = null; el.innerHTML = `<h3>Pick a champion</h3><p class="note">Click a card or a hero on the field to see their rolls, signature and items. Drag cards onto the field to place them.</p>`; return; }
+    if (!h) { el._html = null; el.innerHTML = `<h3>Pick a champion</h3><p class="note">Click a card or a hero on the field to see their rarity, signature and items. Drag cards onto the field to place them.</p>`; return; }
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, G.meta);
     const its = heroItems(run, h);
-    const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${esc(st.aDesc)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
-      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${esc(st.aDesc)}</p><p class="note">${st.rank < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
-    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${tierBadge(d.tier)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
-      ${rollBars(st.rolls, h.rolls)}
-      <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack</small><span>${fmt(st.atk)}</span></div><div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div>
-      <div><small>Ability</small><span>${Math.round(st.ap * 100)}%</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
+    const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
+      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
+    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
+      <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
+      <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
@@ -531,14 +530,14 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Your first hero holds the gate alone for one siege. Stats are rolled 1 to 10 for each card.'], partner: ['Choose a partner', 'Your champion learned to level up and carry items. Time for backup.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
-    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], tot = o.rolls.ad + o.rolls.ap + o.rolls.def, bs = bestStyle(o.rolls);
-      h += `<button class="dcard ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="">${tierBadge(d.tier)}</div>
-        <h3>${esc(d.name)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${rollBars(o.rolls)}<div class="dtot"><span>Roll total <b>${tot}</b></span>${styleChip(bs)}</div>
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${esc(alt ? SPEC_ADESC[alt.ability] : d.aDesc)}</p>`; })()}</button>`; });
-    h += `</div><div class="row between"><span class="note">Attack powers basic hits, Ability power powers signatures, Defense powers HP and armor. Elements later scale with the matching roll.</span>
+    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
+      h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
+        <h3>${esc(d.name)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}</button>`; });
+    h += `</div><div class="row between"><span class="note">Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
@@ -559,12 +558,11 @@ const UI = {
     return h + `<div class="row" style="justify-content:flex-end"><button class="btn small" id="lootReroll" ${G.run.gold < cost ? 'disabled' : ''}>Reroll ${COST(cost)}</button></div>`;
   },
   elementHTML(hr, opts) {
-    const r = effRolls(G.run, hr);
-    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its power scales with the matching roll, and different elements across your heroes form combos.</p>${rollBars(r)}</div></div><div class="elcards">`;
-    opts.forEach((e, i) => { const E = ELEMENTS[e], p = 0.6 + 0.08 * r[E.style];
+    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
+    opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
-        <small>Power ${Math.round(p * 100)}% from ${STAT_NAME[E.style]} ${r[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
+        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
   },
   comboFormHTML(key, kinds) {
@@ -582,11 +580,12 @@ const UI = {
     const max = Math.max(1, ...rep.heroes.map(h => Math.max(h.dmg, h.heal)));
     const mvp = rep.heroes.slice().sort((a, b) => (b.dmg + b.heal) - (a.dmg + a.heal))[0];
     let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} held</h2>`;
+    if (rep.fallen && rep.fallen.length) h += `<div class="fallen"><b>${rep.fallen.length > 1 ? 'Legends lost' : 'A legend is lost'}</b>${rep.fallen.map(f => `<span><img class="px" src="${portrait('h:' + f.id)}" alt="">${esc(f.name)} <small style="color:${RARITY[f.rarity || 0].col}">${RARITY[f.rarity || 0].name} · Lv ${f.level}</small></span>`).join('')}${!G.run.roster.length ? '<small>Every legend fell. The Guild sends one recruit for free.</small>' : ''}</div>`;
     h += `<div class="tiles"><div class="tile"><small>Gold</small><span style="color:var(--gold)">+${fmt(rep.gold)}</span></div><div class="tile"><small>Foes slain</small><span>${rep.kills}</span></div><div class="tile"><small>Castle damage</small><span style="color:${rep.castleLost > 0 ? 'var(--rose)' : 'var(--mint)'}">${fmt(Math.max(0, rep.castleLost))}</span></div>${rep.drops.length ? `<div class="tile"><small>Item drops</small><span>${rep.drops.map(k => `<img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt="${esc(COMPONENTS[k].name)}" style="width:20px;height:20px">`).join('')}</span></div>` : ''}${rep.castleGrow ? `<div class="tile grow"><small>Keep grows</small><span style="color:var(--gold)">${fmt(rep.castleGrow.from)} → ${fmt(rep.castleGrow.to)}</span></div>` : ''}${rep.bossFled ? `<div class="tile"><small>Boss got away</small><span style="color:var(--rose)">${esc(rep.bossFled)}</span></div>` : ''}${rep.fled ? `<div class="tile"><small>Broke through</small><span style="color:var(--rose)">${rep.fled}</span></div>` : ''}${rep.repaired ? `<div class="tile"><small>Fountain</small><span style="color:var(--mint)">+${fmt(rep.repaired)}</span></div>` : ''}</div>`;
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
       h += `<div class="xrow ${hr.alive ? '' : 'dead'}"><img class="px" src="${portrait(inst ? heroSpriteKey(inst) : 'h:' + hr.id)}" alt=""><div><b>${esc(inst ? heroDisplayName(inst) : HERO_BY_ID[hr.id].name)}</b>
-        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Lost ${hr.lost} XP.</span>`}
+        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
         <div class="xpbar big" data-from="${hr.levels ? 0 : Math.min(100, 100 * hr.fromXp / xpNeed(hr.fromLv))}" data-to="${Math.min(100, 100 * hr.toXp / xpNeed(hr.toLv))}"><i></i></div></div>
         <div class="lvl">${hr.levels ? `<span class="lvup">LEVEL UP</span><b>Lv ${hr.fromLv} → ${hr.toLv}</b>` : `<b>Lv ${hr.toLv}</b>`}</div></div>`; }
     h += `</div><div class="eyebrow" style="margin-top:8px">Battle stats${mvp ? ` · MVP ${esc(HERO_BY_ID[mvp.id].name)}` : ''}</div>${UI.statsChartHTML(rep.heroes, 'Hover a bar', true)}`;

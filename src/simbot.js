@@ -10,16 +10,17 @@ const BOT_STYLES = {
 
 function botScoreOpt(style, o) {
   const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
-  const r = o.rolls, sum = r.ad + r.ap + r.def;
-  return (S.focus ? r[S.focus] * 2.2 : 0) + sum + HERO_BY_ID[o.id].tier * 5 + (S.cls && HERO_BY_ID[o.id].cls === S.cls ? 12 : 0) + Math.random();
+  const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
+  return (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
-function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : h.rolls.ap > h.rolls.ad + 2 ? 'ap' : 'ad'; }
+function botKindOf(c) { return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ad' : c === 'guardian' ? 'def' : 'ad'; }
+function botKind(h) { const c = HERO_BY_ID[h.id].cls; return c === 'mage' || c === 'cleric' ? 'ap' : c === 'ranger' ? 'ranger' : c === 'guardian' ? 'tank' : 'ad'; }
 function botFin(run, h) { return heroItems(run, h).filter(i => i.parts.length === 2).length; }
 function botCarryScore(run, style, h) {
   const S = BOT_STYLES[style], k = botKind(h), d = HERO_BY_ID[h.id];
-  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (k === 'ap' ? h.rolls.ap : h.rolls.ad) + d.tier * 4 + (S.cls && d.cls === S.cls ? 30 : 0)
+  return (k === 'tank' || d.cls === 'cleric' ? -40 : 0) + h.level * 3 + (h.rarity || 0) * 8 + (S.cls && d.cls === S.cls ? 30 : 0)
     + (S.focus === 'ap' && k === 'ap' ? 15 : 0) + (S.focus === 'ad' && (k === 'ad' || k === 'ranger') ? 10 : 0)
     + (h.uid === run.botCarry ? 8 : 0) + botFin(run, h) * 6;
 }
@@ -64,7 +65,7 @@ function botGiveItems(run, style) {
 }
 // bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
 function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
-function botBuyDrafts(run, draft) { while (run.roster.length >= 2 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
+function botBuyDrafts(run, draft) { while (run.roster.length >= 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
@@ -89,7 +90,7 @@ function botPickLoot(run, style, opts) {
 }
 function botElement(run, style, h, opts) {
   const S = BOT_STYLES[style];
-  if (!S.focus) { if (style === 'chaos') return pick(opts); const best = STAT_KEYS.slice().sort((a, b) => h.rolls[b] - h.rolls[a])[0]; return opts.find(e => ELEMENTS[e].style === best) || opts[0]; }
+  if (!S.focus) { if (style === 'chaos') return pick(opts); const best = botKindOf(HERO_BY_ID[h.id].cls); return opts.find(e => ELEMENTS[e].style === best) || opts[0]; }
   return opts.find(e => ELEMENTS[e].style === S.focus) || opts[0];
 }
 function botBattle(B, dt, maxT) {
@@ -118,7 +119,7 @@ function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
   const run = newRun(meta); const log = [];
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
-  draft();
+  for (let i = 0; i < START_LEGENDS; i++) draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
@@ -132,13 +133,13 @@ function botPlayRun(style, meta, opts = {}) {
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-    if (run.roster.length < 2) draft();
+    if (!run.roster.length) draft();
     botBuyDrafts(run, draft);
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
   }
-  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rolls: h.rolls, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {
@@ -161,7 +162,7 @@ function summarizeBots(results) {
 function playtestStart(meta, target, style, el) {
   const run = newRun(meta); run.playtest = true; if (el) run.castleEl = el;
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
-  draft(); return { run, meta, style, target, draft, losses: 0 };
+  for (let i = 0; i < START_LEGENDS; i++) draft(); return { run, meta, style, target, draft, losses: 0 };
 }
 function playtestStep(P) {
   const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
@@ -173,7 +174,7 @@ function playtestStep(P) {
   const rep = finishSiege(run, meta, B);
   if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
-  if (run.roster.length < 2) draft();
+  if (!run.roster.length) draft();
   botBuyDrafts(run, draft);
   if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
   run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }

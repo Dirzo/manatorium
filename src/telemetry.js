@@ -29,7 +29,7 @@ const TEL = {
   },
   add(col, data) { if (!this.db) { this.keepLocal(col, data); return Promise.resolve(null); } return this.db.collection(col).add(data).catch(e => { this.keepLocal(col, data); return null; }); },
 
-  heroSummary(run) { return run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el || null, rolls: h.rolls, items: heroItems(run, h).map(it => it.parts.join('+')), placed: !!h.place })); },
+  heroSummary(run) { return run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el || null, rarity: h.rarity || 0, items: heroItems(run, h).map(it => it.parts.join('+')), placed: !!h.place })); },
   runStart(run) {
     this.cur = { runId: run.runId, events: [] };
     this.write('playtests/' + run.runId, { runId: run.runId, by: this.me, build: VERSION, startedAt: new Date(run.startedAt).toISOString(), status: 'live', reached: 1, sieges: [], heroes: [], device: { w: innerWidth, h: innerHeight, touch: 'ontouchstart' in window, ua: navigator.userAgent.slice(0, 120) } });

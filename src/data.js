@@ -66,63 +66,103 @@ const CLASS_BASE = {
   mage:      { hp: 260, atk: 25, as: 0.75, range: 104, spd: 24, armor: 5, mana: 70 },
   cleric:    { hp: 300, atk: 23, as: 0.8, range: 92, spd: 24, armor: 10, mana: 75 },
 };
-const TIER_MUL = [0, 1, 1.4, 1.95];
-const TIER_COST = [0, 25, 55, 110];
+// base ability power per class (AP scales with level and rarity like attack does)
+const CLASS_AP = { guardian: 16, berserker: 14, rogue: 16, ranger: 16, mage: 30, cleric: 28 };
+
+// ===== Rarity (Cam 2026-10-15): no rolled stats. Every legend is rolled at a rarity when drafted.
+// Each step is +25% power on top of level, a little bigger on the field, and a stronger signature.
+const RARITY = [
+  { key: 'common',    name: 'Common',    col: '#b9c2cc', col2: '#6f7a86' },
+  { key: 'rare',      name: 'Rare',      col: '#5fb0ff', col2: '#2a5aa8' },
+  { key: 'epic',      name: 'Epic',      col: '#b97bff', col2: '#5a2aa8' },
+  { key: 'mythic',    name: 'Mythic',    col: '#ff5d8f', col2: '#8a1a4a' },
+  { key: 'legendary', name: 'Legendary', col: '#ffb030', col2: '#a8601a' },
+  { key: 'god',       name: 'God',       col: '#fff3a0', col2: '#ff7ad8' },
+];
+const RARITY_STEP = 0.25;
+function rarityMul(r) { return 1 + RARITY_STEP * (r || 0); }
+function raritySize(r) { return 1 + 0.06 * (r || 0); }
+// what each rarity adds to a legend's signature, on top of +25% power per step
+const RARITY_PERKS = [
+  '',
+  'Signature one rank higher: bigger area or more targets.',
+  'Signature two ranks higher. Starts every siege with 35% mana.',
+  'Signature three ranks higher, 35% mana at the start, and it echoes: a second cast at 50% power.',
+  'Signature four ranks higher, echoes at 75% power, costs 25% less mana.',
+  'Signature five ranks higher, echoes at full power, costs 25% less mana, and starts every siege ready to cast.',
+];
+// draft odds by bosses defeated, shaped like TFT shop odds by level: one new rarity opens per boss.
+// After the first boss (siege 6 onward) a card is Rare 25% of the time.
+const RARITY_ODDS = [
+  [100, 0, 0, 0, 0, 0],
+  [75, 25, 0, 0, 0, 0],
+  [55, 30, 15, 0, 0, 0],
+  [45, 33, 20, 2, 0, 0],
+  [30, 40, 25, 4, 1, 0],
+  [19, 30, 35, 12, 3, 1],
+  [15, 25, 32, 20, 6, 2],
+  [10, 20, 28, 28, 11, 3],
+  [5, 12, 22, 35, 20, 6],
+  [1, 5, 15, 40, 28, 11],
+];
+function rarityOdds(bosses) { return RARITY_ODDS[Math.max(0, Math.min(RARITY_ODDS.length - 1, bosses || 0))]; }
+function rollRarity(bosses) { const o = rarityOdds(bosses); let x = Math.random() * 100; for (let i = 0; i < o.length; i++) { x -= o[i]; if (x < 0) return i; } return 0; }
+const START_LEGENDS = 2;
 
 // Sprite palettes
 const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', orc2: '#a7d94a', bone: '#f1ecdc', toad: '#56c46a', toad2: '#ff8f3a', fur: '#c98a4a', fur2: '#e8e1d0', gob: '#8fd14f', blue: '#7fb4ff' };
 
 const HEROES = [
   // tier 1
-  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground, stunning foes for 1.5s and gaining a 25% HP shield.',
+  { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground for {0}, stunning foes for 1.5s, and gains a shield of {1}.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
-  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd for 320% attack in an area.', proj: 'fire',
+  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd, dealing {0} in an area.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
-  { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for 200% attack.',
+  { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for {0}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'hood', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff' } },
-  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s, 6 waves of 70% attack.', proj: 'arrow',
+  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s: 6 volleys of {0} each.', proj: 'arrow',
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
-  { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for 60% attack.',
+  { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for {0}.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains +60 armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains {0} armor.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
-  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing 35% of their max HP.', proj: 'heal',
+  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing each for {0}.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
-  { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for 450% attack.',
+  { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for {0}.',
     spr: { head: 'beast', skin: SK.fur, snout: '#f3dcc0', hat: 'bandana', armor: '#5a4a8c', armor2: '#3a2f61', cloth: '#ff5d8f', weapon: 'daggers', metal: '#ffffff' } },
   // tier 2
-  { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing 280% attack and knocking enemies back.',
+  { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing {0} and knocking enemies back.',
     spr: { head: 'dwarf', skin: SK.tan, hair: '#ff8f3a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#3a64c9', weapon: 'hammer', metal: '#cfd6e6' } },
-  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for 230% attack each.', proj: 'spark',
+  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for {0} each.', proj: 'spark',
     spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hairStyle: 'long', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff' } },
-  { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for 30% max HP and clears poison and stuns.', proj: 'heal',
+  { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for {0} and clears poison and stuns.', proj: 'heal',
     spr: { head: 'human', skin: SK.brown, hair: '#2a1a12', hairStyle: 'bun', hat: 'none', armor: '#f4f1ff', armor2: '#b8b0e0', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffe066' } },
-  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for 380% attack and knocks foes back.', proj: 'bullet',
+  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for {0} and knocks foes back.', proj: 'bullet',
     spr: { head: 'dwarf', skin: SK.pale, hair: '#ffd166', hat: 'none', hairStyle: 'bun', armor: '#4fae9c', armor2: '#2a6e64', cloth: '#7a4b2a', weapon: 'cannon', metal: '#5a5a6e' } },
-  { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls that fight until the siege ends.', proj: 'soul',
+  { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls with {0} HP and {1} attack that fight until the siege ends.', proj: 'soul',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
-  { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing 300% attack.', proj: 'spit',
+  { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Tongue Lash', aDesc: 'Yanks the toughest enemy in range, stunning it for 2s and dealing {0}.', proj: 'spit',
     spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'spear', metal: '#e6f0ff' } },
-  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies +35% attack for 4s.',
+  { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Thunder Roar', aDesc: 'Taunts every foe in a wide circle and gives all allies {0} attack for 4s.',
     spr: { head: 'beast', skin: '#8a5a32', snout: '#d9b48a', hat: 'none', ears: 'round', armor: '#6aa84f', armor2: '#3f7030', cloth: '#ffd84a', weapon: 'shield', metal: '#d9c38a' } },
-  { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for 12% max HP.', proj: 'heal',
+  { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'War Drums', aDesc: 'Gives every ally +45% attack speed for 4s and heals them for {0}.', proj: 'heal',
     spr: { head: 'orc', skin: SK.orc2, hair: '#ffffff', hairStyle: 'long', hat: 'none', armor: '#c94a7a', armor2: '#7a2a4a', cloth: '#ffd84a', weapon: 'totem', gem: '#ff5d8f' } },
   // tier 3
-  { id: 'aurelle', name: 'Queen Aurelle', race: 'human', cls: 'ranger', tier: 3, ability: 'sunlance', aName: 'Sunlance', aDesc: 'Fires a beam of sunlight across the whole field for 420% attack to every enemy in the line.', proj: 'arrowGold',
+  { id: 'aurelle', name: 'Queen Aurelle', race: 'human', cls: 'ranger', tier: 3, ability: 'sunlance', aName: 'Sunlance', aDesc: 'Fires a beam of sunlight across the whole field, dealing {0} to every enemy in the line.', proj: 'arrowGold',
     spr: { head: 'human', skin: SK.pale, hair: '#ffcf3a', hairStyle: 'long', hat: 'crown', armor: '#ffffff', armor2: '#d0c8ff', cloth: '#ff5d8f', weapon: 'bow', cape: '#7a4ae0' } },
-  { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, ability: 'rampage', aName: 'Rampage', aDesc: 'Charges through the enemy line, hitting everything in the way for 220% attack, then fights 40% faster for 4s.',
+  { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, ability: 'rampage', aName: 'Rampage', aDesc: 'Charges through the enemy line, hitting everything in the way for {0}, then fights 40% faster for 4s.',
     spr: { head: 'beast', skin: '#9a5a2a', snout: '#e8c49a', hat: 'horns', hornCol: '#f1ecdc', ears: 'round', armor: '#7a4a2a', armor2: '#4a2a1a', cloth: '#e8434d', weapon: 'axe', metal: '#d8dde8', cape: '#5a3a8c' } },
-  { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, ability: 'earthsplitter', aName: 'Earthsplitter', aDesc: 'Leaps into the biggest crowd and slams for 500% attack, stunning for 1s.',
+  { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, ability: 'earthsplitter', aName: 'Earthsplitter', aDesc: 'Leaps into the biggest crowd and slams for {0}, stunning for 1s.',
     spr: { head: 'orc', skin: '#4faa3a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'hammer', metal: '#ffcf3a', cape: '#e8434d' } },
-  { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, ability: 'deathMark', aName: 'Death Mark', aDesc: 'Marks 4 enemies. After 1.5s each mark bursts for 600% attack.',
+  { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, ability: 'deathMark', aName: 'Death Mark', aDesc: 'Marks 4 enemies. After 1.5s each mark bursts for {0}.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
-  { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for 260% attack, pushing every enemy back and slowing them.', proj: 'bubble',
+  { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Great Flood', aDesc: 'A wave sweeps the field for {0}, pushing every enemy back and slowing them.', proj: 'bubble',
     spr: { head: 'toad', skin: '#4a9e8f', belly: '#cfeedd', hat: 'wizard', armor: '#5a4ab0', armor2: '#352a7a', cloth: '#7cf0ff', weapon: 'staff', gem: '#5fd3ff' } },
-  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for 40% of their max HP.',
+  { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, ability: 'runicAegis', aName: 'Runic Aegis', aDesc: 'Taunts every foe in a wide circle and shields every ally for {0}.',
     spr: { head: 'dwarf', skin: SK.brown, hair: '#e8e8f0', hat: 'helm', plume: '#5fd3ff', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffcf3a', weapon: 'shield', metal: '#ffcf3a' } },
-  { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for 25% max HP.', proj: 'heal',
+  { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, ability: 'bloom', aName: 'Bloom', aDesc: 'Revives a fallen ally at 60% HP and heals everyone for {0}.', proj: 'heal',
     spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hairStyle: 'long', hat: 'crown', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff' } },
-  { id: 'kodo', name: 'Kodo Stormhorn', race: 'beast', cls: 'mage', tier: 3, ability: 'stampede', aName: 'Stampede', aDesc: 'Spirit beasts charge across the field, dealing 350% attack to everything they trample.', proj: 'spark',
+  { id: 'kodo', name: 'Kodo Stormhorn', race: 'beast', cls: 'mage', tier: 3, ability: 'stampede', aName: 'Stampede', aDesc: 'Spirit beasts charge across the field, dealing {0} to everything they trample.', proj: 'spark',
     spr: { head: 'beast', skin: '#6a6a8a', snout: '#c8c8e0', hat: 'horns', hornCol: '#ffe9b0', armor: '#2f4fb8', armor2: '#1f3080', cloth: '#ffd84a', weapon: 'totem', gem: '#7cf0ff' } },
 ];
 const HERO_BY_ID = Object.fromEntries(HEROES.map(h => [h.id, h]));
@@ -224,7 +264,7 @@ const STAT_KEYS = ['ad', 'ap', 'def'];
 const STAT_NAME = { ad: 'Attack', ap: 'Ability power', def: 'Defense' };
 
 // ===== Elements =====
-// style: which rolled stat powers the element (ad | ap | def)
+// style: which stat the element boosts (ad | ap | def)
 const ELEMENTS = {
   dark:      { name: 'Dark',      col: '#8a5ad8', col2: '#2a1a4a', style: 'ad',  title: 'the Umbral',      desc: 'Heals 18% of damage dealt. Finishes off non-boss foes under 10% HP.' },
   light:     { name: 'Light',     col: '#fff3b0', col2: '#ffcf3a', style: 'ap',  title: 'the Radiant',     desc: '+15% crit. Signatures also heal every ally 10%. Hits blind foes so they miss 25%.' },
@@ -407,7 +447,7 @@ const FINISHED = {
   'belt+belt': ["Big Belt Energy", 'titan', '+60% more HP. Grows the hero.'],
   'belt+glove': ['Hearty Mitts', 'hearty', 'Crits heal 4% max HP.'],
   'glove+glove': ['Lucky Dice', 'dice', '+30% crit. Crits deal a random 1.2× to 2.6×.'],
-  'spatula+spatula': ['Ladle of Destiny', 'destiny', '+2 to every rolled stat. Flips burgers and fate.'],
+  'spatula+spatula': ['Ladle of Destiny', 'destiny', '+10% attack, ability power and HP. Flips burgers and fate.'],
 };
 for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
 function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
@@ -467,7 +507,7 @@ const TECH = {
   resonance:{ name: 'Resonance Coils',    b: 2, t: 2, cost: 115, req: ['wells'],          desc: 'Element combos are 30% stronger.' },
   prism:    { name: 'Prism Array',        b: 2, t: 3, cost: 215, req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
   focus:    { name: 'Signature Focus',    b: 2, t: 3, cost: 195, req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
-  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, req: ['prism', 'focus'], desc: 'Every hero gains +1 to all rolled stats.' },
+  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
   vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 30,  req: [],                 desc: '+15% gold from kills.' },
   scav:     { name: 'Scavengers',         b: 3, t: 2, cost: 85,  req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
   drill:    { name: 'Drill Yard',         b: 3, t: 2, cost: 90, req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
@@ -514,7 +554,58 @@ const SPECS = {
   rogue:     { a: { name: 'Assassin', desc: r => `Rogue signatures are ${40 * r}% stronger and one rank higher.` },
                b: { name: 'Shadow Clones', ability: 'shadowClones', desc: r => `Rogues cast Shadow Clones instead: two shadow copies join the fight for the rest of the siege. Power ${100 + 25 * (r - 1)}%.` } },
 };
-const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero and blasts nearby foes back, stunning them.', bloodFrenzy: 'Heals, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd.', massRez: 'Every fallen hero gets back up and the whole team heals.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+const SPEC_ADESC = { aegisDome: 'Taunts foes in a wide circle, shields every hero for {0} and blasts nearby foes back for {1}, stunning them.', bloodFrenzy: 'Heals {0}, then attacks twice as fast and hits much harder for a few seconds.', hawkStrike: 'A spirit hawk dives across a whole lane for {0}. Foes it hits take 20% more damage.', meteor: 'After a short warning, a huge meteor flattens the biggest crowd for {0}.', massRez: 'Every fallen hero gets back up and the whole team heals for {0}.', shadowClones: 'Two shadow copies join the fight for the rest of the siege.' };
+
+// ===== Signature scalings (Cam 2026-10-15): every number on a signature comes from AD, AP and HP, so items matter.
+// ad/ap: share of attack damage / ability power, hp: share of the caster's max HP, thp: share of the target's max HP.
+const SIG_SCALE = {
+  shieldBash: [{ ad: 0.6, hp: 0.05 }, { hp: 0.25, ap: 1 }],
+  fireball: [{ ad: 0.5, ap: 2.4 }],
+  bladeDance: [{ ad: 1.8, ap: 0.4 }],
+  arrowRain: [{ ad: 0.6, ap: 0.2 }],
+  whirlwind: [{ ad: 0.5, hp: 0.015 }],
+  boneWall: [{ base: 40, ap: 1.5 }],
+  lilySplash: [{ ap: 3.5, thp: 0.1 }],
+  pounce: [{ ad: 4, ap: 0.8 }],
+  quake: [{ ad: 2.4, hp: 0.04 }],
+  chainLightning: [{ ad: 0.3, ap: 1.7 }],
+  dawnMend: [{ ap: 2.5, thp: 0.12 }],
+  cannonball: [{ ad: 3.2, ap: 0.8 }],
+  raiseDead: [{ ap: 6, hp: 0.15 }, { ap: 0.45, ad: 0.15 }],
+  tongueLash: [{ ad: 2.4, ap: 1 }],
+  thunderRoar: [{ base: 25, ap: 0.7, pct: true }],
+  warDrums: [{ ap: 1.2, thp: 0.06 }],
+  sunlance: [{ ad: 3.6, ap: 1 }],
+  rampage: [{ ad: 1.8, hp: 0.04 }],
+  earthsplitter: [{ ad: 4.2, hp: 0.08 }],
+  deathMark: [{ ad: 5, ap: 2 }],
+  greatFlood: [{ ad: 0.4, ap: 1.9 }],
+  runicAegis: [{ hp: 0.2, ap: 1.5 }],
+  bloom: [{ ap: 2, thp: 0.12 }],
+  stampede: [{ ad: 0.5, ap: 2.5 }],
+  aegisDome: [{ hp: 0.18, ap: 1.5 }, { ad: 0.6, hp: 0.06 }],
+  bloodFrenzy: [{ hp: 0.3 }],
+  hawkStrike: [{ ad: 2.7, ap: 0.8 }],
+  meteor: [{ ad: 0.8, ap: 4.3 }],
+  massRez: [{ ap: 1.5, thp: 0.1 }],
+  shadowClones: [{ ap: 1 }],
+};
+// the caster-side value of a scaling line (target-HP shares are added per target by the ability)
+function scaleValue(c, st, maxHp) { return (c.base || 0) + (c.ad || 0) * (st.atk || 0) + (c.ap || 0) * (st.apv || 0) + (c.hp || 0) * (maxHp || st.hp || 0); }
+function scaleParts(c) {
+  const out = [], pc = v => Math.round(v * 100) + '%';
+  if (c.ad) out.push(pc(c.ad) + ' AD'); if (c.ap) out.push(pc(c.ap) + ' AP'); if (c.hp) out.push(pc(c.hp) + ' max HP');
+  return out.join(' + ');
+}
+// "84 (50% AD + 240% AP)" with stats, the bare scaling without
+function scaleText(c, st) {
+  const parts = scaleParts(c), thp = c.thp ? Math.round(c.thp * 100) + '% of their max HP' : '';
+  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return (v != null ? '+' + v + '%' : '+' + c.base + '%') + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
+  if (!st) return [c.base ? String(c.base) : '', parts, thp].filter(Boolean).join(' + ');
+  const v = Math.round(scaleValue(c, st) * (st.sigMul || 1));
+  return `<b class="sv">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
+}
+function abilityText(ab, desc, st) { const S = SIG_SCALE[ab] || []; return String(desc || '').replace(/\{(\d)\}/g, (m, i) => S[+i] ? scaleText(S[+i], st) : m); }
 
 // ===== Field hazards: a card can change the battlefield for the next siege only =====
 // kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
@@ -605,7 +696,7 @@ const ENCOUNTERS = [
   { id: 'groupchat', title: "The Horde's Group Chat Leaked", text: '214 unread messages. Mostly memes. One says "everyone attack the left side lol".',
     opts: [{ label: 'Read the plans', fx: 'mod:fewer,xpAll:15', sub: 'Next siege is smaller. Heroes +15 XP from laughing.' }, { label: 'Reply with a meme', fx: 'mod:partyhats', sub: 'The horde is distracted. They arrive wearing party hats.' }] },
   { id: 'painter', title: 'The Royal Portrait Painter', text: '"Hold still. Look heroic. No, MORE heroic." Your champion has been posing for six hours.',
-    opts: [{ label: 'Add a mustache', fx: 'mustache', sub: 'A random hero grows a magnificent mustache: +1 to every rolled stat' }, { label: 'Sell the painting', fx: 'gold:55', sub: '+55 gold. It was a bad painting.' }] },
+    opts: [{ label: 'Add a mustache', fx: 'mustache', sub: 'A random hero grows a magnificent mustache: +5% attack, ability power and HP' }, { label: 'Sell the painting', fx: 'gold:55', sub: '+55 gold. It was a bad painting.' }] },
   { id: 'trebuchet', title: 'Package Delivered by Mistake', text: 'A crate addressed to "The Other Castle" arrived. It contains a single, very golden spatula.',
     opts: [{ label: 'Keep it', fx: 'comp:spatula', sub: 'A Golden Ladle. It combines into elemental crests.' }, { label: 'Return to sender', fx: 'gold:60', sub: '+60 gold. The courier is very generous' }] },
   { id: 'intern', title: 'The Necromancy Intern', text: '"I was told to raise the dead but I raised dinner." The roast chicken is walking around. It seems happy.',
@@ -678,7 +769,7 @@ const TEMPERS = {
 const TEMPER_KEYS = Object.keys(TEMPERS);
 function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEYS.length)]; }
 
-const NAMES_TIER = ['', 'Common', 'Rare', 'Epic'];
+
 
 const LOOT_AFTER = s => s % 3 === 0 || s % 5 === 0;   // a component every third siege, and after bosses
 const ROSTER_CAP = 8;

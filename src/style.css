@@ -994,3 +994,25 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 
 .syb.combo.nearc { opacity: .45; filter: saturate(.6); cursor: help; }
 .syb.combo.nearc .cnt { position: absolute; right: -4px; bottom: -4px; }
+
+/* ===== Rarity (Common to God) ===== */
+.rar { display: inline-block; font-family: var(--f-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 3px; border: 1px solid var(--ink); color: #10122a; text-transform: uppercase; background: var(--rc); box-shadow: 0 0 0 1px var(--rc2) inset; }
+.rar.r5 { background: linear-gradient(90deg, #fff3a0, #ffb0e8, #a8f0ff, #fff3a0); background-size: 200% 100%; animation: godshine 3s linear infinite; }
+@keyframes godshine { to { background-position: 200% 0; } }
+.dport .rar { position: absolute; top: 4px; right: 6px; }
+.dcard.rar-card { border-color: var(--rc); }
+.dcard.rar-card.r3, .dcard.rar-card.r4, .dcard.rar-card.r5 { box-shadow: 0 0 14px -2px var(--rc), inset 0 0 0 1px var(--rc); }
+.dcard.rar-card .dport { background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--rc) 35%, transparent), transparent 70%); }
+.rperk { font-size: 12px; color: var(--rc); margin: 4px 0 0; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 6px; font-family: var(--f-display); font-size: 14px; }
+.trio span { background: var(--ink); border-radius: 4px; padding: 2px 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+.trio small { font-size: 10px; color: var(--muted); }
+.trio .st-ad { color: #ffb08a; } .trio .st-ap { color: #c9a8ff; } .trio .st-def { color: #8ef0c0; }
+b.sv { color: var(--gold); }
+.hcard.rar-c { border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
+.hcard.rar-c.r0 { border-color: var(--ink); }
+.hcard .rtag { position: absolute; left: 2px; bottom: 2px; font-family: var(--f-display); font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10122a; background: var(--rc); border-radius: 2px; padding: 0 3px; }
+.fallen { background: color-mix(in srgb, var(--rose) 14%, transparent); border: 1px solid var(--rose); border-radius: 6px; padding: 6px 10px; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.fallen > b { color: var(--rose); font-family: var(--f-display); }
+.fallen span { display: inline-flex; align-items: center; gap: 4px; } .fallen img { width: 28px; height: 28px; }
+.fallen > small { flex-basis: 100%; color: var(--muted); }

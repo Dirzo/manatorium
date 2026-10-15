@@ -123,10 +123,12 @@ function buildCastle(run) {
   tower(82, 112 - Math.min(tier, 4), 16, 221, tier >= 6);
   if (tier >= 4) flag(15, 109 - Math.min(tier, 4) - 16 - Math.min(8, tier), '#b84b65');
   for (const x of [46, 73]) { p(x, 181, 2, 7, '#64462d'); R.castleTorches.push({ x, y: 179 }); }
-  // Drawbridge points towards the battlefield and joins the road.
-  poly([[50, 214], [69, 214], [92, 185], [79, 185]], OUTLINE);
-  poly([[52, 214], [68, 214], [90, 186], [79, 186]], '#986b43');
-  for (let i = 0; i < 6; i++) { const y = 190 + i * 4, x = 77 - i * 3; p(x, y, 13, 1, '#cd9a5f'); }
+  // Drawbridge is lowered: it lies flat from the gate threshold down onto the ground.
+  poly([[48, 212], [71, 212], [91, 237], [66, 237]], OUTLINE);
+  poly([[50, 213], [69, 213], [88, 235], [68, 235]], '#986b43');
+  for (let y = 215; y < 235; y += 3) { const k = (y - 213) / 22; p(50 + 18 * k + 1, y, 19, 1, '#cd9a5f'); }
+  poly([[69, 213], [71, 213], [91, 236], [88, 236]], '#64462d');
+  p(66, 236, 25, 2, '#64462d');
   // Lower lane defenses retain the existing collision boundary.
   for (let y = 232; y < H; y += 8) {
     p(89, y - 9, 9, 15, OUTLINE); p(90, y - 8, 7, 13, '#85603d'); p(90, y - 8, 2, 13, '#b78751');

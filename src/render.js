@@ -140,6 +140,12 @@ function drawUnit(g, u, t, opts = {}) {
   const x = Math.round(u.x), y = Math.round(u.y - (u.z || 0) + bob);
   // shadow
   g.fillStyle = 'rgba(26,18,48,0.28)'; const sw = Math.round(8 * sc); g.fillRect(Math.round(u.x) - sw / 2, Math.round(u.y), sw, 2); g.fillRect(Math.round(u.x) - sw / 2 + 1, Math.round(u.y) - 1, sw - 2, 1);
+  // rarity: a coloured ring at the feet, glowing for Mythic and up
+  const rr = u.inst && u.inst.rarity; if (rr && u.alive !== false) { const rc = RARITY[rr].col, rw = Math.round(10 * sc) + 2, uy = Math.round(u.y);
+    g.save(); g.globalAlpha = rr >= 3 ? 0.65 + 0.3 * Math.sin(t * 5 + (u.phase || 0)) : 0.75; g.fillStyle = rc;
+    g.fillRect(x - rw / 2 + 2, uy + 1, rw - 4, 1); g.fillRect(x - rw / 2 + 2, uy - 3, rw - 4, 1); g.fillRect(x - rw / 2, uy - 2, 1, 3); g.fillRect(x + rw / 2 - 1, uy - 2, 1, 3);
+    if (rr >= 5 && Math.random() < 0.15) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round((Math.random() - 0.5) * rw), y - Math.round(Math.random() * size), 1, 1); }
+    g.restore(); }
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
   const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : S.frames[fr];
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
