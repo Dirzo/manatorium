@@ -1014,6 +1014,8 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .trio small { font-size: 10px; color: var(--muted); }
 .trio .st-ad { color: #ffb08a; } .trio .st-ap { color: #c9a8ff; } .trio .st-def { color: #8ef0c0; }
 b.sv { color: var(--gold); }
+.sc-ad, b.sv-ad { color: #ff9b4a; } .sc-ap, b.sv-ap { color: #b48cff; } .sc-hp, b.sv-hp { color: #5ee38f; }
+.sc-ad, .sc-ap, .sc-hp { font-weight: 700; white-space: nowrap; }
 .hcard.rar-c { border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
 .hcard.rar-c.r0 { border-color: var(--ink); }
 .hcard .rtag { position: absolute; left: 2px; bottom: 2px; font-family: var(--f-display); font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10122a; background: var(--rc); border-radius: 2px; padding: 0 3px; }
@@ -1209,28 +1211,28 @@ const HEROES = [
   // tier 1
   { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground for {0}, stunning foes for 1.5s, and gains a shield of {1}.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
-  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd, dealing {0} in an area.', proj: 'fire',
+  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'cinderColossus', aName: 'Cinder Colossus', aDesc: 'Drops a Cinder Colossus onto the biggest crowd for {0}. It stays for 5s, stomping every foe near it for {1} and lumbering after the horde.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
   { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for {0}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'hood', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff' } },
-  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s: 6 volleys of {0} each.', proj: 'arrow',
+  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'glacierLance', aName: 'Glacier Lance', aDesc: 'Looses a giant arrow of ice across the whole field. The first foe hit takes {0} and freezes for up to 3.5s, longer the farther it flew. Everything else in its path takes 60% and is slowed.', proj: 'arrow',
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for {0}.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains {0} armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'cryptGrasp', aName: 'Grasp of the Crypt', aDesc: 'Taunts every foe in a wide circle, then grave hands burst up under the biggest crowd, dealing {0} and binding every foe there for 1.5s.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
-  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing each for {0}.', proj: 'heal',
+  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lotusSanctuary', aName: 'Lotus Sanctuary', aDesc: 'A great lotus blooms under your heroes for 4s. Allies inside heal {0} every half second and take 25% less damage, then it bursts to heal {1}.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
   { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for {0}.',
     spr: { head: 'beast', skin: SK.fur, snout: '#f3dcc0', hat: 'bandana', armor: '#5a4a8c', armor2: '#3a2f61', cloth: '#ff5d8f', weapon: 'daggers', metal: '#ffffff' } },
   // tier 2
   { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing {0} and knocking enemies back.',
     spr: { head: 'dwarf', skin: SK.tan, hair: '#ff8f3a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#3a64c9', weapon: 'hammer', metal: '#cfd6e6' } },
-  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for {0} each.', proj: 'spark',
+  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'tempestCage', aName: 'Tempest Cage', aDesc: 'Cages the biggest crowd in lightning for 3s. Bolts strike foes inside for {1}, anyone touching the bars is stunned and thrown back, and it ends in a thunderclap for {0}.', proj: 'spark',
     spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hairStyle: 'long', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff' } },
   { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for {0} and clears poison and stuns.', proj: 'heal',
     spr: { head: 'human', skin: SK.brown, hair: '#2a1a12', hairStyle: 'bun', hat: 'none', armor: '#f4f1ff', armor2: '#b8b0e0', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffe066' } },
-  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for {0} and knocks foes back.', proj: 'bullet',
+  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'rocketBarrage', aName: 'Rocket Barrage', aDesc: 'Fires a salvo of 6 rockets that carpet the enemy line, each exploding for {0} and knocking foes back.', proj: 'bullet',
     spr: { head: 'dwarf', skin: SK.pale, hair: '#ffd166', hat: 'none', hairStyle: 'bun', armor: '#4fae9c', armor2: '#2a6e64', cloth: '#7a4b2a', weapon: 'cannon', metal: '#5a5a6e' } },
   { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls with {0} HP and {1} attack that fight until the siege ends.', proj: 'soul',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
@@ -1682,21 +1684,32 @@ const SIG_SCALE = {
   meteor: [{ ad: 0.8, ap: 4.3 }],
   massRez: [{ ap: 1.5, thp: 0.1 }],
   shadowClones: [{ ap: 1 }],
+  cinderColossus: [{ ad: 0.4, ap: 1.8 }, { ad: 0.2, ap: 0.7 }],
+  glacierLance: [{ ad: 3.0, ap: 0.6 }],
+  cryptGrasp: [{ ad: 0.4, hp: 0.1 }],
+  tempestCage: [{ ad: 0.3, ap: 1.6 }, { ad: 0.1, ap: 0.6 }],
+  rocketBarrage: [{ ad: 1.1, ap: 0.3 }],
+  lotusSanctuary: [{ ap: 0.35, thp: 0.015 }, { ap: 1.5, thp: 0.08 }],
 };
 // the caster-side value of a scaling line (target-HP shares are added per target by the ability)
 function scaleValue(c, st, maxHp) { return (c.base || 0) + (c.ad || 0) * (st.atk || 0) + (c.ap || 0) * (st.apv || 0) + (c.hp || 0) * (maxHp || st.hp || 0); }
 function scaleParts(c) {
   const out = [], pc = v => Math.round(v * 100) + '%';
-  if (c.ad) out.push(pc(c.ad) + ' AD'); if (c.ap) out.push(pc(c.ap) + ' AP'); if (c.hp) out.push(pc(c.hp) + ' max HP');
+  if (c.ad) out.push(`<span class="sc-ad">${pc(c.ad)} AD</span>`); if (c.ap) out.push(`<span class="sc-ap">${pc(c.ap)} AP</span>`); if (c.hp) out.push(`<span class="sc-hp">${pc(c.hp)} max HP</span>`);
   return out.join(' + ');
+}
+// colour of the scaling that adds the most, so the total reads as "an AP spell" at a glance
+function scaleKind(c, st) {
+  const ad = (c.ad || 0) * (st ? st.atk || 0 : 1), ap = (c.ap || 0) * (st ? st.apv || 0 : 1), hp = (c.hp || 0) * (st ? st.hp || 0 : 10) + (c.thp ? 1e-6 : 0);
+  return hp > ad && hp > ap ? 'hp' : ap > ad ? 'ap' : ad > 0 ? 'ad' : c.thp ? 'hp' : 'base';
 }
 // "84 (50% AD + 240% AP)" with stats, the bare scaling without
 function scaleText(c, st) {
-  const parts = scaleParts(c), thp = c.thp ? Math.round(c.thp * 100) + '% of their max HP' : '';
-  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return (v != null ? '+' + v + '%' : '+' + c.base + '%') + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
+  const parts = scaleParts(c), thp = c.thp ? `<span class="sc-hp">${Math.round(c.thp * 100)}% of their max HP</span>` : '';
+  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return `<b class="sv sv-${scaleKind(c, st)}">${v != null ? '+' + v + '%' : '+' + c.base + '%'}</b>` + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
   if (!st) return [c.base ? String(c.base) : '', parts, thp].filter(Boolean).join(' + ');
   const v = Math.round(scaleValue(c, st) * (st.sigMul || 1));
-  return `<b class="sv">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
+  return `<b class="sv sv-${scaleKind(c, st)}">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
 }
 function abilityText(ab, desc, st) { const S = SIG_SCALE[ab] || []; return String(desc || '').replace(/\{(\d)\}/g, (m, i) => S[+i] ? scaleText(S[+i], st) : m); }
 
@@ -3323,6 +3336,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (src && src.side === 'hero' && src.st && src.st.el.salty && src.grumble) amount *= 1 + 0.02 * src.grumble;
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
+  if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
   let armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred;
   if (tgt.side === 'hero' && tgt.st.sp.gargoyle) armor += 5 * B.enemies.filter(e => e.alive && dist(e, tgt) < 30).length;
@@ -3525,6 +3539,78 @@ const ABILITIES = {
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
     for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.16 * RK(u))); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
   stampede(B, u) { const n = 4 + RK(u), D = AB(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
+  // ----- ultimates (Cam 2026-10-15): big, animated, and grander with every rarity step -----
+  cinderColossus(B, u) { const c = densest(B.enemies, 34, u, 999) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), size = 1 + 0.08 * rar + 0.03 * rk, D0 = AB(u, 0), D1 = AB(u, 1);
+    B.zones.push({ type: 'ult', vis: 'colossus', x: clamp(c.x, CASTLE_X + 30, W - 70), y: c.y, r: 26 * size, size, rar, pw: sigPower(u), t: 0, dur: 5 + rar, src: u, landed: false, tick: 0.9, stompT: -1, face: 1,
+      step(B, z, dt) {
+        if (!z.landed) { if (z.t >= 0.45) { z.landed = true; for (const e of inRadius(B.enemies, z, z.r * 1.4)) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, e.boss ? 0.4 : 0.9); }
+          FX.ultImpact(z.x, z.y, z.r * 1.4, 'colossus', z.rar); FX.sound('quake'); } return; }
+        const t = densest(B.enemies, 26, z, 160) || nearest(B.enemies, z, 200);
+        if (t && dist(t, z) > z.r * 0.6) { const d = dist(t, z) || 1, sp = 16 + 3 * z.rar; z.x = clamp(z.x + (t.x - z.x) / d * sp * dt, CASTLE_X + 30, W - 70); z.y = clamp(z.y + (t.y - z.y) / d * sp * dt, GRID.y + 10, GRID.y + GRID.rows * GRID.cell); z.face = t.x >= z.x ? 1 : -1; }
+        z.tick -= dt; if (z.tick <= 0) { z.tick = z.rar >= 5 ? 0.65 : 0.9; z.stompT = z.t;
+          for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, D1, { sig: true }); if (!e.boss) e.x += 6 * Math.sign(e.x - z.x || 1); }
+          if (z.rar >= 5 && t) { for (const e of B.enemies) if (e.alive && Math.abs(e.y - z.y) < 22 && (e.x - z.x) * z.face > 0 && Math.abs(e.x - z.x) < 90) dealDamage(B, u, e, D1 * 0.6, { sig: true }); FX.ultBreath(z.x + 10 * z.face * z.size, z.y - 26 * z.size, z.face); }
+          FX.ultStomp(z.x, z.y, z.r, z.rar); FX.sound('thud'); } },
+      end(B, z) { FX.ultImpact(z.x, z.y, z.r, 'colossusGone', z.rar); } });
+    FX.sound('cast'); },
+  glacierLance(B, u) { const c = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, D0 = AB(u), sx = u.x + 6, sy = u.y - 8, base = Math.atan2(c.y - u.y, c.x - u.x), angs = rar >= 5 ? [base - 0.16, base, base + 0.16] : [base];
+    for (const a of angs) { const hit = new Set();
+      B.zones.push({ type: 'ult', vis: 'lance', sx, sy, x: sx, y: sy, a, w: 10 + 3 * rar, rar, pw: sigPower(u), t: 0, dur: 1.6, src: u, first: false, trail: [],
+        step(B, z, dt) { const v = 430, px = z.x, py = z.y; z.x += Math.cos(z.a) * v * dt; z.y += Math.sin(z.a) * v * dt; z.trail.push([z.x, z.y]);
+          for (const e of B.enemies) { if (!e.alive || hit.has(e)) continue;
+            const L = Math.hypot(z.x - px, z.y - py) || 1, f = clamp(((e.x - px) * (z.x - px) + (e.y - py) * (z.y - py)) / (L * L), 0, 1);
+            if (Math.hypot(e.x - (px + f * (z.x - px)), e.y - (py + f * (z.y - py))) > z.w) continue; hit.add(e);
+            if (!z.first) { z.first = true; const fl = Math.min(1, Math.hypot(e.x - z.sx, e.y - z.sy) / 300); dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, (1 + 2.5 * fl) * (e.boss ? 0.4 : 1)); e.frozen = Math.max(e.frozen || 0, 1 + 2.5 * fl); FX.ultImpact(e.x, e.y, 24 + 4 * z.rar, 'ice', z.rar); FX.sound('freeze'); }
+            else { dealDamage(B, u, e, D0 * 0.6, { sig: true }); e.slowT = Math.max(e.slowT || 0, 2); e.slowAmt = Math.max(e.slowAmt || 0, 0.35); FX.particles(e.x, e.y - 8, 6, ['#ffffff', '#bff4ff', '#5fd3ff'], { spread: 8 }); } }
+          if (z.rar >= 3 && Math.random() < 0.5) FX.particles(z.x, z.y, 2, ['#ffffff', '#bff4ff'], { spread: 4 });
+          if (z.x > W + 30 || z.y < 0 || z.y > H) z.t = z.dur; },
+        end(B, z) { if (z.rar >= 3) B.zones.push({ type: 'ult', vis: 'frostTrail', pts: z.trail.filter((p, i) => i % 3 === 0), w: z.w, rar: z.rar, t: 0, dur: 3, tick: 0,
+          step(B, y, dt) { y.tick -= dt; if (y.tick > 0) return; y.tick = 0.3; for (const e of B.enemies) if (e.alive && y.pts.some(p => Math.abs(p[0] - e.x) < 8 && Math.abs(p[1] - e.y) < y.w)) { e.slowT = Math.max(e.slowT || 0, 0.6); e.slowAmt = Math.max(e.slowAmt || 0, 0.45); } } }); } }); }
+    FX.ultMuzzle(sx, sy, base, 'ice', rar); FX.sound('beam'); },
+  cryptGrasp(B, u) { const c = densest(B.enemies, 34, u, 170) || nearest(B.enemies, u, 200); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), rad = 40 * (1 + 0.1 * rar) + 5 * rk, D0 = AB(u), bind = 1.5 + 0.25 * rar;
+    guardTaunt(B, u, 3);
+    B.zones.push({ type: 'ult', vis: 'grasp', x: c.x, y: c.y, r: rad, rar, pw: sigPower(u), t: 0, dur: 0.35 + bind, src: u, done: false,
+      step(B, z, dt) { if (z.done || z.t < 0.35) return; z.done = true;
+        for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, bind * (e.boss ? 0.4 : 1)); e.bound = z.t + bind;
+          if (z.rar >= 4 && !e.boss) { e.x += (z.x - e.x) * 0.45; e.y += (z.y - e.y) * 0.45; } }
+        FX.ultImpact(z.x, z.y, z.r, 'grasp', z.rar); FX.shake(5 + z.rar); FX.sound('bash'); } });
+    FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.sound('summon'); },
+  tempestCage(B, u) { const c = densest(B.enemies, 34, u, u.st.range * 1.8) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), rad = 44 * (1 + 0.1 * rar) + 4 * rk, D0 = AB(u, 0), D1 = AB(u, 1), inside = new Set(inRadius(B.enemies, c, rad));
+    B.zones.push({ type: 'ult', vis: 'cage', x: c.x, y: c.y, r: rad, rar, pw: sigPower(u), t: 0, dur: 3 + 0.5 * rar, src: u, tick: 0, bolts: [],
+      step(B, z, dt) {
+        for (const e of B.enemies) { if (!e.alive) continue; const d = dist(e, z);
+          if (d < z.r * 0.9) inside.add(e);
+          else if (inside.has(e) && d > z.r * 0.92) { const k = z.r * 0.85 / (d || 1); if (!e.boss) { e.x = z.x + (e.x - z.x) * k; e.y = z.y + (e.y - z.y) * k; }
+            if (!(e.cageT > B.t)) { e.cageT = B.t + 1; e.stun = Math.max(e.stun, e.boss ? 0.3 : 0.8); dealDamage(B, u, e, D1, { sig: true }); FX.ultBolt(e.x, e.y - 10, z.rar, true); } } }
+        z.tick -= dt; if (z.tick <= 0) { z.tick = 0.4 - 0.04 * z.rar; const live = [...inside].filter(e => e.alive && dist(e, z) <= z.r * 1.05);
+          for (let i = 0; i < 1 + (z.rar >= 4 ? 1 : 0) && live.length; i++) { const e = pick(live); dealDamage(B, u, e, D1, { sig: true }); FX.ultBolt(e.x, e.y - 8, z.rar, false); } FX.sound('zap'); } },
+      end(B, z) { for (const e of B.enemies) if (e.alive && dist(e, z) <= z.r * 1.05) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, 0.5); }
+        FX.ultImpact(z.x, z.y, z.r, 'thunder', z.rar); FX.flash(z.rar >= 5 ? '#fff3a0' : '#bff4ff', 0.25); FX.shake(6 + z.rar); FX.sound('boom'); } });
+    FX.sound('zap'); },
+  rocketBarrage(B, u) { const live = B.enemies.filter(e => e.alive && !e.onRafter); if (!live.length) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), n = 6 + 2 * rar + rk, D0 = AB(u), rad = 16 + 2 * rar, pw = sigPower(u), gold = rar >= 5;
+    const front = live.slice().sort((a, b) => a.x - b.x).slice(0, Math.max(4, Math.ceil(live.length * 0.7)));
+    B.zones.push({ type: 'ult', vis: null, t: 0, dur: 0.12 * n + 0.1, left: n, tick: 0, src: u,
+      step(B, z, dt) { z.tick -= dt; if (z.tick > 0 || z.left <= 0 || !u.alive) return; z.tick = 0.12; z.left--;
+        const e = pick(front.filter(x => x.alive)) || nearest(B.enemies, u, 999); if (!e) return; const tx = e.x + rand(-12, 12), ty = e.y + rand(-8, 8);
+        fireProj(B, u, null, 'orb', 0, { tx, ty: ty - 6, fixed: true, speed: 240, arc: 0.45 * Math.abs(tx - u.x), vfx: { shape: 'rocket', col: gold ? '#ffd84a' : '#ff6a3a', col2: gold ? '#ffffff' : '#ffe08a', pw, size: 1 + 0.08 * rar },
+          onLand: p => { for (const x of inRadius(B.enemies, { x: p.tx, y: p.ty + 6 }, rad)) { dealDamage(B, u, x, D0, { sig: true }); if (!x.boss) x.x += 8; }
+            FX.blast(p.tx, p.ty + 6, rad, gold ? ['#ffffff', '#fff3a0', '#ffd84a', '#a8601a'] : ['#ffffff', '#ffe08a', '#ff6a3a', '#5a2a2a'], pw, { shards: 6 }); FX.sound('boom'); } });
+        FX.particles(u.x + 6, u.y - 14, 6, ['#ffffff', '#c8c8d8'], { spread: 6, up: true, grav: -30 }); FX.sound('cannon'); } });
+    return true; },
+  lotusSanctuary(B, u) { const allies = B.heroes.filter(h => h.alive && !h.rafter); if (!allies.length) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), cx = allies.reduce((a, h) => a + h.x, 0) / allies.length, cy = allies.reduce((a, h) => a + h.y, 0) / allies.length, rad = 52 * (1 + 0.1 * rar) + 4 * rk;
+    B.zones.push({ type: 'ult', vis: 'lotus', x: cx, y: cy, r: rad, rar, pw: sigPower(u), t: 0, dur: 4 + 0.5 * rar, src: u, tick: 0,
+      step(B, z, dt) { z.tick -= dt; for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r) h.lotusT = B.t + 0.3;
+        if (z.tick <= 0) { z.tick = 0.5; for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r) { healUnit(B, u, h, ABH(u, 0, h), true); if (Math.random() < 0.5) FX.particles(h.x, h.y - 6, 3, ['#ffb0d8', '#ffffff'], { spread: 6, up: true }); } } },
+      end(B, z) { for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r * 1.1) healUnit(B, u, h, ABH(u, 1, h));
+        if (z.rar >= 5) { const dead = B.heroes.find(h => !h.alive && !h.temp && dist(h, z) <= z.r * 1.5); if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.5; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ffd84a', true); } }
+        FX.ultImpact(z.x, z.y, z.r, 'lotus', z.rar); FX.sound('heal'); } });
+    FX.sound('heal'); },
   // ----- class spec signatures (meta) -----
   aegisDome(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += AB(u) * (1 + 0.11 * r); }
     for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, AB(u, 1), { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
@@ -3747,6 +3833,7 @@ function stepBattle(B, dt) {
   for (const z of B.zones) { z.t += dt;
     if (z.type === 'arrows') { if (z.t >= z.every) { z.t = 0; z.n--; for (const e of inRadius(B.enemies, z, z.r)) dealDamage(B, z.src, e, z.dmg, { noProc: true, sig: true }); FX.arrowStorm(z.x, z.y, z.r, z.pw || 1); FX.sound('arrows'); if (z.n <= 0) z.dead = true; } }
     else if (z.type === 'telegraph') { if (z.t >= z.dur) { z.dead = true; z.onEnd(z); } }
+    else if (z.type === 'ult') { z.step(B, z, dt); if (z.t >= z.dur && !z.dead) { z.dead = true; if (z.end) z.end(B, z); } }
     else if (z.type === 'breath') { z.tick -= dt; if (z.tick <= 0) { z.tick = 0.2; const src = z.src; if (!src.alive) { z.dead = true; continue; }
         for (const h of B.heroes) if (h.alive && h.x < src.x && h.x > src.x - 110 && Math.abs(h.y - src.y) < 10 + (src.x - h.x) * 0.45) dealDamage(B, src, h, src.atk * 0.35);
         if (src.x - 110 < CASTLE_X) damageCastle(B, src.atk * 0.2); FX.breath(src.x - 26, src.y - 22); } if (z.t >= z.dur) z.dead = true; }
@@ -3801,7 +3888,7 @@ function rafterJump(B, u) {
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
 // how grand a signature looks: signature power x ability power, square-rooted, about 1 early and up to 3 late
-function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3, Math.sqrt((st.sigMul || 1) * (st.ap || 1)))); }
+function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3.6, Math.sqrt((st.sigMul || 1) * (st.ap || 1)) * (1 + 0.12 * (st.rarity || 0)))); }
 function castSignature(B, u) {
   DTAG = 'ability'; let ok; try { ok = ABILITIES[u.st.ability || u.def.ability](B, u); } finally { DTAG = null; }
   if (ok === false) return false;
@@ -4660,7 +4747,7 @@ Object.assign(FX, {
 });
 
 function stepSpellFX(dt) {
-  stepSigVFX(dt); stepCastleVFX(dt);
+  stepSigVFX(dt); stepCastleVFX(dt); if (typeof stepUltFX === 'function') stepUltFX(dt);
   for (const s of FXS.spells) { s.t += dt;
     if (s.kind === 'smoke' && s.t > 0) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= 0.97; s.s *= 1 + 0.6 * dt; }
     if (s.kind === 'arrow' && s.t >= s.life && !s.landed) { s.landed = true;
@@ -4716,6 +4803,7 @@ function drawSpellFX(ctx, k, ox, oy, B) {
   }
   ctx.globalAlpha = 1;
   drawSigVFX(ctx, k, ox, oy, B);
+  if (typeof drawUltVFX === 'function') drawUltVFX(ctx, k, ox, oy, B);
   drawCastleVFX(ctx, k, ox, oy, B);
 }
 
@@ -4785,6 +4873,11 @@ function drawVfxShape(ctx, shape, x, y, r, a, col, col2, k) {
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(r * 1.1, 0); ctx.lineTo(-r * 0.4, -r * 0.15 - fl * 0.85); ctx.lineTo(-r * 0.9, 0); ctx.lineTo(-r * 0.4, r * 0.15 + fl * 0.85); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(r * 0.6, -r * 0.15, r * 0.3, r * 0.3); break; }
     case 'bolt': { glow(r * 2.4, col); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, r * 0.22);
       for (let i = 0; i < 4; i++) { let px = x, py = y; ctx.beginPath(); ctx.moveTo(px, py); const b = rand(0, Math.PI * 2); for (let j = 0; j < 3; j++) { px += Math.cos(b + rand(-0.7, 0.7)) * r * 0.9; py += Math.sin(b + rand(-0.7, 0.7)) * r * 0.9; ctx.lineTo(px, py); } ctx.stroke(); } break; }
+    case 'rocket': { ctx.translate(x, y); ctx.rotate(a); ctx.globalAlpha = 0.8; glowAt(ctx, -r * 1.6, 0, r * 1.4, col2); ctx.globalAlpha = 1;
+      ctx.fillStyle = OUTLINE; ctx.fillRect(-r * 1.4, -r * 0.6, r * 2.4, r * 1.2); ctx.beginPath(); ctx.moveTo(r * 1.0, -r * 0.6); ctx.lineTo(r * 1.8, 0); ctx.lineTo(r * 1.0, r * 0.6); ctx.fill();
+      ctx.fillStyle = '#d8dce8'; ctx.fillRect(-r * 1.2, -r * 0.4, r * 2.2, r * 0.8); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(r * 0.9, -r * 0.4); ctx.lineTo(r * 1.5, 0); ctx.lineTo(r * 0.9, r * 0.4); ctx.fill();
+      ctx.fillStyle = col; ctx.fillRect(-r * 1.4, -r * 0.9, r * 0.5, r * 1.8); ctx.fillStyle = '#ffffff'; ctx.fillRect(-r * 0.6, -r * 0.4, r * 0.3, r * 0.8);
+      for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.8 - i * 0.25; ctx.fillStyle = i ? col : '#ffffff'; ctx.beginPath(); ctx.arc(-r * (1.8 + i * 0.7) + rand(-1, 1), rand(-1, 1) * r * 0.3, r * (0.5 - i * 0.1), 0, Math.PI * 2); ctx.fill(); } break; }
     default: { glow(r * 2.2, col); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.restore();
@@ -4937,6 +5030,194 @@ function drawCastleVFX(ctx, k, ox, oy, B) {
     }
     ctx.restore();
   }
+}
+
+// ===== Ultimates: Cinder Colossus, Glacier Lance, Grasp of the Crypt, Tempest Cage, Rocket Barrage, Lotus Sanctuary =====
+// The sim keeps each ultimate as a B.zones entry of type 'ult' with a `vis` kind; this file draws them.
+// Ground layers draw pixel-sized under units (drawUltGround), tall layers draw on the hi-res pass (drawUltVFX).
+// Every one grows with rarity (z.rar 0..5): bigger, more pieces, richer colors, and a God-tier flourish.
+const ULT_FIRE = ['#ffffff', '#fff3a0', '#ffd23a', '#ff8a2a', '#ff3d2d', '#8a1a2a'];
+const ULT_GOD = ['#ffffff', '#fff3a0', '#ffb0e8', '#a8f0ff'];
+const rarCol = r => RARITY[r || 0].col;
+
+Object.assign(FX, {
+  ultImpact(x, y, r, kind, rar = 0) {
+    const big = 1 + 0.15 * rar;
+    switch (kind) {
+      case 'colossus': FX.blast(x, y, r, rar >= 5 ? ['#ffffff', '#fff3a0', '#ffd84a', '#ff8a2a'] : ['#ffffff', '#ffd23a', '#ff8a2a', '#5a2a1a'], 1.5 + 0.3 * rar, { shards: 14 + 3 * rar });
+        FX.fireburst(x, y, r * 0.7, 1 + 0.3 * rar); for (let i = 0; i < 10 + 3 * rar; i++) FXS.spells.push({ kind: 'urock', x, y: y - 6, vx: rand(-90, 90) * big, vy: -rand(60, 150), s: rand(2, 4), t: 0, life: rand(0.6, 1) });
+        FXS.decals.push({ kind: 'crater', x, y, r: r * 0.5, t: 0, life: 4 + rar }); FX.shake(9 + 2 * rar); FX.flash('#ff8a3a', 0.25); FX.hitstop(0.08); break;
+      case 'colossusGone': for (let i = 0; i < 14; i++) FXS.spells.push({ kind: 'urock', x: x + rand(-10, 10), y: y - rand(4, 30), vx: rand(-40, 40), vy: -rand(10, 60), s: rand(2, 4), t: 0, life: rand(0.5, 0.9) });
+        FX.puff(x, y, 2); FX.particles(x, y - 14, 20, ULT_FIRE.slice(1, 5), { spread: 16, up: true }); break;
+      case 'ice': FX.blast(x, y, r, rar >= 5 ? ['#ffffff', '#fff3a0', '#a8f0ff', '#5fd3ff'] : ['#ffffff', '#e6fbff', '#9ff6ff', '#3a8aa8'], 1.2 + 0.25 * rar, { shards: 10 + 3 * rar });
+        for (let i = 0; i < 6 + rar; i++) FXS.spells.push({ kind: 'icicle', x: x + rand(-r, r) * 0.6, y: y + rand(-4, 6), h: rand(8, 16) * big, t: -i * 0.03, life: 1.6 }); FX.flash('#bff4ff', 0.18); break;
+      case 'grasp': FX.shockwave(x, y, r * 1.4, rarCol(Math.max(2, rar))); FX.shockwave(x, y, r * 1.9, '#9dff6a');
+        FX.particles(x, y - 4, 30 + 8 * rar, ['#f1ecdc', '#9dff6a', rarCol(Math.max(2, rar))], { spread: r, up: true, grav: 60 }); break;
+      case 'thunder': FXS.spells.push({ kind: 'ubolt', x, y, big: true, rar, t: 0, life: 0.45 }); FX.blast(x, y, r * 0.7, rar >= 5 ? ['#ffffff', '#fff3a0', '#ffd84a', '#a8601a'] : ['#ffffff', '#e8f6ff', '#9fd8ff', '#3a4aa8'], 1.5 + 0.3 * rar, { shards: 10 }); break;
+      case 'lotus': for (let i = 0; i < 26 + 6 * rar; i++) { const a = rand(0, Math.PI * 2), sp = rand(30, 90) * big; FXS.spells.push({ kind: 'petal', x, y: y - 6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 30, rot: rand(0, 6), col: rar >= 5 ? pick(ULT_GOD) : pick(['#ffb0d8', '#ff7ab8', '#ffffff']), t: 0, life: rand(0.8, 1.4) }); }
+        FX.shockwave(x, y, r * 1.3, rar >= 5 ? '#ffd84a' : '#ffb0d8'); FX.flash('#ffd0e8', 0.15); break;
+    }
+  },
+  ultStomp(x, y, r, rar = 0) { FX.shockwave(x, y, r * 1.2, rar >= 5 ? '#fff3a0' : '#ff8a3a'); FX.particles(x, y, 12 + 3 * rar, ['#c9b48a', '#8a6a4a', '#ff8a2a'], { spread: r * 0.8 }); FX.shake(3 + rar * 0.6);
+    FXS.decals.push({ kind: 'crack', x, y, r: r * 0.8, t: 0, life: 1.2 }); },
+  ultBreath(x, y, face) { for (let i = 0; i < 26; i++) FXS.spells.push({ kind: 'flame', x, y, vx: face * rand(90, 170), vy: rand(-25, 25), s: rand(2, 5), t: -i * 0.012, life: rand(0.35, 0.55) }); },
+  ultMuzzle(x, y, a, kind, rar = 0) { for (let i = 0; i < 16 + 4 * rar; i++) { const b = a + rand(-0.6, 0.6), sp = rand(40, 120); FXS.parts.push({ x, y, vx: Math.cos(b) * sp, vy: Math.sin(b) * sp, life: rand(0.2, 0.45), t: 0, color: pick(['#ffffff', '#bff4ff', '#5fd3ff']), size: 1, grav: 0 }); }
+    FX.shockwave(x, y, 14 + 3 * rar, '#bff4ff'); FX.shake(3 + rar); },
+  ultBolt(x, y, rar = 0, small = false) { FXS.spells.push({ kind: 'ubolt', x, y, rar, small, t: 0, life: small ? 0.2 : 0.28 }); FX.particles(x, y, small ? 4 : 8, rar >= 5 ? ['#ffffff', '#fff3a0'] : ['#ffffff', '#bff4ff', '#5fd3ff'], { spread: 6 }); },
+});
+
+function stepUltFX(dt) {
+  for (const s of FXS.spells) { if (s.t < 0) continue;
+    if (s.kind === 'urock') { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 320 * dt; }
+    else if (s.kind === 'flame') { s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.96; s.s *= 1 + 1.5 * dt; }
+    else if (s.kind === 'petal') { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 40 * dt; s.vx *= 0.97; s.rot += 6 * dt; } }
+}
+
+// ----- ground layer: pixel-sized, under the units -----
+function drawUltGround(g, B) {
+  for (const d of FXS.decals) { const a = 1 - d.t / d.life;
+    if (d.kind === 'crater') { g.globalAlpha = 0.35 * a; g.fillStyle = '#2a1a1a'; g.beginPath(); g.ellipse(Math.round(d.x), Math.round(d.y), d.r, d.r * 0.42, 0, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = a * (0.5 + 0.3 * Math.sin(FXS.clock * 6)); g.fillStyle = '#ff8a2a'; for (let i = 0; i < 9; i++) { const an = i * 0.7; g.fillRect(Math.round(d.x + Math.cos(an) * d.r * 0.7), Math.round(d.y + Math.sin(an) * d.r * 0.3), 2, 1); } }
+    else if (d.kind === 'crack') { g.globalAlpha = 0.6 * a; g.fillStyle = '#3a2a1a'; for (let i = 0; i < 6; i++) { const an = i * 1.05; for (let j = 2; j < d.r; j += 2) g.fillRect(Math.round(d.x + Math.cos(an + j * 0.04) * j), Math.round(d.y + Math.sin(an + j * 0.04) * j * 0.4), 1, 1); } }
+  }
+  g.globalAlpha = 1;
+  if (!B) return;
+  for (const z of B.zones) { if (z.type !== 'ult' || !z.vis) continue; const kk = Math.min(1, z.t / z.dur), x = Math.round(z.x), y = Math.round(z.y);
+    if (z.vis === 'grasp') { const up = Math.min(1, z.t / 0.35), fade = z.t > z.dur - 0.3 ? (z.dur - z.t) / 0.3 : 1;
+      g.globalAlpha = 0.5 * up * fade; g.fillStyle = '#1a1028'; g.beginPath(); g.ellipse(x, y, z.r * up, z.r * 0.45 * up, 0, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.85 * fade; g.fillStyle = z.rar >= 5 ? '#ffd84a' : z.rar >= 2 ? rarCol(z.rar) : '#9dff6a';
+      for (let i = 0; i < 64; i++) { const an = i / 64 * Math.PI * 2; g.fillRect(Math.round(x + Math.cos(an) * z.r * up), Math.round(y + Math.sin(an) * z.r * 0.45 * up), 1, 1); }
+      for (let i = 0; i < 7 + z.rar; i++) { const an = i * 2.4; for (let j = 0; j < z.r * up * 0.9; j += 3) g.fillRect(Math.round(x + Math.cos(an) * j), Math.round(y + Math.sin(an) * j * 0.45), 1, 1); } }
+    else if (z.vis === 'cage') { const up = Math.min(1, z.t / 0.25);
+      g.globalAlpha = 0.18 + 0.08 * Math.sin(FXS.clock * 20); g.fillStyle = z.rar >= 5 ? '#fff3a0' : '#9fd8ff'; g.beginPath(); g.ellipse(x, y, z.r * up, z.r * 0.5 * up, 0, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.9; g.fillStyle = '#ffffff'; for (let i = 0; i < 80; i++) { const an = i / 80 * Math.PI * 2 + FXS.clock; if (i % 2) g.fillRect(Math.round(x + Math.cos(an) * z.r * up), Math.round(y + Math.sin(an) * z.r * 0.5 * up), 1, 1); } }
+    else if (z.vis === 'lotus') { const up = Math.min(1, z.t / 0.4), fade = z.t > z.dur - 0.3 ? (z.dur - z.t) / 0.3 : 1, n = 8 + 2 * Math.min(z.rar, 4), rot = FXS.clock * 0.4;
+      const cols = z.rar >= 5 ? ['#fff3a0', '#ffd84a', '#ffffff'] : z.rar >= 3 ? ['#ff9fd0', rarCol(z.rar), '#ffffff'] : ['#ffb0d8', '#ff7ab8', '#ffe6f2'];
+      g.globalAlpha = 0.28 * fade; g.fillStyle = cols[0]; g.beginPath(); g.ellipse(x, y, z.r * up, z.r * 0.5 * up, 0, 0, Math.PI * 2); g.fill();
+      for (let layer = 0; layer < 2; layer++) for (let i = 0; i < n; i++) { const an = rot * (layer ? -1 : 1) + (i + layer * 0.5) / n * Math.PI * 2, d = z.r * up * (layer ? 0.45 : 0.72);
+        g.globalAlpha = (layer ? 0.55 : 0.4) * fade; g.fillStyle = cols[layer ? 2 : 1];
+        g.beginPath(); g.ellipse(Math.round(x + Math.cos(an) * d), Math.round(y + Math.sin(an) * d * 0.5), z.r * 0.2 * up, z.r * 0.09 * up, an, 0, Math.PI * 2); g.fill(); }
+      g.globalAlpha = 0.9 * fade; g.fillStyle = '#ffd84a'; g.fillRect(x - 2, y - 1, 4, 2); }
+    else if (z.vis === 'frostTrail') { g.globalAlpha = 0.5 * (1 - kk); g.fillStyle = '#d8f6ff'; for (const p of z.pts) { g.fillRect(Math.round(p[0]) - 3, Math.round(p[1]) - 1, 6, 2); g.fillStyle = Math.random() < 0.5 ? '#9ff6ff' : '#ffffff'; } }
+    else if (z.vis === 'colossus' && z.landed) { g.globalAlpha = 0.3; g.fillStyle = '#1a1028'; g.beginPath(); g.ellipse(x, y + 1, 14 * z.size, 4 * z.size, 0, 0, Math.PI * 2); g.fill(); }
+    else if (z.vis === 'colossus') { const f = Math.min(1, z.t / 0.45); g.globalAlpha = 0.25 + 0.4 * f; g.fillStyle = '#1a1028'; g.beginPath(); g.ellipse(x, y + 1, 18 * z.size * f, 5 * z.size * f, 0, 0, Math.PI * 2); g.fill(); }
+  }
+  g.globalAlpha = 1;
+}
+
+// ----- hi-res layer, over the scene -----
+function drawUltVFX(ctx, k, ox, oy, B) {
+  const X = x => x * k + ox, Y = y => y * k + oy;
+  if (B) for (const z of B.zones) { if (z.type !== 'ult' || !z.vis) continue;
+    if (z.vis === 'colossus') drawColossus(ctx, z, X(z.x), Y(z.y), k);
+    else if (z.vis === 'lance') drawLance(ctx, z, X, Y, k);
+    else if (z.vis === 'grasp') drawGrasp(ctx, z, X(z.x), Y(z.y), k);
+    else if (z.vis === 'cage') drawCage(ctx, z, X(z.x), Y(z.y), k);
+    else if (z.vis === 'lotus') drawLotusMotes(ctx, z, X(z.x), Y(z.y), k);
+  }
+  for (const s of FXS.spells) { if (s.t < 0) continue; const kk = Math.min(1, s.t / s.life);
+    if (s.kind === 'urock') { ctx.globalAlpha = 1 - kk * kk; ctx.fillStyle = OUTLINE; ctx.fillRect(X(s.x) - s.s * k * 0.6, Y(s.y) - s.s * k * 0.6, s.s * k * 1.2, s.s * k * 1.2); ctx.fillStyle = '#6a5a5a'; ctx.fillRect(X(s.x) - s.s * k * 0.4, Y(s.y) - s.s * k * 0.4, s.s * k * 0.8, s.s * k * 0.8); ctx.fillStyle = '#ff8a2a'; ctx.fillRect(X(s.x) - k * 0.5, Y(s.y) - k * 0.5, k, k); }
+    else if (s.kind === 'flame') { ctx.globalAlpha = 1 - kk; ctx.fillStyle = ULT_FIRE[Math.min(5, 1 + Math.floor(kk * 5))]; ctx.beginPath(); ctx.arc(X(s.x), Y(s.y), s.s * k, 0, Math.PI * 2); ctx.fill(); }
+    else if (s.kind === 'petal') { ctx.globalAlpha = 1 - kk; ctx.save(); ctx.translate(X(s.x), Y(s.y)); ctx.rotate(s.rot); ctx.fillStyle = s.col; ctx.beginPath(); ctx.ellipse(0, 0, 3 * k, 1.4 * k, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+    else if (s.kind === 'icicle') { const up = kk < 0.1 ? kk / 0.1 : kk > 0.8 ? (1 - kk) / 0.2 : 1, x = X(s.x), y = Y(s.y), h = s.h * k * up, w = 3 * k;
+      ctx.globalAlpha = 1; ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.moveTo(x - w - k, y); ctx.lineTo(x, y - h - k); ctx.lineTo(x + w + k, y); ctx.fill();
+      ctx.fillStyle = '#9ff6ff'; ctx.beginPath(); ctx.moveTo(x - w, y); ctx.lineTo(x, y - h); ctx.lineTo(x + w, y); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - k * 0.6, y - h * 0.8, k * 1.2, h * 0.6); }
+    else if (s.kind === 'ubolt') { const x = X(s.x), y = Y(s.y), top = s.big ? 0 : y - 70 * k, gold = s.rar >= 5, w = (s.big ? 7 : s.small ? 1.5 : 3) * k * (1 - kk * 0.5);
+      ctx.globalAlpha = 1 - kk; let px = x + rand(-8, 8) * k, py = top; const pts = [[px, py]]; while (py < y) { py += rand(8, 16) * k; px += rand(-9, 9) * k; pts.push([py >= y ? x : px, Math.min(py, y)]); }
+      for (const [lw, col] of [[w * 3, gold ? 'rgba(255,216,74,0.35)' : 'rgba(95,211,255,0.35)'], [w, gold ? '#fff3a0' : '#bff4ff'], [w * 0.4, '#ffffff']]) { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.stroke(); }
+      if (s.big) { ctx.globalAlpha = 0.5 * (1 - kk); glowAt(ctx, x, y, 40 * k, gold ? '#ffd84a' : '#9fd8ff'); } }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// a lumbering heap of rock held together by lava; arms rise before each stomp and slam down
+function drawColossus(ctx, z, x, y, k) {
+  const r = z.rar, s = 1.3 * k * z.size, fall = z.landed ? 0 : Math.pow(1 - Math.min(1, z.t / 0.45), 2) * 170 * k;
+  const fade = z.t > z.dur - 0.4 ? Math.max(0, (z.dur - z.t) / 0.4) : 1, sink = (1 - fade) * 14 * s;
+  const lava = r >= 5 ? ['#ffffff', '#fff3a0', '#ffe066'] : r >= 4 ? ['#fff3a0', '#ffd84a', '#ffb030'] : r >= 3 ? ['#ffd0e0', '#ff5d8f', '#c02a5a'] : ['#fff3a0', '#ffb23a', '#ff5a2a'];
+  const rock = r >= 5 ? ['#7a6a94', '#b8a8d8'] : r >= 2 ? ['#76606e', '#a8909c'] : ['#7a685c', '#a8968a'];
+  const lift = z.tick != null && z.landed ? (z.tick < 0.3 ? 1 - z.tick / 0.3 : z.t - z.stompT < 0.12 ? 0 : 0.25) : 0.6;
+  const step = Math.sin(z.t * 6) * (z.landed ? 1 : 0), face = z.face || 1;
+  ctx.save(); ctx.globalAlpha = fade; ctx.translate(x, y - fall + sink); ctx.scale(face, 1);
+  const blk = (bx, by, bw, bh, c) => { ctx.fillStyle = OUTLINE; ctx.fillRect((bx - 0.6) * s, (by - 0.6) * s, (bw + 1.2) * s, (bh + 1.2) * s); ctx.fillStyle = c[0]; ctx.fillRect(bx * s, by * s, bw * s, bh * s); ctx.fillStyle = c[1]; ctx.fillRect(bx * s, by * s, bw * s, Math.max(1, bh * 0.3) * s); };
+  const glow = (gx, gy, gr) => { ctx.save(); ctx.globalAlpha = fade * (0.55 + 0.35 * Math.sin(FXS.clock * 9 + gx)); glowAt(ctx, gx * s, gy * s, gr * s, lava[1]); ctx.restore(); };
+  // aura
+  ctx.save(); ctx.globalAlpha = fade * (0.25 + 0.05 * r); glowAt(ctx, 0, -14 * s, (16 + 2 * r) * s, lava[2]); ctx.restore();
+  // legs
+  blk(-6, -7 + step, 5, 7 - step, rock); blk(1, -7 - step, 5, 7 + step, rock);
+  // torso and lava core
+  blk(-9, -21, 18, 15, rock); ctx.fillStyle = lava[2]; ctx.fillRect(-3 * s, -17 * s, 6 * s, 7 * s); ctx.fillStyle = lava[1]; ctx.fillRect(-2 * s, -16 * s, 4 * s, 5 * s); ctx.fillStyle = lava[0]; ctx.fillRect(-1 * s, -15 * s, 2 * s, 3 * s); glow(0, -13, 9);
+  // cracks
+  ctx.fillStyle = lava[1]; for (const [cx, cy, cw, ch] of [[-8, -19, 3, 1], [5, -12, 3, 1], [-7, -10, 1, 3], [6, -20, 1, 4]]) ctx.fillRect(cx * s, cy * s, cw * s, ch * s);
+  // head with ember eyes
+  blk(-4, -27, 8, 6, rock); ctx.fillStyle = lava[0]; ctx.fillRect(-2 * s, -25 * s, 1.4 * s, 1.4 * s); ctx.fillRect(1 * s, -25 * s, 1.4 * s, 1.4 * s); glow(0, -24, 4);
+  // arms: raised overhead before a stomp, fists slamming the ground after
+  for (const side of [-1, 1]) { const ay = -20 - 10 * lift, ax = side * 12; ctx.save(); ctx.translate(ax * s, ay * s);
+    blk(-2.5, 0, 5, 9 + 6 * (1 - lift), rock); blk(-3.5, 8 + 6 * (1 - lift), 7, 6, rock); ctx.fillStyle = lava[1]; ctx.fillRect(-1 * s, (10 + 6 * (1 - lift)) * s, 2 * s, 2 * s); ctx.restore(); }
+  // rarity crown: Legendary gets a flame mane, God a halo of white fire
+  if (r >= 4) for (let i = 0; i < 5 + r; i++) { const fx = (-4 + i * 8 / (4 + r)) * s, fh = (3 + 2 * Math.sin(FXS.clock * 14 + i)) * s; ctx.fillStyle = lava[i % 2 ? 1 : 2]; ctx.beginPath(); ctx.moveTo(fx - 1.2 * s, -27 * s); ctx.lineTo(fx, -27 * s - fh); ctx.lineTo(fx + 1.2 * s, -27 * s); ctx.fill(); }
+  if (r >= 5) { ctx.strokeStyle = '#fff3a0'; ctx.lineWidth = 1.2 * k; ctx.globalAlpha = fade * 0.8; ctx.beginPath(); ctx.ellipse(0, -33 * s, 7 * s, 2 * s, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.restore();
+  if (Math.random() < 0.5 + 0.1 * r) FXS.parts.push({ x: z.x + rand(-10, 10) * z.size, y: z.y - rand(8, 34) * z.size, vx: rand(-8, 8), vy: -rand(10, 30), life: rand(0.3, 0.7), t: 0, color: pick(lava), size: 1, grav: -10 });
+}
+
+// a spear of ice the size of a tree trunk, frost streaming behind it
+function drawLance(ctx, z, X, Y, k) {
+  const r = z.rar, x = X(z.x), y = Y(z.y), L = (40 + 4 * r) * k, wd = (3 + 0.5 * r) * k, gold = r >= 5;
+  const tr = z.trail.slice(-24);
+  for (let i = 1; i < tr.length; i++) { const f = i / tr.length; ctx.globalAlpha = 0.5 * f; ctx.strokeStyle = gold ? (i % 2 ? '#fff3a0' : '#a8f0ff') : (i % 2 ? '#bff4ff' : '#ffffff'); ctx.lineWidth = wd * 2.4 * f; ctx.beginPath(); ctx.moveTo(X(tr[i - 1][0]), Y(tr[i - 1][1])); ctx.lineTo(X(tr[i][0]), Y(tr[i][1])); ctx.stroke(); }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(z.a); ctx.globalAlpha = 0.6; glowAt(ctx, 0, 0, L * 0.7, gold ? '#ffd84a' : '#5fd3ff'); ctx.globalAlpha = 1;
+  ctx.fillStyle = OUTLINE; ctx.fillRect(-L, -wd * 0.7, L, wd * 1.4); ctx.fillStyle = '#e6fbff'; ctx.fillRect(-L, -wd * 0.45, L, wd * 0.9); ctx.fillStyle = '#ffffff'; ctx.fillRect(-L, -wd * 0.15, L, wd * 0.3);
+  // fletching of frozen feathers
+  for (const sg of [-1, 1]) { ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(-L - 6 * k, sg * wd * 2.4); ctx.lineTo(-L + 8 * k, 0); ctx.fill(); ctx.fillStyle = gold ? '#ffd84a' : '#9ff6ff'; ctx.beginPath(); ctx.moveTo(-L + k, 0); ctx.lineTo(-L - 4 * k, sg * wd * 2); ctx.lineTo(-L + 6 * k, 0); ctx.fill(); }
+  // crystal head
+  const hl = (9 + r) * k; ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.moveTo(hl + k, 0); ctx.lineTo(-k, -wd * 2.2); ctx.lineTo(-3 * k, 0); ctx.lineTo(-k, wd * 2.2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = gold ? '#fff3a0' : '#9ff6ff'; ctx.beginPath(); ctx.moveTo(hl, 0); ctx.lineTo(0, -wd * 1.8); ctx.lineTo(-2 * k, 0); ctx.lineTo(0, wd * 1.8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(hl * 0.8, 0); ctx.lineTo(0, -wd * 0.6); ctx.lineTo(0, 0); ctx.fill();
+  ctx.restore();
+  if (Math.random() < 0.7) FXS.parts.push({ x: z.x - Math.cos(z.a) * 10, y: z.y - Math.sin(z.a) * 10 + rand(-3, 3), vx: rand(-20, 20), vy: rand(-10, 20), life: rand(0.3, 0.6), t: 0, color: pick(['#ffffff', '#bff4ff', gold ? '#ffd84a' : '#9ff6ff']), size: 1, grav: 20 });
+}
+
+// skeletal hands clawing up through the ground; Legendary and up add binding chains, God burns with soul fire
+function drawGrasp(ctx, z, x, y, k) {
+  const r = z.rar, n = 8 + 2 * r, up = Math.min(1, z.t / 0.35), fade = z.t > z.dur - 0.3 ? Math.max(0, (z.dur - z.t) / 0.3) : 1, rise = up * fade;
+  const bone = '#f1ecdc', fire = r >= 5 ? '#ffd84a' : r >= 2 ? rarCol(r) : '#9dff6a';
+  for (let i = 0; i < n; i++) { const an = i * 2.399 + 0.5, d = z.r * (0.25 + 0.7 * ((i * 0.618) % 1)), hx = x + Math.cos(an) * d * k, hy = y + Math.sin(an) * d * 0.45 * k, h = (10 + (i % 3) * 3) * k * rise, grab = Math.sin(FXS.clock * 8 + i) * 0.3;
+    ctx.globalAlpha = 1; ctx.fillStyle = OUTLINE; ctx.fillRect(hx - 2 * k, hy - h - k, 4 * k, h + k);
+    ctx.fillStyle = bone; ctx.fillRect(hx - k, hy - h, 2 * k, h);
+    // palm and curled fingers
+    ctx.fillStyle = OUTLINE; ctx.fillRect(hx - 3.5 * k, hy - h - 4 * k, 7 * k, 4.5 * k); ctx.fillStyle = bone; ctx.fillRect(hx - 2.5 * k, hy - h - 3 * k, 5 * k, 3 * k);
+    for (let f = -2; f <= 2; f++) { const fx = hx + f * 1.3 * k, fl = (3 + (f === 0 ? 1 : 0)) * k * (1 - grab * Math.abs(f) * 0.5); ctx.fillStyle = OUTLINE; ctx.fillRect(fx - 0.9 * k, hy - h - 3 * k - fl, 1.8 * k, fl); ctx.fillStyle = bone; ctx.fillRect(fx - 0.4 * k, hy - h - 3 * k - fl + 0.5 * k, 0.8 * k, fl - 0.5 * k); }
+    if (r >= 2) { ctx.globalAlpha = 0.45 * rise * (0.7 + 0.3 * Math.sin(FXS.clock * 12 + i)); glowAt(ctx, hx, hy - h - 2 * k, 5 * k, fire); }
+    if (r >= 4) { ctx.globalAlpha = 0.8 * rise; ctx.strokeStyle = r >= 5 ? '#ffd84a' : '#a8a8c0'; ctx.lineWidth = k; ctx.setLineDash([2 * k, 1.5 * k]); ctx.beginPath(); ctx.moveTo(hx, hy - h * 0.5); ctx.quadraticCurveTo((hx + x) / 2, hy - h - 6 * k, x, y - 6 * k); ctx.stroke(); ctx.setLineDash([]); } }
+  if (r >= 5 && Math.random() < 0.6) FXS.parts.push({ x: z.x + rand(-z.r, z.r) * 0.7, y: z.y + rand(-z.r, z.r) * 0.3, vx: 0, vy: -rand(20, 40), life: rand(0.3, 0.6), t: 0, color: pick(['#ffd84a', '#fff3a0', '#9dff6a']), size: 1, grav: -20 });
+  ctx.globalAlpha = 1;
+}
+
+// crystal pylons around the crowd with lightning arcing between them
+function drawCage(ctx, z, x, y, k) {
+  const r = z.rar, n = 6 + r, up = Math.min(1, z.t / 0.25), gold = r >= 5, fade = z.t > z.dur - 0.2 ? Math.max(0, (z.dur - z.t) / 0.2) : 1;
+  const pts = []; for (let i = 0; i < n; i++) { const an = i / n * Math.PI * 2 + 0.3; pts.push([x + Math.cos(an) * z.r * k, y + Math.sin(an) * z.r * 0.5 * k]); }
+  // dome shimmer
+  ctx.globalAlpha = 0.12 * fade; ctx.fillStyle = gold ? '#fff3a0' : '#9fd8ff'; ctx.beginPath(); ctx.ellipse(x, y - z.r * 0.3 * k, z.r * k, z.r * 0.75 * k, 0, Math.PI, 0); ctx.fill();
+  // arcs between pylon tips
+  const tipH = (16 + 2 * r) * k * up;
+  for (let i = 0; i < n; i++) { const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % n];
+    for (const [lw, col] of [[3 * k, gold ? 'rgba(255,216,74,0.35)' : 'rgba(95,211,255,0.35)'], [1.2 * k, gold ? '#fff3a0' : '#e8f6ff']]) { ctx.globalAlpha = fade * (0.6 + 0.4 * Math.random()); ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(ax, ay - tipH);
+      for (let j = 1; j < 5; j++) { const f = j / 5; ctx.lineTo(ax + (bx - ax) * f + rand(-3, 3) * k, ay - tipH + (by - ay) * f + rand(-4, 4) * k); } ctx.lineTo(bx, by - tipH); ctx.stroke(); } }
+  // pylons, back ones first
+  pts.map((p, i) => [p, i]).sort((a, b) => a[0][1] - b[0][1]).forEach(([[px, py], i]) => { ctx.globalAlpha = fade; const w = 3 * k;
+    ctx.fillStyle = OUTLINE; ctx.beginPath(); ctx.moveTo(px - w - k, py); ctx.lineTo(px - w * 0.6, py - tipH); ctx.lineTo(px, py - tipH - 5 * k); ctx.lineTo(px + w * 0.6, py - tipH); ctx.lineTo(px + w + k, py); ctx.fill();
+    ctx.fillStyle = gold ? '#ffd84a' : r >= 3 ? rarCol(r) : '#5fd3ff'; ctx.beginPath(); ctx.moveTo(px - w, py); ctx.lineTo(px - w * 0.5, py - tipH); ctx.lineTo(px, py - tipH - 4 * k); ctx.lineTo(px + w * 0.5, py - tipH); ctx.lineTo(px + w, py); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(px - k * 0.6, py - tipH, k * 1.2, tipH * 0.7);
+    ctx.globalAlpha = fade * (0.5 + 0.4 * Math.sin(FXS.clock * 20 + i)); glowAt(ctx, px, py - tipH - 2 * k, 6 * k, gold ? '#fff3a0' : '#9fd8ff'); });
+  ctx.globalAlpha = 1;
+}
+
+function drawLotusMotes(ctx, z, x, y, k) {
+  const fade = z.t > z.dur - 0.3 ? Math.max(0, (z.dur - z.t) / 0.3) : 1, gold = z.rar >= 5;
+  ctx.globalAlpha = 0.18 * fade; glowAt(ctx, x, y - 6 * k, z.r * k * 0.8, gold ? '#ffd84a' : '#ffb0d8'); ctx.globalAlpha = 1;
+  if (Math.random() < 0.5 + 0.1 * z.rar) { const an = rand(0, Math.PI * 2), d = rand(0, z.r); FXS.spells.push({ kind: 'petal', x: z.x + Math.cos(an) * d, y: z.y + Math.sin(an) * d * 0.5, vx: rand(-6, 6), vy: -rand(20, 40), rot: rand(0, 6), col: gold ? pick(ULT_GOD) : pick(['#ffb0d8', '#ffffff', '#ff7ab8']), t: 0, life: rand(0.8, 1.3) }); }
 }
 
 // ===== Arena renderer =====
@@ -5243,7 +5524,7 @@ function renderFrame(V, dt) {
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
-  drawSpellDecals(g);
+  drawSpellDecals(g); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
@@ -6188,7 +6469,7 @@ function clsTipHTML(c) {
 function abilityTipHTML(ab) {
   const d = HEROES.find(x => x.ability === ab), alt = Object.values(SPECS).map(s => s.b).find(b => b.ability === ab), nm = d ? d.aName : alt ? alt.name : ab;
   const desc = d ? d.aDesc : SPEC_ADESC[ab] || '', lines = (SIG_SCALE[ab] || []).map(scaleParts).filter(Boolean);
-  return `<b>${esc(nm)}</b>${lines.length ? `<div class="trec">Scales with: ${lines.join(' · ')}</div>` : ''}<p>${abilityText(ab, desc, null)}</p><p class="note">Items that add Attack damage, Ability power or HP raise these numbers directly. Signature power grows 7% a level from level ${SIG_LEVEL}. Ranks at levels 8, 12, 16 and 20 add targets or area, and rarer legends get extra ranks.</p>`;
+  return `<b>${esc(nm)}</b>${lines.length ? `<div class="trec">Scales with: ${lines.join(' · ')}</div>` : ''}<p>${abilityText(ab, desc, null)}</p><p class="note">Items that add <span class="sc-ad">Attack damage</span>, <span class="sc-ap">Ability power</span> or <span class="sc-hp">HP</span> raise these numbers directly. Signature power grows 7% a level from level ${SIG_LEVEL}. Ranks at levels 8, 12, 16 and 20 add targets or area, and rarer legends get extra ranks.</p>`;
 }
 function elTipHTML(e) {
   const E = ELEMENTS[e]; if (!E) return '';

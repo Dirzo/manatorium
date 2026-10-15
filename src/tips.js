@@ -25,7 +25,7 @@ function clsTipHTML(c) {
 function abilityTipHTML(ab) {
   const d = HEROES.find(x => x.ability === ab), alt = Object.values(SPECS).map(s => s.b).find(b => b.ability === ab), nm = d ? d.aName : alt ? alt.name : ab;
   const desc = d ? d.aDesc : SPEC_ADESC[ab] || '', lines = (SIG_SCALE[ab] || []).map(scaleParts).filter(Boolean);
-  return `<b>${esc(nm)}</b>${lines.length ? `<div class="trec">Scales with: ${lines.join(' · ')}</div>` : ''}<p>${abilityText(ab, desc, null)}</p><p class="note">Items that add Attack damage, Ability power or HP raise these numbers directly. Signature power grows 7% a level from level ${SIG_LEVEL}. Ranks at levels 8, 12, 16 and 20 add targets or area, and rarer legends get extra ranks.</p>`;
+  return `<b>${esc(nm)}</b>${lines.length ? `<div class="trec">Scales with: ${lines.join(' · ')}</div>` : ''}<p>${abilityText(ab, desc, null)}</p><p class="note">Items that add <span class="sc-ad">Attack damage</span>, <span class="sc-ap">Ability power</span> or <span class="sc-hp">HP</span> raise these numbers directly. Signature power grows 7% a level from level ${SIG_LEVEL}. Ranks at levels 8, 12, 16 and 20 add targets or area, and rarer legends get extra ranks.</p>`;
 }
 function elTipHTML(e) {
   const E = ELEMENTS[e]; if (!E) return '';

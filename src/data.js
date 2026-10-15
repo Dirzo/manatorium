@@ -116,28 +116,28 @@ const HEROES = [
   // tier 1
   { id: 'brann', name: 'Brann Ironward', race: 'human', cls: 'guardian', tier: 1, ability: 'shieldBash', aName: 'Shield Bash', aDesc: 'Taunts every foe in a wide circle, then slams the ground for {0}, stunning foes for 1.5s, and gains a shield of {1}.',
     spr: { head: 'human', skin: SK.pale, hair: '#8a4b2a', hat: 'helm', armor: '#b9c6e8', armor2: '#6c7fb8', cloth: '#3f6ae0', weapon: 'shield', metal: '#e8eefc', cape: '#e8434d' } },
-  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'fireball', aName: 'Fireball', aDesc: 'Hurls a fireball into the thickest crowd, dealing {0} in an area.', proj: 'fire',
+  { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, ability: 'cinderColossus', aName: 'Cinder Colossus', aDesc: 'Drops a Cinder Colossus onto the biggest crowd for {0}. It stays for 5s, stomping every foe near it for {1} and lumbering after the horde.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
   { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, ability: 'bladeDance', aName: 'Blade Dance', aDesc: 'Dashes through up to 4 enemies, striking each for {0}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'hood', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff' } },
-  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'arrowRain', aName: 'Arrow Rain', aDesc: 'Rains arrows on an area for 2s: 6 volleys of {0} each.', proj: 'arrow',
+  { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'glacierLance', aName: 'Glacier Lance', aDesc: 'Looses a giant arrow of ice across the whole field. The first foe hit takes {0} and freezes for up to 3.5s, longer the farther it flew. Everything else in its path takes 60% and is slowed.', proj: 'arrow',
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Whirlwind', aDesc: 'Spins for 2s, hitting everything nearby 8 times for {0}.',
     spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
-  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'boneWall', aName: 'Bone Wall', aDesc: 'Taunts every foe in a wide circle for 3s and gains {0} armor.',
+  { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'cryptGrasp', aName: 'Grasp of the Crypt', aDesc: 'Taunts every foe in a wide circle, then grave hands burst up under the biggest crowd, dealing {0} and binding every foe there for 1.5s.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
-  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lilySplash', aName: 'Lily Splash', aDesc: 'Splashes the 3 most wounded allies, healing each for {0}.', proj: 'heal',
+  { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lotusSanctuary', aName: 'Lotus Sanctuary', aDesc: 'A great lotus blooms under your heroes for 4s. Allies inside heal {0} every half second and take 25% less damage, then it bursts to heal {1}.', proj: 'heal',
     spr: { head: 'toad', skin: SK.toad, belly: '#d9f59b', hat: 'none', armor: '#ffd84a', armor2: '#d99a1f', cloth: '#ff7aa8', weapon: 'staff', gem: '#7cf0ff' } },
   { id: 'fenn', name: 'Fenn Burrowpaw', race: 'beast', cls: 'rogue', tier: 1, ability: 'pounce', aName: 'Pounce', aDesc: 'Leaps onto the farthest enemy in reach and mauls it for {0}.',
     spr: { head: 'beast', skin: SK.fur, snout: '#f3dcc0', hat: 'bandana', armor: '#5a4a8c', armor2: '#3a2f61', cloth: '#ff5d8f', weapon: 'daggers', metal: '#ffffff' } },
   // tier 2
   { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'quake', aName: 'Quake', aDesc: 'Sends a shockwave forward, dealing {0} and knocking enemies back.',
     spr: { head: 'dwarf', skin: SK.tan, hair: '#ff8f3a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#3a64c9', weapon: 'hammer', metal: '#cfd6e6' } },
-  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'chainLightning', aName: 'Chain Lightning', aDesc: 'Lightning leaps between 6 enemies for {0} each.', proj: 'spark',
+  { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, ability: 'tempestCage', aName: 'Tempest Cage', aDesc: 'Cages the biggest crowd in lightning for 3s. Bolts strike foes inside for {1}, anyone touching the bars is stunned and thrown back, and it ends in a thunderclap for {0}.', proj: 'spark',
     spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hairStyle: 'long', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff' } },
   { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, ability: 'dawnMend', aName: 'Dawn Mend', aDesc: 'Heals every ally for {0} and clears poison and stuns.', proj: 'heal',
     spr: { head: 'human', skin: SK.brown, hair: '#2a1a12', hairStyle: 'bun', hat: 'none', armor: '#f4f1ff', armor2: '#b8b0e0', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffe066' } },
-  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'cannonball', aName: 'Cannonball', aDesc: 'Fires a cannonball that explodes for {0} and knocks foes back.', proj: 'bullet',
+  { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, ability: 'rocketBarrage', aName: 'Rocket Barrage', aDesc: 'Fires a salvo of 6 rockets that carpet the enemy line, each exploding for {0} and knocking foes back.', proj: 'bullet',
     spr: { head: 'dwarf', skin: SK.pale, hair: '#ffd166', hat: 'none', hairStyle: 'bun', armor: '#4fae9c', armor2: '#2a6e64', cloth: '#7a4b2a', weapon: 'cannon', metal: '#5a5a6e' } },
   { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Raise Dead', aDesc: 'Raises 2 skeleton thralls with {0} HP and {1} attack that fight until the siege ends.', proj: 'soul',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
@@ -589,21 +589,32 @@ const SIG_SCALE = {
   meteor: [{ ad: 0.8, ap: 4.3 }],
   massRez: [{ ap: 1.5, thp: 0.1 }],
   shadowClones: [{ ap: 1 }],
+  cinderColossus: [{ ad: 0.4, ap: 1.8 }, { ad: 0.2, ap: 0.7 }],
+  glacierLance: [{ ad: 3.0, ap: 0.6 }],
+  cryptGrasp: [{ ad: 0.4, hp: 0.1 }],
+  tempestCage: [{ ad: 0.3, ap: 1.6 }, { ad: 0.1, ap: 0.6 }],
+  rocketBarrage: [{ ad: 1.1, ap: 0.3 }],
+  lotusSanctuary: [{ ap: 0.35, thp: 0.015 }, { ap: 1.5, thp: 0.08 }],
 };
 // the caster-side value of a scaling line (target-HP shares are added per target by the ability)
 function scaleValue(c, st, maxHp) { return (c.base || 0) + (c.ad || 0) * (st.atk || 0) + (c.ap || 0) * (st.apv || 0) + (c.hp || 0) * (maxHp || st.hp || 0); }
 function scaleParts(c) {
   const out = [], pc = v => Math.round(v * 100) + '%';
-  if (c.ad) out.push(pc(c.ad) + ' AD'); if (c.ap) out.push(pc(c.ap) + ' AP'); if (c.hp) out.push(pc(c.hp) + ' max HP');
+  if (c.ad) out.push(`<span class="sc-ad">${pc(c.ad)} AD</span>`); if (c.ap) out.push(`<span class="sc-ap">${pc(c.ap)} AP</span>`); if (c.hp) out.push(`<span class="sc-hp">${pc(c.hp)} max HP</span>`);
   return out.join(' + ');
+}
+// colour of the scaling that adds the most, so the total reads as "an AP spell" at a glance
+function scaleKind(c, st) {
+  const ad = (c.ad || 0) * (st ? st.atk || 0 : 1), ap = (c.ap || 0) * (st ? st.apv || 0 : 1), hp = (c.hp || 0) * (st ? st.hp || 0 : 10) + (c.thp ? 1e-6 : 0);
+  return hp > ad && hp > ap ? 'hp' : ap > ad ? 'ap' : ad > 0 ? 'ad' : c.thp ? 'hp' : 'base';
 }
 // "84 (50% AD + 240% AP)" with stats, the bare scaling without
 function scaleText(c, st) {
-  const parts = scaleParts(c), thp = c.thp ? Math.round(c.thp * 100) + '% of their max HP' : '';
-  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return (v != null ? '+' + v + '%' : '+' + c.base + '%') + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
+  const parts = scaleParts(c), thp = c.thp ? `<span class="sc-hp">${Math.round(c.thp * 100)}% of their max HP</span>` : '';
+  if (c.pct) { const v = st ? Math.round(scaleValue(c, st) * (st.sigMul || 1)) : null; return `<b class="sv sv-${scaleKind(c, st)}">${v != null ? '+' + v + '%' : '+' + c.base + '%'}</b>` + ` (${parts.replace(/(\d+)% AP/, (m, n) => (n / 100) + '% per AP')})`; }
   if (!st) return [c.base ? String(c.base) : '', parts, thp].filter(Boolean).join(' + ');
   const v = Math.round(scaleValue(c, st) * (st.sigMul || 1));
-  return `<b class="sv">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
+  return `<b class="sv sv-${scaleKind(c, st)}">${v}</b>${parts ? ` (${parts})` : ''}${thp ? ' + ' + thp : ''}`;
 }
 function abilityText(ab, desc, st) { const S = SIG_SCALE[ab] || []; return String(desc || '').replace(/\{(\d)\}/g, (m, i) => S[+i] ? scaleText(S[+i], st) : m); }
 

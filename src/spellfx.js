@@ -28,7 +28,7 @@ Object.assign(FX, {
 });
 
 function stepSpellFX(dt) {
-  stepSigVFX(dt); stepCastleVFX(dt);
+  stepSigVFX(dt); stepCastleVFX(dt); if (typeof stepUltFX === 'function') stepUltFX(dt);
   for (const s of FXS.spells) { s.t += dt;
     if (s.kind === 'smoke' && s.t > 0) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy *= 0.97; s.s *= 1 + 0.6 * dt; }
     if (s.kind === 'arrow' && s.t >= s.life && !s.landed) { s.landed = true;
@@ -84,6 +84,7 @@ function drawSpellFX(ctx, k, ox, oy, B) {
   }
   ctx.globalAlpha = 1;
   drawSigVFX(ctx, k, ox, oy, B);
+  if (typeof drawUltVFX === 'function') drawUltVFX(ctx, k, ox, oy, B);
   drawCastleVFX(ctx, k, ox, oy, B);
 }
 
@@ -153,6 +154,11 @@ function drawVfxShape(ctx, shape, x, y, r, a, col, col2, k) {
       ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(r * 1.1, 0); ctx.lineTo(-r * 0.4, -r * 0.15 - fl * 0.85); ctx.lineTo(-r * 0.9, 0); ctx.lineTo(-r * 0.4, r * 0.15 + fl * 0.85); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.fillRect(r * 0.6, -r * 0.15, r * 0.3, r * 0.3); break; }
     case 'bolt': { glow(r * 2.4, col); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, r * 0.22);
       for (let i = 0; i < 4; i++) { let px = x, py = y; ctx.beginPath(); ctx.moveTo(px, py); const b = rand(0, Math.PI * 2); for (let j = 0; j < 3; j++) { px += Math.cos(b + rand(-0.7, 0.7)) * r * 0.9; py += Math.sin(b + rand(-0.7, 0.7)) * r * 0.9; ctx.lineTo(px, py); } ctx.stroke(); } break; }
+    case 'rocket': { ctx.translate(x, y); ctx.rotate(a); ctx.globalAlpha = 0.8; glowAt(ctx, -r * 1.6, 0, r * 1.4, col2); ctx.globalAlpha = 1;
+      ctx.fillStyle = OUTLINE; ctx.fillRect(-r * 1.4, -r * 0.6, r * 2.4, r * 1.2); ctx.beginPath(); ctx.moveTo(r * 1.0, -r * 0.6); ctx.lineTo(r * 1.8, 0); ctx.lineTo(r * 1.0, r * 0.6); ctx.fill();
+      ctx.fillStyle = '#d8dce8'; ctx.fillRect(-r * 1.2, -r * 0.4, r * 2.2, r * 0.8); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(r * 0.9, -r * 0.4); ctx.lineTo(r * 1.5, 0); ctx.lineTo(r * 0.9, r * 0.4); ctx.fill();
+      ctx.fillStyle = col; ctx.fillRect(-r * 1.4, -r * 0.9, r * 0.5, r * 1.8); ctx.fillStyle = '#ffffff'; ctx.fillRect(-r * 0.6, -r * 0.4, r * 0.3, r * 0.8);
+      for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.8 - i * 0.25; ctx.fillStyle = i ? col : '#ffffff'; ctx.beginPath(); ctx.arc(-r * (1.8 + i * 0.7) + rand(-1, 1), rand(-1, 1) * r * 0.3, r * (0.5 - i * 0.1), 0, Math.PI * 2); ctx.fill(); } break; }
     default: { glow(r * 2.2, col); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.restore();

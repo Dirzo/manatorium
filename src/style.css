@@ -1009,6 +1009,8 @@ body:has(#title:not([hidden])) .modal { z-index: 40; }
 .trio small { font-size: 10px; color: var(--muted); }
 .trio .st-ad { color: #ffb08a; } .trio .st-ap { color: #c9a8ff; } .trio .st-def { color: #8ef0c0; }
 b.sv { color: var(--gold); }
+.sc-ad, b.sv-ad { color: #ff9b4a; } .sc-ap, b.sv-ap { color: #b48cff; } .sc-hp, b.sv-hp { color: #5ee38f; }
+.sc-ad, .sc-ap, .sc-hp { font-weight: 700; white-space: nowrap; }
 .hcard.rar-c { border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
 .hcard.rar-c.r0 { border-color: var(--ink); }
 .hcard .rtag { position: absolute; left: 2px; bottom: 2px; font-family: var(--f-display); font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10122a; background: var(--rc); border-radius: 2px; padding: 0 3px; }

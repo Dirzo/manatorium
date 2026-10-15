@@ -371,6 +371,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (src && src.side === 'hero' && src.st && src.st.el.salty && src.grumble) amount *= 1 + 0.02 * src.grumble;
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
+  if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
   let armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred;
   if (tgt.side === 'hero' && tgt.st.sp.gargoyle) armor += 5 * B.enemies.filter(e => e.alive && dist(e, tgt) < 30).length;
@@ -573,6 +574,78 @@ const ABILITIES = {
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
     for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.16 * RK(u))); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
   stampede(B, u) { const n = 4 + RK(u), D = AB(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
+  // ----- ultimates (Cam 2026-10-15): big, animated, and grander with every rarity step -----
+  cinderColossus(B, u) { const c = densest(B.enemies, 34, u, 999) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), size = 1 + 0.08 * rar + 0.03 * rk, D0 = AB(u, 0), D1 = AB(u, 1);
+    B.zones.push({ type: 'ult', vis: 'colossus', x: clamp(c.x, CASTLE_X + 30, W - 70), y: c.y, r: 26 * size, size, rar, pw: sigPower(u), t: 0, dur: 5 + rar, src: u, landed: false, tick: 0.9, stompT: -1, face: 1,
+      step(B, z, dt) {
+        if (!z.landed) { if (z.t >= 0.45) { z.landed = true; for (const e of inRadius(B.enemies, z, z.r * 1.4)) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, e.boss ? 0.4 : 0.9); }
+          FX.ultImpact(z.x, z.y, z.r * 1.4, 'colossus', z.rar); FX.sound('quake'); } return; }
+        const t = densest(B.enemies, 26, z, 160) || nearest(B.enemies, z, 200);
+        if (t && dist(t, z) > z.r * 0.6) { const d = dist(t, z) || 1, sp = 16 + 3 * z.rar; z.x = clamp(z.x + (t.x - z.x) / d * sp * dt, CASTLE_X + 30, W - 70); z.y = clamp(z.y + (t.y - z.y) / d * sp * dt, GRID.y + 10, GRID.y + GRID.rows * GRID.cell); z.face = t.x >= z.x ? 1 : -1; }
+        z.tick -= dt; if (z.tick <= 0) { z.tick = z.rar >= 5 ? 0.65 : 0.9; z.stompT = z.t;
+          for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, D1, { sig: true }); if (!e.boss) e.x += 6 * Math.sign(e.x - z.x || 1); }
+          if (z.rar >= 5 && t) { for (const e of B.enemies) if (e.alive && Math.abs(e.y - z.y) < 22 && (e.x - z.x) * z.face > 0 && Math.abs(e.x - z.x) < 90) dealDamage(B, u, e, D1 * 0.6, { sig: true }); FX.ultBreath(z.x + 10 * z.face * z.size, z.y - 26 * z.size, z.face); }
+          FX.ultStomp(z.x, z.y, z.r, z.rar); FX.sound('thud'); } },
+      end(B, z) { FX.ultImpact(z.x, z.y, z.r, 'colossusGone', z.rar); } });
+    FX.sound('cast'); },
+  glacierLance(B, u) { const c = densest(B.enemies, 30, u, 999) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, D0 = AB(u), sx = u.x + 6, sy = u.y - 8, base = Math.atan2(c.y - u.y, c.x - u.x), angs = rar >= 5 ? [base - 0.16, base, base + 0.16] : [base];
+    for (const a of angs) { const hit = new Set();
+      B.zones.push({ type: 'ult', vis: 'lance', sx, sy, x: sx, y: sy, a, w: 10 + 3 * rar, rar, pw: sigPower(u), t: 0, dur: 1.6, src: u, first: false, trail: [],
+        step(B, z, dt) { const v = 430, px = z.x, py = z.y; z.x += Math.cos(z.a) * v * dt; z.y += Math.sin(z.a) * v * dt; z.trail.push([z.x, z.y]);
+          for (const e of B.enemies) { if (!e.alive || hit.has(e)) continue;
+            const L = Math.hypot(z.x - px, z.y - py) || 1, f = clamp(((e.x - px) * (z.x - px) + (e.y - py) * (z.y - py)) / (L * L), 0, 1);
+            if (Math.hypot(e.x - (px + f * (z.x - px)), e.y - (py + f * (z.y - py))) > z.w) continue; hit.add(e);
+            if (!z.first) { z.first = true; const fl = Math.min(1, Math.hypot(e.x - z.sx, e.y - z.sy) / 300); dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, (1 + 2.5 * fl) * (e.boss ? 0.4 : 1)); e.frozen = Math.max(e.frozen || 0, 1 + 2.5 * fl); FX.ultImpact(e.x, e.y, 24 + 4 * z.rar, 'ice', z.rar); FX.sound('freeze'); }
+            else { dealDamage(B, u, e, D0 * 0.6, { sig: true }); e.slowT = Math.max(e.slowT || 0, 2); e.slowAmt = Math.max(e.slowAmt || 0, 0.35); FX.particles(e.x, e.y - 8, 6, ['#ffffff', '#bff4ff', '#5fd3ff'], { spread: 8 }); } }
+          if (z.rar >= 3 && Math.random() < 0.5) FX.particles(z.x, z.y, 2, ['#ffffff', '#bff4ff'], { spread: 4 });
+          if (z.x > W + 30 || z.y < 0 || z.y > H) z.t = z.dur; },
+        end(B, z) { if (z.rar >= 3) B.zones.push({ type: 'ult', vis: 'frostTrail', pts: z.trail.filter((p, i) => i % 3 === 0), w: z.w, rar: z.rar, t: 0, dur: 3, tick: 0,
+          step(B, y, dt) { y.tick -= dt; if (y.tick > 0) return; y.tick = 0.3; for (const e of B.enemies) if (e.alive && y.pts.some(p => Math.abs(p[0] - e.x) < 8 && Math.abs(p[1] - e.y) < y.w)) { e.slowT = Math.max(e.slowT || 0, 0.6); e.slowAmt = Math.max(e.slowAmt || 0, 0.45); } } }); } }); }
+    FX.ultMuzzle(sx, sy, base, 'ice', rar); FX.sound('beam'); },
+  cryptGrasp(B, u) { const c = densest(B.enemies, 34, u, 170) || nearest(B.enemies, u, 200); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), rad = 40 * (1 + 0.1 * rar) + 5 * rk, D0 = AB(u), bind = 1.5 + 0.25 * rar;
+    guardTaunt(B, u, 3);
+    B.zones.push({ type: 'ult', vis: 'grasp', x: c.x, y: c.y, r: rad, rar, pw: sigPower(u), t: 0, dur: 0.35 + bind, src: u, done: false,
+      step(B, z, dt) { if (z.done || z.t < 0.35) return; z.done = true;
+        for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, bind * (e.boss ? 0.4 : 1)); e.bound = z.t + bind;
+          if (z.rar >= 4 && !e.boss) { e.x += (z.x - e.x) * 0.45; e.y += (z.y - e.y) * 0.45; } }
+        FX.ultImpact(z.x, z.y, z.r, 'grasp', z.rar); FX.shake(5 + z.rar); FX.sound('bash'); } });
+    FX.text(u.x, u.y - 24, 'TAUNT', '#e9e4ff', true); FX.sound('summon'); },
+  tempestCage(B, u) { const c = densest(B.enemies, 34, u, u.st.range * 1.8) || nearest(B.enemies, u, 999); if (!c) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), rad = 44 * (1 + 0.1 * rar) + 4 * rk, D0 = AB(u, 0), D1 = AB(u, 1), inside = new Set(inRadius(B.enemies, c, rad));
+    B.zones.push({ type: 'ult', vis: 'cage', x: c.x, y: c.y, r: rad, rar, pw: sigPower(u), t: 0, dur: 3 + 0.5 * rar, src: u, tick: 0, bolts: [],
+      step(B, z, dt) {
+        for (const e of B.enemies) { if (!e.alive) continue; const d = dist(e, z);
+          if (d < z.r * 0.9) inside.add(e);
+          else if (inside.has(e) && d > z.r * 0.92) { const k = z.r * 0.85 / (d || 1); if (!e.boss) { e.x = z.x + (e.x - z.x) * k; e.y = z.y + (e.y - z.y) * k; }
+            if (!(e.cageT > B.t)) { e.cageT = B.t + 1; e.stun = Math.max(e.stun, e.boss ? 0.3 : 0.8); dealDamage(B, u, e, D1, { sig: true }); FX.ultBolt(e.x, e.y - 10, z.rar, true); } } }
+        z.tick -= dt; if (z.tick <= 0) { z.tick = 0.4 - 0.04 * z.rar; const live = [...inside].filter(e => e.alive && dist(e, z) <= z.r * 1.05);
+          for (let i = 0; i < 1 + (z.rar >= 4 ? 1 : 0) && live.length; i++) { const e = pick(live); dealDamage(B, u, e, D1, { sig: true }); FX.ultBolt(e.x, e.y - 8, z.rar, false); } FX.sound('zap'); } },
+      end(B, z) { for (const e of B.enemies) if (e.alive && dist(e, z) <= z.r * 1.05) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, 0.5); }
+        FX.ultImpact(z.x, z.y, z.r, 'thunder', z.rar); FX.flash(z.rar >= 5 ? '#fff3a0' : '#bff4ff', 0.25); FX.shake(6 + z.rar); FX.sound('boom'); } });
+    FX.sound('zap'); },
+  rocketBarrage(B, u) { const live = B.enemies.filter(e => e.alive && !e.onRafter); if (!live.length) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), n = 6 + 2 * rar + rk, D0 = AB(u), rad = 16 + 2 * rar, pw = sigPower(u), gold = rar >= 5;
+    const front = live.slice().sort((a, b) => a.x - b.x).slice(0, Math.max(4, Math.ceil(live.length * 0.7)));
+    B.zones.push({ type: 'ult', vis: null, t: 0, dur: 0.12 * n + 0.1, left: n, tick: 0, src: u,
+      step(B, z, dt) { z.tick -= dt; if (z.tick > 0 || z.left <= 0 || !u.alive) return; z.tick = 0.12; z.left--;
+        const e = pick(front.filter(x => x.alive)) || nearest(B.enemies, u, 999); if (!e) return; const tx = e.x + rand(-12, 12), ty = e.y + rand(-8, 8);
+        fireProj(B, u, null, 'orb', 0, { tx, ty: ty - 6, fixed: true, speed: 240, arc: 0.45 * Math.abs(tx - u.x), vfx: { shape: 'rocket', col: gold ? '#ffd84a' : '#ff6a3a', col2: gold ? '#ffffff' : '#ffe08a', pw, size: 1 + 0.08 * rar },
+          onLand: p => { for (const x of inRadius(B.enemies, { x: p.tx, y: p.ty + 6 }, rad)) { dealDamage(B, u, x, D0, { sig: true }); if (!x.boss) x.x += 8; }
+            FX.blast(p.tx, p.ty + 6, rad, gold ? ['#ffffff', '#fff3a0', '#ffd84a', '#a8601a'] : ['#ffffff', '#ffe08a', '#ff6a3a', '#5a2a2a'], pw, { shards: 6 }); FX.sound('boom'); } });
+        FX.particles(u.x + 6, u.y - 14, 6, ['#ffffff', '#c8c8d8'], { spread: 6, up: true, grav: -30 }); FX.sound('cannon'); } });
+    return true; },
+  lotusSanctuary(B, u) { const allies = B.heroes.filter(h => h.alive && !h.rafter); if (!allies.length) return false;
+    const rar = u.st.rarity || 0, rk = RK(u), cx = allies.reduce((a, h) => a + h.x, 0) / allies.length, cy = allies.reduce((a, h) => a + h.y, 0) / allies.length, rad = 52 * (1 + 0.1 * rar) + 4 * rk;
+    B.zones.push({ type: 'ult', vis: 'lotus', x: cx, y: cy, r: rad, rar, pw: sigPower(u), t: 0, dur: 4 + 0.5 * rar, src: u, tick: 0,
+      step(B, z, dt) { z.tick -= dt; for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r) h.lotusT = B.t + 0.3;
+        if (z.tick <= 0) { z.tick = 0.5; for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r) { healUnit(B, u, h, ABH(u, 0, h), true); if (Math.random() < 0.5) FX.particles(h.x, h.y - 6, 3, ['#ffb0d8', '#ffffff'], { spread: 6, up: true }); } } },
+      end(B, z) { for (const h of B.heroes) if (h.alive && dist(h, z) <= z.r * 1.1) healUnit(B, u, h, ABH(u, 1, h));
+        if (z.rar >= 5) { const dead = B.heroes.find(h => !h.alive && !h.temp && dist(h, z) <= z.r * 1.5); if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.5; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ffd84a', true); } }
+        FX.ultImpact(z.x, z.y, z.r, 'lotus', z.rar); FX.sound('heal'); } });
+    FX.sound('heal'); },
   // ----- class spec signatures (meta) -----
   aegisDome(B, u) { const r = RK(u); guardTaunt(B, u, 2.5); for (const h of B.heroes) if (h.alive) { h.shield += AB(u) * (1 + 0.11 * r); }
     for (const e of inRadius(B.enemies, u, 60 + 6 * r)) { if (!e.boss) e.x += 30; e.stun = Math.max(e.stun, 1.2); dealDamage(B, u, e, AB(u, 1), { sig: true }); } FX.blast(u.x + 10, u.y, 40, ['#ffffff', '#dffcff', '#9ff6ff', '#3a8aa8'], sigPower(u)); FX.sound('shield'); },
@@ -795,6 +868,7 @@ function stepBattle(B, dt) {
   for (const z of B.zones) { z.t += dt;
     if (z.type === 'arrows') { if (z.t >= z.every) { z.t = 0; z.n--; for (const e of inRadius(B.enemies, z, z.r)) dealDamage(B, z.src, e, z.dmg, { noProc: true, sig: true }); FX.arrowStorm(z.x, z.y, z.r, z.pw || 1); FX.sound('arrows'); if (z.n <= 0) z.dead = true; } }
     else if (z.type === 'telegraph') { if (z.t >= z.dur) { z.dead = true; z.onEnd(z); } }
+    else if (z.type === 'ult') { z.step(B, z, dt); if (z.t >= z.dur && !z.dead) { z.dead = true; if (z.end) z.end(B, z); } }
     else if (z.type === 'breath') { z.tick -= dt; if (z.tick <= 0) { z.tick = 0.2; const src = z.src; if (!src.alive) { z.dead = true; continue; }
         for (const h of B.heroes) if (h.alive && h.x < src.x && h.x > src.x - 110 && Math.abs(h.y - src.y) < 10 + (src.x - h.x) * 0.45) dealDamage(B, src, h, src.atk * 0.35);
         if (src.x - 110 < CASTLE_X) damageCastle(B, src.atk * 0.2); FX.breath(src.x - 26, src.y - 22); } if (z.t >= z.dur) z.dead = true; }
@@ -849,7 +923,7 @@ function rafterJump(B, u) {
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
 // how grand a signature looks: signature power x ability power, square-rooted, about 1 early and up to 3 late
-function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3, Math.sqrt((st.sigMul || 1) * (st.ap || 1)))); }
+function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3.6, Math.sqrt((st.sigMul || 1) * (st.ap || 1)) * (1 + 0.12 * (st.rarity || 0)))); }
 function castSignature(B, u) {
   DTAG = 'ability'; let ok; try { ok = ABILITIES[u.st.ability || u.def.ability](B, u); } finally { DTAG = null; }
   if (ok === false) return false;
