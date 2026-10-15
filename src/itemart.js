@@ -504,7 +504,7 @@ const ITEM_ART = {
     '..ppppmmmm..',
     '............',
   ],
-  // Belt of Many Notches: wide studded belt with a huge buckle
+  // Big Belt Energy: wide studded belt with a huge buckle
   'belt+belt': [
     '............',
     '............',
