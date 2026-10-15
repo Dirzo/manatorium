@@ -1,6 +1,8 @@
 // ===== Mobile: phone layouts (landscape and portrait), touch controls, and the native app shell =====
 // Loaded after main.js and before boot(). It wraps a few functions instead of editing them, so desktop play is unchanged.
 // Layout mode (html.m) is on for narrow windows and phones; touch features (html.touch) follow the primary pointer.
+// native plugin calls return promises; a missing plugin or a refusal must never surface as an error
+const quiet = f => { try { const r = f(); if (r && r.catch) r.catch(() => { }); } catch (e) { } };
 const MOB = {
   on: false, land: false, touch: false, native: false, det: false, ready: false,
   wanted() {
@@ -97,7 +99,7 @@ const MOB = {
   haptic(kind) {
     if (!MOB.touch) return;
     const H = MOB.native && Capacitor.Plugins && Capacitor.Plugins.Haptics;
-    try { if (H) H.impact({ style: kind === 'heavy' ? 'HEAVY' : kind === 'medium' ? 'MEDIUM' : 'LIGHT' }); else if (navigator.vibrate) navigator.vibrate(kind === 'heavy' ? 30 : kind === 'medium' ? 18 : 8); } catch (e) { }
+    if (H) quiet(() => H.impact({ style: kind === 'heavy' ? 'HEAVY' : kind === 'medium' ? 'MEDIUM' : 'LIGHT' })); else try { if (navigator.vibrate) navigator.vibrate(kind === 'heavy' ? 30 : kind === 'medium' ? 18 : 8); } catch (e) { }
   },
   // tips sit above the finger instead of under it
   showTip(el, x, y) {
@@ -129,10 +131,10 @@ const MOB = {
   },
   wireNative() {
     const P = Capacitor.Plugins || {};
-    try { P.StatusBar && P.StatusBar.hide(); } catch (e) { }
-    try { P.SplashScreen && P.SplashScreen.hide(); } catch (e) { }
+    quiet(() => P.StatusBar.hide());
+    quiet(() => P.SplashScreen.hide());
     if (P.App) {
-      P.App.addListener('backButton', () => {
+      quiet(() => P.App.addListener('backButton', () => {
         if (!$('tip').hidden) return UI.tipHide();
         if (!$('mMenu').hidden) return MOB.menu(false);
         if (UI.page) return UI.openPage(null);
@@ -141,9 +143,9 @@ const MOB = {
         if (G.armed) { G.armed = null; UI.hud(); return; }
         if (!$('modal').hidden || TOWER.on) return;
         if ($('title').hidden && G.run) { showTitle(); return; }
-        P.App.minimizeApp && P.App.minimizeApp();
-      });
-      P.App.addListener('pause', () => { try { save(); } catch (e) { } });
+        quiet(() => P.App.minimizeApp());
+      }));
+      quiet(() => P.App.addListener('pause', () => { try { save(); } catch (e) { } }));
     }
   },
 };

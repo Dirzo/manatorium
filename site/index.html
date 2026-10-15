@@ -1180,6 +1180,21 @@ html.m-port .intel { width: 100vw; border-radius: 0; }
 html.m-port .roster .rbody { flex: 1 1 auto; }
 html.m-land .drawer:not(.open) { transform: translateX(calc(-100% - var(--colL, 76px) - 12px)); }
 html.m-land .roster.m-details { z-index: 14; }
+
+/* ===== Store demo: road-ahead screen and title note ===== */
+.rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
+.rah { display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 5px; padding: 4px 8px 4px 4px; }
+.rah img { grid-row: span 2; width: 34px; height: 34px; background: #5a1a36; border: 2px solid var(--ink); border-radius: 3px; }
+.rah b { font-family: var(--f-display); font-weight: 600; font-size: 13px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rah small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.raf { margin: 4px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.raf b { color: var(--gold); font-family: var(--f-display); font-weight: 600; }
+.raact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.raact #demoBuy { font-size: 17px; padding: 10px 18px; flex: 1 1 auto; }
+.raact.sub { justify-content: space-between; }
+#demoMsg:empty { display: none; }
+#title .demonote { margin: 6px 0 0; color: #d6daf7; font-size: 13px; text-align: center; }
+html.native #tPlaytest, html.native #recBadge { display: none !important; }
 </style>
 <div id="app">
   <header class="hud">
@@ -9352,6 +9367,8 @@ function boot(hotData) {
 // ===== Mobile: phone layouts (landscape and portrait), touch controls, and the native app shell =====
 // Loaded after main.js and before boot(). It wraps a few functions instead of editing them, so desktop play is unchanged.
 // Layout mode (html.m) is on for narrow windows and phones; touch features (html.touch) follow the primary pointer.
+// native plugin calls return promises; a missing plugin or a refusal must never surface as an error
+const quiet = f => { try { const r = f(); if (r && r.catch) r.catch(() => { }); } catch (e) { } };
 const MOB = {
   on: false, land: false, touch: false, native: false, det: false, ready: false,
   wanted() {
@@ -9448,7 +9465,7 @@ const MOB = {
   haptic(kind) {
     if (!MOB.touch) return;
     const H = MOB.native && Capacitor.Plugins && Capacitor.Plugins.Haptics;
-    try { if (H) H.impact({ style: kind === 'heavy' ? 'HEAVY' : kind === 'medium' ? 'MEDIUM' : 'LIGHT' }); else if (navigator.vibrate) navigator.vibrate(kind === 'heavy' ? 30 : kind === 'medium' ? 18 : 8); } catch (e) { }
+    if (H) quiet(() => H.impact({ style: kind === 'heavy' ? 'HEAVY' : kind === 'medium' ? 'MEDIUM' : 'LIGHT' })); else try { if (navigator.vibrate) navigator.vibrate(kind === 'heavy' ? 30 : kind === 'medium' ? 18 : 8); } catch (e) { }
   },
   // tips sit above the finger instead of under it
   showTip(el, x, y) {
@@ -9480,10 +9497,10 @@ const MOB = {
   },
   wireNative() {
     const P = Capacitor.Plugins || {};
-    try { P.StatusBar && P.StatusBar.hide(); } catch (e) { }
-    try { P.SplashScreen && P.SplashScreen.hide(); } catch (e) { }
+    quiet(() => P.StatusBar.hide());
+    quiet(() => P.SplashScreen.hide());
     if (P.App) {
-      P.App.addListener('backButton', () => {
+      quiet(() => P.App.addListener('backButton', () => {
         if (!$('tip').hidden) return UI.tipHide();
         if (!$('mMenu').hidden) return MOB.menu(false);
         if (UI.page) return UI.openPage(null);
@@ -9492,9 +9509,9 @@ const MOB = {
         if (G.armed) { G.armed = null; UI.hud(); return; }
         if (!$('modal').hidden || TOWER.on) return;
         if ($('title').hidden && G.run) { showTitle(); return; }
-        P.App.minimizeApp && P.App.minimizeApp();
-      });
-      P.App.addListener('pause', () => { try { save(); } catch (e) { } });
+        quiet(() => P.App.minimizeApp());
+      }));
+      quiet(() => P.App.addListener('pause', () => { try { save(); } catch (e) { } }));
     }
   },
 };
@@ -9545,6 +9562,114 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   UI.layout = function () { MOB.sync(); return MOB.on ? MOB.layout() : layout0.call(UI); };
   // the native app never asks for the microphone (that capture is for web playtests)
   if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) REC.startMic = function () { this.asked = true; this.state = 'off'; };
+}
+
+// ===== Store demo: the app plays the first three hordes free, then one purchase unlocks the rest =====
+// The limit only applies in the native app (or with ?demo on the web). The purchase itself lives in app/native.js
+// (RevenueCat), which only the app build includes; this file talks to it through window.SOL_IAP.
+const DEMO = {
+  LAST: CASTLE_SIEGE, // the demo ends after the siege 15 boss, right after the elemental castle choice
+  PRICE: '$4.99',     // shown until the store reports the real local price
+  unlocked: false, ready: false, price: null, busy: false,
+  enforced() { return /[?&]demo\b/.test(location.search) || !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); },
+  on() { return DEMO.enforced() && !DEMO.unlocked; },
+  locked(run) { return DEMO.on() && run && run.siege > DEMO.LAST && !run.won; },
+  async init() {
+    try { DEMO.unlocked = localStorage.getItem('sol.unlocked') === '1'; } catch (e) { }
+    if (!window.SOL_IAP) return;
+    try { const r = await SOL_IAP.init(); DEMO.ready = !!r.ready; DEMO.why = r.why || null; DEMO.price = r.price || null; if (r.owned) DEMO.grant(true); }
+    catch (e) { console.warn('store', e); }
+  },
+  grant(quiet) {
+    const was = DEMO.unlocked; DEMO.unlocked = true; try { localStorage.setItem('sol.unlocked', '1'); } catch (e) { }
+    if (quiet || was) return;
+    UI.closeModal(); SFX.play('victory'); FX.flash('#ffcf3a', 0.5);
+    UI.banner('Full game unlocked', 'Seven more hordes await'); TEL.event('unlock', { s: G.run && G.run.siege });
+    if (!$('title').hidden) showTitle();
+  },
+  async buy() {
+    if (DEMO.busy) return;
+    if (!window.SOL_IAP || !DEMO.ready) { UI.toast(DEMO.why === 'no store key' ? 'Purchases are not set up in this build yet.' : 'The store is not reachable right now. Check your connection and try again.', true); if (window.SOL_IAP) DEMO.init(); return; }
+    DEMO.busy = true; DEMO.mark('Opening the store…');
+    const r = await SOL_IAP.buy().catch(e => ({ ok: false, error: e && e.message }));
+    DEMO.busy = false; DEMO.mark('');
+    if (r.ok) DEMO.grant(); else if (!r.cancelled) UI.toast(r.error || 'The purchase did not go through.', true);
+  },
+  async restore() {
+    if (DEMO.busy) return;
+    if (!window.SOL_IAP || !DEMO.ready) { UI.toast('The store is not reachable right now.', true); return; }
+    DEMO.busy = true; DEMO.mark('Checking your purchases…');
+    const r = await SOL_IAP.restore().catch(e => ({ ok: false, error: e && e.message }));
+    DEMO.busy = false; DEMO.mark('');
+    if (r.ok) DEMO.grant(); else UI.toast(r.error || 'No purchase found for this store account.', true);
+  },
+  mark(t) { const m = document.getElementById('demoMsg'); if (m) m.textContent = t; document.querySelectorAll('#demoBuy,#demoRestore').forEach(b => b.disabled = !!t); },
+  // ---- the "road ahead" screen ----
+  html(run) {
+    const hordes = [];
+    for (let s = DEMO.LAST + 5; s <= FINAL_SIEGE; s += 5) { const F = FACTIONS[factionIndex(s)], b = ENEMIES[bossFor(s)];
+      hordes.push(`<div class="rah"><img class="px" src="${portrait('e:' + bossFor(s))}" alt=""><b>${esc(F.name)}</b><small>${s === FINAL_SIEGE ? 'Final boss' : 'Siege ' + s}: ${esc(b ? b.name : '')}</small></div>`); }
+    const done = run && run.siege > DEMO.LAST;
+    return `<span class="eyebrow">${done ? `Demo complete · ${DEMO.LAST} sieges held` : `Free demo · sieges 1 to ${DEMO.LAST}`}</span>
+      <h2>The road ahead</h2>
+      <p class="lede">${done ? `Your keep has held through three hordes. Seven more are marching, and the goose is watching.` : `The demo plays the first three hordes. The full game has seven more.`}</p>
+      <div class="rahs">${hordes.join('')}</div>
+      <ul class="raf">
+        <li><b>Legend Summons.</b> A Legendary champion after siege 35, a God after siege 40.</li>
+        <li><b>Ascension.</b> Raise your favourite legends all the way to God rarity.</li>
+        <li><b>The goose.</b> From siege 46 it carries off a champion before every siege.</li>
+        <li><b>The Shard War.</b> The final battle, fought inside your own great hall.</li>
+      </ul>
+      <p class="note">One purchase unlocks everything, forever, with no ads. Your keep, diamonds and achievements carry over.</p>
+      <div class="raact">
+        <button class="btn primary go" id="demoBuy">Unlock the full game · ${esc(DEMO.price || DEMO.PRICE)}</button>
+        <button class="btn small ghost" id="demoRestore">Restore purchase</button>
+      </div>
+      <p class="note" id="demoMsg" aria-live="polite"></p>
+      <div class="raact sub">${done ? `<button class="btn small" id="demoEnd">End this run and climb the tower</button>` : ''}<button class="btn small ghost" id="demoClose">Not now</button></div>`;
+  },
+  show() {
+    const run = G.run;
+    UI.modal(DEMO.html(run), s => {
+      s.querySelector('#demoBuy').onclick = () => DEMO.buy();
+      s.querySelector('#demoRestore').onclick = () => DEMO.restore();
+      s.querySelector('#demoClose').onclick = () => UI.closeModal();
+      const end = s.querySelector('#demoEnd'); if (end) end.onclick = () => DEMO.endRun();
+      requestAnimationFrame(() => { s.scrollTop = 0; });
+    }, 'wide');
+    TEL.event('paywall', { s: run && run.siege });
+  },
+  // the demo run ends like a fallen keep: the tower climb, records and achievements
+  endRun() {
+    UI.closeModal(); G.phase = 'over'; G.armed = null;
+    TEL.runEnd(G.run, 'demo');
+    UI.banner('The demo ends here', `You held ${G.run.siege - 1} sieges`);
+    setTimeout(() => startTower(), 1800);
+  },
+};
+
+{
+  const begin0 = beginSiege, prep0 = toPrep, title0 = showTitle, boot0 = boot;
+  // Begin siege past the last demo siege opens the road ahead instead
+  beginSiege = function () { if (G.phase === 'prep' && DEMO.locked(G.run)) { DEMO.show(); return; } return begin0.apply(this, arguments); };
+  // reaching siege 16 in the demo shows it once on its own
+  toPrep = function () { const r = prep0.apply(this, arguments); const run = G.run; if (DEMO.locked(run) && !run.demoSeen) { run.demoSeen = true; save(); setTimeout(() => { if (G.phase === 'prep' && $('modal').hidden) DEMO.show(); }, 900); } return r; };
+  // the title says it is a demo and offers the unlock
+  showTitle = function () {
+    const r = title0.apply(this, arguments);
+    const cta = document.querySelector('#title .cta');
+    if (cta && DEMO.on() && !document.getElementById('tUnlock')) {
+      const b = document.createElement('button'); b.className = 'btn primary'; b.id = 'tUnlock'; b.textContent = `Unlock the full game · ${DEMO.price || DEMO.PRICE}`; b.onclick = () => DEMO.show();
+      const n = document.createElement('p'); n.className = 'demonote'; n.textContent = `Free demo: the first ${DEMO.LAST} sieges.`;
+      cta.appendChild(b); cta.after(n);
+    }
+    return r;
+  };
+  // the store answers after boot: refresh the title button with the local price, or drop it if already bought
+  boot = function () {
+    DEMO.init().then(() => { const b = document.getElementById('tUnlock'); if (!b) return; if (!DEMO.on()) { b.remove(); document.querySelectorAll('.demonote').forEach(n => n.remove()); } else b.textContent = `Unlock the full game · ${DEMO.price || DEMO.PRICE}`; });
+    return boot0.apply(this, arguments);
+  };
 }
 
 loadCastleArt().then(() => { window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? null); });

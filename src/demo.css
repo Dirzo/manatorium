@@ -1,0 +1,15 @@
+
+/* ===== Store demo: road-ahead screen and title note ===== */
+.rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
+.rah { display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 5px; padding: 4px 8px 4px 4px; }
+.rah img { grid-row: span 2; width: 34px; height: 34px; background: #5a1a36; border: 2px solid var(--ink); border-radius: 3px; }
+.rah b { font-family: var(--f-display); font-weight: 600; font-size: 13px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rah small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.raf { margin: 4px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.raf b { color: var(--gold); font-family: var(--f-display); font-weight: 600; }
+.raact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.raact #demoBuy { font-size: 17px; padding: 10px 18px; flex: 1 1 auto; }
+.raact.sub { justify-content: space-between; }
+#demoMsg:empty { display: none; }
+#title .demonote { margin: 6px 0 0; color: #d6daf7; font-size: 13px; text-align: center; }
+html.native #tPlaytest, html.native #recBadge { display: none !important; }

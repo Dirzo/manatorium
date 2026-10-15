@@ -27,7 +27,7 @@ npx cap open android  # opens Android Studio
 npx cap open ios      # opens Xcode (macOS only)
 ```
 
-`src/mobile.js` and `src/mobile.css` hold the phone layouts and touch controls. App icons and splash art are in `app/icons` (regenerate them with `npx @capacitor/assets generate --ios --android --assetPath app/icons`). The **Mobile app** GitHub workflow builds an installable debug APK on every push to the mobile branch, and builds the iOS project on request. Publishing to the stores is covered in [docs/MOBILE.md](docs/MOBILE.md).
+`src/mobile.js` and `src/mobile.css` hold the phone layouts and touch controls. App icons and splash art are in `app/icons` (regenerate them with `npx @capacitor/assets generate --ios --android --assetPath app/icons`). The **Mobile app** GitHub workflow builds an installable debug APK on every push to the mobile branch, and builds the iOS project on request. The app is a free demo of the first 15 sieges with a one-time unlock (`src/demo.js`, RevenueCat in `app/native.js`). Publishing and setting up the unlock are covered in [docs/MOBILE.md](docs/MOBILE.md).
 
 ## Build
 
@@ -53,6 +53,7 @@ node build.mjs        # refreshes dist/manatorium.html, index.html and site/inde
 | `src/telemetry.js` | Optional playtest logging when hosted as a claude.ai artifact; inert elsewhere |
 | `src/main.js`, `src/shell.html`, `src/style.css` | Game flow, input, layout |
 | `src/mobile.js`, `src/mobile.css` | Phone layouts, touch controls, native app hooks (back button, haptics) |
+| `src/demo.js`, `src/demo.css` | App demo limit (first 15 sieges), the road-ahead screen and the unlock |
 
 ## Balance tools
 
