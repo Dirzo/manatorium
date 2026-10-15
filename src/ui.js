@@ -23,7 +23,8 @@ function draftFit(run, o) {
   for (const [kind, key, T, n0] of [['cls', d.cls, CLASSES[d.cls], c[d.cls] || 0], ['race', d.race, RACES[d.race], r[d.race] || 0]]) {
     const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${T.name}` : T.name;
     if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${esc(label)}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
-    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${n0 ? 'You have one. ' : ''}${T.at[0] - n} more for the bonus.</small></div>` });
+    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
+    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
     else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
@@ -333,6 +334,12 @@ const UI = {
     if (kind === 'stat') return statTipHTML(a);
     return '';
   },
+  // a bonus switching on gets a toast that says what it does, so it is never missed
+  announceSynergies(run, act) {
+    const now = Object.keys(act).filter(k => act[k] >= 0).map(k => k + ':' + act[k]), was = UI.synWas;
+    UI.synWas = now; if (!was || G.phase !== 'prep' || run !== UI.synRun) { UI.synRun = run; return; }
+    for (const k of now) if (!was.includes(k)) { const [key, t] = k.split(':'), T = RACES[key] || CLASSES[key]; if (T) UI.toast(`${T.name} bonus on. ${T.desc(+t)}`); }
+  },
   tipShow(el, x, y) { const t = $('tip'), key = el && el.dataset.tip; if (!key) return UI.tipHide(); const h = UI.tipHTML(key); if (!h) return UI.tipHide(); UI.tipKey = key; UI.tipEl = el; t.innerHTML = h; t.hidden = false; UI.tipMove(x, y); },
   tipMove(x, y) { const t = $('tip'); if (t.hidden) return; UI.tipXY = [x, y]; const r = t.getBoundingClientRect(), vw = innerWidth, vh = innerHeight;
     let L = x + 14, T = y + 14; if (L + r.width > vw - 8) L = x - r.width - 14; if (T + r.height > vh - 8) T = Math.max(8, y - r.height - 14); t.style.left = Math.max(8, L) + 'px'; t.style.top = T + 'px'; },
@@ -457,8 +464,12 @@ const UI = {
     const badge = (key, def, n, isRace) => { if (!n) return ''; const t = act[key], on = t >= 0, next = def.at.find(v => v > n);
       const pips = def.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('');
       const icon = isRace ? `<img class="px" src="${portrait('h:' + HEROES.find(d => d.race === key).id)}" alt="">` : `<span class="glyph">${def.icon}</span>`;
-      return `<div class="syb ${on ? 'on' : ''} ${isRace ? 'race' : 'cls'}" style="--rc:${isRace ? def.color : 'var(--sky)'}" data-tip="syn:${key}" aria-label="${esc(def.name)} ${n}${next ? ' of ' + next : ''}">${icon}<b class="cnt">${n}</b><span class="pips">${pips}</span></div>`; };
-    let bon = ''; for (const k in RACES) bon += badge(k, RACES[k], race[k], true); for (const k in CLASSES) bon += badge(k, CLASSES[k], cls[k], false);
+      const goal = on ? (next ? `${n}/${next}` : 'max') : `${n}/${def.at[0]}`;
+      return `<div class="sybw ${on ? 'on' : ''}" style="--rc:${isRace ? def.color : 'var(--sky)'}" data-tip="syn:${key}" aria-label="${esc(def.name)} ${n}${next ? ' of ' + next : ''}"><div class="syb ${on ? 'on' : ''} ${isRace ? 'race' : 'cls'}">${icon}<span class="pips">${pips}</span></div><span class="syl"><b>${esc(def.name)}</b><small>${goal}</small></span></div>`; };
+    // live bonuses first, so the strongest news is the first thing you see
+    const bl = []; for (const k in RACES) bl.push([act[k] >= 0, badge(k, RACES[k], race[k], true)]); for (const k in CLASSES) bl.push([act[k] >= 0, badge(k, CLASSES[k], cls[k], false)]);
+    const bon = bl.filter(b => b[0]).map(b => b[1]).join('') + bl.filter(b => !b[0]).map(b => b[1]).join('');
+    UI.announceSynergies(run, act);
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
     for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
@@ -475,6 +486,7 @@ const UI = {
     if (all.length || nearC.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
+    $('synChips').querySelectorAll('[data-tip]:not([data-act])').forEach(b => b.onclick = e => { e.stopPropagation(); const r = b.getBoundingClientRect(); UI.tipShow(b, r.left + r.width / 2, r.top); });
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
     let tp = `<section class="tsec"><h4>Battle stats <small id="teamChartLabel"></small></h4><div id="teamChart"><p class="note">Fills in once a siege starts.</p></div></section>`;
     const live = [], near = [];
@@ -545,8 +557,8 @@ const UI = {
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
-        <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}</button>`; });
+        <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(d.name.split(' ')[0])}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= ROSTER_CAP ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}

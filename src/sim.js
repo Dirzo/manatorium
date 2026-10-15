@@ -750,28 +750,31 @@ function castCastlePower(B, x, y) {
 function bossCall(B, u, title, quip, cols, shake) { FX.combo(W / 2, 64, title, cols); FX.text(u.x, u.y - 30 * (u.scale || 1) - 12, quip, '#ffffff', true, true); FX.shake(shake || 8); FX.flash(cols[0], 0.18); }
 const BOSS_MOVES = {
   grubnose(B, u, hs) { const t = hs.slice().sort((a, b) => b.maxHp - a.maxHp)[0]; if (!t) return 4; bossCall(B, u, 'BUCKET THROW', 'MY THRONE. CATCH.', ['#c9a35a', '#8a6a2a']);
-    fireProj(B, u, t, 'rock', 0, { speed: 150, onLand: p => { for (const h of inRadius(B.heroes, { x: p.tx, y: p.ty + 8 }, 26)) { dealDamage(B, u, h, u.atk * 2.2); h.stun = Math.max(h.stun, 2); } FX.text(p.tx, p.ty - 10, 'CLANG', '#ffde3a', true); FX.shake(10); FX.sound('hammer'); } }); return 11; },
-  gloop(B, u, hs) { bossCall(B, u, 'MOM HUG', 'come here, sweetie', ['#7fe05a', '#ff8fb0']); for (const h of hs) { if (h.rafter) continue; if (dist(h, u) < 140) { h.x += (u.x - 20 - h.x) * 0.6; h.y += (u.y - h.y) * 0.4; h.slowT = 3; h.slowAmt = 0.5; dealDamage(B, u, h, u.atk * 0.8); } } FX.sound('summon'); return 12; },
-  wyrm(B, u, hs) { bossCall(B, u, 'DRAMATIC READING', '"Chapter Three: My Feelings"', ['#a89ae8', '#ff9a4a'], 6); for (const h of hs) if (dist(h, u) < 220) { h.stun = Math.max(h.stun, 1.6); FX.text(h.x, h.y - 22, 'zzz', '#c8c8ff', false); } return 13; },
-  ringmaster(B, u, hs) { const t = hs.slice().sort((a, b) => a.x - b.x)[0]; if (!t) return 4; bossCall(B, u, 'HUMAN CANNONBALL', 'LADIES AND GOBLINS!', ['#ff5a5a', '#ffd84a'], 10);
+    const fl = 1.1; FX.boss('bucket', { sx: u.x - 10, sy: u.y - 30, tx: t.x, ty: t.y - 6, life: fl });
+    B.zones.push({ type: 'telegraph', x: t.x, y: t.y, r: 26, t: 0, dur: fl, onEnd: z => { for (const h of inRadius(B.heroes, z, 26)) { dealDamage(B, u, h, u.atk * 2.2); h.stun = Math.max(h.stun, 2); } FX.text(z.x, z.y - 16, 'CLANG', '#ffde3a', true); FX.explode(z.x, z.y - 4, 20, ['#c9a35a', '#8a6a2a', '#e0e0f0']); FX.shake(10); FX.sound('hammer'); } }); return 11; },
+  gloop(B, u, hs) { bossCall(B, u, 'MOM HUG', 'come here, sweetie', ['#7fe05a', '#ff8fb0']); for (const h of hs) { if (h.rafter) continue; if (dist(h, u) < 140) { FX.boss('tendril', { sx: u.x - 8, sy: u.y - 14, tx: h.x, ty: h.y - 8, life: 0.8 }); h.x += (u.x - 20 - h.x) * 0.6; h.y += (u.y - h.y) * 0.4; h.slowT = 3; h.slowAmt = 0.5; dealDamage(B, u, h, u.atk * 0.8); } } FX.sound('summon'); return 12; },
+  wyrm(B, u, hs) { bossCall(B, u, 'DRAMATIC READING', '"Chapter Three: My Feelings"', ['#a89ae8', '#ff9a4a'], 6);
+    FX.boss('pages', { sx: u.x - 10, sy: u.y - 40, life: 1.6, pts: hs.filter(h => dist(h, u) < 220).flatMap(h => [0, 1, 2].map(i => ({ x: h.x + rand(-8, 8), y: h.y - 10 + rand(-6, 6), d: rand(0, 0.35) }))) }); for (const h of hs) if (dist(h, u) < 220) { h.stun = Math.max(h.stun, 1.6); FX.text(h.x, h.y - 22, 'zzz', '#c8c8ff', false); } return 13; },
+  ringmaster(B, u, hs) { const t = hs.slice().sort((a, b) => a.x - b.x)[0]; if (!t) return 4; bossCall(B, u, 'HUMAN CANNONBALL', 'LADIES AND GOBLINS!', ['#ff5a5a', '#ffd84a'], 10); FX.boss('spotlight', { sx: u.x, sy: u.y - 20, tx: t.x, ty: t.y, life: 1 });
     B.zones.push({ type: 'telegraph', x: t.x, y: t.y, r: 40, t: 0, dur: 1, meteor: true, onEnd: z => { u.x = Math.max(u.x - 60, z.x + 30); for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 2.4); FX.explode(z.x, z.y - 4, 36, ['#ff5a5a', '#ffd84a', '#ffffff']); FX.shake(12); FX.sound('boom'); } }); return 12; },
-  sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
-  matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
-  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
-  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
-  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
+  sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); FX.boss('spores', { sx: u.x, life: 1.8 }); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
+  matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); FX.boss('avalanche', { sx: W + 20, life: 1.2 }); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
+  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); FX.boss('dumpster', { sx: u.x, sy: u.y, life: 1.6 }); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
+  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); FX.boss('reset', { sx: u.x, life: 1 }); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
+  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); FX.boss('ship', { life: 2 }); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
   // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
   shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
     if (m === 1 && left.length) { bossCall(B, u, 'SHARD STORM', 'MY SHARDS. MY CASTLE.', [ELEMENTS[pick(left)].col, '#ffffff'], 10);
       for (let i = 0; i < Math.min(8, 2 + left.length); i++) { const t = pick(hs); if (!t) break; const e = pick(left);
-        B.zones.push({ type: 'telegraph', x: t.x + rand(-14, 14), y: t.y + rand(-8, 8), r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
+        const zx = t.x + rand(-14, 14), zy = t.y + rand(-8, 8); FX.boss('shardStreak', { sx: u.x, sy: u.y - 60, tx: zx, ty: zy, col: ELEMENTS[e].col, life: 1.2 + i * 0.12 });
+        B.zones.push({ type: 'telegraph', x: zx, y: zy, r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
       return 10; }
-    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
+    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
     bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 3 }); return 11; },
   goosegod(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3;
-    if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
-    if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
+    if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
+    if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); FX.boss('hammerSteal', { sx: CASTLE_X - 30, sy: 70, tx: u.x, ty: u.y - 40, life: 1 }); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
     bossCall(B, u, 'GOOSE STAMPEDE', 'release the goslings', ['#f4e48a', '#ff8a1a'], 10); for (let i = 0; i < 5; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 4 }); return 11; },
 };
 // ----- boss skills -----
@@ -784,7 +787,7 @@ function bossSkill(B, u, sk) {
     case 'breath': { B.zones.push({ type: 'breath', x: u.x - 30, y: u.y, t: 0, dur: 1.4, src: u, tick: 0 }); FX.sound('breath'); return 7; }
     case 'gust': for (const h of targets) { if (!h.rafter) { h.x = Math.max(CASTLE_X + 8, h.x - 30); } dealDamage(B, u, h, u.atk * 0.4, { quiet: false }); } FX.gust(); FX.shake(5); FX.sound('gust'); return 9;
     case 'fireRain': { const ts = targets.slice().sort(() => Math.random() - 0.5).slice(0, 5); for (const h of ts) B.zones.push({ type: 'telegraph', x: h.x, y: h.y, r: 18, t: 0, dur: 1.1, meteor: true, onEnd: z => { for (const hh of inRadius(B.heroes, z, z.r)) dealDamage(B, u, hh, u.atk * 1.3); FX.explode(z.x, z.y - 4, 18, ['#ffde3a', '#ff8a3a', '#ff3d3d']); FX.shake(3); FX.sound('boom'); } }); return 8; }
-    case 'move': return BOSS_MOVES[u.id] ? BOSS_MOVES[u.id](B, u, targets) : 8;
+    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; FX.fury(u); return 99;
     case 'laser': { const t = pick(targets); if (!t) return 3; B.zones.push({ type: 'laser', t: 0, dur: 1.6, src: u, ty: t.y, tick: 0 }); FX.sound('beam'); return 8; }
   }
   return 6;
@@ -1057,6 +1060,8 @@ function stepEnemy(B, u, dt) {
   if (u.stun > 0) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
+  // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it
+  if (u.fury) { u.fury.t += dt; u.moving = false; if (u.fury.t >= u.fury.dur) { u.fury = null; u.skillT.move = BOSS_MOVES[u.id](B, u, B.heroes.filter(h => h.alive)); u.atkT = 0.4; } return; }
   if (u.boss) { for (const sk in u.skillT) { u.skillT[sk] -= dt; if (u.skillT[sk] <= 0) { u.skillT[sk] = bossSkill(B, u, sk); u.atkT = 0.4; } } }
   const spd = u.spd * (1 - u.slowAmt) * hzSpd(B, u);
   const heroes = B.heroes;
