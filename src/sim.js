@@ -8,7 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
@@ -17,8 +17,10 @@ const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.24
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
-function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) * hordeDiff(s); }
-function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s)); }
+// late ramp (V41): swaps, summons and ascension make late teams stronger, so the horde grows to match from siege 10 on
+function lateRamp(s) { return 1 + BAL.late * Math.max(0, s - 10) / 40; }
+function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) * hordeDiff(s) * lateRamp(s); }
+function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s) * lateRamp(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
@@ -225,31 +227,37 @@ function heroStats(h, run, meta, syn) {
 
 // ----- wave generation -----
 function swarmK(s) { return 1 + BAL.swarm * (s - 1); }
-function genWave(s, mods) {
+function genWave(s, mods, tac) {
   const fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5, cyc = cycleOf(s);
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
   if (mods.fewer) budget *= 0.75;
+  if (tac === 'swarm') budget *= 1.5; if (tac === 'shieldwall') budget *= 0.85;
   const list = [];
   const boss = isBossSiege(s) ? bossFor(s) : null;
   if (boss) budget *= 0.5;
   let elites = within >= 3 ? 1 + Math.floor(s / 14) : within === 2 && s > 5 ? 1 : 0;
   if (cyc > 0) elites += 1;
+  if (tac === 'captain') elites = Math.max(1, elites);
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
   const sw = swarmK(s) * BAL.thin; budget *= sw;
   let guard = 0;
-  while (budget > 0.5 && guard++ < 600 && list.length < BAL.maxSpawn) { const id = pick(pool); list.push(id); budget -= ENEMIES[id].cost; }
+  // tactics: a warband mixes in an earlier horde, an air raid calls flyers from every horde so far
+  const old = tac === 'warband' ? FACTIONS[Math.max(0, fi - randi(1, 2))].pool : null;
+  const air = tac === 'airraid' ? FACTIONS.slice(0, fi + 1).flatMap(f => f.pool).filter(id => ENEMIES[id].kind === 'flyer') : null;
+  while (budget > 0.5 && guard++ < 600 && list.length < BAL.maxSpawn) { const id = old && Math.random() < 0.4 ? pick(old) : air && air.length && Math.random() < 0.35 ? pick(air) : pick(pool); list.push(id); budget -= ENEMIES[id].cost; }
   if (mods.chickens) { for (let i = 0; i < list.length; i++) if (!ENEMIES[list[i]].elite && Math.random() < 0.35) list[i] = 'chicken'; for (let i = 0; i < 6; i++) list.push('chicken'); }
   if (mods.honked) list.push('goose');
   for (let i = list.length - 1; i > 0; i--) { const j = randi(0, i); [list[i], list[j]] = [list[j], list[i]]; }
   list.sort((a, b) => (ENEMIES[a].elite ? 1 : 0) - (ENEMIES[b].elite ? 1 : 0));
   // three waves that build: a probe, a push, then the surge that pours in all at once
   const out = []; let t = 0.8; const n = list.length, n1 = Math.max(1, Math.round(n * 0.2)), n2 = Math.max(n1 + 1, Math.round(n * 0.5));
-  const waves = n >= 8 ? [list.slice(0, n1), list.slice(n1, n2), list.slice(n2)] : [list];
-  waves.forEach((w, wi) => { const last = wi === waves.length - 1 && waves.length > 1;
+  const waves = n >= 8 && tac !== 'blitz' ? [list.slice(0, n1), list.slice(n1, n2), list.slice(n2)] : [list];
+  let capt = tac === 'captain';
+  waves.forEach((w, wi) => { const last = (wi === waves.length - 1 && waves.length > 1) || tac === 'blitz';
     if (wi > 0) { t += 2.5; out.push({ t: t - 1.2, event: last ? 'surge' : 'wave', wave: wi + 1, of: waves.length, n: w.length }); }
-    w.forEach((id, i) => { out.push({ t, id, sw: ENEMIES[id].elite ? 1 : sw, rush: last });
+    w.forEach((id, i) => { const cp = capt && ENEMIES[id].elite; if (cp) capt = false; out.push({ t, id, sw: ENEMIES[id].elite ? 1 : sw, rush: last, captain: cp || undefined });
       t += last ? (i % 6 === 5 ? rand(0.5, 0.8) : rand(0.04, 0.12)) : wi === 1 ? rand(0.2, 0.45) : (i % 4 === 3 ? rand(1.2, 1.8) : rand(0.4, 0.8)); }); });
   if (boss) out.push({ t: Math.max(4, t * 0.45), id: boss, boss: true });
   out.sort((a, b) => a.t - b.t);
@@ -265,7 +273,7 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
@@ -305,6 +313,11 @@ function spawnEnemy(B, id, opts = {}) {
   const d = ENEMIES[id], s = B.siege, mods = B.run.mods;
   let hm = hpMul(s), am = atkMul(s);
   if (d.boss) { const f = BOSS_TOUGH[id] || 1, big = d.boss === 'big'; const decay = Math.pow(BAL.bossDecay, Math.max(0, s / 5 - 1)); hm = (big ? BAL.bigBoss : BAL.miniBoss) * decay * 75 * f * BAL.bossHp * hpMul(s) / d.hp; am = (big ? BAL.bigAtk : BAL.miniAtk) * 9 * f * atkMul(s) / d.atk; }
+  // elites stay well below the siege's boss: never more than eliteCap of a mini-boss
+  if (d.elite && !d.boss) hm = Math.min(hm, BAL.eliteCap * BAL.miniBoss * 75 * BAL.bossHp * hpMul(s) / d.hp);
+  const tac = !d.boss && B.run.tactic, cap = !!opts.captain;
+  if (cap) { hm *= 2; am *= 1.4; }
+  if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
   if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
   let vs = 1, spdM = rand(0.92, 1.08);
@@ -315,11 +328,13 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
   const y = opts.y != null ? opts.y : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
-  const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15;
+  const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
     flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
+  if (tac === 'shieldwall') u.armor += 30;
+  if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
@@ -461,6 +476,7 @@ function killUnit(B, u, src) {
   // loot drops: elites sometimes, bosses always
   let drops = 0;
   if (u.boss) drops = (u.def.boss === 'big' ? 2 : 1) + (run.tech.trophy ? 1 : 0);
+  else if (u.captain) drops = 1;
   else if (u.def.elite && Math.random() < 0.06) drops = 1;
   else if (u.id === 'goose') drops = 1;
   for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'spatula' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
@@ -796,7 +812,7 @@ function stepBattle(B, dt) {
   const run = B.run;
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
-    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush }); B.lastSpawn = B.t; }
+    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain }); B.lastSpawn = B.t; }
   // overtime: once the last foe has arrived and the fight drags on, heroes hit harder every second.
   // Normal foes still standing after a while stop fighting and charge the wall instead, so a siege always ends.
   if (!B.overtime && !B.queue.length && !(B.bossUnit && B.bossUnit.alive) && B.t - Math.max(B.lastSpawn || 0, B.bossGoneT || 0) > BAL.otStart) {

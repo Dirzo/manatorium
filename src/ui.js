@@ -31,6 +31,13 @@ function draftFit(run, o) {
   return { score: out.reduce((a, f) => a + f.score, 0), html: out.map(f => f.html).join('') };
 }
 // your keep at a glance: every champion you own, then class and race progress
+// gold sink and a door to rarer tiers: raise one legend's rarity
+function ascendBtn(run, h, mode) {
+  const c = ascendCost(h); if (c == null) return mode === 'ascend' ? '<span></span>' : '';
+  const next = RARITY[(h.rarity || 0) + 1], open = (h.rarity || 0) + 1 <= maxRarityNow(run), ok = open && run.gold >= c && G.phase === 'prep';
+  const attr = mode === 'iact' ? `data-iact="ascend"` : `data-act="ascend" data-arg="${h.uid}"`;
+  return `<button class="btn small ascend" ${attr} ${ok ? '' : 'disabled'} style="--rc:${next.col}" title="${open ? `Raise to ${next.name} for ${c} gold` : `Beat more bosses to open ${next.name}`}">Ascend to ${next.name} ${COST(c)}</button>`;
+}
 function keepStripHTML(run) {
   if (!run.roster.length) return '';
   const { c, r } = teamCounts(run);
@@ -231,10 +238,11 @@ const UI = {
     else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); title = `Scouts report: siege ${s}`; }
     const act = activeSynergies(run); const synKeys = [...Object.keys(RACES), ...Object.keys(CLASSES)].filter(k => act[k] >= 0);
     const combos = activeCombos(run), fe = fieldElements(run);
-    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods]); if (key === UI.intelKey) return; UI.intelKey = key;
+    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic]); if (key === UI.intelKey) return; UI.intelKey = key;
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
+    const tc = run.tactic && TACTICS[run.tactic]; if (tc) h += `<div class="mods tac"><p><b>${tc.icon} Horde tactic: ${esc(tc.name)}.</b> ${esc(tc.desc)}</p></div>`;
     const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
     const mods = Object.keys(run.mods).filter(m => modNote[m]); if (mods.length) h += `<div class="mods">${mods.map(m => `<p>${esc(modNote[m])}</p>`).join('')}</div>`;
     $('intelMain').innerHTML = h;
@@ -349,16 +357,16 @@ const UI = {
     body.querySelectorAll('details.hbranch').forEach(d => d.ontoggle = () => { UI.hallOpen[d.dataset.br] = d.open; });
   },
   guildHTML(run) {
-    const c = draftCost(run), full = run.roster.length >= ROSTER_CAP, can = !full && run.gold >= c && G.phase === 'prep';
+    const full = run.roster.length >= ROSTER_CAP, c = full ? swapCost(run) : draftCost(run), can = run.gold >= c && G.phase === 'prep';
     let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">Each card rolls a rarity: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Beat bosses to open rarer legends. New legends start at level 1 and learn twice as fast while they catch up. The bigger your keep, the more a draft costs; legends who fall are gone for good.</p>
-      <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions).` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
-      <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>Draft champion</b><span>${COST(c)} gold</span></button></div>`;
-    h += `<div class="group-title">Your champions</div>`;
+      <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions). You can still draft: after you pick, choose who heads home to make room. You have ${run.gold} gold.` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
+      <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>${full ? 'Draft and swap' : 'Draft champion'}</b><span>${COST(c)} gold</span></button></div>`;
+    h += `<div class="group-title">Your champions</div><p class="note">Ascend a champion to raise their rarity for gold. Each boss you beat opens a rarer tier. Legend Summons after the bosses at sieges 30 and 35 offer Legendary legends, and after 40 and 45 God legends.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : !hr.el ? (hr.level < ELEMENT_LEVEL ? `Element choice at level ${ELEMENT_LEVEL}` : 'Element choice pending') : `Signature rank ${st.rank}`;
       h += `<div class="card recruit"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><div><h4>${esc(heroDisplayName(hr))} ${rarityBadge(hr.rarity)}</h4><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(hr.el)}${temperChip(heroTemper(hr))}</div>
-        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div><span></span></div>`;
+        <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div>${ascendBtn(run, hr, 'ascend')}</div>`;
     }
     h += `<div class="group-title">Champion codex</div><div class="codex">`;
     for (const d of HEROES) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span${d.fixed ? ` style="color:${RARITY[d.fixed].col}"` : ''}>${esc(d.name.split(' ')[0])}</span></div>`; }
@@ -521,6 +529,7 @@ const UI = {
       ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button></div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
+        ${ascendBtn(run, h, 'iact')}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Release this champion for gold. Their items go back to the Armory.">${UI.sellArm === h.uid ? 'Click again to confirm' : `Release for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
@@ -530,17 +539,27 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= ROSTER_CAP ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
-    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
+    opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
         ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}</button>`; });
-    h += `</div><div class="row between"><span class="note">Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
+    if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
+    h += `</div><div class="row between"><span class="note">${run.roster.length >= ROSTER_CAP ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
+  },
+  makeRoomHTML(o) {
+    const run = G.run, d = HERO_BY_ID[o.id];
+    let h = `<span class="eyebrow">Your keep is full</span><h2>Who makes room for ${esc(d.name)}?</h2><p class="lede">The one you pick heads home with a little gold. Their items go back to the Armory. ${esc(d.name.split(' ')[0])} takes their spot and joins at their level (or higher).</p><div class="room">`;
+    for (const hr of run.roster.slice().sort((a, b) => (a.rarity || 0) - (b.rarity || 0) || a.level - b.level)) {
+      const hd = HERO_BY_ID[hr.id];
+      h += `<button class="rcard rar-card r${hr.rarity || 0}" data-out="${hr.uid}" style="--rc:${RARITY[hr.rarity || 0].col}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><b>${esc(heroDisplayName(hr))}</b>${rarityBadge(hr.rarity)}<span>Level ${hr.level} · ${esc(CLASSES[hd.cls] ? CLASSES[hd.cls].name : hd.cls)}</span><small>Heads home with +${sellValue(hr)} gold</small></button>`;
+    }
+    return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small" id="roomBack">Back to the cards</button></div>`;
   },
   lootHTML(opts, cost) {
     const boss = opts[0] && opts[0].parts.length === 2;

@@ -57,17 +57,47 @@ function showDraft() {
   const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-      const o = run.pendingDraft[+b.dataset.pick]; run.pendingDraft = null; run.recruitFrom = null;
-      const h = addDraftedHero(run, o); G.selected = h.uid; SFX.play('draft');
-      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, kind === 'starter' ? 'joins the keep' : 'answers the call');
+      const o = run.pendingDraft[+b.dataset.pick];
+      // a full keep: pick who heads home to make room, or go back to the cards
+      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
+      run.pendingDraft = null; run.recruitFrom = null;
+      picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
+    });
+    function picked(o, h, line) {
+      G.selected = h.uid; SFX.play('draft');
+      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line);
       TEL.event('draft', { id: o.id, rarity: o.rarity || 0, kind });
       if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
-    });
+    }
     const rr = s.querySelector('#draftReroll'); if (rr) rr.onclick = () => { const c = draftRerollCost(run); if (run.gold < c) return; run.gold -= c; run.draftRerolls++; run.pendingDraft = draftOptions(run, G.meta); SFX.play('click'); showDraft(); };
     s.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => { const c = draftRerollCost(run); if (run.gold < c) return; const [kind, key] = b.dataset.focus.split(':'); run.gold -= c; run.draftRerolls++; run.pendingDraft = draftOptions(run, G.meta, { kind, key }); SFX.play('click'); TEL.event('draftFocus', { kind, key }); showDraft(); });
   }, 'wide');
 }
+
+// a full keep takes in a new legend: choose who heads home (they keep nothing, their items go back to the Armory)
+function showMakeRoom(o, back, after) {
+  const run = G.run;
+  UI.modal(UI.makeRoomHTML(o), s => {
+    s.querySelectorAll('[data-out]').forEach(b => b.onclick = () => { const old = run.roster.find(h => h.uid === b.dataset.out); if (!old) return; const r = swapHero(run, old, o); TEL.event('swap', { inId: o.id, outId: old.id, lv: old.level }); after(r.h, old, r.gold); });
+    s.querySelector('#roomBack').onclick = () => back();
+  }, 'wide');
+}
+// Legend Summons after the boss at 30/35 (Legendary) and 40/45 (God)
+function showSummon() {
+  const run = G.run, P = run.pendingSummon; if (!P || !P.opts.length) { run.pendingSummon = null; return nextPost(); }
+  G.phase = 'draft'; save(); SFX.play('sig');
+  const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
+  UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+      const o = P.opts[+b.dataset.pick];
+      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
+      const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
+    });
+    const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
+  }, 'wide');
+}
+function summonSkipGold(run) { return Math.round(200 * goldMul(run.siege) / 5) * 5; }
 
 function beginSiege() {
   if (G.phase !== 'prep') return;
@@ -77,7 +107,7 @@ function beginSiege() {
   G.phase = 'siege'; G.B = startBattle(G.run, G.meta); G.armed = null;
   if (G.run.siege > 1) UI.setRoster(true);
   const s = G.run.siege; const F = FACTIONS[factionIndex(s)];
-  if (!isBossSiege(s)) UI.banner(`Siege ${s}`, F.name);
+  if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
   SFX.play('cast');
   UI.refresh();
   if (s === 1) setTimeout(() => UI.coach('xp-live', document.querySelector('.hcard .xpbar'), 'Heroes earn experience from kills and from surviving the siege. A hero who falls loses everything they earned this round.'), 1500);
@@ -115,6 +145,7 @@ function endSiege() {
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
+    const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
     run.post.push('encounter');
     run.lastRep = rep; save();
     setTimeout(() => showReport(rep), 900);
@@ -144,6 +175,7 @@ function nextPost() {
   if (step === 'draft') return showDraft();
   if (step === 'castle') return showCastle();
   if (step === 'encounter') return showEncounter();
+  if (step === 'summon') return showSummon();
   nextPost();
 }
 
@@ -246,7 +278,7 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
-    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; if (run.roster.length >= ROSTER_CAP) return UI.toast('Your keep is full.', true); const c = draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= ROSTER_CAP ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
@@ -261,6 +293,8 @@ G.act = function (act, arg) {
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
+    case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
+      SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();
@@ -474,7 +508,7 @@ function titleEnter() { const t = $('title'); t.classList.remove('enter'); void 
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
-  if (run.pendingDraft || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); return nextPost(); }
+  if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
   G.phase = 'prep'; changed();
 }
 

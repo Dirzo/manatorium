@@ -1020,3 +1020,12 @@ b.sv { color: var(--gold); }
 .fallen > small { flex-basis: 100%; color: var(--muted); }
 
 .rfixed { margin: -2px 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+/* full keep: who makes room */
+.room { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+.rcard { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border-radius: 10px; border: 2px solid var(--rc, #555); background: rgba(255,255,255,0.04); color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.rcard:hover { background: rgba(255,93,143,0.14); border-color: #ff5d8f; transform: translateY(-2px); }
+.rcard img { width: 56px; height: 56px; image-rendering: pixelated; }
+.rcard span, .rcard small { font-size: 12px; opacity: .85; }
+.btn.ascend { border-color: var(--rc); color: var(--rc); }
+.btn.ascend:disabled { opacity: .45; }
+.mods.tac p { color: #9fd8ff; } .mods.tac b { color: #6cc4ff; }

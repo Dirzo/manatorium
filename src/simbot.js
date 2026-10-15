@@ -135,6 +135,12 @@ function botPlayRun(style, meta, opts = {}) {
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     botBuyDrafts(run, draft);
+    // Legend Summons: take the best card; a full keep sends home its weakest legend
+    const tier = summonTier(rep.siege); if (tier) { const os = summonOptions(run, tier); if (os.length) { const o = os.sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0];
+      if (run.roster.length >= ROSTER_CAP) swapHero(run, run.roster.slice().sort((a, b) => (a.rarity || 0) * 50 + a.level - (b.rarity || 0) * 50 - b.level)[0], o);
+      else { const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); } } }
+    // spare gold goes into ascending the strongest legends
+    for (const h of run.roster.slice().sort((a, b) => b.level - a.level)) { const c = ascendCost(h); if (c != null && run.gold >= c + 200 && (h.rarity || 0) < maxRarityNow(run)) ascendHero(run, h); }
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;

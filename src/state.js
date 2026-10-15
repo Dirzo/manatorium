@@ -51,6 +51,33 @@ function addDraftedHero(run, opt) {
   run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
   return h;
 }
+// Cam 2026-10-15: a full keep must still be able to take in new legends, and Legendary/God legends need a
+// reliable door near siege 40. Swaps (a full keep drafts and someone makes room), Legend Summons after the
+// boss at 30/35 (Legendary) and 40/45 (God), and Ascension (spend gold to raise a legend's rarity).
+function swapCost(run) { return Math.round(40 * Math.pow(1.8, ROSTER_CAP - 1 - START_LEGENDS) / 5) * 5; }
+function teamLevel(run) { const l = run.roster.map(h => h.level).sort((a, b) => a - b); return l.length ? l[Math.floor(l.length / 2)] : joinLevel(run); }
+function swapHero(run, old, opt) {
+  for (const it of run.stash) if (it.holder === old.uid) it.holder = null;
+  const g = sellValue(old), place = old.place; run.gold += g; run.roster = run.roster.filter(x => x !== old);
+  const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
+  const h = addDraftedHero(run, opt); h.level = Math.max(h.level, old.level);
+  if (place) h.place = place;
+  return { h, gold: g };
+}
+function summonTier(s) { return s === 30 || s === 35 ? 4 : s === 40 || s === 45 ? 5 : 0; }
+function summonOptions(run, tier) {
+  const own = new Set(run.roster.map(h => h.id));
+  return HEROES.filter(h => h.fixed === tier && !own.has(h.id)).sort(() => Math.random() - 0.5).slice(0, 3).map(h => draftCard(h.id, run, tier));
+}
+const ASCEND_COST = [150, 400, 1000, 2500, 6000];
+function maxRarityNow(run) { return rarityOdds(castleTier(run)).reduce((m, v, i) => v ? i : m, 0); }
+function ascendCost(h) { return HERO_BY_ID[h.id].fixed || h.rarity >= 5 ? null : ASCEND_COST[h.rarity || 0]; }
+function ascendHero(run, h) {
+  const c = ascendCost(h); if (c == null) return { err: 'This legend is already as rare as it gets.' };
+  if ((h.rarity || 0) + 1 > maxRarityNow(run)) return { err: `Beat more bosses to open ${RARITY[(h.rarity || 0) + 1].name}.` };
+  if (run.gold < c) return { err: `Ascending costs ${c} gold. Save up ${c - run.gold} more.` };
+  run.gold -= c; h.rarity = (h.rarity || 0) + 1; return { ok: true };
+}
 function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
 function needsElement(h) { return h.level >= ELEMENT_LEVEL && !h.el; }
 function elementOptions(run, meta, h) {
@@ -189,7 +216,7 @@ function resolveEncounter(run, meta, fxs) {
       case 'mood': run.mood = (run.mood || 0) + n; out.push(n > 0 ? 'They will remember that kindly.' : 'They will remember that.'); break;
       case 'bossdeal': if ((run.mood || 0) >= 1) { run.mods.bosssoft = true; out.push('They accept. Their heart is not in this siege.'); } else if ((run.mood || 0) <= -1) { run.mods.bossmad = true; out.push('They laugh in your face. After everything you did? The boss is coming in a rage.'); } else out.push('They shrug. Nothing changes.'); break;
       case 'recruit': { if (run.lastRecruit != null && run.siege - run.lastRecruit < RECRUIT_GAP) { const g = Math.round(35 * goldMul(run.siege)); run.gold += g; out.push(`The champion takes one look at your crowded barracks and leaves ${g} gold as an apology.`); break; } run.lastRecruit = run.siege;
-        if (run.roster.length < ROSTER_CAP && Math.random() < 0.8) { run.recruitFrom = 'encounter'; run.post.unshift('draft'); out.push('Three champions step forward. You get to pick one.'); break; } const os = run.roster.length < ROSTER_CAP ? draftOptions(run, meta) : []; const o = os[0]; if (!o) { const g = Math.round(40 * goldMul(run.siege)); run.gold += g; out.push(`Your keep is full, so they pay ${g} gold for the trouble instead.`); break; } const h = addDraftedHero(run, o); out.push(`${HERO_BY_ID[h.id].name} joins your keep at level ${h.level}!`); break; }
+        if (Math.random() < 0.8) { run.recruitFrom = 'encounter'; run.post.unshift('draft'); out.push('Three champions step forward. You get to pick one.'); break; } const os = run.roster.length < ROSTER_CAP ? draftOptions(run, meta) : []; const o = os[0]; if (!o) { const g = Math.round(40 * goldMul(run.siege)); run.gold += g; out.push(`Your keep is full, so they pay ${g} gold for the trouble instead.`); break; } const h = addDraftedHero(run, o); out.push(`${HERO_BY_ID[h.id].name} joins your keep at level ${h.level}!`); break; }
       case 'heal': { const a = Math.round(run.castle.max * n / 100); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); out.push(`Castle repaired by ${a}.`); break; }
       case 'maxhp': if (run.gold >= 50) { run.gold -= 50; run.maxhpMul *= 1.15; const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp += run.castle.max - old; out.push('Castle max HP +15%.'); } else out.push('You could not afford the masons. They leave, still eating your bread.'); break;
       case 'diamonds': { const g = Math.round(20 * n * goldMul(run.siege)); run.gold += g; out.push(`+${g} gold`); break; } // diamonds only come from achievements now
@@ -241,7 +268,7 @@ function finishSiege(run, meta, B) {
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   run.mods = {};
-  run.siege++; run.lootRerolls = 0;
+  run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege);
   return rep;
 }
 

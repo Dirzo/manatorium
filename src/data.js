@@ -303,10 +303,20 @@ const FACTIONS = [
   { name: 'Crab Corsairs', pool: ['crab', 'deckhand', 'gull', 'gunner'], elite: 'kingcrab', boss: 'pinchbeard', tint: '#1a3a4a', sky: ['#5ac8ff', '#e8fbff'], hill: '#3a9ad0' },
   { name: 'The Feathered Host', pool: ['chicken', 'gosling', 'duck', 'pigeon', 'goose'], elite: 'rooster', boss: 'goosegod', tint: '#4a4a2a', sky: ['#ffd8a8', '#fff8e8'], hill: '#e0c080' },
 ];
+// horde tactics (Cam 2026-10-15: late sieges felt predictable): most sieges from 6 on roll one, shown in the scouts report
+const TACTICS = {
+  warband:    { name: 'Mixed Warband', icon: '⚔', desc: 'Stragglers from an earlier horde march with this one.' },
+  blitz:      { name: 'Blitz',         icon: '»', desc: 'Everything comes in one rush, 35% faster, with 15% less HP.' },
+  captain:    { name: 'War Captain',   icon: '♛', desc: 'An elite leads the charge with double HP and harder hits. It always drops loot.' },
+  swarm:      { name: 'Swarm',         icon: '∴', desc: 'Half again as many foes, each with 35% less HP.' },
+  shieldwall: { name: 'Shieldwall',    icon: '▣', desc: 'Foes carry shields for +30 armor, but 15% fewer come.' },
+  airraid:    { name: 'Air Raid',      icon: '^', desc: 'Flyers from every horde so far join the attack.' },
+};
+function rollTactic(s) { if (s < 6 || s % 5 === 0 || s >= FINAL_SIEGE || Math.random() < 0.2) return null; const k = Object.keys(TACTICS); return k[Math.floor(Math.random() * k.length)]; }
 const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.1';
+const VERSION = 'phase3.2';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
