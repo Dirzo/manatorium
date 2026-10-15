@@ -1,8 +1,8 @@
 // ===== Developer splash: someone has a go at the "NOOBSCRUB GAMES" logo and it goes wrong =====
 // Three skits, one picked at random each launch (never the same twice in a row):
 //   sword  a little noob leaps at the logo, the sword snaps, he lands dazed
-//   mop    a burly janitor mops the muddy letters clean, then slips on his own suds
-//   mage   a mage blasts the letters, the spell bounces straight back and chars him
+//   mop    a burly janitor mops the muddy letters clean, struts off across his wet floor and slips
+//   mage   a mage hurls a fireball at the letters, it bounces straight back and chars him
 // Self-contained: paints on a 240×135 pixel buffer, scaled up by a whole number onto a full-screen canvas.
 // startSplash(done) plays one (about 5 s); a tap, click or key skips it. ?splash=sword|mop|mage forces one.
 const startSplash = (() => {
@@ -176,7 +176,7 @@ const startSplash = (() => {
 
     mop(E) {
       const bruteF = BRUTE.map(r => sprite(r)), bruteDazed = sprite(BRUTE_DAZED), MOP = mopImg();
-      const T = { walk: [0.3, 0.9], scrub: [0.9, 2.35], pop: 2.4, slip: [2.75, 3.08], games: 3.1, shine: [3.6, 4.15], out: 4.9, end: 5.35 };
+      const T = { walk: [0.3, 0.9], scrub: [0.9, 2.35], pop: 2.4, slip: [3.1, 3.42], games: 3.45, shine: [3.9, 4.45], out: 5.1, end: 5.55 };
       // grime: chunky 2px mud speckle over the big word
       const M = document.createElement('canvas'); M.width = SW; M.height = SH; const mg = M.getContext('2d');
       const GX0 = E.bx - 6, GX1 = E.bx + E.bigW + 6, GY0 = E.by - 6, GY1 = E.by + 7 * E.BS + 10;
@@ -188,63 +188,74 @@ const startSplash = (() => {
       for (let i = 0; i < 14; i++) { const x = GX0 + 4 + Math.floor(Math.random() * (GX1 - GX0 - 8) / 2) * 2; mg.fillStyle = MUD[i % MUD.length]; mg.fillRect(x, GY1 - 2, 2, 2 + Math.floor(Math.random() * 4) * 2); }
       const scrub = (x, y) => { mg.save(); mg.globalCompositeOperation = 'destination-out'; const qx = Math.round(x / 2) * 2, qy = Math.round(y / 2) * 2; mg.fillRect(qx - 9, qy - 7, 18, 14); mg.fillRect(qx - 7, qy - 9, 14, 18); mg.restore(); };
       const mopAt = t => { const u = (t - T.scrub[0]) / (T.scrub[1] - T.scrub[0]); return { x: GX0 + 6 + u * (GX1 - GX0 - 12), y: (GY0 + GY1) / 2 + Math.sin(u * Math.PI * 9) * ((GY1 - GY0) / 2 - 5) }; };
-      const GY = FLOOR - 20, REACH = 34;
-      const bx = t => t < T.walk[1] ? -26 + (GX0 - 22 + 26) * ease((t - T.walk[0]) / (T.walk[1] - T.walk[0])) : Math.min(mopAt(Math.min(t, T.scrub[1])).x - 22, GX1 - 40);
+      const GY = FLOOR - 20, REACH = 34, STRUT = T.pop + 0.15, PACE = 34;   // after the pop he struts back left across his wet floor
+      const flip = c => { const f = document.createElement('canvas'); f.width = c.width; f.height = c.height; const fg = f.getContext('2d'); fg.translate(c.width, 0); fg.scale(-1, 1); fg.drawImage(c, 0, 0); return f; };
+      const bruteL = bruteF.map(flip), dazedL = flip(bruteDazed);
+      const scrubX = t => t < T.walk[1] ? -26 + (GX0 - 22 + 26) * ease((t - T.walk[0]) / (T.walk[1] - T.walk[0])) : Math.min(mopAt(Math.min(t, T.scrub[1])).x - 22, GX1 - 40);
+      const bx = t => t < STRUT ? scrubX(t) : scrubX(T.scrub[1]) - (Math.min(t, T.slip[0]) - STRUT) * PACE;
+      const strutting = t => t >= STRUT && t < T.slip[0];
       const mop = { free: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, va: 0, down: false };
-      let popped = false, slipped = false, landed = false, lastSq = 0, puddle = 0;
-      const lieAt = () => { const x = bx(T.slip[0]); return { px: x + 10, py: FLOOR }; };
+      let popped = false, slipped = false, landed = false, lastSq = 0, lastStep = 0, wetTo = GX0 - 10;
+      const lieAt = t => { const k = Math.min(1, (t - T.slip[0]) / (T.slip[1] - T.slip[0])); return { px: bx(T.slip[0]) + 10 - Math.round(14 * ease(k)), py: FLOOR, k }; };
       return {
         T,
         update(dt) {
           const t = E.t;
           if (t >= T.scrub[0] && t < T.scrub[1]) {
-            const m = mopAt(t); scrub(m.x, m.y); puddle = Math.min(1, puddle + dt * 0.8);
+            const m = mopAt(t); scrub(m.x, m.y); wetTo = Math.max(wetTo, bx(t) + 18);
             if (Math.random() < 0.6) E.bubble(m.x + rnd(-6, 6), m.y + rnd(-3, 3));
             if (Math.random() < 0.25) E.drip(m.x + rnd(-4, 4), m.y + 6);
             if (t - lastSq > 0.18) { lastSq = t; beep(rnd(300, 420), 0.07, 'triangle', 0.04, 0.8); fizz(0.08, 0.05, 1800); if (Math.random() < 0.5) E.glint(Math.round(m.x - rnd(8, 16)), Math.round(m.y + rnd(-6, 6))); }
           }
           if (!popped && t >= T.pop) {
-            popped = true; mg.clearRect(0, 0, SW, SH);
+            popped = true; mg.clearRect(0, 0, SW, SH); wetTo = GX1;
             for (let i = 0; i < 26; i++) E.bubble(rnd(GX0, GX1), rnd(GY0, GY1));
             E.spark(SW / 2, E.by + 10, 24, ['#ffe066', '#ffffff', '#ff9a3d', '#8ee0ff']);
             [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.14, 'square', 0.05, 1, i * 0.06));
           }
+          // a squeaky, swaggering step on the wet tiles, a little whistle on the way
+          if (strutting(t) && t - lastStep > 0.125) { lastStep = t; beep(rnd(1300, 1700), 0.04, 'triangle', 0.025, 1.4); if (Math.random() < 0.5) E.bubble(bx(t) + rnd(6, 14), FLOOR - 1); }
+          if (strutting(t) && t - STRUT < 0.02) { [784, 988, 1175].forEach((f, i) => beep(f, 0.09, 'sine', 0.04, 1, i * 0.11)); }
           if (!slipped && t >= T.slip[0]) {
             slipped = true; const h = this.hand(t);
-            Object.assign(mop, { free: true, x: h.x, y: h.y, vx: 40, vy: -170, a: this.mopA(t), va: 14 });
-            for (let i = 0; i < 8; i++) E.bubble(bx(t) + rnd(4, 16), FLOOR - 2);
-            beep(900, 0.25, 'sine', 0.06, 0.3); fizz(0.2, 0.08, 2500);
+            Object.assign(mop, { free: true, x: h.x, y: h.y, vx: 46, vy: -175, a: this.mopA(t), va: 13 });
+            for (let i = 0; i < 10; i++) E.bubble(bx(t) + rnd(2, 18), FLOOR - 2);
+            beep(1200, 0.3, 'sine', 0.06, 0.25); fizz(0.25, 0.1, 2500);
           }
-          if (!landed && t >= T.slip[1]) { landed = true; E.shake(0.35); E.dust(lieAt().px - 10, FLOOR, 12); beep(80, 0.25, 'sine', 0.25, 0.5); fizz(0.15, 0.3, 200); }
+          if (!landed && t >= T.slip[1]) { landed = true; E.shake(0.35); E.dust(lieAt(t).px + 10, FLOOR, 12); beep(80, 0.25, 'sine', 0.25, 0.5); fizz(0.15, 0.3, 200); }
           if (mop.free && !mop.down) {
             mop.vy += 420 * dt; mop.x += mop.vx * dt; mop.y += mop.vy * dt; mop.a += mop.va * dt;
             if (mop.vy > 0 && mop.y > FLOOR - 9) { mop.down = true; mop.y = FLOOR - 1; mop.a = Math.PI / 2 * 0.98; E.dust(mop.x, FLOOR, 5); beep(520, 0.06, 'square', 0.05, 0.7); beep(440, 0.06, 'square', 0.05, 0.7, 0.08); }
           }
         },
-        hand(t) { return { x: bx(t) + 16, y: GY + 12 + (t > T.walk[0] && t < T.scrub[1] ? (Math.floor(t * 8) & 1) : 0) }; },
+        // facing right he grips with his right hand; strutting left the sprite flips and the mop rides his shoulder
+        hand(t) { const x = bx(t), bob = (t > T.walk[0] && t < T.scrub[1]) || strutting(t) ? (Math.floor(t * 8) & 1) : 0; return { x: t >= STRUT ? x + 4 : x + 16, y: GY + 12 + bob }; },
         mopA(t) {
           const h = this.hand(t);
           if (t >= T.scrub[0] && t < T.scrub[1]) { const m = mopAt(t); return Math.atan2(m.x - h.x, -(m.y - h.y)); }
           if (t < T.scrub[0]) return 0.35 + Math.sin(t * 9) * 0.05;
-          return 0.35 + (Math.atan2(GX1 - 6 - h.x, -(GY0 + 10 - h.y)) - 0.35) * (1 - ease((t - T.scrub[1]) / 0.3));
+          const a0 = Math.atan2(GX1 - 6 - h.x, -(GY0 + 10 - h.y));
+          if (t < STRUT) return a0 + (0.15 - a0) * ease((t - T.scrub[1]) / (STRUT - T.scrub[1]));
+          return 0.15 + 0.4 * ease((t - STRUT) / 0.2) + Math.sin(t * 16) * 0.06;   // swung up onto his shoulder, bouncing with each step
         },
         over(g) { g.drawImage(M, 0, 0); },
         draw(g) {
           const t = E.t; if (t < T.walk[0] - 0.01) return;
-          // the suds puddle he's been making
-          if (puddle > 0) { const cx = Math.round(bx(Math.min(t, T.slip[0])) + 12), w = Math.round(10 + puddle * 26); g.fillStyle = '#8ad8ff'; g.fillRect(cx - w, FLOOR, w * 2, 1); g.fillStyle = '#bfe6ff'; g.fillRect(cx - w + 3, FLOOR, w * 2 - 6, 1); g.fillStyle = '#ffffff'; if ((t * 4 | 0) & 1) g.fillRect(cx - w + 6, FLOOR, 2, 1); }
+          // the wet floor he's mopped: glistening suds
+          for (let x = GX0 - 10; x < wetTo; x += 6) if ((x * 7) % 5 < 3) { g.fillStyle = (((x / 6) | 0) + Math.floor(t * 3)) % 4 === 0 ? '#ffffff' : '#8ad8ff'; g.fillRect(x, FLOOR + 1 + (((x / 6) | 0) & 1), 4, 1); }
           if (t < T.slip[0]) {
-            const x = Math.round(bx(t)), walking = t > T.walk[0] && t < T.walk[1], proud = t > T.pop && t < T.slip[0];
-            const y = GY - (proud && t - T.pop < 0.2 ? Math.round(Math.sin((t - T.pop) / 0.2 * Math.PI) * 3) : 0);
-            const h = this.hand(t), a = this.mopA(t);
+            const x = Math.round(bx(t)), walking = (t > T.walk[0] && t < T.walk[1]) || strutting(t);
+            const y = GY - (t > T.pop && t - T.pop < 0.2 ? Math.round(Math.sin((t - T.pop) / 0.2 * Math.PI) * 3) : 0) - (strutting(t) ? (Math.floor(t * 8) & 1) : 0);
+            const h = this.hand(t), a = this.mopA(t), frame = walking || (t > T.scrub[0] && t < T.scrub[1] && (Math.floor(t * 6) & 1)) ? Math.floor(t * 8) & 1 : 0;
             E.rot(MOP, h.x, h.y - (GY - y), a, 5, REACH + 5);
-            g.drawImage(bruteF[walking || (t > T.scrub[0] && t < T.scrub[1] && (Math.floor(t * 6) & 1)) ? Math.floor(t * 8) & 1 : 0], x, y);
+            g.drawImage(t >= STRUT ? bruteL[frame] : bruteF[frame], x, y);
           } else {
-            // whoops: feet fly out, he goes over backwards and lands flat
-            const { px, py } = lieAt(), k = Math.min(1, (t - T.slip[0]) / (T.slip[1] - T.slip[0]));
-            const a = -Math.PI / 2 * k * k, lift = Math.round(Math.sin(k * Math.PI) * 8), rise = Math.round(7 * k);
-            E.rot(landed ? bruteDazed : bruteF[1], px, py - lift - rise, a, 10, 20);
-            if (landed) E.dizzy(px - 17, py - 20, 8);
+            // whoops: his feet shoot out in front, he skids and goes over backwards, flat on the tiles
+            const { px, py, k } = lieAt(t);
+            const a = Math.PI / 2 * k * k, lift = Math.round(Math.sin(k * Math.PI) * 9), rise = Math.round(7 * k);
+            E.rot(landed ? dazedL : bruteL[1], px, py - lift - rise, a, 10, 20);
+            if (landed) E.dizzy(px + 17, py - 20, 8);
+            if (!landed && Math.random() < 0.5) E.bubble(px + rnd(-8, 8), FLOOR - 1);
           }
           if (mop.free) E.rot(MOP, mop.x, mop.y, mop.a, 5, mop.down ? 5 : REACH + 5);
         },
@@ -259,7 +270,6 @@ const startSplash = (() => {
       const ORB = { x: MX + 14, y: MY + 1 };
       const TGT = { x: E.big[2].x + 9, y: E.by + 12 };   // the second O
       const BODY = { x: MX + 7, y: MY + 11 };
-      const trail = [];
       let fired = false, bounced = false, boomed = false, bounceT = 9;
       const mx = t => t < T.walk[1] ? -20 + (MX + 20) * ease((t - T.walk[0]) / (T.walk[1] - T.walk[0])) : MX;
       const bolt = t => {
@@ -267,7 +277,7 @@ const startSplash = (() => {
         if (t < BOUNCE) { const k = (t - FIRE) / (BOUNCE - FIRE); return { x: ORB.x + (TGT.x - ORB.x) * k, y: ORB.y + (TGT.y - ORB.y) * k - Math.sin(k * Math.PI) * 6 }; }
         const k = (t - BOUNCE) / (BACK - BOUNCE); return { x: TGT.x + (BODY.x - TGT.x) * k, y: TGT.y + (BODY.y - TGT.y) * k + Math.sin(k * Math.PI) * 8 };
       };
-      const COLS = ['#ff7af0', '#c86aff', '#8ee0ff', '#ffffff'];
+      const COLS = ['#ff3a1a', '#ff7a1a', '#ffb83a', '#ffe066'];   // fire
       return {
         T,
         update(dt) {
@@ -278,12 +288,18 @@ const startSplash = (() => {
             if (Math.random() < 0.2) beep(rnd(500, 900) + (t - T.charge[0]) * 800, 0.05, 'triangle', 0.025);
           }
           if (!fired && t >= FIRE) { fired = true; beep(880, 0.25, 'sawtooth', 0.05, 0.4); fizz(0.25, 0.1, 2500); E.spark(ORB.x, ORB.y, 8, COLS, 50); }
-          const b = bolt(t); if (b) { trail.push({ x: b.x, y: b.y, t }); if (Math.random() < 0.7) E.parts.push({ x: b.x, y: b.y, vx: rnd(-10, 10), vy: rnd(-10, 10), t: 0, life: 0.35, c: pick(COLS) }); }
-          if (!bounced && t >= BOUNCE) { bounced = true; bounceT = t; E.spark(TGT.x, TGT.y, 16, ['#ffffff', '#ffe066', '#ff7af0'], 80); beep(1568, 0.12, 'square', 0.06, 1); beep(2093, 0.15, 'square', 0.05, 1, 0.05); E.shake(0.12); }
+          const b = bolt(t), b0 = bolt(t - 0.016);
+          if (b && b0) {   // flames peel off the back of the fireball and lick upward
+            const dx = b.x - b0.x, dy = b.y - b0.y, d = Math.hypot(dx, dy) || 1;
+            for (let i = 0; i < 4; i++) E.parts.push({ x: b.x + rnd(-3, 3), y: b.y + rnd(-3, 3), vx: -dx / d * rnd(20, 50) + rnd(-8, 8), vy: -dy / d * rnd(20, 50) - rnd(10, 30), t: 0, life: rnd(0.2, 0.42), flame: 1 });
+            if (Math.random() < 0.3) fizz(0.05, 0.04, 900);
+          }
+          if (!bounced && t >= BOUNCE) { bounced = true; bounceT = t; E.spark(TGT.x, TGT.y, 18, ['#ffffff', '#ffe066', '#ff7a1a', '#ff3a1a'], 80); beep(1568, 0.12, 'square', 0.06, 1); beep(2093, 0.15, 'square', 0.05, 1, 0.05); E.shake(0.12); }
           if (!boomed && t >= BACK) {
             boomed = true; E.flash(0.15); E.shake(0.4);
             for (let i = 0; i < 18; i++) { const a = rnd(0, Math.PI * 2), s = rnd(15, 45); E.parts.push({ x: BODY.x, y: BODY.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, t: 0, life: rnd(0.6, 1.1), c: pick(['#6a6070', '#8a8090', '#4a4050']), smoke: 1 }); }
-            E.spark(BODY.x, BODY.y, 20, COLS, 90); beep(120, 0.4, 'sawtooth', 0.12, 0.3); fizz(0.4, 0.35, 400);
+            for (let i = 0; i < 26; i++) { const a = rnd(0, Math.PI * 2), s = rnd(20, 70); E.parts.push({ x: BODY.x, y: BODY.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 15, t: 0, life: rnd(0.25, 0.5), flame: 1 }); }
+            beep(120, 0.4, 'sawtooth', 0.12, 0.3); fizz(0.4, 0.35, 400);
           }
           if (boomed && Math.random() < dt * 6) E.parts.push({ x: MX + 9 + rnd(-1, 1), y: MY, vx: rnd(-3, 3), vy: -14, t: 0, life: 1.0, c: pick(['#6a6070', '#8a8090']), smoke: 1 });   // the hat smoulders
         },
@@ -299,12 +315,28 @@ const startSplash = (() => {
           // staff with its orb
           const sx = x + 14; g.fillStyle = INK; g.fillRect(sx - 1, y + 2, 3, 19); g.fillStyle = '#a0603a'; g.fillRect(sx, y + 3, 1, 17);
           const charge = t > T.charge[0] && t < FIRE ? (t - T.charge[0]) / (FIRE - T.charge[0]) : 0, r = boomed ? 1 : 1 + Math.round(charge * 2);
-          g.fillStyle = boomed ? '#4a4050' : '#8ee0ff'; g.fillRect(sx - r, y + 1 - r, r * 2 + 1, r * 2 + 1); if (!boomed) { g.fillStyle = '#ffffff'; g.fillRect(sx, y + 1 - Math.max(0, r - 1), 1, 1); }
+          g.fillStyle = boomed ? '#4a4050' : charge > 0.5 ? '#ffb83a' : '#ff7a1a'; g.fillRect(sx - r, y + 1 - r, r * 2 + 1, r * 2 + 1); if (!boomed) { g.fillStyle = '#ffffff'; g.fillRect(sx, y + 1 - Math.max(0, r - 1), 1, 1); }
           if (!boomed) g.drawImage(mageImg, x, y);
           else { const blink = ((t - BACK) % 1.1) > 0.95 || (t - BACK > 0.5 && t - BACK < 0.62); g.drawImage(blink ? MAGE_BLINK : MAGE_SOOT, x, y); }
           // the bolt and its trail
-          for (let i = 1; i < trail.length; i++) { const a = trail[i - 1], b = trail[i]; if (t - b.t > 0.12) continue; E.line(a.x, a.y, b.x, b.y, t - b.t < 0.05 ? '#ffffff' : '#ff7af0'); }
-          const b = bolt(t); if (b) { const bx = Math.round(b.x), by = Math.round(b.y); g.fillStyle = INK; g.fillRect(bx - 2, by - 2, 5, 5); g.fillStyle = '#ff7af0'; g.fillRect(bx - 1, by - 2, 3, 5); g.fillRect(bx - 2, by - 1, 5, 3); g.fillStyle = '#ffffff'; g.fillRect(bx - 1, by - 1, 2, 2); }
+          // the fireball: a tail of flame tongues streaming behind a red-hot core
+          const b = bolt(t), b0 = bolt(t - 0.016);
+          if (b) {
+            const dx = b0 ? b.x - b0.x : 1, dy = b0 ? b.y - b0.y : 0, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+            const TAIL = ['#ffe066', '#ffd84a', '#ffb83a', '#ff9a2a', '#ff7a1a', '#ff3a1a', '#e0281a', '#c8201a', '#801a20'];
+            for (let i = TAIL.length; i >= 1; i--) {
+              const w = Math.sin(t * 38 + i * 1.7) * (0.6 + i * 0.35), r = Math.max(1, 6 - Math.floor(i * 0.6));
+              const x = Math.round(b.x - ux * i * 2.6 - uy * w), y = Math.round(b.y - uy * i * 2.6 + ux * w - i * 0.5);
+              g.fillStyle = TAIL[i - 1]; g.fillRect(x - (r >> 1), y - (r >> 1), r, r);
+            }
+            const bx = Math.round(b.x), by = Math.round(b.y), fl = (t * 30 | 0) & 1;
+            g.fillStyle = INK; g.fillRect(bx - 5, by - 3, 11, 7); g.fillRect(bx - 3, by - 5, 7, 11); g.fillRect(bx - 4, by - 4, 9, 9);
+            g.fillStyle = '#e0281a'; g.fillRect(bx - 4, by - 2, 9, 5); g.fillRect(bx - 2, by - 4, 5, 9); g.fillRect(bx - 3, by - 3, 7, 7);
+            g.fillStyle = '#ff7a1a'; g.fillRect(bx - 3, by - 2, 7, 5); g.fillRect(bx - 2, by - 3, 5, 7);
+            g.fillStyle = '#ffb83a'; g.fillRect(bx - 2, by - 1, 5, 3); g.fillRect(bx - 1, by - 2, 3, 5);
+            g.fillStyle = '#ffe066'; g.fillRect(bx - 1, by - 1, 2 + fl, 2);
+            g.fillStyle = '#ffffff'; g.fillRect(bx, by - 1, 1, 1);
+          }
         },
       };
     },
@@ -418,6 +450,7 @@ const startSplash = (() => {
         const a = 1 - p.t / p.life, x = Math.round(p.x), y = Math.round(p.y);
         if (p.bub) { g.fillStyle = a > 0.2 ? '#bfe6ff' : '#ffffff'; if (p.bub === 2) { g.fillRect(x - 1, y - 2, 3, 1); g.fillRect(x - 1, y + 2, 3, 1); g.fillRect(x - 2, y - 1, 1, 3); g.fillRect(x + 2, y - 1, 1, 3); g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 1, 1, 1); } else { g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); } }
         else if (p.glint) { g.fillStyle = p.c; const r = Math.round(Math.sin(p.t / p.life * Math.PI) * 3); g.fillRect(x - r, y, r * 2 + 1, 1); g.fillRect(x, y - r, 1, r * 2 + 1); }
+        else if (p.flame) { const k = p.t / p.life, r = k < 0.35 ? 2 : 1; g.fillStyle = k < 0.2 ? '#ffe066' : k < 0.45 ? '#ffb83a' : k < 0.7 ? '#ff6a1a' : k < 0.88 ? '#d02a1a' : '#5a3a40'; g.fillRect(x - (r >> 1), y - (r >> 1), r, r); }
         else if (p.smoke) { g.globalAlpha = Math.min(1, a * 1.5) * 0.85; g.fillStyle = p.c; const r = 1 + Math.round(p.t / p.life * 2); g.fillRect(x - r, y - r, r * 2, r * 2); g.globalAlpha = 1; }
         else { g.globalAlpha = a; g.fillStyle = p.c; g.fillRect(x, y, 1, p.heavy ? 2 : 1); g.globalAlpha = 1; }
       }
@@ -437,6 +470,7 @@ const startSplash = (() => {
         p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt;
         if (p.bub) { p.vx *= 0.96; p.x += Math.sin((p.t + p.y) * 8) * 0.2; }
         else if (p.smoke) { p.vy -= 10 * dt; p.vx *= 0.97; }
+        else if (p.flame) { p.vy -= 40 * dt; p.vx *= 0.9; }
         else if (p.heavy) p.vy += 120 * dt;
         else if (!p.nograv && !p.glint) p.vy += 60 * dt;
       }
