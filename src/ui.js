@@ -485,6 +485,8 @@ const UI = {
     for (const c of nearC) com += `<span class="syb combo nearc" data-tip="ncombo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" aria-label="${ELEMENTS[c.a].name} ${c.na}/2 and ${ELEMENTS[c.b].name} ${c.nb}/2"><span class="orb"></span><b class="cnt">${c.missing}</b></span>`;
     if (all.length || nearC.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
+    // compact copy for phone layouts where the roster header is hidden: bonuses and element stacks only
+    const ss = $('synStrip'); if (ss) { ss.innerHTML = bon + elb; ss.hidden = !(bon || elb) || G.phase === 'siege'; ss.querySelectorAll('[data-tip]').forEach(b => b.onclick = e => { e.stopPropagation(); const r = b.getBoundingClientRect(); UI.tipShow(b, r.left + r.width / 2, r.bottom + 8); }); }
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
     $('synChips').querySelectorAll('[data-tip]:not([data-act])').forEach(b => b.onclick = e => { e.stopPropagation(); const r = b.getBoundingClientRect(); UI.tipShow(b, r.left + r.width / 2, r.top); });
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
