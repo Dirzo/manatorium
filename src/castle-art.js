@@ -19,6 +19,55 @@ async function loadCastleArt() {
     } catch (error) { console.warn('Castle sprite could not load; using procedural fallback:', el, error); }
   }));
 }
+// Turn the detailed painting into game pixels that sit with the 16px heroes: area-average down to
+// the on-screen size, hard alpha, a small per-castle palette, speckles merged, a little extra pop,
+// and the same dark 1px outline every hero and foe wears. Cached per size.
+function pixelCastle(art, w, h) {
+  const key = w + 'x' + h; art.px = art.px || {}; if (art.px[key]) return art.px[key];
+  const cv = document.createElement('canvas'); cv.width = w + 2; cv.height = h + 2;
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  // two-step downscale keeps thin highlights from vanishing
+  const mid = document.createElement('canvas'); mid.width = w * 2; mid.height = h * 2;
+  const mg = mid.getContext('2d'); mg.imageSmoothingEnabled = true; mg.imageSmoothingQuality = 'high';
+  mg.drawImage(art.img, art.x0, art.y0, art.w, art.h, 0, 0, w * 2, h * 2);
+  g.drawImage(mid, 1, 1, w, h);
+  const im = g.getImageData(0, 0, w + 2, h + 2), d = im.data, W2 = w + 2, N = W2 * (h + 2);
+  const on = new Uint8Array(N), px = [];
+  for (let i = 0; i < N; i++) if (d[i * 4 + 3] >= 110) {
+    on[i] = 1;
+    // a touch more saturation and lift, toward the brighter whimsical palette
+    let r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2]; const l = (r + gg + b) / 3, sat = 1.22;
+    r = l + (r - l) * sat; gg = l + (gg - l) * sat; b = l + (b - l) * sat;
+    const lift = v => Math.max(0, Math.min(255, v * 1.06 + 6));
+    d[i * 4] = lift(r); d[i * 4 + 1] = lift(gg); d[i * 4 + 2] = lift(b); px.push(i);
+  }
+  // k-means palette, seeded across the brightness range
+  const K = 16, sorted = px.slice().sort((a, b) => (d[a*4]+d[a*4+1]+d[a*4+2]) - (d[b*4]+d[b*4+1]+d[b*4+2]));
+  let cen = Array.from({ length: K }, (_, k) => { const i = sorted[Math.floor((k + 0.5) / K * sorted.length)]; return [d[i*4], d[i*4+1], d[i*4+2]]; });
+  const lab = new Int16Array(N).fill(-1);
+  for (let it = 0; it < 10; it++) {
+    const acc = cen.map(() => [0, 0, 0, 0]);
+    for (const i of px) { let best = 0, bd = 1e9; for (let k = 0; k < K; k++) { const c = cen[k], dr = d[i*4]-c[0], dg = d[i*4+1]-c[1], db = d[i*4+2]-c[2], dd = dr*dr*0.3 + dg*dg*0.59 + db*db*0.11; if (dd < bd) { bd = dd; best = k; } } lab[i] = best; const a = acc[best]; a[0] += d[i*4]; a[1] += d[i*4+1]; a[2] += d[i*4+2]; a[3]++; }
+    cen = cen.map((c, k) => acc[k][3] ? [acc[k][0] / acc[k][3], acc[k][1] / acc[k][3], acc[k][2] / acc[k][3]] : c);
+  }
+  // merge lone speckles into their most common neighbour colour
+  const nb = [-1, 1, -W2, W2];
+  for (let pass = 0; pass < 2; pass++) for (const i of px) {
+    const cnt = {}; let same = 0, n = 0;
+    for (const o of nb) { const j = i + o; if (!on[j]) continue; n++; if (lab[j] === lab[i]) same++; cnt[lab[j]] = (cnt[lab[j]] || 0) + 1; }
+    if (n >= 3 && same === 0) { let bk = lab[i], bc = 0; for (const k in cnt) if (cnt[k] > bc) { bc = cnt[k]; bk = +k; } lab[i] = bk; }
+  }
+  for (let i = 0; i < N; i++) {
+    if (on[i]) { const c = cen[lab[i]]; d[i*4] = c[0]; d[i*4+1] = c[1]; d[i*4+2] = c[2]; d[i*4+3] = 255; }
+    else d[i*4+3] = 0;
+  }
+  // 1px outline around the silhouette, like the sprites
+  const o = [0x1a, 0x12, 0x30];
+  for (let y = 0; y < h + 2; y++) for (let x = 0; x < W2; x++) { const i = y * W2 + x; if (on[i]) continue;
+    if ((x > 0 && on[i-1]) || (x < W2-1 && on[i+1]) || (y > 0 && on[i-W2]) || (y < h+1 && on[i+W2])) { d[i*4] = o[0]; d[i*4+1] = o[1]; d[i*4+2] = o[2]; d[i*4+3] = 255; } }
+  g.putImageData(im, 0, 0);
+  return (art.px[key] = cv);
+}
 function drawArtCastle(run) {
   const el = run.castleEl, art = CASTLE_ART[el], T = run.tech || {};
   const tier = Math.min(10, castleTier(run)), rf = rafterSlots(run);
@@ -29,7 +78,7 @@ function drawArtCastle(run) {
   // One uniform scale for the entire sprite: no sliced or stretched sections.
   const shape = castleShape(run);
   const base = shape.baseY;
-  g.drawImage(art.img, art.x0, art.y0, art.w, art.h, shape.x, shape.y, shape.width, shape.height);
+  g.drawImage(pixelCastle(art, shape.width, shape.height), shape.x - 1, shape.y - 1);
   R.castleFlags = []; R.castleTorches = []; R.castleGlow = [];
   const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
   const deck = { fire: ['#73727e', '#b99b77', '#393644'], water: ['#c7d2cd', '#edf0d9', '#6c8b91'], nature: ['#987044', '#c69c64', '#58432d'] }[el] || [CASTLE_PAL[el][1], CASTLE_PAL[el][0], CASTLE_PAL[el][2]];
