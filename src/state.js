@@ -23,17 +23,19 @@ function newRun(meta) {
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
 function draftBosses(run) { return castleTier(run); }
-function draftCard(id, run) { return { id, rarity: rollRarity(draftBosses(run)), temper: rollTemper() }; }
+// Legendary and God rolls can also turn up the legends that only exist at that rarity (hero.fixed), and they show up 3x as often
+function draftPool(cands, rarity) { const pool = cands.filter(h => !h.fixed || h.fixed === rarity); return pool.flatMap(h => h.fixed ? [h, h, h] : [h]); }
+function draftCard(id, run, rarity) { const d = HERO_BY_ID[id]; return { id, rarity: d.fixed || (rarity != null ? rarity : rollRarity(draftBosses(run))), temper: rollTemper() }; }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
   for (let i = 0; i < n; i++) {
-    let cands = HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id));
-    if (!cands.length) break;
-    out.push(draftCard(pick(cands).id, run));
+    const rar = rollRarity(draftBosses(run)), pool = draftPool(HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id)), rar);
+    if (!pool.length) break;
+    out.push(draftCard(pick(pool).id, run, rar));
   }
   // a focused search guarantees one card of the class or race you asked for
-  if (focus && out.length) { const fits = HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
-    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run); }
+  if (focus && out.length) { const rar = out[0].rarity, fits = draftPool(HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id)), rar);
+    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run, rar); }
   return out;
 }
 // the first two legends are free; after that each draft costs more the bigger the roster is (losing legends makes it cheaper again)
@@ -44,7 +46,7 @@ function joinLevel(run) { return 1 + (run.vet || 0); }
 // legends behind the team's best level learn twice as fast, so a late recruit can catch up
 function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.level)); return h.level < top - 1 ? 2 : 1; }
 function addDraftedHero(run, opt) {
-  const h = { uid: nuid(), id: opt.id, rarity: opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
+  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].fixed || opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h);
   run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
   return h;

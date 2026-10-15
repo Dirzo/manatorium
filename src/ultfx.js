@@ -67,6 +67,8 @@ function drawUltGround(g, B) {
     else if (z.vis === 'frostTrail') { g.globalAlpha = 0.5 * (1 - kk); g.fillStyle = '#d8f6ff'; for (const p of z.pts) { g.fillRect(Math.round(p[0]) - 3, Math.round(p[1]) - 1, 6, 2); g.fillStyle = Math.random() < 0.5 ? '#9ff6ff' : '#ffffff'; } }
     else if (z.vis === 'colossus' && z.landed) { g.globalAlpha = 0.3; g.fillStyle = '#1a1028'; g.beginPath(); g.ellipse(x, y + 1, 14 * z.size, 4 * z.size, 0, 0, Math.PI * 2); g.fill(); }
     else if (z.vis === 'colossus') { const f = Math.min(1, z.t / 0.45); g.globalAlpha = 0.25 + 0.4 * f; g.fillStyle = '#1a1028'; g.beginPath(); g.ellipse(x, y + 1, 18 * z.size * f, 5 * z.size * f, 0, 0, Math.PI * 2); g.fill(); }
+    else if (typeof drawUltGround2 === 'function') drawUltGround2(g, z);
+    g.globalAlpha = 1;
   }
   g.globalAlpha = 1;
 }
@@ -80,6 +82,7 @@ function drawUltVFX(ctx, k, ox, oy, B) {
     else if (z.vis === 'grasp') drawGrasp(ctx, z, X(z.x), Y(z.y), k);
     else if (z.vis === 'cage') drawCage(ctx, z, X(z.x), Y(z.y), k);
     else if (z.vis === 'lotus') drawLotusMotes(ctx, z, X(z.x), Y(z.y), k);
+    else if (typeof drawUltVFX2 === 'function') { ctx.save(); drawUltVFX2(ctx, z, X, Y, k); ctx.restore(); }
   }
   for (const s of FXS.spells) { if (s.t < 0) continue; const kk = Math.min(1, s.t / s.life);
     if (s.kind === 'urock') { ctx.globalAlpha = 1 - kk * kk; ctx.fillStyle = OUTLINE; ctx.fillRect(X(s.x) - s.s * k * 0.6, Y(s.y) - s.s * k * 0.6, s.s * k * 1.2, s.s * k * 1.2); ctx.fillStyle = '#6a5a5a'; ctx.fillRect(X(s.x) - s.s * k * 0.4, Y(s.y) - s.s * k * 0.4, s.s * k * 0.8, s.s * k * 0.8); ctx.fillStyle = '#ff8a2a'; ctx.fillRect(X(s.x) - k * 0.5, Y(s.y) - k * 0.5, k, k); }

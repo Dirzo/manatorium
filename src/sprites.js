@@ -88,6 +88,16 @@ function drawWeapon(g, s, type, hx, hy, atk) {
       g.rect(hx - 3, hy, hx - 2, hy, wood);
       if (atk) { g.set(hx + 6, hy - 2, '#ffde3a', true); g.set(hx + 7, hy - 3, '#ff8a3a', true); g.set(hx + 7, hy - 1, '#ff8a3a', true); }
       break;
+    case 'scythe': {
+      const m = s.metal || '#e8ffd0';
+      if (!atk) { g.rect(hx + 1, hy - 11, hx + 1, hy + 5, '#3a2a2a'); g.rect(hx - 5, hy - 12, hx + 1, hy - 12, m); g.rect(hx - 6, hy - 11, hx - 4, hy - 11, m); g.set(hx - 7, hy - 10, m); g.set(hx - 2, hy - 11, '#ffffff', true); }
+      else { g.rect(hx - 2, hy - 2, hx + 6, hy - 2, '#3a2a2a'); g.rect(hx + 6, hy - 1, hx + 6, hy + 5, m); g.rect(hx + 7, hy, hx + 7, hy + 3, m); g.set(hx + 5, hy + 5, m); }
+      break; }
+    case 'orb': {
+      const gem = s.gem || '#ffd84a', oy = atk ? -3 : -1;
+      g.rect(hx + 1, hy - 3 + oy, hx + 3, hy - 1 + oy, gem, true); g.set(hx + 1, hy - 3 + oy, '#ffffff', true); g.set(hx + 2, hy - 4 + oy, gem, true); g.set(hx + 4, hy - 2 + oy, gem, true); g.set(hx + 2, hy + oy, shade(gem, -0.3), true);
+      if (atk) { g.set(hx + 5, hy - 5, '#ffffff', true); g.set(hx, hy - 7, '#ffffff', true); }
+      break; }
     case 'shield': {
       const off = atk ? 2 : 0, a2 = s.armor2 || '#6c7fb8';
       g.rect(hx - 1 + off, hy - 4, hx + 3 + off, hy + 2, metal); g.rect(hx + off, hy + 3, hx + 2 + off, hy + 3, metal);
@@ -101,6 +111,10 @@ function genHumanoid(s, frame) {
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;
+  // wings (behind everything): feathered, flat-lit so they read as light
+  if (s.wings) { const w = s.wings, wy = by + (frame === 'walk0' || frame === 'atk' ? -1 : 0);
+    g.rect(2, 8 + wy, 5, 13 + wy, w); g.rect(1, 7 + wy, 3, 9 + wy, w); g.set(0, 6 + wy, w); g.set(1, 6 + wy, w); g.rect(1, 13 + wy, 3, 14 + wy, w); g.set(2, 15 + wy, w);
+    g.set(2, 10 + wy, shade(w, -0.25), true); g.set(3, 12 + wy, shade(w, -0.25), true); g.set(1, 8 + wy, '#ffffff', true); }
   // cape
   if (s.cape) g.rect(4, 11 + by, 5, 17, s.cape);
   // legs
@@ -179,9 +193,17 @@ function genHumanoid(s, frame) {
       const hc = s.hornCol || '#f1ecdc';
       g.set(6, 3 + hatY, hc); g.set(5, 2 + hatY, hc); g.set(4, 1 + hatY, hc); g.set(4, 0 + hatY, hc);
       g.set(12, 3 + hatY, hc); g.set(13, 2 + hatY, hc); g.set(14, 1 + hatY, hc); g.set(14, 0 + hatY, hc); break; }
+    case 'antlers': {
+      const hc = s.hornCol || '#c9a06a';
+      g.rect(6, 0 + hatY, 6, 3 + hatY, hc); g.set(5, 1 + hatY, hc); g.set(4, 0 + hatY, hc); g.set(7, 1 + hatY, hc);
+      g.rect(12, 0 + hatY, 12, 3 + hatY, hc); g.set(13, 1 + hatY, hc); g.set(14, 0 + hatY, hc); g.set(11, 1 + hatY, hc); break; }
+    case 'tricorn':
+      g.rect(4, 3 + hatY, 14, 4 + hatY, cl); g.rect(6, 1 + hatY, 12, 2 + hatY, cl); g.set(3, 2 + hatY, cl); g.set(15, 2 + hatY, cl); g.rect(6, 3 + hatY, 12, 3 + hatY, '#ffcf3a', true); break;
     case 'bandana':
       g.rect(5, 3 + hatY, 13, 4 + hatY, cl); g.set(4, 4 + hatY, cl); g.set(3, 5 + hatY, cl); g.set(3, 6 + hatY, cl); g.set(11, 3 + hatY, '#ffffff', true); break;
   }
+  // halo floats above whatever is on the head
+  if (s.halo) { const hy0 = Math.max(0, hatY - (s.hat && s.hat !== 'none' ? 1 : -1)); g.rect(7, hy0, 11, hy0, s.halo, true); g.set(6, hy0 + 1, s.halo, true); g.set(12, hy0 + 1, s.halo, true); }
   // front arm + weapon
   if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
   else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); drawWeapon(g, s, s.weapon, 12, 14 + by, false); }

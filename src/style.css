@@ -1018,3 +1018,5 @@ b.sv { color: var(--gold); }
 .fallen > b { color: var(--rose); font-family: var(--f-display); }
 .fallen span { display: inline-flex; align-items: center; gap: 4px; } .fallen img { width: 28px; height: 28px; }
 .fallen > small { flex-basis: 100%; color: var(--muted); }
+
+.rfixed { margin: -2px 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }

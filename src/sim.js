@@ -8,7 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.0, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 0.92, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
@@ -372,6 +372,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
+  if (tgt.side === 'enemy' && tgt.vulnT > B.t) amount *= 1.2;
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
   let armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred;
   if (tgt.side === 'hero' && tgt.st.sp.gargoyle) armor += 5 * B.enemies.filter(e => e.alive && dist(e, tgt) < 30).length;
@@ -380,6 +381,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
+  if (tgt.side === 'hero' && tgt.undyingT > B.t && tgt.hp < 1) tgt.hp = 1;
   if (src) src.dmg += dmg;
   if (src && src.side === 'hero') { addTo(src.dsrc, src.temp ? 'summon' : o.from || (o.sig ? 'ability' : DTAG || 'auto'), dmg); if (tgt.side === 'enemy') tgt.ccBy = src.temp && src.owner ? src.owner : src; }
   else if (!src && tgt.side === 'enemy') tgt.ccBy = null;
