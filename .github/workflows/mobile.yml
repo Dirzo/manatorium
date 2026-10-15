@@ -1,0 +1,45 @@
+# Builds the Siege of Legends phone apps from this repo.
+# Android: an installable debug APK on every push to the mobile branch (download it from the run's Artifacts).
+# iOS: a simulator build to prove the Xcode project compiles; run it by hand (macOS minutes cost more).
+name: Mobile app
+
+on:
+  push:
+    branches: [claude/mobile-app-61jip8]
+    paths: ['src/**', 'build.mjs', 'app/**', 'android/**', 'ios/**', 'capacitor.config.json', 'package*.json', 'tools/build-app.mjs', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+    inputs:
+      ios:
+        description: 'Also build the iOS project (simulator, unsigned)'
+        type: boolean
+        default: false
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm ci
+      - run: node build.mjs && node tools/build-app.mjs && npx cap sync android
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: siege-of-legends-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    if: github.event_name == 'workflow_dispatch' && inputs.ios
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: node build.mjs && node tools/build-app.mjs && npx cap sync ios
+      - run: xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
