@@ -57,10 +57,10 @@ function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
-// flat power bonuses that used to be +1 rolls: mustache, Aether Engine, double Golden Ladle (+2)
+// flat power bonuses that used to be +1 rolls: mustache, Aether Engine, Heart of the Twelve (+3)
 function heroBonusPts(run, h) {
   let bonus = (h.mustache ? 1 : 0) + (run.tech.aether ? 1 : 0);
-  for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'spatula+spatula') bonus += 2;
+  for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'shard+shard') bonus += 3;
   return bonus;
 }
 function heroRarity(h) { return h.rarity || 0; }
@@ -173,48 +173,48 @@ function heroStats(h, run, meta, syn) {
     }
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
-  // items: components give stats; finished items give 125% of both parts plus a special
+  // items: a component gives its stat (a bit more inside a finished item); a finished item adds one effect of its own
   for (const it0 of heroItems(run, h)) for (const it of it0.sub ? [it0, it0.sub] : [it0]) {
-    const f = it.parts.length === 2 ? 1.6 : 1.3;
-    for (const c of it.parts) switch (c) {
-      case 'sword': s.atk *= 1 + 0.18 * f; break;
-      case 'bow': s.as *= 1 + 0.18 * f; break;
-      case 'rod': s.ap *= 1 + 0.22 * f; break;
-      case 'tear': s.startMana += 0.2 * f; s.manaGain *= 1 + 0.15 * f; break;
-      case 'vest': s.armor += 25 * f; break;
-      case 'cloak': s.dodge += 0.1 * f; break;
-      case 'belt': s.hp *= 1 + 0.2 * f; break;
-      case 'glove': s.crit += 0.15 * f; break;
-    }
+    const fi = it.parts.length === 2 ? 1 : 0;
+    for (const c of it.parts) { const C = COMPONENTS[c]; if (!C || !C.stat) continue; const v = C.stat[fi] / 100; switch (c) {
+      case 'sword': s.atk *= 1 + v; break;
+      case 'bow': s.as *= 1 + v; break;
+      case 'rod': s.ap *= 1 + v; break;
+      case 'tear': s.startMana += v; s.manaGain *= 1 + C.stat2[fi] / 100; break;
+      case 'vest': s.armor += C.stat[fi]; break;
+      case 'cloak': s.dodge += v; break;
+      case 'belt': s.hp *= 1 + v; break;
+      case 'glove': s.crit += v; break;
+    } }
     if (it.parts.length === 2) {
       const sp = FINISHED[itemKey(...it.parts)][1]; s.sp[sp] = true;
       switch (sp) {
-        case 'bloodthirst': s.lifesteal += 0.22; break;
-        case 'ambush': s.firstStrike += 1.5; break;
-        case 'reflect': s.reflect += 0.35; break; case 'porcupine': s.reflect += 0.25; break; case 'spiked': s.reflect += 0.3; break;
-        case 'storm': s.storm = 0.25; break; case 'frost': s.frost = 0.35; break; case 'phoenix': s.revive = 0.6; break; case 'midas': s.midas = 0.6; break;
-        case 'ghostwind': s.dodge += 0.2; s.spd *= 1.3; break;
-        case 'zeal': s.spd *= 1.25; break;
-        case 'sniper': s.range *= 1.4; break;
-        case 'archmage': s.ap *= 1.5; break;
-        case 'jeweled': s.sigMul *= 1.35; break;
-        case 'bastion': s.armor += 60; break;
-        case 'bedsheet': s.dodge += 0.25; break;
-        case 'trollblood': s.regen += 0.04; break;
-        case 'titan': s.hp *= 1.6; s.scale *= 1.15; break;
-        case 'dice': s.crit += 0.3; break;
+        case 'lifesteal': s.lifesteal += 0.2; break;
+        case 'ambush': s.firstStrike += 2; break;
+        case 'thorns': s.reflect += 0.3; break;
+        case 'chainZap': s.storm = Math.max(s.storm, 0.25); break; case 'chill': s.frost = 0.3; break; case 'revive': s.revive = 0.5; break; case 'goldFinger': s.midas = 0.5; break;
+        case 'fogstep': s.spd *= 1.3; break;
+        case 'farsight': s.range *= 1.4; break;
+        case 'bigHat': s.ap *= 1.5; break;
+        case 'sigBoost': s.sigMul *= 1.4; break;
+        case 'bubble': s.startShield = Math.max(s.startShield, 0.25); break;
+        case 'heavyPlate': s.armor += 60; break;
+        case 'ghost': s.dodge += 0.3; break;
+        case 'regen': s.regen += 0.03; break;
+        case 'bigBelt': s.hp *= 1.6; s.scale *= 1.15; break;
+        case 'dice': s.crit += 0.2; break;
       }
     }
   }
   for (const it of heroItems(run, h)) if (it.sup) { const sp = s.sp; switch (it.sup) {
-    case 'sword': s.atk *= 1.25; sp.cleave = sp.multishot = sp.execute = true; break;
-    case 'bow': s.as *= 1.25; sp.quicksilver = sp.multishot = true; s.storm = Math.max(s.storm || 0, 0.35); break;
-    case 'rod': s.ap *= 1.35; s.sigMul *= 1.2; sp.hex = sp.jeweled = sp.spellblade = true; break;
-    case 'tear': s.startMana += 0.3; sp.fountain = sp.teacup = sp.hummingbird = true; break;
-    case 'vest': s.armor += 80; s.reflect += 0.3; sp.gargoyle = true; break;
-    case 'cloak': s.dodge += 0.2; sp.bedsheet = sp.trickster = true; break;
-    case 'belt': s.hp *= 1.4; s.regen += 0.03; sp.sunfire = true; break;
-    case 'glove': s.crit += 0.3; sp.dice = sp.hearty = sp.execute = true; break;
+    case 'sword': s.atk *= 1.25; sp.splash = sp.twinStrike = sp.execute = true; break;
+    case 'bow': s.as *= 1.25; sp.haste = true; s.storm = Math.max(s.storm || 0, 0.35); break;
+    case 'rod': s.ap *= 1.35; s.sigMul *= 1.2; sp.curse = sp.runeStrike = true; break;
+    case 'tear': s.startMana += 0.3; sp.wellspring = sp.refill = sp.manaHit = true; break;
+    case 'vest': s.armor += 80; s.reflect += 0.3; sp.arrowWard = true; break;
+    case 'cloak': s.dodge += 0.2; sp.counter = true; break;
+    case 'belt': s.hp *= 1.4; s.regen += 0.03; sp.emberAura = true; break;
+    case 'glove': s.crit += 0.25; sp.dice = sp.heavyHands = sp.execute = true; break;
   } }
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
@@ -281,7 +281,8 @@ function startBattle(run, meta) {
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
   for (const c of B.combos) if (c.kind === 'gold') B.goldBonus += 0.3 * cp;
-  const chalice = placedHeroes(run).some(h => heroItems(run, h).some(it => [it, it.sub].some(x => x && x.parts.length === 2 && FINISHED[itemKey(...x.parts)][1] === 'chalice')));
+  const teamItem = sp => placedHeroes(run).some(h => heroItems(run, h).some(it => [it, it.sub].some(x => x && x.parts.length === 2 && FINISHED[itemKey(...x.parts)][1] === sp)));
+  const teamMana = teamItem('teamMana'), rally = teamItem('rally');
   for (const h of placedHeroes(run)) {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, meta, syn);
     let pos, rafter = false;
@@ -291,7 +292,8 @@ function startBattle(run, meta) {
     if (run.mods.inspire) st.atk = Math.round(st.atk * 1.25);
     if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
     if (B.hzK === 'gale') st.as *= 1.2;
-    if (chalice) st.startMana += 0.2;
+    if (teamMana) st.startMana += 0.2;
+    if (rally) st.as *= 1.1;
     const u = makeUnit('hero', { def: d, inst: h, key: heroSpriteKey(h), x: pos.x, y: pos.y, hx: pos.x, hy: pos.y, rafter, maxHp: st.hp, hp: st.hp, st, vscale: st.scale,
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
     if (st.startShield) u.shield = Math.max(u.shield || 0, u.maxHp * st.startShield);
@@ -377,27 +379,30 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'hero' && !o.unavoidable) {
     if (src && src.blindT > 0 && Math.random() < 0.25) { FX.text(tgt.x, tgt.y - 18, 'miss', '#fff3b0'); return 0; }
     if (tgt.st.dodge && Math.random() < tgt.st.dodge) { FX.text(tgt.x, tgt.y - 18, 'dodge', '#bff4ff');
-      if (src && src.alive && src.side === 'enemy') { if (tgt.st.sp.bedsheet && !src.boss) { src.stun = Math.max(src.stun, 0.5); FX.text(src.x, src.y - 20, 'BOO!', '#ffffff', true); } if (tgt.st.sp.trickster) dealDamage(B, tgt, src, tgt.st.atk, { from: 'item', noProc: true }); }
+      if (src && src.alive && src.side === 'enemy') { if (tgt.st.sp.counter) dealDamage(B, tgt, src, tgt.st.atk, { from: 'item', noProc: true }); }
       return 0; }
   }
   let crit = false;
-  if (src && src.side === 'hero' && src.st && !o.noCrit && Math.random() < src.st.crit) { amount *= src.st.sp.dice ? rand(1.2, 2.6) : src.st.critMul; crit = true; }
+  if (src && src.side === 'hero' && src.st && !o.noCrit && Math.random() < src.st.crit) { amount *= src.st.sp.dice ? rand(1.5, 2.5) : src.st.critMul; crit = true; }
   if (src && src.side === 'hero' && src.st && src.st.firstStrike && !src.struck) { amount *= 1 + src.st.firstStrike; src.struck = true; crit = true; }
-  if (src && src.side === 'hero' && src.spellblade > 0 && !o.noProc && !o.sig) { amount *= 2.2; src.spellblade--; }
+  if (src && src.side === 'hero' && src.spellblade > 0 && !o.noProc && !o.sig) { amount *= 2; src.spellblade--; }
+  if (src && src.side === 'hero' && src.st && src.st.sp.brimming && !o.sig && src.maxMana > 0) amount *= 1 + 0.4 * Math.min(1, src.mana / src.maxMana);
+  if (tgt.side === 'hero' && tgt.stoneT > B.t) return 0;
+  if (tgt.side === 'hero' && o.ranged && tgt.st.sp.arrowWard) amount *= 0.6;
   if (src && src.side === 'hero' && src.st && src.st.el.salty && src.grumble) amount *= 1 + 0.02 * src.grumble;
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
   if (tgt.side === 'enemy' && tgt.vulnT > B.t) amount *= 1.2;
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
-  let armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred;
-  if (tgt.side === 'hero' && tgt.st.sp.gargoyle) armor += 5 * B.enemies.filter(e => e.alive && dist(e, tgt) < 30).length;
+  const armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred - (tgt.pry || 0);
   let dmg = amount * armorFactor(armor);
   if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.15; if (tgt.curseT > 0) dmg *= 1.2; }
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
   if (tgt.side === 'hero' && tgt.undyingT > B.t && tgt.hp < 1) tgt.hp = 1;
+  if (tgt.side === 'hero' && tgt.st.sp.statue && !tgt.stoneUsed && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.3) { tgt.stoneUsed = true; tgt.stoneT = B.t + 2; tgt.stun = Math.max(tgt.stun || 0, 2); FX.text(tgt.x, tgt.y - 22, 'STONE', '#c8c2b4', true); FX.particles(tgt.x, tgt.y - 8, 12, ['#9a9488', '#d8d2c4'], { spread: 14 }); }
   if (src) src.dmg += dmg;
   if (src && src.side === 'hero') { addTo(src.dsrc, src.temp ? 'summon' : o.from || (o.sig ? 'ability' : DTAG || 'auto'), dmg); if (tgt.side === 'enemy') tgt.ccBy = src.temp && src.owner ? src.owner : src; }
   else if (!src && tgt.side === 'enemy') tgt.ccBy = null;
@@ -406,7 +411,8 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'hero') { if (tgt.st.sigOn) tgt.mana = Math.min(tgt.maxMana, tgt.mana + 3 * tgt.st.manaGain); if (tgt.st.el.salty) tgt.grumble = Math.min(25, tgt.grumble + 1); }
   if (src && src.side === 'hero' && src.st) {
     if (src.st.lifesteal) healUnit(B, src, src, dmg * src.st.lifesteal, true, 'lifesteal');
-    if (crit && src.st.sp.hearty) healUnit(B, src, src, src.maxHp * 0.04, true, 'item');
+    if (crit && src.st.sp.heavyHands && !o.noProc && tgt.alive) dealDamage(B, src, tgt, src.maxHp * 0.05, { from: 'item', noProc: true, noCrit: true, quiet: true });
+    if (crit && src.st.sp.armorBreak && tgt.side === 'enemy') tgt.pry = Math.min(50, (tgt.pry || 0) + 10);
     if (!o.noProc) {
       const E = src.st.el;
       if (B.syn.toad >= 0) tgt.poison.push({ dps: [4, 10][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
@@ -421,10 +427,9 @@ function dealDamage(B, src, tgt, amount, o = {}) {
       if (E.sweet) { tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.15); }
       if (E.treat && !tgt.boss && Math.random() < 0.12) { tgt.stun = Math.max(tgt.stun, 0.6); FX.text(tgt.x, tgt.y - 22, 'ooh, a snack', '#ffb02e'); }
       if (E.dark && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.1) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#8a5ad8', true); tgt.hp = 0; }
-      if (crit && src.st.sp.execute && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.15) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#ff3d6e', true); tgt.hp = 0; }
-      if (src.st.sp.cleave) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.35, { from: 'item', noProc: true, quiet: true });
-      if (src.st.sp.manaCleave && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
-      if (src.st.sp.hummingbird && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 6);
+      if (crit && src.st.sp.execute && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.2) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#ff3d6e', true); tgt.hp = 0; }
+      if (src.st.sp.splash) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.4, { from: 'item', noProc: true, quiet: true });
+      if (src.st.sp.manaHit && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
     }
   }
   if (tgt.side === 'hero' && src && src.side === 'enemy' && !o.ranged && tgt.st.reflect) dealDamage(B, tgt, src, dmg * tgt.st.reflect, { from: tgt.st.el.nature ? 'element' : 'item', noProc: true, quiet: true, noCrit: true });
@@ -480,7 +485,7 @@ function killUnit(B, u, src) {
   else if (u.captain) drops = 1;
   else if (u.def.elite && Math.random() < 0.06) drops = 1;
   else if (u.id === 'goose') drops = 1;
-  for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'spatula' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
+  for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
   if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name); B.bossKilled = u.def.boss; }
 }
@@ -744,7 +749,7 @@ function castCastlePower(B, x, y) {
 // ----- boss signature moves: one funny or epic move per boss, announced across the screen -----
 function bossCall(B, u, title, quip, cols, shake) { FX.combo(W / 2, 64, title, cols); FX.text(u.x, u.y - 30 * (u.scale || 1) - 12, quip, '#ffffff', true, true); FX.shake(shake || 8); FX.flash(cols[0], 0.18); }
 const BOSS_MOVES = {
-  grubnose(B, u, hs) { const t = hs.slice().sort((a, b) => b.maxHp - a.maxHp)[0]; if (!t) return 4; bossCall(B, u, 'BUCKET THROW', 'MY THRONE! CATCH!', ['#c9a35a', '#8a6a2a']);
+  grubnose(B, u, hs) { const t = hs.slice().sort((a, b) => b.maxHp - a.maxHp)[0]; if (!t) return 4; bossCall(B, u, 'BUCKET THROW', 'MY THRONE. CATCH.', ['#c9a35a', '#8a6a2a']);
     fireProj(B, u, t, 'rock', 0, { speed: 150, onLand: p => { for (const h of inRadius(B.heroes, { x: p.tx, y: p.ty + 8 }, 26)) { dealDamage(B, u, h, u.atk * 2.2); h.stun = Math.max(h.stun, 2); } FX.text(p.tx, p.ty - 10, 'CLANG', '#ffde3a', true); FX.shake(10); FX.sound('hammer'); } }); return 11; },
   gloop(B, u, hs) { bossCall(B, u, 'MOM HUG', 'come here, sweetie', ['#7fe05a', '#ff8fb0']); for (const h of hs) { if (h.rafter) continue; if (dist(h, u) < 140) { h.x += (u.x - 20 - h.x) * 0.6; h.y += (u.y - h.y) * 0.4; h.slowT = 3; h.slowAmt = 0.5; dealDamage(B, u, h, u.atk * 0.8); } } FX.sound('summon'); return 12; },
   wyrm(B, u, hs) { bossCall(B, u, 'DRAMATIC READING', '"Chapter Three: My Feelings"', ['#a89ae8', '#ff9a4a'], 6); for (const h of hs) if (dist(h, u) < 220) { h.stun = Math.max(h.stun, 1.6); FX.text(h.x, h.y - 22, 'zzz', '#c8c8ff', false); } return 13; },
@@ -753,8 +758,8 @@ const BOSS_MOVES = {
   sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
   matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
   trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
-  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'HAVE YOU TRIED TURNING IT OFF', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
-  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'FIRE ALL CANNONS! ARR!', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
+  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
+  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
   // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
   shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
@@ -848,21 +853,20 @@ function stepBattle(B, dt) {
     let r = (B.syn.cleric >= 0 ? [0.01, 0.025][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
     if (h.st.el && h.st.el.water && h.hp < h.maxHp * 0.5) r += 0.03 * h.st.el.water;
     if (r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * r * dt);
-    if (h.st.sp && h.st.sp.fountain && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
+    if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
   }
-  // sweet aura + frozen heart + sunfire
+  // sweet aura, ember mantle, kettle
   const sweet = B.heroes.filter(h => h.alive && h.st && h.st.el && h.st.el.sweet);
   for (const h of B.heroes) if (h.alive) h.auraAs = sweet.some(s => dist(s, h) < 60) ? 0.15 * Math.max(...sweet.map(s => s.st.el.sweet)) : 0;
   B.kettleT += dt; const tick = B.kettleT >= 1; if (tick) B.kettleT = 0;
   for (const h of B.heroes) if (h.alive && h.st && h.st.sp) {
-    if (h.st.sp.frozenHeart) for (const e of inRadius(B.enemies, h, 40)) { e.slowT = Math.max(e.slowT, 0.3); e.slowAmt = Math.max(e.slowAmt, 0.25); }
-    if (tick && h.st.sp.sunfire) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
-    if (h.st.sp.redemption) { h.redT = (h.redT || 0) + dt; if (h.redT >= 10) { h.redT = 0; for (const a of B.heroes) if (a.alive) healUnit(B, h, a, a.maxHp * 0.12, false, 'item'); FX.ring(h.x, h.y - 6, 30, '#7cf09a'); FX.sound('heal'); } }
+    if (tick && h.st.sp.emberAura) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
+    if (h.st.sp.kettle) { h.redT = (h.redT || 0) + dt; if (h.redT >= 10) { h.redT = 0; for (const a of B.heroes) if (a.alive) healUnit(B, h, a, a.maxHp * 0.1, false, 'item'); FX.ring(h.x, h.y - 6, 30, '#7cf09a'); FX.sound('heal'); } }
   }
   // combos
   if (anyFoe) for (const c of B.combos) { c.t += dt; if (c.t >= c.every) { c.t = 0; comboPulse(B, c); } }
   // secrets
-  if (run.tech.bard && anyFoe) { B.bardT -= dt; if (B.bardT <= 0) { B.bardT = 18; for (const h of B.heroes) if (h.alive) { h.buffAs = Math.max(h.buffAs, 0.4); h.buffAsT = 5; } FX.combo(70, 40, '♪ The bard drops a banger ♪', ['#ff9fd0', '#ffd84a']); FX.sound('jingle'); } }
+  if (run.tech.bard && anyFoe) { B.bardT -= dt; if (B.bardT <= 0) { B.bardT = 18; for (const h of B.heroes) if (h.alive) { h.buffAs = Math.max(h.buffAs, 0.4); h.buffAsT = 5; } FX.combo(70, 40, '♪ The bard plays the big number ♪', ['#ff9fd0', '#ffd84a']); FX.sound('jingle'); } }
   if (run.tech.cheese && anyFoe) { B.cheeseT -= dt; if (B.cheeseT <= 0) { B.cheeseT = 7; B.waves.push({ type: 'cheese', x: CASTLE_X, y: GRID.y + randi(0, GRID.rows - 1) * GRID.cell + 14, vx: 150, life: 2.6, t: 0, src: null, dmg: teamAtk(B) * 1.4, hit: new Set(), kb: 30, h: 12 }); FX.sound('whoosh'); } }
   if (run.tech.goose) { B.gooseT -= dt; if (B.gooseT <= 0) { B.gooseT = 1; for (const e of B.enemies) if (e.alive && !e.flying && e.x < CASTLE_X + 14) { dealDamage(B, null, e, e.maxHp * (e.boss ? 0.005 : 0.05), { kind: 'combo' }); if (Math.random() < 0.3) { FX.text(e.x, e.y - 22, 'HONK', '#ffffff', true); FX.sound('honk'); } } } }
   if (B.pinataT > 0) B.pinataT -= dt;
@@ -951,7 +955,7 @@ function moveToward(u, tx, ty, spd, dt) {
   const s = Math.min(d, spd * dt); u.x += dx / d * s; u.y += dy / d * s; if (Math.abs(dx) > 1) u.facing = dx > 0 ? 1 : -1; u.moving = true;
 }
 
-function heroAS(u) { return u.st.as * (1 + u.buffAs + (u.auraAs || 0) + (u.st.frenzy ? 0.04 * u.frenzyStacks : 0) + (u.st.sp && u.st.sp.quicksilver ? 0.05 * u.qs : 0)) * (1 - (u.slowAmt || 0) * 0.5); }
+function heroAS(u) { return u.st.as * (1 + u.buffAs + (u.auraAs || 0) + (u.st.frenzy ? 0.04 * u.frenzyStacks : 0) + (u.st.sp && u.st.sp.haste ? 0.05 * u.qs : 0)) * (1 - (u.slowAmt || 0) * 0.5); }
 function heroAtk(u) { return u.st.atk * (1 + u.buffAtk) * BAL.auto; } // basic attacks only; signatures use S(u)
 
 // a rafter hero leaps down to fight on the field for the rest of the siege
@@ -970,13 +974,13 @@ function castSignature(B, u) {
   // Mythic and rarer legends echo their signature a moment later
   if (u.st.echo && !u.echoing) (B.echoes = B.echoes || []).push({ u, t: 0.9, mul: u.st.echo });
   if (B.ach) B.ach.sigs++;
-  u.mana = u.st.sp.teacup ? u.maxMana * 0.4 : 0; u.atkT = 0.35;
+  u.mana = u.st.sp.refill ? u.maxMana * 0.4 : 0; u.atkT = 0.35;
   const E = u.st.el, ecol = u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#fff1a8';
   const myEl = u.els || [], cb = (B.combos || []).find(c => myEl.includes(c.a) || myEl.includes(c.b));
   FX.cutin(u, u.st.aName || u.def.aName, ecol, { ab: u.st.ability || u.def.ability, els: myEl, col2: myEl[0] ? ELEMENTS[myEl[0]].col2 : '#ffffff', combo: cb ? { name: cb.name, ca: ELEMENTS[cb.a].col, cb: ELEMENTS[cb.b].col } : null, pw: sigPower(u) });
   FX.castSpark(u, ecol);
-  if (u.st.sp.spellblade) u.spellblade = 3;
-  if (u.st.sp.hex) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
+  if (u.st.sp.runeStrike) u.spellblade = 3;
+  if (u.st.sp.curse) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
   if (E.light) for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.1 * E.light, true, 'element');
   if (E.void) { const t = densest(B.enemies, 30) ; if (t) { for (const e of inRadius(B.enemies, t, 60)) if (!e.boss) { e.x += (t.x - e.x) * 0.6; e.y += (t.y - e.y) * 0.6; } FX.vortex(t.x, t.y, [ELEMENTS.void.col, '#0f0a2a']); } }
   if (E.meat) for (const e of inRadius(B.enemies, u, TAUNT_R)) { e.taunt = u; e.tauntT = Math.max(e.tauntT, 2.5); }
@@ -1028,17 +1032,18 @@ function stepHero(B, u, dt) {
         u.cd = 1 / heroAS(u); u.atkT = 0.18; u.hits++;
         if (u.st.sigOn) u.mana = Math.min(u.maxMana, u.mana + 10 * u.st.manaGain);
         if (u.st.frenzy) u.frenzyStacks = Math.min(u.st.frenzy, u.frenzyStacks + 1);
-        if (u.st.sp.quicksilver) u.qs = Math.min(15, u.qs + 1);
+        if (u.st.sp.haste) u.qs = Math.min(10, u.qs + 1);
         if (u.healing) fireProj(B, u, t, 'heal', u.st.atk * (1 + u.buffAtk) * 1.6, { speed: 150 });
         else if (ranged) {
           const pt = u.def.proj && u.def.proj !== 'heal' ? u.def.proj : (cls === 'mage' || cls === 'cleric' ? 'spark' : 'arrow');
           fireProj(B, u, t, pt, heroAtk(u), { speed: u.rafter ? 360 : pt === 'arrow' || pt === 'arrowGold' ? 300 : 200, rafter: u.rafter });
           if (u.rafter && typeof FXS !== 'undefined') { u.flashT = 0.12; for (let i = 0; i < 4; i++) FXS.parts.push({ x: u.x + 6, y: u.y - 12, vx: rand(10, 40), vy: rand(-20, 5), life: 0.25, t: 0, color: '#ffe680', size: 1, grav: 0 }); }
-          const extraN = (cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2][B.syn.ranger] : 0) + (u.st.sp.multishot ? 1 : 0);
-          if (extraN) { const extra = B.enemies.filter(e => e.alive && e !== t && dist(e, u) < u.st.range).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, extraN); for (const e of extra) fireProj(B, u, e, pt, heroAtk(u) * BAL.extraShot, { speed: 300, rafter: u.rafter, from: u.st.sp.multishot && !(cls === 'ranger' && B.syn.ranger >= 0) ? 'item' : 'bonus' }); }
+          const extraN = cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2][B.syn.ranger] : 0;
+          if (extraN) { const extra = B.enemies.filter(e => e.alive && e !== t && dist(e, u) < u.st.range).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, extraN); for (const e of extra) fireProj(B, u, e, pt, heroAtk(u) * BAL.extraShot, { speed: 300, rafter: u.rafter, from: 'bonus' }); }
           FX.sound(pt === 'arrow' || pt === 'arrowGold' ? 'bow' : 'pew');
-        } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit');
-          if (u.st.sp.multishot) { const e2 = nearest(B.enemies, t, 24, e => e !== t); if (e2) dealDamage(B, u, e2, heroAtk(u) * 0.6, { from: 'item' }); } }
+        } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
+        // Gale Cutlass: every third attack strikes twice
+        if (u.st.sp.twinStrike && !u.healing && u.hits % 3 === 0 && t.alive) { if (ranged) fireProj(B, u, t, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u), { speed: 300, rafter: u.rafter, from: 'item' }); else dealDamage(B, u, t, heroAtk(u), { from: 'item' }); }
       }
     }
   } else if (!u.rafter) {

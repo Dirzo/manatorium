@@ -365,7 +365,7 @@ const ICONS = {
   vest:    ['.S....S.', 'SsS..SsS', 'SssSSssS', 'SsssssssS'.slice(0, 8), 'SsSssSsS', 'SssssssS', '.SSSSSS.', '........'],
   cloak:   ['...pp...', '..pPPp..', '.pPkkPp.', '.pPPPPp.', 'pPPPPPPp', 'pPpPPpPp', 'pp.pp.pp', '........'],
   glove:   ['.r.r.r..', '.r.r.r..', '.rrrrr.r', '.rRRRRrr', '.rRRRRr.', '.rRRRr..', '..yyy...', '..yyy...'],
-  spatula: ['....yyy.', '....yYy.', '....yyy.', '...b....', '..b.....', '.b......', 'b.......', '........'],
+  shard:   ['....w...', '...pPp..', '..pPwPp.', '..pPPPp.', '..pPPPp.', '...pPp..', '....p...', 'w.......'],
   scroll:  ['.YYYYYY.', 'Yy....yY', '.Y.kk.Y.', '.Y....Y.', '.Y.kk.Y.', '.Y....Y.', 'Yy....yY', '.YYYYYY.'],
   mic:     ['..SSS...', '.SsssS..', '.SsssS..', '.SsssS..', 'S.SSS.S.', '.S...S..', '..SSS...', '...S....'],
   crown:   ['........', 'y..y..y.', 'yy.y.yy.', 'yyyyyyy.', 'yrycyry.', 'yyyyyyy.', '........', '........'],

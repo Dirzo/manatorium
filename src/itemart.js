@@ -9,7 +9,7 @@ const ITEM_PAL = {
   'u': '#d8561a', // copper
 };
 const ITEM_ART = {
-  // Twice-Forged Claymore: huge broad greatsword
+  // Twin-Forged Greatblade: huge broad greatsword
   'sword+sword': [
     '.....ws.....',
     '....wsS.....',
@@ -24,7 +24,7 @@ const ITEM_ART = {
     '.....bB.....',
     '....yyyy....',
   ],
-  // Hurricane Saber: curved blade with wind swirls
+  // Gale Cutlass: curved blade with wind swirls
   'sword+bow': [
     '.......ww...',
     '.....wwsS...',
@@ -39,7 +39,7 @@ const ITEM_ART = {
     '...yyy..c..c',
     '.........cc.',
   ],
-  // Spellblade: diagonal violet-glowing blade with arcane sparkle
+  // Runeslash Rapier: diagonal violet-glowing blade with arcane sparkle
   'sword+rod': [
     '..........PP',
     '.........PpP',
@@ -54,7 +54,7 @@ const ITEM_ART = {
     '.bB.........',
     'yB......m...',
   ],
-  // Mana Cleaver: square cleaver with glowing mana core
+  // Brook Cleaver: square cleaver with glowing mana core
   'sword+tear': [
     '............',
     'ssssssss....',
@@ -69,7 +69,7 @@ const ITEM_ART = {
     '...ccc......',
     '....c.......',
   ],
-  // Bramble Edge: vine-wrapped sword with thorns
+  // Thornwood Sword: vine-wrapped sword with thorns
   'sword+vest': [
     'GG..........',
     'GwG.........',
@@ -84,7 +84,7 @@ const ITEM_ART = {
     '.......gbB..',
     '.........yy.',
   ],
-  // Assassin's Shroud: dark hood with glaring eyes and a dagger
+  // Moonless Shroud: dark hood with glaring eyes and a dagger
   'sword+cloak': [
     '....vvvv....',
     '...vppppv...',
@@ -99,7 +99,7 @@ const ITEM_ART = {
     'vpvpppppbv..',
     'vvvvvvvvvv..',
   ],
-  // Bloodthirst Axe: big red axe dripping
+  // Vampire Hatchet: big red axe dripping
   'sword+belt': [
     '..rrr.......',
     '.rRRrrbB....',
@@ -114,7 +114,7 @@ const ITEM_ART = {
     '......bB.r..',
     '.....BBB....',
   ],
-  // Executioner's Grin: toothy grinning skull over crossed blades
+  // Grimgrin Charm: toothy grinning skull over crossed blades
   'sword+glove': [
     '...WWWWWW...',
     '..WwwwwwwW..',
@@ -129,7 +129,7 @@ const ITEM_ART = {
     '..ss....ss..',
     '.ss......ss.',
   ],
-  // Quicksilver Bow: silver recurve with arrow and speed streak
+  // Hasty Longbow: silver recurve with arrow and speed streak
   'bow+bow': [
     '...Ws.......',
     '...k.ss.....',
@@ -144,7 +144,7 @@ const ITEM_ART = {
     '...Ws.......',
     '.cc..cc.....',
   ],
-  // Storm Ring: blue ring crowned with a lightning bolt
+  // Thunder Band: blue ring crowned with a lightning bolt
   'bow+rod': [
     '.....yy.....',
     '....yY..c...',
@@ -189,7 +189,7 @@ const ITEM_ART = {
     '..BBBBBBBB..',
     '............',
   ],
-  // Ghostwind Boots: pale boot with a wing
+  // Fogstep Boots: pale boot with a wing
   'bow+cloak': [
     '............',
     '...WWWW..C..',
@@ -204,7 +204,7 @@ const ITEM_ART = {
     '..WWWWWWWWWW',
     'c..c...c....',
   ],
-  // Zealot's Sash: red diagonal sash with gold medal knot
+  // Pep Rally Sash: red diagonal sash with gold medal knot
   'bow+belt': [
     'rR..........',
     'RrR.........',
@@ -219,7 +219,7 @@ const ITEM_ART = {
     '..rR.....Rr.',
     '..R.......R.',
   ],
-  // Sniper's Monocle: gold-rimmed lens with crosshair and chain
+  // Squint Monocle: gold-rimmed lens with crosshair and chain
   'bow+glove': [
     '...yyyyy....',
     '..yCCCCcy...',
@@ -234,7 +234,7 @@ const ITEM_ART = {
     '......y.....',
     '.......y....',
   ],
-  // Archmage's Hat: tall pointy starry wizard hat
+  // Too-Tall Wizard Hat: tall pointy starry wizard hat
   'rod+rod': [
     '.......v....',
     '......pv....',
@@ -249,7 +249,7 @@ const ITEM_ART = {
     '.vvvvvvvvvv.',
     '............',
   ],
-  // Fountainhead Staff: staff spouting a fountain of water
+  // Wellspring Staff: staff spouting a fountain of water
   'rod+tear': [
     '..c..C..c...',
     '.cC.cCc.Cc..',
@@ -264,7 +264,7 @@ const ITEM_ART = {
     '.....bB.....',
     '....yBy.....',
   ],
-  // Frost Charm: snowflake pendant on a gold chain
+  // Snowglobe: snowflake pendant on a gold chain
   'rod+vest': [
     '..y......y..',
     '...y....y...',
@@ -279,7 +279,7 @@ const ITEM_ART = {
     '.....cc.....',
     '............',
   ],
-  // Hex Veil: tattered violet veil with a cursed green eye
+  // Curse-Lace Veil: tattered violet veil with a cursed green eye
   'rod+cloak': [
     '.mmmmmmmmmm.',
     'mvvvvvvvvvvm',
@@ -294,7 +294,7 @@ const ITEM_ART = {
     '..v...v...v.',
     '............',
   ],
-  // Phoenix Feather: blazing diagonal feather
+  // Firebird Plume: blazing diagonal feather
   'rod+belt': [
     '........rro.',
     '.......royyo',
@@ -309,7 +309,7 @@ const ITEM_ART = {
     '.Y..........',
     'Y...........',
   ],
-  // Jeweled Scepter: crowned gold scepter with a ruby
+  // Bedazzled Scepter: crowned gold scepter with a ruby
   'rod+glove': [
     '....y.y.y...',
     '....yyyyy...',
@@ -339,7 +339,7 @@ const ITEM_ART = {
     'wWWWWWWWWWW.',
     '.WWWWWWWWW..',
   ],
-  // Frozen Heart Mail: icy breastplate with a frosty heart, icicles
+  // Bubble Mail: pale blue breastplate with a shimmering heart
   'tear+vest': [
     '.nnn....nnn.',
     'ncccn..ncccn',
@@ -354,7 +354,7 @@ const ITEM_ART = {
     '..c....c....',
     '............',
   ],
-  // Chalice of Calm: golden goblet of still water
+  // Cup of Plenty: golden goblet of still water
   'tear+cloak': [
     '.yyyyyyyyyy.',
     '.yccccccccy.',
@@ -369,7 +369,7 @@ const ITEM_ART = {
     '...yyyyxx...',
     '............',
   ],
-  // Redemption Kettle: copper kettle with a healing cross
+  // Second-Wind Kettle: copper kettle with a healing cross
   'tear+belt': [
     '...c..G.....',
     '..c..GwG....',
@@ -384,7 +384,7 @@ const ITEM_ART = {
     '....uuuuuu..',
     '............',
   ],
-  // Pickpocket Glove: sneaky violet glove snatching a coin
+  // Sticky Fingers: sneaky violet glove snatching a coin
   'tear+glove': [
     '..p.p.p.p...',
     '..p.p.p.p...',
@@ -399,7 +399,7 @@ const ITEM_ART = {
     '........yxxy',
     '.........yy.',
   ],
-  // Bastion Plate: massive gold-trimmed plate armor
+  // Doorframe Cuirass: massive gold-trimmed plate armor
   'vest+vest': [
     'SSS......SSS',
     'SsSS....SSsS',
@@ -414,7 +414,7 @@ const ITEM_ART = {
     '.SSSSSSSSSS.',
     '............',
   ],
-  // Gargoyle Hide: horned stone gargoyle with bat wings
+  // Statue Skin: horned stone statue with bat wings
   'vest+cloak': [
     'S..........S',
     'SS..e..e..SS',
@@ -429,7 +429,7 @@ const ITEM_ART = {
     '..eS....Se..',
     '............',
   ],
-  // Sunfire Cape: flaming cape with a sun emblem
+  // Ember Mantle: flaming cape with a sun emblem
   'vest+belt': [
     '...yyyyyy...',
     '..roooooor..',
@@ -444,7 +444,7 @@ const ITEM_ART = {
     'r.rro.rro.rr',
     '..y...y...y.',
   ],
-  // Spiked Gauntlet: steel fist with knuckle spikes
+  // Can-Opener Gauntlet: steel fist with knuckle spikes
   'vest+glove': [
     '.w..w..w....',
     '.s..s..s....',
@@ -474,7 +474,7 @@ const ITEM_ART = {
     'wWwwWwwWwwWw',
     'w.ww.ww.ww.w',
   ],
-  // Troll Blood Flask: round flask of bubbling green blood
+  // Swamp Tonic: round flask of bubbling green tonic
   'cloak+belt': [
     '.....bb.....',
     '.....BB.....',
@@ -489,7 +489,7 @@ const ITEM_ART = {
     '..wgggggww..',
     '...wwwwww...',
   ],
-  // Trickster's Hood: two-tone jester hood with a sly grin
+  // Prankster's Hood: two-tone jester hood with a sly grin
   'cloak+glove': [
     'y..........y',
     'pp........mm',
@@ -504,7 +504,7 @@ const ITEM_ART = {
     '..ppppmmmm..',
     '............',
   ],
-  // Titan's Girdle: wide studded belt with a huge buckle
+  // Belt of Many Notches: wide studded belt with a huge buckle
   'belt+belt': [
     '............',
     '............',
@@ -519,7 +519,7 @@ const ITEM_ART = {
     '............',
     '............',
   ],
-  // Hearty Mitts: puffy red mitten with a heart and fluffy cuff
+  // Haymakers: puffy red mitten with a heart and fluffy cuff
   'belt+glove': [
     '...rrrr.....',
     '..rRRrrr....',
@@ -549,23 +549,23 @@ const ITEM_ART = {
     '......rrrrrd',
     '......dddddd',
   ],
-  // Golden Spatula of Destiny: sparkling slotted gold spatula
-  'spatula+spatula': [
-    '.Y....yyyyyy',
-    'YwY...yYkYkx',
-    '.Y....yYkYkx',
-    '......yYkYkx',
-    '......yyyyxx',
-    '.....xy.....',
-    '....xy......',
-    '...xy.......',
-    '..bB........',
-    '.bB.........',
-    'bB.....Y....',
-    'B.....YwY...',
+  // Heart of the Twelve: faceted violet heart-gem with sparkles
+  'shard+shard': [
+    '.Y.........w',
+    'YwY.........',
+    '.Y.vvv..vvv.',
+    '..vPPwvvPPPv',
+    '..vPwPPPPPmv',
+    '..vPPPPPPmmv',
+    '...vPPPPmmv.',
+    '....vPPmmv..',
+    '.....vPmv...',
+    '......vv....',
+    '..........Y.',
+    '.........YwY',
   ],
-  // Emblems: shared gold crest, inner field + symbol per component
-  'sword+spatula': [
+  // Crests: shared gold crest, inner field + symbol per component
+  'sword+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxrrwsrrxy.',
@@ -579,7 +579,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'bow+spatula': [
+  'bow+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxggYYggxy.',
@@ -593,7 +593,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'rod+spatula': [
+  'rod+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxppppYpxy.',
@@ -607,7 +607,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'tear+spatula': [
+  'tear+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxnnCCnnxy.',
@@ -621,7 +621,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'vest+spatula': [
+  'vest+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxWWeeWWxy.',
@@ -635,7 +635,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'cloak+spatula': [
+  'cloak+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxvvkkvvxy.',
@@ -649,7 +649,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'belt+spatula': [
+  'belt+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxooooooxy.',
@@ -663,7 +663,7 @@ const ITEM_ART = {
     '....yxxy....',
     '.....yy.....',
   ],
-  'glove+spatula': [
+  'glove+shard': [
     '..yyyyyyyy..',
     '.yYxxxxxxYy.',
     '.yxCrrrrCxy.',

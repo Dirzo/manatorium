@@ -23,10 +23,10 @@ const ACHIEVEMENTS = [
   { id: 'rainbow', group: 'Champions', name: 'Rainbow Keep', desc: 'Field 5 different elements at once.', dia: 21, test: run => Object.keys(fieldElements(run)).length >= 5 },
   { id: 'trinity', group: 'Champions', name: 'Holy Trinity', desc: 'Field attack, ability and defense elements together.', dia: 14, test: run => trinityActive(run) },
   { id: 'sigs', group: 'Champions', name: 'Signature Move', desc: 'Cast 60 signatures in one run.', dia: 18, test: run => (A_(run).sigs || 0) >= 60 },
-  { id: 'combos', group: 'Champions', name: 'Combo Breaker', desc: 'Fire element combos 80 times in one run.', dia: 21, test: run => (A_(run).combos || 0) >= 80 },
+  { id: 'combos', group: 'Champions', name: 'Chain Reaction', desc: 'Fire element combos 80 times in one run.', dia: 21, test: run => (A_(run).combos || 0) >= 80 },
   { id: 'sold', group: 'Champions', name: 'Catch and Release', desc: 'Release a champion.', dia: 7, test: run => (A_(run).sold || 0) >= 1 },
   // the castle
-  { id: 'hammer', group: 'Castle', name: 'Hammer Time', desc: 'Crush 25 foes with the Sky Hammer in one run.', dia: 18, test: run => (A_(run).hammer || 0) >= 25 },
+  { id: 'hammer', group: 'Castle', name: 'Hammered Home', desc: 'Crush 25 foes with the Sky Hammer in one run.', dia: 18, test: run => (A_(run).hammer || 0) >= 25 },
   { id: 'tech10', group: 'Castle', name: 'Tech Tycoon', desc: "Build 10 techs in the Artificers' Hall in one run.", dia: 21, test: run => Object.keys(run.tech).length >= 10 },
   { id: 'castleEl', group: 'Castle', name: 'The Keep Awakens', desc: 'Give your castle an element.', dia: 11, test: run => !!run.castleEl },
   { id: 'walls', group: 'Castle', name: 'Not a Scratch', desc: 'End siege 10 with the castle at full HP.', dia: 21, test: run => (A_(run).fullWalls || 0) >= 10 },
@@ -34,7 +34,7 @@ const ACHIEVEMENTS = [
   // stories and silliness
   { id: 'landlord', group: 'Stories', name: 'Good Landlord', desc: 'Let Grubnose rent the moat.', dia: 14, test: run => (run.storySeen || []).includes('story0_0') && !!run.discovered.goose },
   { id: 'kind', group: 'Stories', name: 'Kill Them With Kindness', desc: 'Beat 3 bosses who were holding back because you were nice to them.', dia: 29, test: run => (A_(run).soft || 0) >= 3 },
-  { id: 'rude', group: 'Stories', name: 'Rage Bait', desc: 'Beat 3 enraged bosses in one run.', dia: 29, test: run => (A_(run).mad || 0) >= 3 },
+  { id: 'rude', group: 'Stories', name: 'Poking the Bear', desc: 'Beat 3 enraged bosses in one run.', dia: 29, test: run => (A_(run).mad || 0) >= 3 },
   { id: 'chickens', group: 'Stories', name: 'Poultry in Motion', desc: 'Defeat 40 chickens in one run.', dia: 18, test: run => (A_(run).chickens || 0) >= 40 },
   { id: 'secrets', group: 'Stories', name: 'Secret Keeper', desc: 'Discover 3 secret techs in one run.', dia: 18, test: run => Object.keys(run.discovered || {}).length >= 3 },
   { id: 'humble', group: 'Stories', name: 'Humble Beginnings', desc: 'Lose on the very first siege. It happens.', dia: 4, test: run => run.siege === 1 && !run.won },
