@@ -1047,6 +1047,32 @@ b.sv { color: var(--gold); }
 @keyframes snatchfly { 0% { left: -30%; top: 55%; } 45% { left: 40%; top: 25%; } 100% { left: 110%; top: -40%; } }
 @keyframes dangle { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
 
+/* synergy badges carry their name and progress, so they read without hovering */
+.sybw { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 2px 8px 2px 2px; border-radius: 24px; background: rgba(255,255,255,.04); border: 1px solid transparent; cursor: help; }
+.sybw.on { background: color-mix(in srgb, var(--rc) 18%, transparent); border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
+.sybw .syl { display: flex; flex-direction: column; line-height: 1.1; }
+.sybw .syl b { font: 600 12px var(--f-display); color: var(--muted); white-space: nowrap; }
+.sybw .syl small { font: 600 11px var(--f-display); color: #8a92c0; }
+.sybw.on .syl b { color: #fff; } .sybw.on .syl small { color: var(--rc); }
+.sybw:hover .syb { transform: translateY(-2px); }
+.fits .fit small { white-space: normal; }
+/* touch: first tap on a draft card selects it so its text can be read; a second tap drafts */
+.dcard.armed { outline: 3px solid var(--gold); outline-offset: 2px; }
+.dcard .armbar { display: none; }
+.dcard.armed .armbar { display: block; position: sticky; bottom: 0; margin-top: 6px; padding: 8px; border-radius: 6px; background: var(--gold); color: #1a1230; font: 600 14px var(--f-display); text-align: center; }
+
+/* phone landscape hides the roster header, so a slim strip of bonuses sits over the top of the field */
+#synStrip { display: none; }
+html.m-land #synStrip:not([hidden]) { display: flex; position: fixed; z-index: 9; top: calc(var(--hudH, 44px) + 4px); left: 50%; transform: translateX(-50%); max-width: 56vw; gap: 4px; overflow-x: auto; padding: 3px 4px; border-radius: 20px; background: rgba(15,20,48,.72); scrollbar-width: none; }
+html.m-land #synStrip::-webkit-scrollbar { display: none; }
+#synStrip .sybw { padding: 1px 6px 1px 1px; gap: 3px; }
+#synStrip .syb { width: 24px; height: 24px; flex-basis: 24px; border-width: 1px; }
+#synStrip .syb img { width: 32px; height: 32px; clip-path: circle(11px at 50% 50%); margin-top: 4px; }
+#synStrip .syb .glyph { font-size: 13px; } #synStrip .syb .pips { display: none; }
+#synStrip .syb .cnt { top: -3px; right: -3px; min-width: 12px; height: 12px; font-size: 8px; line-height: 12px; }
+#synStrip .syl b { font-size: 10px; } #synStrip .syl small { font-size: 9px; }
+#synStrip .sybw:not(.on) .syl b { display: none; }
+
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
 #mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
@@ -1255,6 +1281,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
 </div>
 
 <div id="fxlayer"></div>
+<div id="synStrip" aria-label="Active bonuses" hidden></div>
 <div id="tip" role="tooltip" hidden></div>
 <img id="ghost" class="px" alt="" hidden>
 <div id="toast" aria-live="polite"></div>
@@ -1595,7 +1622,7 @@ const VAULT_LORE = {
 }; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.4';
+const VERSION = 'phase3.5';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -4007,28 +4034,31 @@ function castCastlePower(B, x, y) {
 function bossCall(B, u, title, quip, cols, shake) { FX.combo(W / 2, 64, title, cols); FX.text(u.x, u.y - 30 * (u.scale || 1) - 12, quip, '#ffffff', true, true); FX.shake(shake || 8); FX.flash(cols[0], 0.18); }
 const BOSS_MOVES = {
   grubnose(B, u, hs) { const t = hs.slice().sort((a, b) => b.maxHp - a.maxHp)[0]; if (!t) return 4; bossCall(B, u, 'BUCKET THROW', 'MY THRONE. CATCH.', ['#c9a35a', '#8a6a2a']);
-    fireProj(B, u, t, 'rock', 0, { speed: 150, onLand: p => { for (const h of inRadius(B.heroes, { x: p.tx, y: p.ty + 8 }, 26)) { dealDamage(B, u, h, u.atk * 2.2); h.stun = Math.max(h.stun, 2); } FX.text(p.tx, p.ty - 10, 'CLANG', '#ffde3a', true); FX.shake(10); FX.sound('hammer'); } }); return 11; },
-  gloop(B, u, hs) { bossCall(B, u, 'MOM HUG', 'come here, sweetie', ['#7fe05a', '#ff8fb0']); for (const h of hs) { if (h.rafter) continue; if (dist(h, u) < 140) { h.x += (u.x - 20 - h.x) * 0.6; h.y += (u.y - h.y) * 0.4; h.slowT = 3; h.slowAmt = 0.5; dealDamage(B, u, h, u.atk * 0.8); } } FX.sound('summon'); return 12; },
-  wyrm(B, u, hs) { bossCall(B, u, 'DRAMATIC READING', '"Chapter Three: My Feelings"', ['#a89ae8', '#ff9a4a'], 6); for (const h of hs) if (dist(h, u) < 220) { h.stun = Math.max(h.stun, 1.6); FX.text(h.x, h.y - 22, 'zzz', '#c8c8ff', false); } return 13; },
-  ringmaster(B, u, hs) { const t = hs.slice().sort((a, b) => a.x - b.x)[0]; if (!t) return 4; bossCall(B, u, 'HUMAN CANNONBALL', 'LADIES AND GOBLINS!', ['#ff5a5a', '#ffd84a'], 10);
+    const fl = 1.1; FX.boss('bucket', { sx: u.x - 10, sy: u.y - 30, tx: t.x, ty: t.y - 6, life: fl });
+    B.zones.push({ type: 'telegraph', x: t.x, y: t.y, r: 26, t: 0, dur: fl, onEnd: z => { for (const h of inRadius(B.heroes, z, 26)) { dealDamage(B, u, h, u.atk * 2.2); h.stun = Math.max(h.stun, 2); } FX.text(z.x, z.y - 16, 'CLANG', '#ffde3a', true); FX.explode(z.x, z.y - 4, 20, ['#c9a35a', '#8a6a2a', '#e0e0f0']); FX.shake(10); FX.sound('hammer'); } }); return 11; },
+  gloop(B, u, hs) { bossCall(B, u, 'MOM HUG', 'come here, sweetie', ['#7fe05a', '#ff8fb0']); for (const h of hs) { if (h.rafter) continue; if (dist(h, u) < 140) { FX.boss('tendril', { sx: u.x - 8, sy: u.y - 14, tx: h.x, ty: h.y - 8, life: 0.8 }); h.x += (u.x - 20 - h.x) * 0.6; h.y += (u.y - h.y) * 0.4; h.slowT = 3; h.slowAmt = 0.5; dealDamage(B, u, h, u.atk * 0.8); } } FX.sound('summon'); return 12; },
+  wyrm(B, u, hs) { bossCall(B, u, 'DRAMATIC READING', '"Chapter Three: My Feelings"', ['#a89ae8', '#ff9a4a'], 6);
+    FX.boss('pages', { sx: u.x - 10, sy: u.y - 40, life: 1.6, pts: hs.filter(h => dist(h, u) < 220).flatMap(h => [0, 1, 2].map(i => ({ x: h.x + rand(-8, 8), y: h.y - 10 + rand(-6, 6), d: rand(0, 0.35) }))) }); for (const h of hs) if (dist(h, u) < 220) { h.stun = Math.max(h.stun, 1.6); FX.text(h.x, h.y - 22, 'zzz', '#c8c8ff', false); } return 13; },
+  ringmaster(B, u, hs) { const t = hs.slice().sort((a, b) => a.x - b.x)[0]; if (!t) return 4; bossCall(B, u, 'HUMAN CANNONBALL', 'LADIES AND GOBLINS!', ['#ff5a5a', '#ffd84a'], 10); FX.boss('spotlight', { sx: u.x, sy: u.y - 20, tx: t.x, ty: t.y, life: 1 });
     B.zones.push({ type: 'telegraph', x: t.x, y: t.y, r: 40, t: 0, dur: 1, meteor: true, onEnd: z => { u.x = Math.max(u.x - 60, z.x + 30); for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 2.4); FX.explode(z.x, z.y - 4, 36, ['#ff5a5a', '#ffd84a', '#ffffff']); FX.shake(12); FX.sound('boom'); } }); return 12; },
-  sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
-  matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
-  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
-  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
-  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
+  sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); FX.boss('spores', { sx: u.x, life: 1.8 }); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
+  matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); FX.boss('avalanche', { sx: W + 20, life: 1.2 }); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
+  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); FX.boss('dumpster', { sx: u.x, sy: u.y, life: 1.6 }); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
+  colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); FX.boss('reset', { sx: u.x, life: 1 }); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
+  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); FX.boss('ship', { life: 2 }); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
   // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
   shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
     if (m === 1 && left.length) { bossCall(B, u, 'SHARD STORM', 'MY SHARDS. MY CASTLE.', [ELEMENTS[pick(left)].col, '#ffffff'], 10);
       for (let i = 0; i < Math.min(8, 2 + left.length); i++) { const t = pick(hs); if (!t) break; const e = pick(left);
-        B.zones.push({ type: 'telegraph', x: t.x + rand(-14, 14), y: t.y + rand(-8, 8), r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
+        const zx = t.x + rand(-14, 14), zy = t.y + rand(-8, 8); FX.boss('shardStreak', { sx: u.x, sy: u.y - 60, tx: zx, ty: zy, col: ELEMENTS[e].col, life: 1.2 + i * 0.12 });
+        B.zones.push({ type: 'telegraph', x: zx, y: zy, r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
       return 10; }
-    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
+    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
     bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 3 }); return 11; },
   goosegod(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3;
-    if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
-    if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
+    if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
+    if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); FX.boss('hammerSteal', { sx: CASTLE_X - 30, sy: 70, tx: u.x, ty: u.y - 40, life: 1 }); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
     bossCall(B, u, 'GOOSE STAMPEDE', 'release the goslings', ['#f4e48a', '#ff8a1a'], 10); for (let i = 0; i < 5; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 4 }); return 11; },
 };
 // ----- boss skills -----
@@ -4041,7 +4071,7 @@ function bossSkill(B, u, sk) {
     case 'breath': { B.zones.push({ type: 'breath', x: u.x - 30, y: u.y, t: 0, dur: 1.4, src: u, tick: 0 }); FX.sound('breath'); return 7; }
     case 'gust': for (const h of targets) { if (!h.rafter) { h.x = Math.max(CASTLE_X + 8, h.x - 30); } dealDamage(B, u, h, u.atk * 0.4, { quiet: false }); } FX.gust(); FX.shake(5); FX.sound('gust'); return 9;
     case 'fireRain': { const ts = targets.slice().sort(() => Math.random() - 0.5).slice(0, 5); for (const h of ts) B.zones.push({ type: 'telegraph', x: h.x, y: h.y, r: 18, t: 0, dur: 1.1, meteor: true, onEnd: z => { for (const hh of inRadius(B.heroes, z, z.r)) dealDamage(B, u, hh, u.atk * 1.3); FX.explode(z.x, z.y - 4, 18, ['#ffde3a', '#ff8a3a', '#ff3d3d']); FX.shake(3); FX.sound('boom'); } }); return 8; }
-    case 'move': return BOSS_MOVES[u.id] ? BOSS_MOVES[u.id](B, u, targets) : 8;
+    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; FX.fury(u); return 99;
     case 'laser': { const t = pick(targets); if (!t) return 3; B.zones.push({ type: 'laser', t: 0, dur: 1.6, src: u, ty: t.y, tick: 0 }); FX.sound('beam'); return 8; }
   }
   return 6;
@@ -4314,6 +4344,8 @@ function stepEnemy(B, u, dt) {
   if (u.stun > 0) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
+  // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it
+  if (u.fury) { u.fury.t += dt; u.moving = false; if (u.fury.t >= u.fury.dur) { u.fury = null; u.skillT.move = BOSS_MOVES[u.id](B, u, B.heroes.filter(h => h.alive)); u.atkT = 0.4; } return; }
   if (u.boss) { for (const sk in u.skillT) { u.skillT[sk] -= dt; if (u.skillT[sk] <= 0) { u.skillT[sk] = bossSkill(B, u, sk); u.atkT = 0.4; } } }
   const spd = u.spd * (1 - u.slowAmt) * hzSpd(B, u);
   const heroes = B.heroes;
@@ -5287,6 +5319,7 @@ function fmtDmg(n) { n = Math.round(n); return n >= 1e6 ? (n / 1e6).toFixed(1) +
 function stepFX(dt) {
   FXS.clock += dt; if (FXS.slowmo > 0) FXS.slowmo -= dt;
   if (typeof stepSpellFX === 'function') stepSpellFX(dt);
+  if (typeof stepBossFX === 'function') stepBossFX(dt);
   for (const a of ['dmgs', 'cutins', 'shocks', 'combos']) { for (const o of FXS[a]) o.t += dt; FXS[a] = FXS[a].filter(o => o.t < o.life); }
   for (const d of FXS.drops) { d.t += dt; if (d.t < 0.7) { d.vy += 220 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > d.ground) { d.y = d.ground; d.vy *= -0.5; d.vx *= 0.6; } } else if (!d.flown) { d.flown = true; UI.flyItem && UI.flyItem(d); } }
   FXS.drops = FXS.drops.filter(d => !d.flown);
@@ -5685,6 +5718,123 @@ function drawCastleVFX(ctx, k, ox, oy, B) {
     }
     ctx.restore();
   }
+}
+
+// ===== Boss fury: every boss winds up angrily before its signature move, and each move has its own themed animation =====
+// sim.js starts u.fury (the wind-up) and calls FX.boss(kind, o) when a move lands. Everything here is drawn on the hi-res layer.
+const BFX = [];
+Object.assign(FX, {
+  boss(kind, o = {}) { BFX.push(Object.assign({ kind, t: 0, life: 1 }, o)); },
+  // the wind-up: a roar line, a shake and a burst of steam
+  fury(u) {
+    const sz = 20 * (u.scale || 1);
+    FX.text(u.x, u.y - sz - 14, pick(FURY_LINES[u.id] || FURY_LINES._), '#ff5d5d', true, true);
+    FX.shake(4); FX.sound('quake');
+    for (let i = 0; i < 18; i++) FXS.parts.push({ x: u.x + rand(-sz / 2, sz / 2), y: u.y - rand(sz * 0.4, sz), vx: rand(-30, 30), vy: rand(-40, -10), life: rand(0.4, 0.8), t: 0, color: pick(['#ffffff', '#d8d8e8', '#ff8a8a']), size: 1, grav: -20 });
+  },
+});
+const FURY_LINES = {
+  grubnose: ['THAT WAS MY GOOD BUCKET', 'RENT IS DUE', 'GRRRAAH'],
+  gloop: ['WHO POPPED HIM', 'MOTHER IS UPSET', 'BLORP'],
+  wyrm: ['YOU WILL LISTEN', 'SILENCE. I AM READING.'],
+  ringmaster: ['THE SHOW MUST GO ON', 'SPOTLIGHT. NOW.'],
+  sporebaron: ['I AM VERY FUNGAL TODAY', 'BEHOLD MY SPORES'],
+  matriarch: ['SHOVEL YOUR WALKS', 'THE SNOW IS COMING'],
+  trashpaw: ['THAT IS MY BIN', 'MAMA IS HUNGRY'],
+  colossus: ['ERROR. ERROR. ANGRY.', 'RECALIBRATING RAGE'],
+  pinchbeard: ['RUN OUT THE GUNS', 'PAY THE TOLL'],
+  shardgoose: ['HONK', 'THE SHARDS ARE MINE'],
+  goosegod: ['HONK', 'HONK HONK'],
+  _: ['RAAAGH'],
+};
+const BOSS_TINT = { grubnose: '#ff5d3a', gloop: '#7fe05a', wyrm: '#a86aff', ringmaster: '#ffd84a', sporebaron: '#c8ff6a', matriarch: '#9ad8ff', trashpaw: '#c84a8a', colossus: '#5fd3ff', pinchbeard: '#ffd84a', shardgoose: '#c98aff', goosegod: '#ff8a1a' };
+
+function stepBossFX(dt) { for (const f of BFX) f.t += dt; for (let i = BFX.length - 1; i >= 0; i--) if (BFX[i].t >= BFX[i].life) BFX.splice(i, 1); }
+
+function drawBossFX(ctx, k, ox, oy, B) {
+  const X = x => x * k + ox, Y = y => y * k + oy, clock = FXS.clock;
+  const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(X(x)), Math.round(Y(y)), Math.max(1, w * k), Math.max(1, h * k)); };
+  // ---- the wind-up on every angry boss ----
+  if (B) for (const u of B.enemies) if (u.fury && u.alive) {
+    const f = Math.min(1, u.fury.t / u.fury.dur), sz = 20 * (u.scale || 1), col = BOSS_TINT[u.id] || '#ff5d5d';
+    // a hot glow and a cracking ring on the ground that tightens as the move gets close
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const gr = ctx.createRadialGradient(X(u.x), Y(u.y - sz / 2), 0, X(u.x), Y(u.y - sz / 2), sz * 1.3 * k);
+    gr.addColorStop(0, `rgba(255,80,60,${0.25 + 0.25 * f})`); gr.addColorStop(1, 'rgba(255,40,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(X(u.x), Y(u.y - sz / 2), sz * 1.3 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    const rr = sz * (1.6 - 0.8 * f); ctx.strokeStyle = col; ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(clock * 18)); ctx.lineWidth = 2 * k;
+    ctx.beginPath(); ctx.ellipse(X(u.x), Y(u.y), rr * k, rr * 0.4 * k, 0, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + 0.3, l = rr * (0.4 + 0.6 * f); ctx.beginPath(); ctx.moveTo(X(u.x + Math.cos(a) * rr * 0.3), Y(u.y + Math.sin(a) * rr * 0.12)); ctx.lineTo(X(u.x + Math.cos(a) * l), Y(u.y + Math.sin(a) * l * 0.4)); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    // anger veins popping beside the head
+    const hx = u.x + sz * 0.35, hy = u.y - sz * 0.95, pop = 1 + 0.35 * Math.abs(Math.sin(clock * 12)), s = Math.round(2 * pop);
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { px(hx + dx * s - (dx < 0 ? 1 : 0), hy + dy * s, 1, s, '#1a1230'); px(hx + dx * s - (dx < 0 ? 1 : 0), hy + dy * (s + 1) - (dy < 0 ? 0 : 1), s, 1, '#1a1230');
+      px(hx + dx * (s - 1) - (dx < 0 ? 1 : 0), hy + dy * (s - 1), 1, s, '#ff3d3d'); }
+    // steam from both sides of the head
+    if (Math.random() < 0.6) for (const sd of [-1, 1]) FXS.parts.push({ x: u.x + sd * sz * 0.4, y: u.y - sz * 0.85, vx: sd * rand(8, 22), vy: rand(-30, -14), life: rand(0.3, 0.6), t: 0, color: pick(['#ffffff', '#e8e8f0']), size: 1, grav: -10 });
+  }
+  // ---- the themed signature animations ----
+  for (const f of BFX) {
+    const a = f.t / f.life, fade = Math.min(1, (1 - a) * 4);
+    ctx.globalAlpha = fade;
+    if (f.kind === 'bucket') { // a spinning bucket on a high arc
+      const x = f.sx + (f.tx - f.sx) * a, y = f.sy + (f.ty - f.sy) * a - Math.sin(a * Math.PI) * 70;
+      ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(a * 12); const s = k * 1.4;
+      ctx.fillStyle = '#1a1230'; ctx.fillRect(-5 * s, -5 * s, 10 * s, 10 * s); ctx.fillStyle = '#c9a35a'; ctx.fillRect(-4 * s, -4 * s, 8 * s, 8 * s);
+      ctx.fillStyle = '#8a6a2a'; ctx.fillRect(-4 * s, -1 * s, 8 * s, 1 * s); ctx.fillRect(-4 * s, 2 * s, 8 * s, 1 * s); ctx.fillStyle = '#e0e0f0'; ctx.fillRect(-3 * s, -7 * s, 6 * s, 1 * s); ctx.restore();
+      if (Math.random() < 0.5) FXS.parts.push({ x, y, vx: rand(-10, 10), vy: rand(-5, 10), life: 0.3, t: 0, color: '#c9a35a', size: 1, grav: 60 });
+    } else if (f.kind === 'tendril') { // slime arms reach out, grab, and haul back
+      const reach = a < 0.45 ? a / 0.45 : 1 - (a - 0.45) / 0.55, ex = f.sx + (f.tx - f.sx) * reach, ey = f.sy + (f.ty - f.sy) * reach;
+      ctx.strokeStyle = '#1a1230'; ctx.lineWidth = 5 * k; ctx.lineCap = 'round'; const wv = (s, w) => { ctx.beginPath(); for (let i = 0; i <= 12; i++) { const q = i / 12, wx = f.sx + (ex - f.sx) * q, wy = f.sy + (ey - f.sy) * q + Math.sin(q * 9 + clock * 14) * 3 * (1 - q * 0.5); i ? ctx.lineTo(X(wx), Y(wy)) : ctx.moveTo(X(wx), Y(wy)); } ctx.lineWidth = w * k; ctx.strokeStyle = s; ctx.stroke(); };
+      wv('#1a1230', 5); wv('#5ad84a', 3); wv('#b8ff9a', 1);
+      ctx.fillStyle = '#5ad84a'; ctx.beginPath(); ctx.arc(X(ex), Y(ey), 4 * k, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ff8fb0'; ctx.fillRect(X(ex) - k, Y(ey) - k, 2 * k, 2 * k);
+    } else if (f.kind === 'pages') { // manuscript pages flutter out of the wyrm onto every listener
+      for (const p of f.pts) { const q = Math.max(0, Math.min(1, (a - p.d) / 0.6)); if (!q) continue; const x = f.sx + (p.x - f.sx) * q + Math.sin(q * 10 + p.d * 20) * 6, y = f.sy + (p.y - f.sy) * q - Math.sin(q * Math.PI) * 40;
+        ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(Math.sin(clock * 8 + p.d * 30) * 0.6); const s = k;
+        ctx.fillStyle = '#1a1230'; ctx.fillRect(-3 * s, -4 * s, 7 * s, 9 * s); ctx.fillStyle = '#fff8e8'; ctx.fillRect(-2 * s, -3 * s, 5 * s, 7 * s); ctx.fillStyle = '#a89ae8'; for (let l = 0; l < 3; l++) ctx.fillRect(-1 * s, (-2 + l * 2) * s, 3 * s, s); ctx.restore(); }
+    } else if (f.kind === 'spotlight') { // a circus spotlight picks the target, then the ringmaster arrives by cannon
+      const w = 22 * (1 - a * 0.5); ctx.globalAlpha = 0.35 * fade; ctx.fillStyle = '#fff3a0'; ctx.beginPath(); ctx.moveTo(X(f.tx - 6), Y(0)); ctx.lineTo(X(f.tx + 6), Y(0)); ctx.lineTo(X(f.tx + w), Y(f.ty)); ctx.lineTo(X(f.tx - w), Y(f.ty)); ctx.fill();
+      ctx.globalAlpha = fade; const x = f.sx + (f.tx - f.sx) * a, y = f.sy + (f.ty - f.sy) * a - Math.sin(a * Math.PI) * 90;
+      ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(a * 16); ctx.fillStyle = '#1a1230'; ctx.beginPath(); ctx.arc(0, 0, 7 * k, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff5a5a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 6 * k, i * Math.PI / 2, (i + 1) * Math.PI / 2); ctx.fill(); } ctx.restore();
+      if (Math.random() < 0.8) FXS.parts.push({ x, y, vx: rand(-20, 20), vy: rand(-20, 20), life: 0.4, t: 0, color: pick(['#ff5a5a', '#ffd84a', '#5fd3ff', '#7cf09a']), size: 1, grav: 40 });
+    } else if (f.kind === 'spores') { // rolling spore clouds sweep toward the castle
+      for (let i = 0; i < 7; i++) { const q = Math.max(0, a * 1.3 - i * 0.05), x = f.sx - q * (f.sx - CASTLE_X) , y = GRID.y + 12 + i * (GRID.rows * GRID.cell - 16) / 6, r = (10 + 14 * q) * k;
+        if (q <= 0) continue; ctx.globalAlpha = 0.65 * fade; ctx.fillStyle = i % 2 ? '#a86ad8' : '#9ad84a'; ctx.beginPath(); ctx.arc(X(x), Y(y), r, 0, Math.PI * 2); ctx.arc(X(x + 8), Y(y - 4), r * 0.7, 0, Math.PI * 2); ctx.arc(X(x - 8), Y(y + 3), r * 0.6, 0, Math.PI * 2); ctx.fill(); }
+    } else if (f.kind === 'avalanche') { // a wall of snow rolls across the field
+      const fx = f.sx - a * (f.sx - CASTLE_X + 10), top = GRID.y - 10, bot = GRID.y + GRID.rows * GRID.cell + 6;
+      ctx.globalAlpha = 0.85 * fade; ctx.fillStyle = '#e8f4ff'; ctx.beginPath(); ctx.moveTo(X(fx + 60), Y(top)); for (let y = top; y <= bot; y += 6) ctx.lineTo(X(fx + Math.sin(y * 0.4 + clock * 10) * 4), Y(y)); ctx.lineTo(X(fx + 60), Y(bot)); ctx.fill();
+      ctx.fillStyle = '#9ad8ff'; for (let y = top; y <= bot; y += 6) ctx.fillRect(X(fx + Math.sin(y * 0.4 + clock * 10) * 4) - k, Y(y), 2 * k, 3 * k);
+      if (Math.random() < 0.9) for (let i = 0; i < 3; i++) FXS.parts.push({ x: fx, y: rand(top, bot), vx: rand(-60, -20), vy: rand(-30, 0), life: 0.5, t: 0, color: pick(['#ffffff', '#c8e8ff']), size: 2, grav: 60 });
+    } else if (f.kind === 'dumpster') { // a dumpster drops in and its lid flaps while trash flies out
+      const drop = Math.min(1, a / 0.2), x = f.sx + 22, y = f.sy + 4 - 60 * (1 - drop), lid = a > 0.2 ? Math.abs(Math.sin(clock * 14)) : 0;
+      px(x - 16, y - 20, 32, 21, '#1a1230'); px(x - 15, y - 19, 30, 19, '#3a6a4a'); px(x - 15, y - 12, 30, 2, '#2a4a3a'); px(x - 11, y - 17, 3, 14, '#5a8a6a'); px(x + 6, y - 17, 3, 14, '#5a8a6a');
+      ctx.save(); ctx.translate(X(x - 16), Y(y - 20)); ctx.rotate(-lid * 0.9); ctx.fillStyle = '#1a1230'; ctx.fillRect(0, -3 * k, 32 * k, 4 * k); ctx.fillStyle = '#5a8a6a'; ctx.fillRect(k, -2 * k, 30 * k, 2 * k); ctx.restore();
+      if (a > 0.2 && Math.random() < 0.7) FXS.parts.push({ x: x, y: y - 20, vx: rand(-50, 30), vy: rand(-80, -40), life: 0.7, t: 0, color: pick(['#c8a070', '#8a8a9a', '#ffde3a', '#c84a8a', '#7ad87a']), size: 2, grav: 160 });
+      if (drop === 1 && f.t - 0.2 * f.life < 0.03) FX.shake(6);
+    } else if (f.kind === 'reset') { // a scanline wipes the field and glitches every hero
+      const sx = f.sx - a * (f.sx - CASTLE_X); ctx.globalAlpha = 0.7 * fade; ctx.fillStyle = '#5fd3ff'; ctx.fillRect(X(sx), Y(GRID.y - 20), 2 * k, (GRID.rows * GRID.cell + 30) * k);
+      ctx.globalAlpha = 0.18 * fade; ctx.fillRect(X(sx), Y(GRID.y - 20), (f.sx - sx) * k, (GRID.rows * GRID.cell + 30) * k);
+      if (B) for (const h of B.heroes) if (h.alive && h.x > sx) { ctx.globalAlpha = 0.8 * fade; for (let i = 0; i < 3; i++) px(h.x + rand(-7, 5), h.y - rand(4, 18), randi(2, 6), 1, pick(['#5fd3ff', '#ff3a5a', '#ffffff'])); }
+    } else if (f.kind === 'ship') { // a pirate ship slides in at the edge and fires every gun
+      const slide = Math.min(1, a / 0.2), x = W + 40 - 70 * slide, y = GRID.y + GRID.rows * GRID.cell / 2;
+      px(x - 26, y - 6, 56, 16, '#1a1230'); px(x - 25, y - 5, 54, 14, '#6a4a2a'); px(x - 25, y + 2, 54, 2, '#8a6a3a'); px(x - 2, y - 46, 2, 41, '#1a1230'); px(x + 1, y - 44, 22, 18, '#f4ecd8'); px(x + 8, y - 38, 6, 5, '#1a1230');
+      for (let i = 0; i < 4; i++) { px(x - 24, y - 3 + i * 3, 4, 2, '#1a1230'); if (slide === 1 && Math.sin(clock * 20 + i * 1.7) > 0.7) { px(x - 32, y - 4 + i * 3, 8, 4, '#ffd84a'); px(x - 36, y - 3 + i * 3, 4, 2, '#ffffff'); } }
+    } else if (f.kind === 'shardStreak') { // a shard leaves the crown and streaks to its target
+      const q = Math.min(1, a / 0.5), x = f.sx + (f.tx - f.sx) * q, y = f.sy + (f.ty - f.sy) * q - Math.sin(q * Math.PI) * 30;
+      ctx.strokeStyle = f.col; ctx.lineWidth = 2 * k; ctx.beginPath(); ctx.moveTo(X(f.sx), Y(f.sy)); ctx.lineTo(X(x), Y(y)); ctx.globalAlpha = 0.35 * fade; ctx.stroke(); ctx.globalAlpha = fade;
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(X(x), Y(y - 4)); ctx.lineTo(X(x + 2), Y(y)); ctx.lineTo(X(x), Y(y + 4)); ctx.lineTo(X(x - 2), Y(y)); ctx.fill(); ctx.strokeStyle = f.col; ctx.lineWidth = k; ctx.stroke();
+    } else if (f.kind === 'honk') { // a honk you can see: beak-shaped shock arcs and flying letters
+      for (let i = 0; i < 4; i++) { const r = (20 + 70 * a + i * 22) * k; ctx.globalAlpha = Math.max(0, (1 - a) * (1 - i * 0.2)); ctx.strokeStyle = i % 2 ? '#ffffff' : '#ff8a1a'; ctx.lineWidth = 3 * k; ctx.beginPath(); ctx.arc(X(f.sx), Y(f.sy), r, Math.PI * 0.65, Math.PI * 1.35); ctx.stroke(); }
+      ctx.globalAlpha = fade; ctx.font = `${Math.round(10 * k)}px "Press Start 2P", monospace`; ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 4; i++) ctx.fillText('HONK'[i], X(f.sx - 20 - a * 140 - i * 12), Y(f.sy - 30 + Math.sin(a * 8 + i) * 12));
+    } else if (f.kind === 'hammerSteal') { // the goose plucks the Sky Hammer off the castle
+      const x = f.sx + (f.tx - f.sx) * a, y = f.sy + (f.ty - f.sy) * a - Math.sin(a * Math.PI) * 50;
+      ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(a * 10); const s = k * 1.5; ctx.fillStyle = '#1a1230'; ctx.fillRect(-1 * s, -2 * s, 2 * s, 9 * s); ctx.fillRect(-5 * s, -6 * s, 10 * s, 5 * s);
+      ctx.fillStyle = '#9a6332'; ctx.fillRect(-0.5 * s, -1 * s, s, 7 * s); ctx.fillStyle = '#c9d0ea'; ctx.fillRect(-4 * s, -5 * s, 8 * s, 3 * s); ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ===== Ultimates: Cinder Colossus, Glacier Lance, Grasp of the Crypt, Tempest Cage, Rocket Barrage, Lotus Sanctuary =====
@@ -6270,6 +6420,13 @@ function unitFrame(u, t) {
   return Math.floor((t + (u.phase || 0)) * 2) % 2 ? 'idle1' : 'idle0';
 }
 
+// a red-flushed copy of a sprite frame, made once and cached
+function redFrame(S, fr) {
+  S.red = S.red || {}; if (S.red[fr]) return S.red[fr];
+  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d');
+  x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,40,40,0.55)'; x.fillRect(0, 0, c.width, c.height);
+  return (S.red[fr] = c);
+}
 function drawUnit(g, u, t, opts = {}) {
   const S = SPR[u.key] || ensureSprite(u.key); if (!S) return;
   const sc = (S.scale || u.scale || 1) * (u.vscale || 1), size = Math.round(20 * sc);
@@ -6287,10 +6444,13 @@ function drawUnit(g, u, t, opts = {}) {
     if (rr >= 5 && Math.random() < 0.15) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round((Math.random() - 0.5) * rw), y - Math.round(Math.random() * size), 1, 1); }
     g.restore(); }
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
-  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : S.frames[fr];
+  // an angry boss winding up: it swells, trembles and flushes red
+  const fu = u.fury && u.alive !== false ? Math.min(1, u.fury.t / u.fury.dur) : 0;
+  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  const fs = fu ? Math.round(size * (1 + 0.14 * fu + 0.04 * Math.sin(t * 30))) : size, fx = fu ? x + randi(-1, 1) : x;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
-  if (flip) { g.translate(x, 0); g.scale(-1, 1); g.drawImage(img, -size / 2, y - size + 1, size, size); }
-  else g.drawImage(img, x - size / 2, y - size + 1, size, size);
+  if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
+  else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
   g.restore();
   if (u.frozen > 0 && u.alive !== false) { g.globalAlpha = 0.45; g.fillStyle = '#bfeeff'; g.fillRect(x - size / 2 + 3, y - size + 4, size - 6, size - 4); g.globalAlpha = 1; }
   if (u.hat) { const hx = x + (u.facing === 1 ? 1 : -1), hy = y - Math.round(size * 0.86); g.fillStyle = OUTLINE; g.fillRect(hx - 3, hy, 7, 1); g.fillStyle = Math.floor(hx) % 2 ? '#ff5d8f' : '#5fd3ff'; g.fillRect(hx - 2, hy - 2, 5, 2); g.fillRect(hx - 1, hy - 4, 3, 2); g.fillStyle = '#ffd84a'; g.fillRect(hx, hy - 6, 1, 2); g.fillRect(hx - 1, hy - 1, 1, 1); }
@@ -6504,6 +6664,7 @@ function renderFrame(V, dt) {
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawSpellFX(ctx, k, ox, oy, B);
+  if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);
@@ -7556,7 +7717,8 @@ function draftFit(run, o) {
   for (const [kind, key, T, n0] of [['cls', d.cls, CLASSES[d.cls], c[d.cls] || 0], ['race', d.race, RACES[d.race], r[d.race] || 0]]) {
     const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${T.name}` : T.name;
     if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${esc(label)}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
-    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${n0 ? 'You have one. ' : ''}${T.at[0] - n} more for the bonus.</small></div>` });
+    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
+    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
     else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
@@ -7866,6 +8028,12 @@ const UI = {
     if (kind === 'stat') return statTipHTML(a);
     return '';
   },
+  // a bonus switching on gets a toast that says what it does, so it is never missed
+  announceSynergies(run, act) {
+    const now = Object.keys(act).filter(k => act[k] >= 0).map(k => k + ':' + act[k]), was = UI.synWas;
+    UI.synWas = now; if (!was || G.phase !== 'prep' || run !== UI.synRun) { UI.synRun = run; return; }
+    for (const k of now) if (!was.includes(k)) { const [key, t] = k.split(':'), T = RACES[key] || CLASSES[key]; if (T) UI.toast(`${T.name} bonus on. ${T.desc(+t)}`); }
+  },
   tipShow(el, x, y) { const t = $('tip'), key = el && el.dataset.tip; if (!key) return UI.tipHide(); const h = UI.tipHTML(key); if (!h) return UI.tipHide(); UI.tipKey = key; UI.tipEl = el; t.innerHTML = h; t.hidden = false; UI.tipMove(x, y); },
   tipMove(x, y) { const t = $('tip'); if (t.hidden) return; UI.tipXY = [x, y]; const r = t.getBoundingClientRect(), vw = innerWidth, vh = innerHeight;
     let L = x + 14, T = y + 14; if (L + r.width > vw - 8) L = x - r.width - 14; if (T + r.height > vh - 8) T = Math.max(8, y - r.height - 14); t.style.left = Math.max(8, L) + 'px'; t.style.top = T + 'px'; },
@@ -7990,8 +8158,12 @@ const UI = {
     const badge = (key, def, n, isRace) => { if (!n) return ''; const t = act[key], on = t >= 0, next = def.at.find(v => v > n);
       const pips = def.at.map(v => `<i class="${n >= v ? 'f' : ''}"></i>`).join('');
       const icon = isRace ? `<img class="px" src="${portrait('h:' + HEROES.find(d => d.race === key).id)}" alt="">` : `<span class="glyph">${def.icon}</span>`;
-      return `<div class="syb ${on ? 'on' : ''} ${isRace ? 'race' : 'cls'}" style="--rc:${isRace ? def.color : 'var(--sky)'}" data-tip="syn:${key}" aria-label="${esc(def.name)} ${n}${next ? ' of ' + next : ''}">${icon}<b class="cnt">${n}</b><span class="pips">${pips}</span></div>`; };
-    let bon = ''; for (const k in RACES) bon += badge(k, RACES[k], race[k], true); for (const k in CLASSES) bon += badge(k, CLASSES[k], cls[k], false);
+      const goal = on ? (next ? `${n}/${next}` : 'max') : `${n}/${def.at[0]}`;
+      return `<div class="sybw ${on ? 'on' : ''}" style="--rc:${isRace ? def.color : 'var(--sky)'}" data-tip="syn:${key}" aria-label="${esc(def.name)} ${n}${next ? ' of ' + next : ''}"><div class="syb ${on ? 'on' : ''} ${isRace ? 'race' : 'cls'}">${icon}<span class="pips">${pips}</span></div><span class="syl"><b>${esc(def.name)}</b><small>${goal}</small></span></div>`; };
+    // live bonuses first, so the strongest news is the first thing you see
+    const bl = []; for (const k in RACES) bl.push([act[k] >= 0, badge(k, RACES[k], race[k], true)]); for (const k in CLASSES) bl.push([act[k] >= 0, badge(k, CLASSES[k], cls[k], false)]);
+    const bon = bl.filter(b => b[0]).map(b => b[1]).join('') + bl.filter(b => !b[0]).map(b => b[1]).join('');
+    UI.announceSynergies(run, act);
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     let com = '';
     for (const c of all) com += `<button class="syb combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''} aria-label="${esc(c.name)} ${on.has(c.key) ? 'on' : 'off'}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></button>`;
@@ -8007,7 +8179,10 @@ const UI = {
     for (const c of nearC) com += `<span class="syb combo nearc" data-tip="ncombo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" aria-label="${ELEMENTS[c.a].name} ${c.na}/2 and ${ELEMENTS[c.b].name} ${c.nb}/2"><span class="orb"></span><b class="cnt">${c.missing}</b></span>`;
     if (all.length || nearC.length) sh += `<div class="sygroup"><span class="sylabel" data-tip="help:combo">Combos <b>${on.size}/${comboSlots(run)}</b></span>${com}</div>`;
     $('synChips').innerHTML = sh || '<span class="note">Two heroes of the same race or class switch on a bonus.</span>';
+    // compact copy for phone layouts where the roster header is hidden: bonuses and element stacks only
+    const ss = $('synStrip'); if (ss) { ss.innerHTML = bon + elb; ss.hidden = !(bon || elb) || G.phase === 'siege'; ss.querySelectorAll('[data-tip]').forEach(b => b.onclick = e => { e.stopPropagation(); const r = b.getBoundingClientRect(); UI.tipShow(b, r.left + r.width / 2, r.bottom + 8); }); }
     $('synChips').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg));
+    $('synChips').querySelectorAll('[data-tip]:not([data-act])').forEach(b => b.onclick = e => { e.stopPropagation(); const r = b.getBoundingClientRect(); UI.tipShow(b, r.left + r.width / 2, r.top); });
     // expanded drawer: battle chart on top, then live bonuses spelled out, near-misses as small badges, then combos
     let tp = `<section class="tsec"><h4>Battle stats <small id="teamChartLabel"></small></h4><div id="teamChart"><p class="note">Fills in once a siege starts.</p></div></section>`;
     const live = [], near = [];
@@ -8078,8 +8253,8 @@ const UI = {
     let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
-        <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p>${run.roster.length ? `<div class="fits">${fits[i].html}</div>` : ''}${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}</button>`; });
+        <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(d.name.split(' ')[0])}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= ROSTER_CAP ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
@@ -8845,17 +9020,26 @@ function startRun() {
   nextPost();
 }
 
+// on touch there is no hover: the first tap on a draft card selects it so its bonuses and tips can be read, the second tap drafts
+addEventListener('pointerdown', e => { G.touchInput = e.pointerType === 'touch' || e.pointerType === 'pen'; }, true);
+function touchPick(s, b, e, go) {
+  if (!G.touchInput) return go();
+  const tipEl = e && e.target.closest && e.target.closest('[data-tip]');
+  if (b.classList.contains('armed') && !tipEl) return go();
+  if (!b.classList.contains('armed')) { s.querySelectorAll('.armed').forEach(x => x.classList.remove('armed')); b.classList.add('armed'); b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); SFX.play('click'); }
+  if (tipEl && tipEl !== b) { const r = tipEl.getBoundingClientRect(); setTimeout(() => UI.tipShow(tipEl, r.left + r.width / 2, r.top), 0); }
+}
 function showDraft() {
   const run = G.run; if (!run.pendingDraft) run.pendingDraft = draftOptions(run, G.meta);
   const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
-    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
       if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
-    });
+    }));
     function picked(o, h, line) {
       G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line);
@@ -8882,11 +9066,11 @@ function showSummon() {
   G.phase = 'draft'; save(); SFX.play('sig');
   const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
-    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
       if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
-    });
+    }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
   }, 'wide');
 }

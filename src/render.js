@@ -130,6 +130,13 @@ function unitFrame(u, t) {
   return Math.floor((t + (u.phase || 0)) * 2) % 2 ? 'idle1' : 'idle0';
 }
 
+// a red-flushed copy of a sprite frame, made once and cached
+function redFrame(S, fr) {
+  S.red = S.red || {}; if (S.red[fr]) return S.red[fr];
+  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d');
+  x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,40,40,0.55)'; x.fillRect(0, 0, c.width, c.height);
+  return (S.red[fr] = c);
+}
 function drawUnit(g, u, t, opts = {}) {
   const S = SPR[u.key] || ensureSprite(u.key); if (!S) return;
   const sc = (S.scale || u.scale || 1) * (u.vscale || 1), size = Math.round(20 * sc);
@@ -147,10 +154,13 @@ function drawUnit(g, u, t, opts = {}) {
     if (rr >= 5 && Math.random() < 0.15) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round((Math.random() - 0.5) * rw), y - Math.round(Math.random() * size), 1, 1); }
     g.restore(); }
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
-  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : S.frames[fr];
+  // an angry boss winding up: it swells, trembles and flushes red
+  const fu = u.fury && u.alive !== false ? Math.min(1, u.fury.t / u.fury.dur) : 0;
+  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  const fs = fu ? Math.round(size * (1 + 0.14 * fu + 0.04 * Math.sin(t * 30))) : size, fx = fu ? x + randi(-1, 1) : x;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
-  if (flip) { g.translate(x, 0); g.scale(-1, 1); g.drawImage(img, -size / 2, y - size + 1, size, size); }
-  else g.drawImage(img, x - size / 2, y - size + 1, size, size);
+  if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
+  else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
   g.restore();
   if (u.frozen > 0 && u.alive !== false) { g.globalAlpha = 0.45; g.fillStyle = '#bfeeff'; g.fillRect(x - size / 2 + 3, y - size + 4, size - 6, size - 4); g.globalAlpha = 1; }
   if (u.hat) { const hx = x + (u.facing === 1 ? 1 : -1), hy = y - Math.round(size * 0.86); g.fillStyle = OUTLINE; g.fillRect(hx - 3, hy, 7, 1); g.fillStyle = Math.floor(hx) % 2 ? '#ff5d8f' : '#5fd3ff'; g.fillRect(hx - 2, hy - 2, 5, 2); g.fillRect(hx - 1, hy - 4, 3, 2); g.fillStyle = '#ffd84a'; g.fillRect(hx, hy - 6, 1, 2); g.fillRect(hx - 1, hy - 1, 1, 1); }
@@ -364,6 +374,7 @@ function renderFrame(V, dt) {
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawSpellFX(ctx, k, ox, oy, B);
+  if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);

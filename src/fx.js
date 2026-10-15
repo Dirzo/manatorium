@@ -52,6 +52,7 @@ function fmtDmg(n) { n = Math.round(n); return n >= 1e6 ? (n / 1e6).toFixed(1) +
 function stepFX(dt) {
   FXS.clock += dt; if (FXS.slowmo > 0) FXS.slowmo -= dt;
   if (typeof stepSpellFX === 'function') stepSpellFX(dt);
+  if (typeof stepBossFX === 'function') stepBossFX(dt);
   for (const a of ['dmgs', 'cutins', 'shocks', 'combos']) { for (const o of FXS[a]) o.t += dt; FXS[a] = FXS[a].filter(o => o.t < o.life); }
   for (const d of FXS.drops) { d.t += dt; if (d.t < 0.7) { d.vy += 220 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > d.ground) { d.y = d.ground; d.vy *= -0.5; d.vx *= 0.6; } } else if (!d.flown) { d.flown = true; UI.flyItem && UI.flyItem(d); } }
   FXS.drops = FXS.drops.filter(d => !d.flown);

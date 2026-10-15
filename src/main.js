@@ -53,17 +53,26 @@ function startRun() {
   nextPost();
 }
 
+// on touch there is no hover: the first tap on a draft card selects it so its bonuses and tips can be read, the second tap drafts
+addEventListener('pointerdown', e => { G.touchInput = e.pointerType === 'touch' || e.pointerType === 'pen'; }, true);
+function touchPick(s, b, e, go) {
+  if (!G.touchInput) return go();
+  const tipEl = e && e.target.closest && e.target.closest('[data-tip]');
+  if (b.classList.contains('armed') && !tipEl) return go();
+  if (!b.classList.contains('armed')) { s.querySelectorAll('.armed').forEach(x => x.classList.remove('armed')); b.classList.add('armed'); b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); SFX.play('click'); }
+  if (tipEl && tipEl !== b) { const r = tipEl.getBoundingClientRect(); setTimeout(() => UI.tipShow(tipEl, r.left + r.width / 2, r.top), 0); }
+}
 function showDraft() {
   const run = G.run; if (!run.pendingDraft) run.pendingDraft = draftOptions(run, G.meta);
   const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
-    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
       if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
-    });
+    }));
     function picked(o, h, line) {
       G.selected = h.uid; SFX.play('draft');
       UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line);
@@ -90,11 +99,11 @@ function showSummon() {
   G.phase = 'draft'; save(); SFX.play('sig');
   const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
-    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
       if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
-    });
+    }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
   }, 'wide');
 }

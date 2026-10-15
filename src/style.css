@@ -1036,3 +1036,29 @@ b.sv { color: var(--gold); }
 .snatch .victim { width: 44px; height: 44px; image-rendering: pixelated; position: absolute; left: 34px; top: 62px; animation: dangle 0.5s ease-in-out infinite alternate; }
 @keyframes snatchfly { 0% { left: -30%; top: 55%; } 45% { left: 40%; top: 25%; } 100% { left: 110%; top: -40%; } }
 @keyframes dangle { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+
+/* synergy badges carry their name and progress, so they read without hovering */
+.sybw { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 2px 8px 2px 2px; border-radius: 24px; background: rgba(255,255,255,.04); border: 1px solid transparent; cursor: help; }
+.sybw.on { background: color-mix(in srgb, var(--rc) 18%, transparent); border-color: color-mix(in srgb, var(--rc) 70%, transparent); }
+.sybw .syl { display: flex; flex-direction: column; line-height: 1.1; }
+.sybw .syl b { font: 600 12px var(--f-display); color: var(--muted); white-space: nowrap; }
+.sybw .syl small { font: 600 11px var(--f-display); color: #8a92c0; }
+.sybw.on .syl b { color: #fff; } .sybw.on .syl small { color: var(--rc); }
+.sybw:hover .syb { transform: translateY(-2px); }
+.fits .fit small { white-space: normal; }
+/* touch: first tap on a draft card selects it so its text can be read; a second tap drafts */
+.dcard.armed { outline: 3px solid var(--gold); outline-offset: 2px; }
+.dcard .armbar { display: none; }
+.dcard.armed .armbar { display: block; position: sticky; bottom: 0; margin-top: 6px; padding: 8px; border-radius: 6px; background: var(--gold); color: #1a1230; font: 600 14px var(--f-display); text-align: center; }
+
+/* phone landscape hides the roster header, so a slim strip of bonuses sits over the top of the field */
+#synStrip { display: none; }
+html.m-land #synStrip:not([hidden]) { display: flex; position: fixed; z-index: 9; top: calc(var(--hudH, 44px) + 4px); left: 50%; transform: translateX(-50%); max-width: 56vw; gap: 4px; overflow-x: auto; padding: 3px 4px; border-radius: 20px; background: rgba(15,20,48,.72); scrollbar-width: none; }
+html.m-land #synStrip::-webkit-scrollbar { display: none; }
+#synStrip .sybw { padding: 1px 6px 1px 1px; gap: 3px; }
+#synStrip .syb { width: 24px; height: 24px; flex-basis: 24px; border-width: 1px; }
+#synStrip .syb img { width: 32px; height: 32px; clip-path: circle(11px at 50% 50%); margin-top: 4px; }
+#synStrip .syb .glyph { font-size: 13px; } #synStrip .syb .pips { display: none; }
+#synStrip .syb .cnt { top: -3px; right: -3px; min-width: 12px; height: 12px; font-size: 8px; line-height: 12px; }
+#synStrip .syl b { font-size: 10px; } #synStrip .syl small { font-size: 9px; }
+#synStrip .sybw:not(.on) .syl b { display: none; }
