@@ -10246,8 +10246,6 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   // after the desktop init, so its rail wiring never sees the phone-only buttons
   UI.init = function () { const r = init0.apply(UI, arguments); MOB.init(); return r; };
   UI.layout = function () { MOB.sync(); return MOB.on ? MOB.layout() : layout0.call(UI); };
-  // the native app never asks for the microphone (that capture is for web playtests)
-  if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) REC.startMic = function () { this.asked = true; this.state = 'off'; };
 }
 
 // ===== Store demo: the app plays the first three hordes free, then one purchase unlocks the rest =====
@@ -10356,6 +10354,17 @@ const DEMO = {
     DEMO.init().then(() => { const b = document.getElementById('tUnlock'); if (!b) return; if (!DEMO.on()) { b.remove(); document.querySelectorAll('.demonote').forEach(n => n.remove()); } else b.textContent = `Unlock the full game · ${DEMO.price || DEMO.PRICE}`; });
     return boot0.apply(this, arguments);
   };
+}
+
+// ===== Public builds (the website and the phone app): no playtest capture =====
+// Playtest recording (click log, microphone clips, the "Logging playtest" badge, N-key notes) only runs inside
+// the Claude artifact, where the shared playtest log lives. Everywhere else it is switched off before boot.
+if (!(window.claude && window.claude.use)) {
+  REC.init = function () { };
+  REC.startMic = function () { this.asked = true; this.state = 'off'; };
+  REC.flush = function () { };
+  NOTES.open = function () { };
+  UI.recBadge = function () { const b = $('recBadge'); if (b) b.hidden = true; };
 }
 
 loadCastleArt().then(() => { window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? null); });

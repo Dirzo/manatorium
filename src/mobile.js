@@ -200,6 +200,4 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   // after the desktop init, so its rail wiring never sees the phone-only buttons
   UI.init = function () { const r = init0.apply(UI, arguments); MOB.init(); return r; };
   UI.layout = function () { MOB.sync(); return MOB.on ? MOB.layout() : layout0.call(UI); };
-  // the native app never asks for the microphone (that capture is for web playtests)
-  if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) REC.startMic = function () { this.asked = true; this.state = 'off'; };
 }
