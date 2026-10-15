@@ -583,7 +583,8 @@ function boot(hotData) {
   rebuildPrepUnits(); UI.refresh();
   showTitle();
   // the opening cinematic plays over the title on a fresh load (not on hot reloads); ?nointro skips it
-  if (!hotData && !/[?&]nointro/.test(location.search)) startIntro(() => titleEnter()); else titleEnter();
+  // first the Noobscrub Games splash, then the cinematic; ?nointro skips both
+  if (!hotData && !/[?&]nointro/.test(location.search)) startSplash(() => startIntro(() => titleEnter())); else titleEnter();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
   try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
