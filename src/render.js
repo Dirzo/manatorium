@@ -266,21 +266,23 @@ function hazardThumbURL(id) {
 function renderFrame(V, dt) {
   R.t += dt; const g = R.lctx, run = V.run, B = V.B, t = R.t;
   const fi = factionIndex(run.siege);
-  const bgKey = fi + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = buildBackground(fi, run.castleEl);
+  const hall = run.finale === 'ready';
+  const bgKey = hall ? 'hall' : fi + ':' + (run.castleEl || 'stone');
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(fi, run.castleEl);
   g.imageSmoothingEnabled = false;
   g.drawImage(R.bg[bgKey], 0, 0);
+  if (hall) drawHallLive(g, t, B);
   // clouds
-  for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
+  if (!hall) for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#ac9298' : '#ffffff'; g.fillRect(Math.round(c.x), Math.round(c.y), c.w, 4); g.fillRect(Math.round(c.x + 4), Math.round(c.y - 3), c.w - 10, 3); g.fillRect(Math.round(c.x + c.w * 0.4), Math.round(c.y - 5), c.w * 0.35, 2);
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#7d707f' : '#e4ecff'; g.fillRect(Math.round(c.x + 2), Math.round(c.y + 4), c.w - 4, 1); }
   // castle
-  g.drawImage(buildCastle(run), 0, 0); drawCastleLive(g, t);
-  if (run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
+  if (!hall) { g.drawImage(buildCastle(run), 0, 0); drawCastleLive(g, t); }
+  if (!hall && run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
   // castle damage
   const hpf = run.castle.hp / run.castle.max;
-  if (hpf < 0.66) { g.fillStyle = OUTLINE; [[70, 100], [12, 120], [84, 230], [40, 200]].slice(0, hpf < 0.33 ? 4 : 2).forEach(([x, y]) => { g.fillRect(x, y, 1, 4); g.fillRect(x + 1, y + 3, 1, 4); g.fillRect(x - 1, y + 6, 1, 3); }); }
-  if (hpf < 0.33) for (const [x, y] of [[20, 40], [74, 72], [48, 40]]) { for (let i = 0; i < 4; i++) { g.fillStyle = pick(['#ff8a3a', '#ffde3a', '#ff3d3d']); g.fillRect(x + randi(-2, 2), y - randi(0, 6), 2, 2); } }
+  if (!hall && hpf < 0.66) { g.fillStyle = OUTLINE; [[70, 100], [12, 120], [84, 230], [40, 200]].slice(0, hpf < 0.33 ? 4 : 2).forEach(([x, y]) => { g.fillRect(x, y, 1, 4); g.fillRect(x + 1, y + 3, 1, 4); g.fillRect(x - 1, y + 6, 1, 3); }); }
+  if (!hall && hpf < 0.33) for (const [x, y] of [[20, 40], [74, 72], [48, 40]]) { for (let i = 0; i < 4; i++) { g.fillStyle = pick(['#ff8a3a', '#ffde3a', '#ff3d3d']); g.fillRect(x + randi(-2, 2), y - randi(0, 6), 2, 2); } }
   if (B && B.castleHitT > 0) { B.castleHitT -= dt; g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(58, 72, 36, H - 72); }
   // siege ladders and the battering ram
   if (B) { for (const e of B.enemies) if (e.alive && e.climb) { const L = e.climb, k = L.phase === 'raise' ? Math.min(1, L.t / 1.1) : 1, by = Math.round(L.y0), ty = by - (by - castleRafterY(run) + 4) * k, bx = CASTLE_X + 8;
@@ -313,6 +315,7 @@ function renderFrame(V, dt) {
     if (u.alive === false) { // tombstone
       const x = Math.round(u.x), y = Math.round(u.y); g.fillStyle = OUTLINE; g.fillRect(x - 4, y - 9, 8, 10); g.fillStyle = '#c9c4e6'; g.fillRect(x - 3, y - 8, 6, 8); g.fillStyle = '#8a83b8'; g.fillRect(x - 1, y - 7, 2, 5); g.fillRect(x - 2, y - 6, 4, 1); continue; }
     drawUnit(g, u, t, { selected: V.selected && u.inst && u.inst.uid === V.selected });
+    if (u.shards) drawShardCrown(g, u, t);
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
@@ -414,4 +417,56 @@ function drawCutin(ctx, k, c, ox = 0, oy = 0) {
   ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6 * k; ctx.strokeStyle = OUTLINE; ctx.strokeText(label, x, y); ctx.fillStyle = gr; ctx.fillText(label, x, y);
   if (c.combo) { ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
   ctx.restore();
+}
+
+// ----- the great hall: where the goose finale is fought (Cam: "the battle takes place in the castle") -----
+function buildHall() {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  // back wall: violet-grey stone in brick courses
+  p(0, 0, W, 104, '#4a4266');
+  for (let y = 0; y < 104; y += 8) for (let x = -((y / 8) % 2) * 8; x < W; x += 16) { const r = hash(x, y); p(x + 1, y + 1, 14, 6, r < 0.33 ? '#544c74' : r < 0.66 ? '#5c5480' : '#50486e'); p(x + 1, y + 1, 14, 1, '#6a628e'); }
+  // tall arched windows with a night sky and stars
+  for (const wx of [150, 250, 350]) {
+    p(wx - 15, 10, 30, 70, '#2a2440');
+    for (let y = 0; y < 66; y++) { const half = y < 14 ? Math.round(Math.sqrt(196 - (14 - y) * (14 - y))) : 14; p(wx - half, 12 + y, half * 2, 1, mix('#1c1a44', '#5a3a8a', y / 66)); }
+    for (let i = 0; i < 9; i++) { const sx = wx - 11 + Math.floor(hash(wx, i) * 22), sy = 18 + Math.floor(hash(i, wx) * 50); p(sx, sy, 1, 1, '#fff6d0'); }
+    p(wx - 1, 12, 2, 66, '#2a2440'); p(wx - 14, 44, 28, 2, '#2a2440');
+    p(wx - 17, 78, 34, 4, '#7a7298'); p(wx - 17, 78, 34, 1, '#9a92b8');
+  }
+  // banners between the windows
+  for (const bx of [200, 300, 400]) { p(bx - 9, 8, 18, 2, '#c9a24a'); p(bx - 8, 10, 16, 40, '#8a2a4a'); p(bx - 8, 10, 16, 2, '#a83a5a');
+    for (let i = 0; i < 4; i++) { p(bx - 8 + i * 4, 50, 4, 3 + (i % 2) * 2, '#8a2a4a'); } p(bx - 3, 24, 6, 6, '#e8c46a'); p(bx - 2, 25, 4, 4, '#fff0a8'); }
+  // skirting and floor
+  p(0, 98, W, 8, '#3a3458'); p(0, 98, W, 2, '#6a628e');
+  for (let y = 106; y < H; y += 12) for (let x = 0; x < W; x += 16) { const odd = ((x / 16) + Math.floor((y - 106) / 12)) % 2; p(x, y, 16, 12, odd ? '#6e6488' : '#7c7298'); p(x, y, 16, 1, odd ? '#7e749a' : '#8e84aa'); p(x, y, 1, 12, '#5e5678'); }
+  // red carpet from the doors to the altar
+  const cy = GRID.y + GRID.rows * GRID.cell / 2 - 10;
+  p(60, cy, W - 60, 22, '#9a2a3a'); p(60, cy, W - 60, 2, '#d8a84a'); p(60, cy + 20, W - 60, 2, '#d8a84a');
+  for (let x = 70; x < W; x += 14) p(x, cy + 10, 6, 2, '#b8404e');
+  // pillars
+  for (const px of [104, 470]) { p(px - 7, 0, 14, 106, '#5a5278'); p(px - 7, 0, 3, 106, '#7a7298'); p(px + 4, 0, 3, 106, '#423a5e'); p(px - 9, 98, 18, 8, '#6a628e'); }
+  // the shard altar on a dais at the back of the hall
+  p(0, 104, 90, H - 104, '#5a4a7a'); for (let i = 0; i < 4; i++) { p(80 + i * 3, 104 + i * 30, 10 - i * 3, H, '#6a5a8a'); }
+  p(0, 104, 92, 3, '#9a8ac0'); p(89, 104, 3, H - 104, '#3a2e58');
+  p(18, 118, 54, 104, '#3c3060'); p(18, 118, 54, 3, '#c9a24a'); p(18, 219, 54, 3, '#c9a24a'); p(22, 124, 46, 92, '#2a2248');
+  // broken doors where the goose came in
+  p(452, 104, 28, H - 104, '#2a2234'); for (let i = 0; i < 6; i++) { const y = 112 + i * 26; p(448 + (i % 2) * 4, y, 10, 4, '#7a5030'); p(458, y + 9, 8, 3, '#5a3a20'); }
+  return c;
+}
+// shards back on the altar (the ones knocked from the goose's crown), plus torch flicker
+function drawHallLive(g, t, B) {
+  const gz = B && B.bossUnit && B.bossUnit.def && B.bossUnit.def.boss && B.bossUnit.shards != null ? B.bossUnit : null;
+  const home = gz ? 12 - gz.shards : B ? 0 : 12;
+  EL_KEYS.forEach((e, i) => { const col = i % 3, row = Math.floor(i / 3), x = 30 + col * 14, y = 134 + row * 21 + Math.round(Math.sin(t * 2 + i) * 1.5);
+    if (i >= home) { g.fillStyle = '#1a1430'; g.fillRect(x - 2, y + 4, 5, 2); return; }
+    g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 4, 7, 10); g.fillStyle = ELEMENTS[e].col; g.fillRect(x - 2, y - 3, 5, 8); g.fillStyle = ELEMENTS[e].col2; g.fillRect(x + 1, y - 1, 2, 5); g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 2, 1, 2);
+    if (Math.random() < 0.04) FXS.parts && FXS.parts.push({ x, y: y - 4, vx: rand(-4, 4), vy: rand(-14, -6), life: 0.8, t: 0, color: ELEMENTS[e].col, size: 1, grav: 0 }); });
+  for (const tx of [125, 225, 325, 425]) { const f = Math.sin(t * 13 + tx) > 0; g.fillStyle = '#3a2a1a'; g.fillRect(tx - 1, 56, 3, 10); g.fillStyle = f ? '#ffb02e' : '#ff7a1a'; g.fillRect(tx - 2, 50 - (f ? 1 : 0), 5, 6); g.fillStyle = '#fff0a8'; g.fillRect(tx, 52, 1, 3); }
+}
+// the crown of shards orbits the goose's head
+function drawShardCrown(g, u, t) {
+  if (!u.shards) return; const hy = u.y - u.z - 34 * u.scale, n = u.shards;
+  for (let i = 0; i < n; i++) { const a = t * 1.6 + i * Math.PI * 2 / n, x = Math.round(u.x + Math.cos(a) * 16), y = Math.round(hy + Math.sin(a) * 5), e = EL_KEYS[i];
+    g.fillStyle = OUTLINE; g.fillRect(x - 2, y - 3, 5, 7); g.fillStyle = ELEMENTS[e].col; g.fillRect(x - 1, y - 2, 3, 5); g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 2, 1, 1); }
 }

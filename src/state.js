@@ -64,7 +64,7 @@ function swapHero(run, old, opt) {
   if (place) h.place = place;
   return { h, gold: g };
 }
-function summonTier(s) { return s === 30 || s === 35 ? 4 : s === 40 || s === 45 ? 5 : 0; }
+function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
 function summonOptions(run, tier) {
   const own = new Set(run.roster.map(h => h.id));
   return HEROES.filter(h => h.fixed === tier && !own.has(h.id)).sort(() => Math.random() - 0.5).slice(0, 3).map(h => draftCard(h.id, run, tier));
@@ -77,6 +77,18 @@ function ascendHero(run, h) {
   if ((h.rarity || 0) + 1 > maxRarityNow(run)) return { err: `Beat more bosses to open ${RARITY[(h.rarity || 0) + 1].name}.` };
   if (run.gold < c) return { err: `Ascending costs ${c} gold. Save up ${c - run.gold} more.` };
   run.gold -= c; h.rarity = (h.rarity || 0) + 1; return { ok: true };
+}
+// the goose carries off one champion per siege from 46 to 50; captives sit out until the finale
+function vaultDue(run) { return run.siege >= VAULT_FROM && run.siege <= FINAL_SIEGE && !run.finale && (run.vaultDone || 0) < run.siege && run.roster.filter(h => !h.vault).length > 2; }
+function sendToVault(run, h) { h.vault = true; h.place = null; run.vaultDone = run.siege; }
+function gooseSnatch(run) { const free = run.roster.filter(h => !h.vault); const h = free[Math.floor(Math.random() * free.length)]; sendToVault(run, h); return h; }
+function vaultSkip(run) { run.vaultDone = run.siege; }
+// after the goose falls at 50: it storms back into the great hall; the vault guards come up and everyone fights
+function startFinale(run) {
+  run.finale = 'ready'; run.siege = FINAL_SIEGE; run.tactic = null; run.mods = {};
+  for (const h of run.roster) { h.vault = false; h.place = null; }
+  for (const h of run.roster) autoPlace(run, h);
+  run.castle.hp = run.castle.max;
 }
 function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
 function needsElement(h) { return h.level >= ELEMENT_LEVEL && !h.el; }
@@ -96,8 +108,9 @@ function cellFree(run, c, r, except) { return !run.roster.some(h => h !== except
 function rafterFree(run, i, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'rafter' && h.place.i === i); }
 function isRangedHero(id) { const d = HERO_BY_ID[id]; return CLASS_BASE[d.cls].range > 40; }
 function autoPlace(run, h) {
+  if (h.vault) return;
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
-  if (ranged) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
+  if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
   const rows = [3, 2, 4, 1, 5, 0];
   for (const c of cols) for (const r of rows) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }

@@ -13,7 +13,7 @@ const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
-const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
+const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.05];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -24,13 +24,13 @@ function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
-const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 1.6 };
+const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
 function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
 
 // ----- synergies -----
-function placedHeroes(run) { return run.roster.filter(h => h.place); }
+function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault); }
 function synergyCounts(run) {
   const race = {}, cls = {}, seen = new Set();
   for (const h of placedHeroes(run)) {
@@ -227,15 +227,15 @@ function heroStats(h, run, meta, syn) {
 
 // ----- wave generation -----
 function swarmK(s) { return 1 + BAL.swarm * (s - 1); }
-function genWave(s, mods, tac) {
+function genWave(s, mods, tac, finale) {
   const fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5, cyc = cycleOf(s);
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
   if (mods.fewer) budget *= 0.75;
   if (tac === 'swarm') budget *= 1.5; if (tac === 'shieldwall') budget *= 0.85;
   const list = [];
-  const boss = isBossSiege(s) ? bossFor(s) : null;
-  if (boss) budget *= 0.5;
+  const boss = finale ? 'shardgoose' : isBossSiege(s) ? bossFor(s) : null;
+  if (boss) budget *= finale ? 0.4 : 0.5;
   let elites = within >= 3 ? 1 + Math.floor(s / 14) : within === 2 && s > 5 ? 1 : 0;
   if (cyc > 0) elites += 1;
   if (tac === 'captain') elites = Math.max(1, elites);
@@ -273,7 +273,7 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
@@ -337,6 +337,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
+  if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name); FX.shake(6); FX.sound('boss'); }
@@ -755,6 +756,14 @@ const BOSS_MOVES = {
   colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'HAVE YOU TRIED TURNING IT OFF', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
   pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'FIRE ALL CANNONS! ARR!', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
+  // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
+  shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
+    if (m === 1 && left.length) { bossCall(B, u, 'SHARD STORM', 'MY SHARDS. MY CASTLE.', [ELEMENTS[pick(left)].col, '#ffffff'], 10);
+      for (let i = 0; i < Math.min(8, 2 + left.length); i++) { const t = pick(hs); if (!t) break; const e = pick(left);
+        B.zones.push({ type: 'telegraph', x: t.x + rand(-14, 14), y: t.y + rand(-8, 8), r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
+      return 10; }
+    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
+    bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 3 }); return 11; },
   goosegod(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3;
     if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
     if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
@@ -806,10 +815,23 @@ function stepHazard(B, dt) {
     B.hzPatches = B.hzPatches.filter(P => P.t < P.life); }
 }
 
+// shard-crowned goose: every sixth of its HP knocks two shards loose; they fly home to the vault, mend the
+// hall a little, and the goose gets weaker without them
+function stepShards(B) {
+  const u = B.bossUnit; if (!u || !u.alive || !u.shards) return;
+  const want = Math.ceil(12 * u.hp / u.maxHp / 2) * 2; if (want >= u.shards) return;
+  while (u.shards > want) { u.shards--; const e = EL_KEYS[u.shards];
+    FX.text(u.x + rand(-20, 20), u.y - 40 * u.scale + rand(-6, 6), ELEMENTS[e].name.toUpperCase() + ' SHARD', ELEMENTS[e].col, true);
+    FX.particles(u.x, u.y - 30, 16, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff'], { spread: 30, up: true });
+    B.castle.hp = Math.min(B.castle.max, B.castle.hp + B.castle.max * 0.02); }
+  const k = u.shards / 12; u.atk = u.shardBase.atk * (0.7 + 0.3 * k); u.armor = u.shardBase.armor * (0.5 + 0.5 * k);
+  FX.shake(6); FX.sound('jingle');
+}
 function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
   const run = B.run;
+  if (B.bossUnit && B.bossUnit.shards) stepShards(B);
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
     spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain }); B.lastSpawn = B.t; }

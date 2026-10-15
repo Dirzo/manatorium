@@ -83,7 +83,7 @@ function showMakeRoom(o, back, after) {
     s.querySelector('#roomBack').onclick = () => back();
   }, 'wide');
 }
-// Legend Summons after the boss at 30/35 (Legendary) and 40/45 (God)
+// Legend Summons after the boss at 35 (Legendary) and 40 (God)
 function showSummon() {
   const run = G.run, P = run.pendingSummon; if (!P || !P.opts.length) { run.pendingSummon = null; return nextPost(); }
   G.phase = 'draft'; save(); SFX.play('sig');
@@ -102,12 +102,12 @@ function summonSkipGold(run) { return Math.round(200 * goldMul(run.siege) / 5) *
 function beginSiege() {
   if (G.phase !== 'prep') return;
   if (!G.run.roster.some(h => h.place)) { UI.toast('Place at least one hero on the field first.', true); return; }
-  if (isBossSiege(G.run.siege) && G.run.bossNag !== G.run.siege && bossReminder()) return;
+  if (isBossSiege(G.run.siege) && !G.run.finale && G.run.bossNag !== G.run.siege && bossReminder()) return;
   UI.openPage(null); UI.coachDone('begin'); UI.coachDone('place');
   G.phase = 'siege'; G.B = startBattle(G.run, G.meta); G.armed = null;
   if (G.run.siege > 1) UI.setRoster(true);
   const s = G.run.siege; const F = FACTIONS[factionIndex(s)];
-  if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
+  if (G.run.finale === 'ready') UI.banner('The Shard War', 'Knock the shards loose'); else if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
   SFX.play('cast');
   UI.refresh();
   if (s === 1) setTimeout(() => UI.coach('xp-live', document.querySelector('.hcard .xpbar'), 'Heroes earn experience from kills and from surviving the siege. A hero who falls loses everything they earned this round.'), 1500);
@@ -140,6 +140,7 @@ function endSiege() {
     TEL.siege(G.run, rep);
     SFX.play('victory');
     const run = G.run;
+    if (rep.siege >= FINAL_SIEGE && run.finale !== 'ready') { startFinale(run); G.phase = 'finale'; save(); TEL.event('finale', {}); setTimeout(() => showFinale(), 1400); UI.hud(); return; }
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
     // every legend fell: one free recruit so the keep is never empty
@@ -243,14 +244,24 @@ function showReforge(enc, done) {
   }), 'wide');
 }
 
+function showVault() {
+  const run = G.run; G.phase = 'vault'; const h = gooseSnatch(run); save();
+  SFX.play('honk'); FX.shake(10); TEL.event('snatch', { id: h.id, s: run.siege });
+  UI.modal(UI.vaultHTML(run, h), s => { s.querySelector('#vaultOk').onclick = () => toPrep(); }, 'wide');
+}
+function showFinale() {
+  const run = G.run; G.phase = 'finale'; FX.shake(16); FX.flash('#c98aff', 0.5); SFX.play('roar');
+  UI.modal(UI.finaleHTML(run), s => { s.querySelector('#finaleGo').onclick = () => { R.castleKey = null; toPrep(); UI.banner('The Shard War', 'Inside the great hall'); }; }, 'wide');
+}
 function toPrep() {
+  if (vaultDue(G.run)) return showVault();
   UI.closeModal(); G.phase = 'prep'; G.B = null; UI.pendingGold = 0;
   // champions drawer stays tucked away unless someone is waiting on the bench
   UI.setRoster(G.run.siege > 1 && G.run.roster.every(h => h.place));
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
-  if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
@@ -312,6 +323,7 @@ function slotAt(p) {
 function slotOk(h, s) { if (!s) return false; if (s.type === 'rafter') return isRangedHero(h.id); return true; }
 function occupant(s, except) { return G.run.roster.find(h => h !== except && h.place && h.place.type === s.type && (s.type === 'grid' ? h.place.c === s.c && h.place.r === s.r : h.place.i === s.i)); }
 function placeHero(h, s) {
+  if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   const occ = occupant(s, h);
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
@@ -509,6 +521,7 @@ function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
   if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
+  if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
 }
 

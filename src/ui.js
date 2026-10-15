@@ -193,14 +193,15 @@ const UI = {
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
     const sub = $('siegeSub');
-    if (isBossSiege(s)) { sub.textContent = s === FINAL_SIEGE ? 'FINAL BOSS' : ENEMIES[bossFor(s)].boss === 'big' ? 'BOSS SIEGE' : 'MINI-BOSS SIEGE'; sub.className = 'boss'; }
+    if (run.finale === 'ready') { sub.textContent = 'FINAL BATTLE · GREAT HALL'; sub.className = 'boss'; }
+    else if (isBossSiege(s)) { sub.textContent = s === FINAL_SIEGE ? 'FINAL BOSS' : ENEMIES[bossFor(s)].boss === 'big' ? 'BOSS SIEGE' : 'MINI-BOSS SIEGE'; sub.className = 'boss'; }
     else { const nb = 5 - (s % 5); sub.textContent = `${F.name} · boss in ${nb}`; sub.className = ''; }
     if (G.B && !G.B.done && G.B.wave && !G.B.overtime) { sub.textContent = G.B.wave === G.B.waves_of ? `${F.name} · FINAL WAVE` : `${F.name} · wave ${G.B.wave} of ${G.B.waves_of}`; sub.className = G.B.wave === G.B.waves_of ? 'boss' : ''; }
     if (G.B && !G.B.done && G.B.bossUnit && G.B.bossUnit.alive) { const u = G.B.bossUnit, left = Math.ceil((u.patMax || bossLimit(u)) - (u.patT || 0)); if (u.rage || left <= 15) { sub.textContent = u.rage ? 'THE BOSS IS CHARGING' : `Boss charges the wall in ${left}s`; sub.className = 'boss'; } }
     if (G.B && G.B.overtime && !G.B.done) { const B = G.B, left = Math.ceil(BAL.otCharge - B.otT); sub.textContent = `OVERTIME · heroes +${Math.round(BAL.otRamp * B.otT * 100)}%${B.bossUnit && B.bossUnit.alive ? '' : left > 0 ? ` · charge in ${left}s` : ' · foes charging'}`; sub.className = 'boss'; }
     const hp = Math.max(0, Math.round(run.castle.hp)); $('castleTxt').textContent = `${fmt(hp)} / ${fmt(run.castle.max)}`;
     const f = $('castleFill'); f.style.width = (100 * hp / run.castle.max) + '%'; f.classList.toggle('low', hp / run.castle.max < 0.35);
-    $('castleLabel').textContent = run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : 'Castle';
+    $('castleLabel').textContent = run.finale === 'ready' ? 'Shard altar' : run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : 'Castle';
     const B = G.B, hb = $('hammerBtn');
     if (B && !B.done) { const cd = B.hammer.cd, max = hammerCooldown(run, G.meta); hb.disabled = cd > 0 || !!B.hammer.pending; $('hammerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; }
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
@@ -361,7 +362,7 @@ const UI = {
     let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">Each card rolls a rarity: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Beat bosses to open rarer legends. New legends start at level 1 and learn twice as fast while they catch up. The bigger your keep, the more a draft costs; legends who fall are gone for good.</p>
       <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions). You can still draft: after you pick, choose who heads home to make room. You have ${run.gold} gold.` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
       <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>${full ? 'Draft and swap' : 'Draft champion'}</b><span>${COST(c)} gold</span></button></div>`;
-    h += `<div class="group-title">Your champions</div><p class="note">Ascend a champion to raise their rarity for gold. Each boss you beat opens a rarer tier. Legend Summons after the bosses at sieges 30 and 35 offer Legendary legends, and after 40 and 45 God legends.</p>`;
+    h += `<div class="group-title">Your champions</div><p class="note">Ascend a champion to raise their rarity for gold. Each boss you beat opens a rarer tier. Legend Summons after the boss at siege 35 offers a Legendary legend, and after siege 40 a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : !hr.el ? (hr.level < ELEMENT_LEVEL ? `Element choice at level ${ELEMENT_LEVEL}` : 'Element choice pending') : `Signature rank ${st.rank}`;
@@ -498,7 +499,7 @@ const UI = {
     let h = '';
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
-      const where = !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
+      const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
       const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
         <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
@@ -551,6 +552,19 @@ const UI = {
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
+  },
+  vaultHTML(run, h) {
+    const L = VAULT_LORE[run.siege] || VAULT_LORE[FINAL_SIEGE], taken = run.roster.filter(x => x.vault && x !== h), left = run.roster.filter(x => !x.vault).length;
+    return `<span class="eyebrow">The goose strikes · siege ${run.siege}</span><h2>${esc(L[0])}</h2>
+      <div class="snatch"><div class="sky"><img class="px goose" src="${portrait('e:goosegod')}" alt=""><img class="px victim" src="${portrait(heroSpriteKey(h))}" alt=""></div></div>
+      <p class="lede">${esc(L[1].replace('{name}', heroDisplayName(h)))}</p>
+      <p class="note">${esc(heroDisplayName(h))} sits out until the goose is beaten. ${taken.length ? `Also in the nest: ${taken.map(x => esc(heroDisplayName(x))).join(', ')}. ` : ''}${left} champion${left === 1 ? '' : 's'} left to hold the walls.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="vaultOk">Hold the walls</button></div>`;
+  },
+  finaleHTML(run) {
+    return `<span class="eyebrow">The goose is not done</span><h2>It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
+      <p>Your captured champions burst out of the goose's nest and come running back. Everyone fights this one, inside the castle's great hall. Knock the shards out of its crown. Each sixth of its health shakes two loose, and it gets weaker without them.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="finaleGo">Into the great hall</button></div>`;
   },
   makeRoomHTML(o) {
     const run = G.run, d = HERO_BY_ID[o.id];

@@ -1029,3 +1029,10 @@ b.sv { color: var(--gold); }
 .btn.ascend { border-color: var(--rc); color: var(--rc); }
 .btn.ascend:disabled { opacity: .45; }
 .mods.tac p { color: #9fd8ff; } .mods.tac b { color: #6cc4ff; }
+/* the goose carries off a champion */
+.snatch { height: 120px; position: relative; overflow: hidden; border-radius: 10px; background: linear-gradient(#2a2a5a, #8a6aa8 70%, #e8b88a); margin: 8px 0 12px; }
+.snatch .sky { position: absolute; left: -30%; top: 60%; width: 120px; height: 100px; animation: snatchfly 2.6s cubic-bezier(.4,.1,.6,1) forwards; }
+.snatch .goose { width: 96px; height: 96px; image-rendering: pixelated; position: absolute; left: 0; top: 0; transform: scaleX(-1); }
+.snatch .victim { width: 44px; height: 44px; image-rendering: pixelated; position: absolute; left: 34px; top: 62px; animation: dangle 0.5s ease-in-out infinite alternate; }
+@keyframes snatchfly { 0% { left: -30%; top: 55%; } 45% { left: 40%; top: 25%; } 100% { left: 110%; top: -40%; } }
+@keyframes dangle { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }

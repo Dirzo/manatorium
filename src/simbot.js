@@ -123,12 +123,14 @@ function botPlayRun(style, meta, opts = {}) {
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+    if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
     if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
     const rep = finishSiege(run, meta, B);
     if (opts.onSiege) opts.onSiege(run, rep);
+    if (rep.siege >= FINAL_SIEGE && !run.finale) { startFinale(run); continue; }
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }

@@ -1034,6 +1034,13 @@ b.sv { color: var(--gold); }
 .btn.ascend { border-color: var(--rc); color: var(--rc); }
 .btn.ascend:disabled { opacity: .45; }
 .mods.tac p { color: #9fd8ff; } .mods.tac b { color: #6cc4ff; }
+/* the goose carries off a champion */
+.snatch { height: 120px; position: relative; overflow: hidden; border-radius: 10px; background: linear-gradient(#2a2a5a, #8a6aa8 70%, #e8b88a); margin: 8px 0 12px; }
+.snatch .sky { position: absolute; left: -30%; top: 60%; width: 120px; height: 100px; animation: snatchfly 2.6s cubic-bezier(.4,.1,.6,1) forwards; }
+.snatch .goose { width: 96px; height: 96px; image-rendering: pixelated; position: absolute; left: 0; top: 0; transform: scaleX(-1); }
+.snatch .victim { width: 44px; height: 44px; image-rendering: pixelated; position: absolute; left: 34px; top: 62px; animation: dangle 0.5s ease-in-out infinite alternate; }
+@keyframes snatchfly { 0% { left: -30%; top: 55%; } 45% { left: 40%; top: 25%; } 100% { left: 110%; top: -40%; } }
+@keyframes dangle { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
 </style>
 <div id="app">
   <header class="hud">
@@ -1393,6 +1400,7 @@ const ENEMIES = {
   sporebaron:{ name: 'The Spore Baron', boss: 'mini', hp: 16000, atk: 80, as: 0.7, range: 22, spd: 12, armor: 40, gold: 800, kind: 'melee', scale: 2, skills: ['slam', 'summon:shroom', 'gust'], spr: { gen: 'humanoid', head: 'goblin', skin: '#f4e4c8', hat: 'wizard', armor: '#8a3ad8', armor2: '#5a1a9a', cloth: '#e84a5a', weapon: 'staff', gem: '#c8ff6a', cape: '#e84a5a' } },
   trashpaw: { name: 'Big Mama Trashpaw', boss: 'mini', hp: 30000, atk: 110, as: 0.8, range: 22, spd: 14, armor: 55, gold: 1200, kind: 'melee', scale: 2, skills: ['slam', 'summon:bandit', 'fireRain'], spr: { gen: 'humanoid', head: 'beast', skin: '#7a7a8a', snout: '#2a2a3a', ears: 'round', hat: 'none', armor: '#c84a8a', armor2: '#8a2a5a', cloth: '#3a3a4a', weapon: 'hammer', metal: '#c8c8d8', cape: '#5a3a7a' } },
   pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'sword', metal: '#ffd84a', cape: '#a82a3a' } },
+  shardgoose: { name: 'The Shard-Crowned Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3.2, skills: ['breath', 'slam', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#d8d0f0', beak: '#ff8a1a', neck: true, crown: '#c98aff' } },
   goosegod: { name: 'The Eternal Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3, skills: ['breath', 'slam', 'summon:chicken', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#c8c8d0', beak: '#ff8a1a', neck: true, crown: '#ffd84a' } },
   colossus: { name: 'The Brass Colossus', boss: 'big', hp: 60000, atk: 130, as: 0.5, range: 30, spd: 9, armor: 60, gold: 2500, kind: 'melee', scale: 3, skills: ['laser', 'slam', 'summon:cog'], spr: { gen: 'golem', body: '#e8b84a', trim: '#8a5a2a', eye: '#ff3a5a', crown: true } },
 };
@@ -1419,10 +1427,21 @@ const TACTICS = {
   airraid:    { name: 'Air Raid',      icon: '^', desc: 'Flyers from every horde so far join the attack.' },
 };
 function rollTactic(s) { if (s < 6 || s % 5 === 0 || s >= FINAL_SIEGE || Math.random() < 0.2) return null; const k = Object.keys(TACTICS); return k[Math.floor(Math.random() * k.length)]; }
-const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at the end
+const FINAL_SIEGE = 50;
+// Cam 2026-10-15, the goose finale: before each of the last five sieges the goose swoops in and carries off one
+// champion (they sit out), so the goose is beaten by a small team. Then it storms the castle for the twelve
+// elemental shards, the captives break free, and everyone fights one last battle inside the castle's great hall.
+const VAULT_FROM = 46;
+const VAULT_LORE = {
+  46: ['Something Big Overhead', 'A shadow crosses the courtyard. The Eternal Goose drops out of the sky, grabs {name} by the collar and flaps off toward its nest. "HONK," it says, which you are fairly sure means "collateral".'],
+  47: ['Again', 'It came back. You heard the wings this time, but not soon enough. {name} is carried off over the walls, still shouting instructions.'],
+  48: ['Ransom Note', 'A gosling delivers a note: "I HAVE YOUR FRIENDS. BRING SHARDS." Before you can reply, the goose swoops down and takes {name} as well.'],
+  49: ['The Nest Grows', 'Scouts spot the goose\'s nest on the far hill, made of stolen banners and your champions\' capes. Tonight it adds {name} to the collection.'],
+  50: ['The Last Snatch', 'The Eternal Goose is at the gates, and it takes one more for luck. {name} is gone. A small team will have to hold the walls.'],
+}; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.2';
+const VERSION = 'phase3.3';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -3094,7 +3113,7 @@ const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
-const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.065];
+const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.05];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -3105,13 +3124,13 @@ function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
-const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 1.6 };
+const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
 function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
 
 // ----- synergies -----
-function placedHeroes(run) { return run.roster.filter(h => h.place); }
+function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault); }
 function synergyCounts(run) {
   const race = {}, cls = {}, seen = new Set();
   for (const h of placedHeroes(run)) {
@@ -3308,15 +3327,15 @@ function heroStats(h, run, meta, syn) {
 
 // ----- wave generation -----
 function swarmK(s) { return 1 + BAL.swarm * (s - 1); }
-function genWave(s, mods, tac) {
+function genWave(s, mods, tac, finale) {
   const fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5, cyc = cycleOf(s);
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
   if (mods.fewer) budget *= 0.75;
   if (tac === 'swarm') budget *= 1.5; if (tac === 'shieldwall') budget *= 0.85;
   const list = [];
-  const boss = isBossSiege(s) ? bossFor(s) : null;
-  if (boss) budget *= 0.5;
+  const boss = finale ? 'shardgoose' : isBossSiege(s) ? bossFor(s) : null;
+  if (boss) budget *= finale ? 0.4 : 0.5;
   let elites = within >= 3 ? 1 + Math.floor(s / 14) : within === 2 && s > 5 ? 1 : 0;
   if (cyc > 0) elites += 1;
   if (tac === 'captain') elites = Math.max(1, elites);
@@ -3354,7 +3373,7 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
@@ -3418,6 +3437,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
+  if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name); FX.shake(6); FX.sound('boss'); }
@@ -3836,6 +3856,14 @@ const BOSS_MOVES = {
   colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'HAVE YOU TRIED TURNING IT OFF', ['#e8b84a', '#5fd3ff'], 9); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
   pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'FIRE ALL CANNONS! ARR!', ['#2a2a3a', '#ffd84a'], 10); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
+  // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
+  shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
+    if (m === 1 && left.length) { bossCall(B, u, 'SHARD STORM', 'MY SHARDS. MY CASTLE.', [ELEMENTS[pick(left)].col, '#ffffff'], 10);
+      for (let i = 0; i < Math.min(8, 2 + left.length); i++) { const t = pick(hs); if (!t) break; const e = pick(left);
+        B.zones.push({ type: 'telegraph', x: t.x + rand(-14, 14), y: t.y + rand(-8, 8), r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
+      return 10; }
+    if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
+    bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 3 }); return 11; },
   goosegod(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3;
     if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
     if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
@@ -3887,10 +3915,23 @@ function stepHazard(B, dt) {
     B.hzPatches = B.hzPatches.filter(P => P.t < P.life); }
 }
 
+// shard-crowned goose: every sixth of its HP knocks two shards loose; they fly home to the vault, mend the
+// hall a little, and the goose gets weaker without them
+function stepShards(B) {
+  const u = B.bossUnit; if (!u || !u.alive || !u.shards) return;
+  const want = Math.ceil(12 * u.hp / u.maxHp / 2) * 2; if (want >= u.shards) return;
+  while (u.shards > want) { u.shards--; const e = EL_KEYS[u.shards];
+    FX.text(u.x + rand(-20, 20), u.y - 40 * u.scale + rand(-6, 6), ELEMENTS[e].name.toUpperCase() + ' SHARD', ELEMENTS[e].col, true);
+    FX.particles(u.x, u.y - 30, 16, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff'], { spread: 30, up: true });
+    B.castle.hp = Math.min(B.castle.max, B.castle.hp + B.castle.max * 0.02); }
+  const k = u.shards / 12; u.atk = u.shardBase.atk * (0.7 + 0.3 * k); u.armor = u.shardBase.armor * (0.5 + 0.5 * k);
+  FX.shake(6); FX.sound('jingle');
+}
 function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
   const run = B.run;
+  if (B.bossUnit && B.bossUnit.shards) stepShards(B);
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
     spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain }); B.lastSpawn = B.t; }
@@ -4539,7 +4580,7 @@ function swapHero(run, old, opt) {
   if (place) h.place = place;
   return { h, gold: g };
 }
-function summonTier(s) { return s === 30 || s === 35 ? 4 : s === 40 || s === 45 ? 5 : 0; }
+function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
 function summonOptions(run, tier) {
   const own = new Set(run.roster.map(h => h.id));
   return HEROES.filter(h => h.fixed === tier && !own.has(h.id)).sort(() => Math.random() - 0.5).slice(0, 3).map(h => draftCard(h.id, run, tier));
@@ -4552,6 +4593,18 @@ function ascendHero(run, h) {
   if ((h.rarity || 0) + 1 > maxRarityNow(run)) return { err: `Beat more bosses to open ${RARITY[(h.rarity || 0) + 1].name}.` };
   if (run.gold < c) return { err: `Ascending costs ${c} gold. Save up ${c - run.gold} more.` };
   run.gold -= c; h.rarity = (h.rarity || 0) + 1; return { ok: true };
+}
+// the goose carries off one champion per siege from 46 to 50; captives sit out until the finale
+function vaultDue(run) { return run.siege >= VAULT_FROM && run.siege <= FINAL_SIEGE && !run.finale && (run.vaultDone || 0) < run.siege && run.roster.filter(h => !h.vault).length > 2; }
+function sendToVault(run, h) { h.vault = true; h.place = null; run.vaultDone = run.siege; }
+function gooseSnatch(run) { const free = run.roster.filter(h => !h.vault); const h = free[Math.floor(Math.random() * free.length)]; sendToVault(run, h); return h; }
+function vaultSkip(run) { run.vaultDone = run.siege; }
+// after the goose falls at 50: it storms back into the great hall; the vault guards come up and everyone fights
+function startFinale(run) {
+  run.finale = 'ready'; run.siege = FINAL_SIEGE; run.tactic = null; run.mods = {};
+  for (const h of run.roster) { h.vault = false; h.place = null; }
+  for (const h of run.roster) autoPlace(run, h);
+  run.castle.hp = run.castle.max;
 }
 function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
 function needsElement(h) { return h.level >= ELEMENT_LEVEL && !h.el; }
@@ -4571,8 +4624,9 @@ function cellFree(run, c, r, except) { return !run.roster.some(h => h !== except
 function rafterFree(run, i, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'rafter' && h.place.i === i); }
 function isRangedHero(id) { const d = HERO_BY_ID[id]; return CLASS_BASE[d.cls].range > 40; }
 function autoPlace(run, h) {
+  if (h.vault) return;
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
-  if (ranged) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
+  if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
   const rows = [3, 2, 4, 1, 5, 0];
   for (const c of cols) for (const r of rows) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
@@ -6190,21 +6244,23 @@ function hazardThumbURL(id) {
 function renderFrame(V, dt) {
   R.t += dt; const g = R.lctx, run = V.run, B = V.B, t = R.t;
   const fi = factionIndex(run.siege);
-  const bgKey = fi + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = buildBackground(fi, run.castleEl);
+  const hall = run.finale === 'ready';
+  const bgKey = hall ? 'hall' : fi + ':' + (run.castleEl || 'stone');
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(fi, run.castleEl);
   g.imageSmoothingEnabled = false;
   g.drawImage(R.bg[bgKey], 0, 0);
+  if (hall) drawHallLive(g, t, B);
   // clouds
-  for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
+  if (!hall) for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#ac9298' : '#ffffff'; g.fillRect(Math.round(c.x), Math.round(c.y), c.w, 4); g.fillRect(Math.round(c.x + 4), Math.round(c.y - 3), c.w - 10, 3); g.fillRect(Math.round(c.x + c.w * 0.4), Math.round(c.y - 5), c.w * 0.35, 2);
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#7d707f' : '#e4ecff'; g.fillRect(Math.round(c.x + 2), Math.round(c.y + 4), c.w - 4, 1); }
   // castle
-  g.drawImage(buildCastle(run), 0, 0); drawCastleLive(g, t);
-  if (run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
+  if (!hall) { g.drawImage(buildCastle(run), 0, 0); drawCastleLive(g, t); }
+  if (!hall && run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
   // castle damage
   const hpf = run.castle.hp / run.castle.max;
-  if (hpf < 0.66) { g.fillStyle = OUTLINE; [[70, 100], [12, 120], [84, 230], [40, 200]].slice(0, hpf < 0.33 ? 4 : 2).forEach(([x, y]) => { g.fillRect(x, y, 1, 4); g.fillRect(x + 1, y + 3, 1, 4); g.fillRect(x - 1, y + 6, 1, 3); }); }
-  if (hpf < 0.33) for (const [x, y] of [[20, 40], [74, 72], [48, 40]]) { for (let i = 0; i < 4; i++) { g.fillStyle = pick(['#ff8a3a', '#ffde3a', '#ff3d3d']); g.fillRect(x + randi(-2, 2), y - randi(0, 6), 2, 2); } }
+  if (!hall && hpf < 0.66) { g.fillStyle = OUTLINE; [[70, 100], [12, 120], [84, 230], [40, 200]].slice(0, hpf < 0.33 ? 4 : 2).forEach(([x, y]) => { g.fillRect(x, y, 1, 4); g.fillRect(x + 1, y + 3, 1, 4); g.fillRect(x - 1, y + 6, 1, 3); }); }
+  if (!hall && hpf < 0.33) for (const [x, y] of [[20, 40], [74, 72], [48, 40]]) { for (let i = 0; i < 4; i++) { g.fillStyle = pick(['#ff8a3a', '#ffde3a', '#ff3d3d']); g.fillRect(x + randi(-2, 2), y - randi(0, 6), 2, 2); } }
   if (B && B.castleHitT > 0) { B.castleHitT -= dt; g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(58, 72, 36, H - 72); }
   // siege ladders and the battering ram
   if (B) { for (const e of B.enemies) if (e.alive && e.climb) { const L = e.climb, k = L.phase === 'raise' ? Math.min(1, L.t / 1.1) : 1, by = Math.round(L.y0), ty = by - (by - castleRafterY(run) + 4) * k, bx = CASTLE_X + 8;
@@ -6237,6 +6293,7 @@ function renderFrame(V, dt) {
     if (u.alive === false) { // tombstone
       const x = Math.round(u.x), y = Math.round(u.y); g.fillStyle = OUTLINE; g.fillRect(x - 4, y - 9, 8, 10); g.fillStyle = '#c9c4e6'; g.fillRect(x - 3, y - 8, 6, 8); g.fillStyle = '#8a83b8'; g.fillRect(x - 1, y - 7, 2, 5); g.fillRect(x - 2, y - 6, 4, 1); continue; }
     drawUnit(g, u, t, { selected: V.selected && u.inst && u.inst.uid === V.selected });
+    if (u.shards) drawShardCrown(g, u, t);
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
@@ -6338,6 +6395,58 @@ function drawCutin(ctx, k, c, ox = 0, oy = 0) {
   ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6 * k; ctx.strokeStyle = OUTLINE; ctx.strokeText(label, x, y); ctx.fillStyle = gr; ctx.fillText(label, x, y);
   if (c.combo) { ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
   ctx.restore();
+}
+
+// ----- the great hall: where the goose finale is fought (Cam: "the battle takes place in the castle") -----
+function buildHall() {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  // back wall: violet-grey stone in brick courses
+  p(0, 0, W, 104, '#4a4266');
+  for (let y = 0; y < 104; y += 8) for (let x = -((y / 8) % 2) * 8; x < W; x += 16) { const r = hash(x, y); p(x + 1, y + 1, 14, 6, r < 0.33 ? '#544c74' : r < 0.66 ? '#5c5480' : '#50486e'); p(x + 1, y + 1, 14, 1, '#6a628e'); }
+  // tall arched windows with a night sky and stars
+  for (const wx of [150, 250, 350]) {
+    p(wx - 15, 10, 30, 70, '#2a2440');
+    for (let y = 0; y < 66; y++) { const half = y < 14 ? Math.round(Math.sqrt(196 - (14 - y) * (14 - y))) : 14; p(wx - half, 12 + y, half * 2, 1, mix('#1c1a44', '#5a3a8a', y / 66)); }
+    for (let i = 0; i < 9; i++) { const sx = wx - 11 + Math.floor(hash(wx, i) * 22), sy = 18 + Math.floor(hash(i, wx) * 50); p(sx, sy, 1, 1, '#fff6d0'); }
+    p(wx - 1, 12, 2, 66, '#2a2440'); p(wx - 14, 44, 28, 2, '#2a2440');
+    p(wx - 17, 78, 34, 4, '#7a7298'); p(wx - 17, 78, 34, 1, '#9a92b8');
+  }
+  // banners between the windows
+  for (const bx of [200, 300, 400]) { p(bx - 9, 8, 18, 2, '#c9a24a'); p(bx - 8, 10, 16, 40, '#8a2a4a'); p(bx - 8, 10, 16, 2, '#a83a5a');
+    for (let i = 0; i < 4; i++) { p(bx - 8 + i * 4, 50, 4, 3 + (i % 2) * 2, '#8a2a4a'); } p(bx - 3, 24, 6, 6, '#e8c46a'); p(bx - 2, 25, 4, 4, '#fff0a8'); }
+  // skirting and floor
+  p(0, 98, W, 8, '#3a3458'); p(0, 98, W, 2, '#6a628e');
+  for (let y = 106; y < H; y += 12) for (let x = 0; x < W; x += 16) { const odd = ((x / 16) + Math.floor((y - 106) / 12)) % 2; p(x, y, 16, 12, odd ? '#6e6488' : '#7c7298'); p(x, y, 16, 1, odd ? '#7e749a' : '#8e84aa'); p(x, y, 1, 12, '#5e5678'); }
+  // red carpet from the doors to the altar
+  const cy = GRID.y + GRID.rows * GRID.cell / 2 - 10;
+  p(60, cy, W - 60, 22, '#9a2a3a'); p(60, cy, W - 60, 2, '#d8a84a'); p(60, cy + 20, W - 60, 2, '#d8a84a');
+  for (let x = 70; x < W; x += 14) p(x, cy + 10, 6, 2, '#b8404e');
+  // pillars
+  for (const px of [104, 470]) { p(px - 7, 0, 14, 106, '#5a5278'); p(px - 7, 0, 3, 106, '#7a7298'); p(px + 4, 0, 3, 106, '#423a5e'); p(px - 9, 98, 18, 8, '#6a628e'); }
+  // the shard altar on a dais at the back of the hall
+  p(0, 104, 90, H - 104, '#5a4a7a'); for (let i = 0; i < 4; i++) { p(80 + i * 3, 104 + i * 30, 10 - i * 3, H, '#6a5a8a'); }
+  p(0, 104, 92, 3, '#9a8ac0'); p(89, 104, 3, H - 104, '#3a2e58');
+  p(18, 118, 54, 104, '#3c3060'); p(18, 118, 54, 3, '#c9a24a'); p(18, 219, 54, 3, '#c9a24a'); p(22, 124, 46, 92, '#2a2248');
+  // broken doors where the goose came in
+  p(452, 104, 28, H - 104, '#2a2234'); for (let i = 0; i < 6; i++) { const y = 112 + i * 26; p(448 + (i % 2) * 4, y, 10, 4, '#7a5030'); p(458, y + 9, 8, 3, '#5a3a20'); }
+  return c;
+}
+// shards back on the altar (the ones knocked from the goose's crown), plus torch flicker
+function drawHallLive(g, t, B) {
+  const gz = B && B.bossUnit && B.bossUnit.def && B.bossUnit.def.boss && B.bossUnit.shards != null ? B.bossUnit : null;
+  const home = gz ? 12 - gz.shards : B ? 0 : 12;
+  EL_KEYS.forEach((e, i) => { const col = i % 3, row = Math.floor(i / 3), x = 30 + col * 14, y = 134 + row * 21 + Math.round(Math.sin(t * 2 + i) * 1.5);
+    if (i >= home) { g.fillStyle = '#1a1430'; g.fillRect(x - 2, y + 4, 5, 2); return; }
+    g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 4, 7, 10); g.fillStyle = ELEMENTS[e].col; g.fillRect(x - 2, y - 3, 5, 8); g.fillStyle = ELEMENTS[e].col2; g.fillRect(x + 1, y - 1, 2, 5); g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 2, 1, 2);
+    if (Math.random() < 0.04) FXS.parts && FXS.parts.push({ x, y: y - 4, vx: rand(-4, 4), vy: rand(-14, -6), life: 0.8, t: 0, color: ELEMENTS[e].col, size: 1, grav: 0 }); });
+  for (const tx of [125, 225, 325, 425]) { const f = Math.sin(t * 13 + tx) > 0; g.fillStyle = '#3a2a1a'; g.fillRect(tx - 1, 56, 3, 10); g.fillStyle = f ? '#ffb02e' : '#ff7a1a'; g.fillRect(tx - 2, 50 - (f ? 1 : 0), 5, 6); g.fillStyle = '#fff0a8'; g.fillRect(tx, 52, 1, 3); }
+}
+// the crown of shards orbits the goose's head
+function drawShardCrown(g, u, t) {
+  if (!u.shards) return; const hy = u.y - u.z - 34 * u.scale, n = u.shards;
+  for (let i = 0; i < n; i++) { const a = t * 1.6 + i * Math.PI * 2 / n, x = Math.round(u.x + Math.cos(a) * 16), y = Math.round(hy + Math.sin(a) * 5), e = EL_KEYS[i];
+    g.fillStyle = OUTLINE; g.fillRect(x - 2, y - 3, 5, 7); g.fillStyle = ELEMENTS[e].col; g.fillRect(x - 1, y - 2, 3, 5); g.fillStyle = '#ffffff'; g.fillRect(x - 1, y - 2, 1, 1); }
 }
 
 // Pixel architecture: rear spires, great hall, curtain wall, then gate towers.
@@ -7132,12 +7241,14 @@ function botPlayRun(style, meta, opts = {}) {
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+    if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
     if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
     const rep = finishSiege(run, meta, B);
     if (opts.onSiege) opts.onSiege(run, rep);
+    if (rep.siege >= FINAL_SIEGE && !run.finale) { startFinale(run); continue; }
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
@@ -7453,14 +7564,15 @@ const UI = {
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
     const sub = $('siegeSub');
-    if (isBossSiege(s)) { sub.textContent = s === FINAL_SIEGE ? 'FINAL BOSS' : ENEMIES[bossFor(s)].boss === 'big' ? 'BOSS SIEGE' : 'MINI-BOSS SIEGE'; sub.className = 'boss'; }
+    if (run.finale === 'ready') { sub.textContent = 'FINAL BATTLE · GREAT HALL'; sub.className = 'boss'; }
+    else if (isBossSiege(s)) { sub.textContent = s === FINAL_SIEGE ? 'FINAL BOSS' : ENEMIES[bossFor(s)].boss === 'big' ? 'BOSS SIEGE' : 'MINI-BOSS SIEGE'; sub.className = 'boss'; }
     else { const nb = 5 - (s % 5); sub.textContent = `${F.name} · boss in ${nb}`; sub.className = ''; }
     if (G.B && !G.B.done && G.B.wave && !G.B.overtime) { sub.textContent = G.B.wave === G.B.waves_of ? `${F.name} · FINAL WAVE` : `${F.name} · wave ${G.B.wave} of ${G.B.waves_of}`; sub.className = G.B.wave === G.B.waves_of ? 'boss' : ''; }
     if (G.B && !G.B.done && G.B.bossUnit && G.B.bossUnit.alive) { const u = G.B.bossUnit, left = Math.ceil((u.patMax || bossLimit(u)) - (u.patT || 0)); if (u.rage || left <= 15) { sub.textContent = u.rage ? 'THE BOSS IS CHARGING' : `Boss charges the wall in ${left}s`; sub.className = 'boss'; } }
     if (G.B && G.B.overtime && !G.B.done) { const B = G.B, left = Math.ceil(BAL.otCharge - B.otT); sub.textContent = `OVERTIME · heroes +${Math.round(BAL.otRamp * B.otT * 100)}%${B.bossUnit && B.bossUnit.alive ? '' : left > 0 ? ` · charge in ${left}s` : ' · foes charging'}`; sub.className = 'boss'; }
     const hp = Math.max(0, Math.round(run.castle.hp)); $('castleTxt').textContent = `${fmt(hp)} / ${fmt(run.castle.max)}`;
     const f = $('castleFill'); f.style.width = (100 * hp / run.castle.max) + '%'; f.classList.toggle('low', hp / run.castle.max < 0.35);
-    $('castleLabel').textContent = run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : 'Castle';
+    $('castleLabel').textContent = run.finale === 'ready' ? 'Shard altar' : run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : 'Castle';
     const B = G.B, hb = $('hammerBtn');
     if (B && !B.done) { const cd = B.hammer.cd, max = hammerCooldown(run, G.meta); hb.disabled = cd > 0 || !!B.hammer.pending; $('hammerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; }
     else { hb.disabled = true; $('hammerCd').style.transform = 'scaleX(0)'; }
@@ -7621,7 +7733,7 @@ const UI = {
     let h = `<div class="card buydraft"><div><span class="eyebrow">Draft a champion</span><p style="margin:4px 0 0">Each card rolls a rarity: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Beat bosses to open rarer legends. New legends start at level 1 and learn twice as fast while they catch up. The bigger your keep, the more a draft costs; legends who fall are gone for good.</p>
       <p class="note">${full ? `Your keep is full (${ROSTER_CAP} champions). You can still draft: after you pick, choose who heads home to make room. You have ${run.gold} gold.` : run.gold >= c ? `You have ${run.gold} gold.` : `You have ${run.gold} gold. Save ${c - run.gold} more.`}</p></div>
       <button class="btn primary dbtn" data-act="buydraft" ${can ? '' : 'disabled'}><b>${full ? 'Draft and swap' : 'Draft champion'}</b><span>${COST(c)} gold</span></button></div>`;
-    h += `<div class="group-title">Your champions</div><p class="note">Ascend a champion to raise their rarity for gold. Each boss you beat opens a rarer tier. Legend Summons after the bosses at sieges 30 and 35 offer Legendary legends, and after 40 and 45 God legends.</p>`;
+    h += `<div class="group-title">Your champions</div><p class="note">Ascend a champion to raise their rarity for gold. Each boss you beat opens a rarer tier. Legend Summons after the boss at siege 35 offers a Legendary legend, and after siege 40 a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : !hr.el ? (hr.level < ELEMENT_LEVEL ? `Element choice at level ${ELEMENT_LEVEL}` : 'Element choice pending') : `Signature rank ${st.rank}`;
@@ -7758,7 +7870,7 @@ const UI = {
     let h = '';
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
-      const where = !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
+      const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
       const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
         <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
@@ -7811,6 +7923,19 @@ const UI = {
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
+  },
+  vaultHTML(run, h) {
+    const L = VAULT_LORE[run.siege] || VAULT_LORE[FINAL_SIEGE], taken = run.roster.filter(x => x.vault && x !== h), left = run.roster.filter(x => !x.vault).length;
+    return `<span class="eyebrow">The goose strikes · siege ${run.siege}</span><h2>${esc(L[0])}</h2>
+      <div class="snatch"><div class="sky"><img class="px goose" src="${portrait('e:goosegod')}" alt=""><img class="px victim" src="${portrait(heroSpriteKey(h))}" alt=""></div></div>
+      <p class="lede">${esc(L[1].replace('{name}', heroDisplayName(h)))}</p>
+      <p class="note">${esc(heroDisplayName(h))} sits out until the goose is beaten. ${taken.length ? `Also in the nest: ${taken.map(x => esc(heroDisplayName(x))).join(', ')}. ` : ''}${left} champion${left === 1 ? '' : 's'} left to hold the walls.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="vaultOk">Hold the walls</button></div>`;
+  },
+  finaleHTML(run) {
+    return `<span class="eyebrow">The goose is not done</span><h2>It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
+      <p>Your captured champions burst out of the goose's nest and come running back. Everyone fights this one, inside the castle's great hall. Knock the shards out of its crown. Each sixth of its health shakes two loose, and it gets weaker without them.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="finaleGo">Into the great hall</button></div>`;
   },
   makeRoomHTML(o) {
     const run = G.run, d = HERO_BY_ID[o.id];
@@ -8588,7 +8713,7 @@ function showMakeRoom(o, back, after) {
     s.querySelector('#roomBack').onclick = () => back();
   }, 'wide');
 }
-// Legend Summons after the boss at 30/35 (Legendary) and 40/45 (God)
+// Legend Summons after the boss at 35 (Legendary) and 40 (God)
 function showSummon() {
   const run = G.run, P = run.pendingSummon; if (!P || !P.opts.length) { run.pendingSummon = null; return nextPost(); }
   G.phase = 'draft'; save(); SFX.play('sig');
@@ -8607,12 +8732,12 @@ function summonSkipGold(run) { return Math.round(200 * goldMul(run.siege) / 5) *
 function beginSiege() {
   if (G.phase !== 'prep') return;
   if (!G.run.roster.some(h => h.place)) { UI.toast('Place at least one hero on the field first.', true); return; }
-  if (isBossSiege(G.run.siege) && G.run.bossNag !== G.run.siege && bossReminder()) return;
+  if (isBossSiege(G.run.siege) && !G.run.finale && G.run.bossNag !== G.run.siege && bossReminder()) return;
   UI.openPage(null); UI.coachDone('begin'); UI.coachDone('place');
   G.phase = 'siege'; G.B = startBattle(G.run, G.meta); G.armed = null;
   if (G.run.siege > 1) UI.setRoster(true);
   const s = G.run.siege; const F = FACTIONS[factionIndex(s)];
-  if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
+  if (G.run.finale === 'ready') UI.banner('The Shard War', 'Knock the shards loose'); else if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
   SFX.play('cast');
   UI.refresh();
   if (s === 1) setTimeout(() => UI.coach('xp-live', document.querySelector('.hcard .xpbar'), 'Heroes earn experience from kills and from surviving the siege. A hero who falls loses everything they earned this round.'), 1500);
@@ -8645,6 +8770,7 @@ function endSiege() {
     TEL.siege(G.run, rep);
     SFX.play('victory');
     const run = G.run;
+    if (rep.siege >= FINAL_SIEGE && run.finale !== 'ready') { startFinale(run); G.phase = 'finale'; save(); TEL.event('finale', {}); setTimeout(() => showFinale(), 1400); UI.hud(); return; }
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
     // every legend fell: one free recruit so the keep is never empty
@@ -8748,14 +8874,24 @@ function showReforge(enc, done) {
   }), 'wide');
 }
 
+function showVault() {
+  const run = G.run; G.phase = 'vault'; const h = gooseSnatch(run); save();
+  SFX.play('honk'); FX.shake(10); TEL.event('snatch', { id: h.id, s: run.siege });
+  UI.modal(UI.vaultHTML(run, h), s => { s.querySelector('#vaultOk').onclick = () => toPrep(); }, 'wide');
+}
+function showFinale() {
+  const run = G.run; G.phase = 'finale'; FX.shake(16); FX.flash('#c98aff', 0.5); SFX.play('roar');
+  UI.modal(UI.finaleHTML(run), s => { s.querySelector('#finaleGo').onclick = () => { R.castleKey = null; toPrep(); UI.banner('The Shard War', 'Inside the great hall'); }; }, 'wide');
+}
 function toPrep() {
+  if (vaultDue(G.run)) return showVault();
   UI.closeModal(); G.phase = 'prep'; G.B = null; UI.pendingGold = 0;
   // champions drawer stays tucked away unless someone is waiting on the bench
   UI.setRoster(G.run.siege > 1 && G.run.roster.every(h => h.place));
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
-  if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
@@ -8817,6 +8953,7 @@ function slotAt(p) {
 function slotOk(h, s) { if (!s) return false; if (s.type === 'rafter') return isRangedHero(h.id); return true; }
 function occupant(s, except) { return G.run.roster.find(h => h !== except && h.place && h.place.type === s.type && (s.type === 'grid' ? h.place.c === s.c && h.place.r === s.r : h.place.i === s.i)); }
 function placeHero(h, s) {
+  if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   const occ = occupant(s, h);
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
@@ -9014,6 +9151,7 @@ function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
   if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
+  if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
 }
 

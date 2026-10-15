@@ -287,6 +287,7 @@ const ENEMIES = {
   sporebaron:{ name: 'The Spore Baron', boss: 'mini', hp: 16000, atk: 80, as: 0.7, range: 22, spd: 12, armor: 40, gold: 800, kind: 'melee', scale: 2, skills: ['slam', 'summon:shroom', 'gust'], spr: { gen: 'humanoid', head: 'goblin', skin: '#f4e4c8', hat: 'wizard', armor: '#8a3ad8', armor2: '#5a1a9a', cloth: '#e84a5a', weapon: 'staff', gem: '#c8ff6a', cape: '#e84a5a' } },
   trashpaw: { name: 'Big Mama Trashpaw', boss: 'mini', hp: 30000, atk: 110, as: 0.8, range: 22, spd: 14, armor: 55, gold: 1200, kind: 'melee', scale: 2, skills: ['slam', 'summon:bandit', 'fireRain'], spr: { gen: 'humanoid', head: 'beast', skin: '#7a7a8a', snout: '#2a2a3a', ears: 'round', hat: 'none', armor: '#c84a8a', armor2: '#8a2a5a', cloth: '#3a3a4a', weapon: 'hammer', metal: '#c8c8d8', cape: '#5a3a7a' } },
   pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'sword', metal: '#ffd84a', cape: '#a82a3a' } },
+  shardgoose: { name: 'The Shard-Crowned Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3.2, skills: ['breath', 'slam', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#d8d0f0', beak: '#ff8a1a', neck: true, crown: '#c98aff' } },
   goosegod: { name: 'The Eternal Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3, skills: ['breath', 'slam', 'summon:chicken', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#c8c8d0', beak: '#ff8a1a', neck: true, crown: '#ffd84a' } },
   colossus: { name: 'The Brass Colossus', boss: 'big', hp: 60000, atk: 130, as: 0.5, range: 30, spd: 9, armor: 60, gold: 2500, kind: 'melee', scale: 3, skills: ['laser', 'slam', 'summon:cog'], spr: { gen: 'golem', body: '#e8b84a', trim: '#8a5a2a', eye: '#ff3a5a', crown: true } },
 };
@@ -313,10 +314,21 @@ const TACTICS = {
   airraid:    { name: 'Air Raid',      icon: '^', desc: 'Flyers from every horde so far join the attack.' },
 };
 function rollTactic(s) { if (s < 6 || s % 5 === 0 || s >= FINAL_SIEGE || Math.random() < 0.2) return null; const k = Object.keys(TACTICS); return k[Math.floor(Math.random() * k.length)]; }
-const FINAL_SIEGE = 50; // ten hordes of five sieges; the Eternal Goose waits at the end
+const FINAL_SIEGE = 50;
+// Cam 2026-10-15, the goose finale: before each of the last five sieges the goose swoops in and carries off one
+// champion (they sit out), so the goose is beaten by a small team. Then it storms the castle for the twelve
+// elemental shards, the captives break free, and everyone fights one last battle inside the castle's great hall.
+const VAULT_FROM = 46;
+const VAULT_LORE = {
+  46: ['Something Big Overhead', 'A shadow crosses the courtyard. The Eternal Goose drops out of the sky, grabs {name} by the collar and flaps off toward its nest. "HONK," it says, which you are fairly sure means "collateral".'],
+  47: ['Again', 'It came back. You heard the wings this time, but not soon enough. {name} is carried off over the walls, still shouting instructions.'],
+  48: ['Ransom Note', 'A gosling delivers a note: "I HAVE YOUR FRIENDS. BRING SHARDS." Before you can reply, the goose swoops down and takes {name} as well.'],
+  49: ['The Nest Grows', 'Scouts spot the goose\'s nest on the far hill, made of stolen banners and your champions\' capes. Tonight it adds {name} to the collection.'],
+  50: ['The Last Snatch', 'The Eternal Goose is at the gates, and it takes one more for luck. {name} is gone. A small team will have to hold the walls.'],
+}; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.2';
+const VERSION = 'phase3.3';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
