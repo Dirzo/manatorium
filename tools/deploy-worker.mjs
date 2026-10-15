@@ -68,15 +68,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   fs.writeFileSync(new URL('manifest.json', out), JSON.stringify(manifest, null, 1));
   const kb = parts.reduce((n, p) => n + Buffer.byteLength(p.body), 0) / 1024;
   console.log(`worker ready in dist/worker: app build ${build}, seq ${seq}, ${manifest.files.length} app files, ${kb.toFixed(0)} KB before compression`);
+  const meta = { main_module: 'worker.js', compatibility_date: '2026-09-27' };
+  fs.writeFileSync(new URL('metadata.json', out), JSON.stringify(meta));
   if (process.argv.includes('--upload')) {
+    // curl rather than fetch: it honours HTTPS_PROXY, and CLOUDFLARE_API_TOKEN when it is set
     const id = process.env.CLOUDFLARE_ACCOUNT_ID; if (!id) throw new Error('set CLOUDFLARE_ACCOUNT_ID');
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify({ main_module: 'worker.js', compatibility_date: '2025-01-01' })], { type: 'application/json' }));
-    for (const p of parts) form.append(p.name, new Blob([p.body], { type: p.type }), p.name);
-    const headers = process.env.CLOUDFLARE_API_TOKEN ? { authorization: 'Bearer ' + process.env.CLOUDFLARE_API_TOKEN } : {};
-    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${id}/workers/scripts/${NAME}`, { method: 'PUT', body: form, headers });
-    const j = await r.json().catch(() => ({}));
-    if (!j.success) { console.error('upload failed', r.status, JSON.stringify(j.errors || j).slice(0, 500)); process.exit(1); }
-    console.log('uploaded worker', NAME);
+    const { execFileSync } = await import('child_process');
+    const dir = out.pathname, args = ['-sS', '-X', 'PUT', `https://api.cloudflare.com/client/v4/accounts/${id}/workers/scripts/${NAME}`,
+      '-F', `metadata=@${dir}metadata.json;type=application/json`, ...parts.flatMap(p => ['-F', `${p.name}=@${dir}${p.name};filename=${p.name};type=${p.type}`])];
+    if (process.env.CLOUDFLARE_API_TOKEN) args.push('-H', 'Authorization: Bearer ' + process.env.CLOUDFLARE_API_TOKEN);
+    const j = JSON.parse(execFileSync('curl', args, { maxBuffer: 1 << 26 }).toString() || '{}');
+    if (!j.success) { console.error('upload failed', JSON.stringify(j.errors || j).slice(0, 500)); process.exit(1); }
+    console.log('uploaded worker', NAME, j.result && j.result.etag);
   }
 }
