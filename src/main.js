@@ -7,7 +7,8 @@ function save() {
 }
 function load() {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw = localStorage.getItem(SAVE_KEY);
+    if (raw) raw = raw.replace(/"spatula"/g, '"shard"'); // older saves called the rare component a spatula
     if (raw) { const d = JSON.parse(raw); if (d && d.v === 2 && d.meta) return d; }
     const old = localStorage.getItem(OLD_SAVE_KEY);   // keep diamonds and ranks from phase 1, drop the old run
     if (old) { const d = JSON.parse(old); if (d && d.meta) { const m = Object.assign(newMeta(), d.meta); m.seen = {}; return { v: 2, meta: m, run: null }; } }

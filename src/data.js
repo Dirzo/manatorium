@@ -328,7 +328,7 @@ const VAULT_LORE = {
 }; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.3';
+const VERSION = 'phase3.4';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -368,7 +368,7 @@ const COMBOS = {
   'dark+treat': ['Trick or Treat', 'critter', 'Little ghosts in bedsheets join the fight.'],
   'light+lightning': ['Radiant Storm', 'rain', 'Golden bolts rain from a clear sky.'],
   'light+fire': ['Solar Flare', 'nova', 'A miniature sun goes off in the crowd.'],
-  'light+water': ['Double Rainbow', 'haste', 'Everyone stops to say "whoa", then attacks faster.'],
+  'light+water': ['Double Rainbow', 'haste', 'Everyone stops to admire it, then attacks faster.'],
   'light+ice': ['Prism Shards', 'rain', 'Rainbow icicles fall on random foes.'],
   'light+nature': ['Photosynthesis', 'heal', 'Heroes heal in the sunshine.'],
   'light+void': ['Event Horizon', 'shred', 'Light bends wrong. Enemy armor gives up.'],
@@ -392,14 +392,14 @@ const COMBOS = {
   'fire+salty': ['Hot Sauce Incident', 'rage', 'Eyes watering, heroes swing harder.'],
   'fire+sweet': ['Crème Brûlée', 'shield', 'Caramelized sugar shells protect the team.'],
   'fire+meat': ['Backyard BBQ', 'heal', 'Someone fired up the grill. Everyone heals.'],
-  'fire+treat': ["Campfire S'mores", 'haste', 'Sugar and smoke. Attack speed up.'],
+  'fire+treat': ["Campfire S'mores", 'haste', 'Sugar and smoke. Heroes attack faster.'],
   'water+ice': ['Blizzard', 'freeze', 'A whiteout freezes the front lines.'],
   'water+nature': ['Monsoon Bloom', 'heal', 'Warm rain heals the team.'],
   'water+void': ['Whirlpool', 'vortex', 'The moat spins up and swallows foes.'],
   'water+salty': ['Seawater', 'shred', 'Rust spreads on every enemy blade and plate.'],
   'water+sweet': ['Lemonade Stand', 'gold', 'Business is booming. Kills pay extra.'],
   'water+meat': ['Soup of the Day', 'heal', 'Hearty soup heals every hero.'],
-  'water+treat': ['Bubble Tea', 'shield', 'Tapioca pearls shield everyone. Somehow.'],
+  'water+treat': ['Bubble Tea', 'shield', 'Chewy tapioca pearls shield everyone.'],
   'ice+nature': ['Evergreen', 'shield', 'Frosted pine bark shields the team.'],
   'ice+void': ['Absolute Zero', 'freeze', 'Everything near the front stops. Completely.'],
   'ice+salty': ['Road Salt', 'shred', 'Salt melts enemy armor like a winter road.'],
@@ -409,17 +409,17 @@ const COMBOS = {
   'nature+void': ['Weeds From Nowhere', 'vortex', 'Vines from the void drag foes together.'],
   'nature+salty': ['Pickled', 'shred', 'Foes get brined. Armor goes soft.'],
   'nature+sweet': ['Honeycomb', 'shield', 'Sticky honey shields every hero.'],
-  'nature+meat': ['Balanced Diet', 'rage', 'Greens and protein. Heroes hit harder.'],
+  'nature+meat': ['Balanced Diet', 'rage', 'The cook approves. Heroes hit harder.'],
   'nature+treat': ['Trail Mix', 'heal', 'Mostly raisins, but it heals.'],
   'void+salty': ['Existential Dread', 'freeze', 'Foes stop to question everything.'],
   'void+sweet': ['Black Hole Donut', 'vortex', 'A donut with an event horizon pulls foes in.'],
   'void+meat': ['Mystery Meat', 'critter', 'The meat stands up and fights for you.'],
-  'void+treat': ['Bag of Holding Snacks', 'gold', 'Endless snacks. Kills pay extra.'],
+  'void+treat': ['Bag of Holding Snacks', 'gold', 'Endless snacks. Kills drop extra gold.'],
   'salty+sweet': ['Kettle Corn', 'rain', 'Popcorn kernels explode on random foes.'],
   'salty+meat': ['Beef Jerky', 'rage', 'Chewy and furious. Heroes hit harder.'],
   'salty+treat': ['Pretzel Party', 'haste', 'Twisty snacks, twisty attacks. Speed up.'],
   'sweet+meat': ['Honey Glazed Ham', 'heal', 'Sticky, sweet, healing.'],
-  'sweet+treat': ['Sugar Rush', 'haste', 'EVERYONE IS VIBRATING. Huge attack speed boost.'],
+  'sweet+treat': ['Sugar Rush', 'haste', 'Everyone is vibrating quietly. Huge attack speed boost.'],
   'meat+treat': ['Doggy Bag', 'critter', 'Very good dogs arrive for the leftovers.'],
 };
 function comboKey(a, b) { return EL_KEYS.indexOf(a) < EL_KEYS.indexOf(b) ? a + '+' + b : b + '+' + a; }
@@ -469,86 +469,89 @@ const CASTLE_POWERS = {
 };
 
 // ===== Items: components combine into finished items =====
+// stat: [value alone, value inside a finished item]; every finished item has one effect no other item shares
 const COMPONENTS = {
-  sword:   { name: 'Rusty Shortsword', glyph: 'sword',   desc: '+18% attack' },
-  bow:     { name: 'Slingbow',     glyph: 'bow',     desc: '+18% attack speed' },
-  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',  desc: '+22% ability power' },
-  tear:    { name: 'Dewdrop Vial',  glyph: 'tear',    desc: '+20% starting mana, +15% mana gain' },
-  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    desc: '+25 armor' },
-  cloak:   { name: 'Dusk Cloak',    glyph: 'cloak',   desc: '+10% dodge' },
-  belt:    { name: "Ogre Belt",    glyph: 'belt',    desc: '+20% max HP' },
-  glove:   { name: 'Knuckle Mitt',  glyph: 'glove',   desc: '+15% crit chance' },
-  spatula: { name: 'Golden Ladle',  glyph: 'spatula', desc: 'Combines into crests. Nobody knows why.', rare: true },
+  sword:   { name: 'Rusty Shortsword',   glyph: 'sword',   stat: [25, 30], unit: '% attack' },
+  bow:     { name: 'Slingbow',           glyph: 'bow',     stat: [25, 30], unit: '% attack speed' },
+  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',     stat: [30, 35], unit: '% ability power' },
+  tear:    { name: 'Dewdrop Vial',       glyph: 'tear',    stat: [25, 30], unit: '% starting mana', stat2: [20, 25], unit2: '% mana gain' },
+  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    stat: [30, 40], unit: ' armor' },
+  cloak:   { name: 'Dusk Cloak',         glyph: 'cloak',   stat: [10, 15], unit: '% dodge' },
+  belt:    { name: 'Ogre Belt',          glyph: 'belt',    stat: [25, 30], unit: '% max HP' },
+  glove:   { name: 'Knuckle Mitt',       glyph: 'glove',   stat: [20, 25], unit: '% crit chance' },
+  shard:   { name: 'Stray Shard',        glyph: 'shard',   desc: 'A splinter of an elemental shard that fell off a certain crown. It hums. Combines into crests.', rare: true },
 };
+function compStat(c, fin, k = 1) { const C = COMPONENTS[c], i = fin ? 1 : 0; if (!C.stat) return ''; return `+${C.stat[i] * k}${C.unit}` + (C.stat2 ? `, +${C.stat2[i] * k}${C.unit2}` : ''); }
+for (const k in COMPONENTS) if (!COMPONENTS[k].desc) COMPONENTS[k].desc = compStat(k, false);
 const COMP_KEYS = ['sword', 'bow', 'rod', 'tear', 'vest', 'cloak', 'belt', 'glove'];
 const FINISHED = {
-  'sword+sword': ['Twin-Forged Greatblade', 'cleave', 'Attacks splash 35% damage to foes nearby.'],
-  'sword+bow': ['Gale Cutlass', 'multishot', 'Attacks hit one extra foe for 60%.'],
-  'sword+rod': ['Runeslash Blade', 'spellblade', 'After a signature, the next 3 attacks deal +120%.'],
-  'sword+tear': ['Brook Cleaver', 'manaCleave', 'Each attack grants 5 extra mana.'],
-  'sword+vest': ['Thornwood Sword', 'reflect', 'Reflects 35% of melee damage taken.'],
-  'sword+cloak': ["Moonless Shroud", 'ambush', 'The first strike each siege deals +150%.'],
-  'sword+belt': ['Vampire Hatchet', 'bloodthirst', 'Heals 22% of damage. Once per siege, gains a 25% shield when low.'],
-  'sword+glove': ["Grimgrin Charm", 'execute', 'Crits finish non-boss foes under 15% HP.'],
-  'bow+bow': ['Hasty Longbow', 'quicksilver', 'Each attack grants +5% attack speed (up to 15 stacks).'],
-  'bow+rod': ['Thunder Band', 'storm', '25% chance on hit to chain lightning.'],
-  'bow+tear': ['Hummingbird Harp', 'hummingbird', 'Each attack grants 6 extra mana.'],
-  'bow+vest': ['Porcupine Plate', 'porcupine', 'Reflects 25% of melee damage taken.'],
-  'bow+cloak': ['Fogstep Boots', 'ghostwind', '+20% dodge and +30% move speed.'],
-  'bow+belt': ["Pep Rally Sash", 'zeal', 'Attack speed and HP, and the urge to run at things.'],
-  'bow+glove': ["Squint Monocle", 'sniper', '+40% range.'],
-  'rod+rod': ["Too-Tall Wizard Hat", 'archmage', '+50% more ability power. Pointy.'],
-  'rod+tear': ['Wellspring Staff', 'fountain', 'Gains 4 mana every second.'],
-  'rod+vest': ['Snowglobe Charm', 'frost', 'Attacks slow foes 35% for 2s.'],
-  'rod+cloak': ['Curse-Lace Veil', 'hex', 'Signatures curse foes so they take +20% damage for 4s.'],
-  'rod+belt': ['Firebird Plume', 'phoenix', 'Revives once per siege at 60% HP.'],
-  'rod+glove': ['Bedazzled Scepter', 'jeweled', 'Signatures can crit.'],
-  'tear+tear': ['Bottomless Teacup', 'teacup', 'Refunds 40% mana after a signature.'],
-  'tear+vest': ['Icebox Mail', 'frozenHeart', 'Foes nearby are slowed 25%.'],
-  'tear+cloak': ['Cup of Chill', 'chalice', 'Every hero starts sieges with +20% mana.'],
-  'tear+belt': ['Second-Wind Kettle', 'redemption', 'Every 10s, heals every hero 12%.'],
-  'tear+glove': ['Sticky-Finger Glove', 'midas', 'Kills by this hero drop +60% gold.'],
-  'vest+vest': ['Doorframe Plate', 'bastion', '+60 more armor. Very heavy. Very safe.'],
-  'vest+cloak': ['Statue Skin', 'gargoyle', '+5 armor for each foe within reach.'],
-  'vest+belt': ['Ember Mantle', 'sunfire', 'Burns foes nearby every second.'],
-  'vest+glove': ['Hedgehog Gauntlet', 'spiked', 'Reflects 30% of melee damage taken.'],
-  'cloak+cloak': ['Bedsheet Ghost Costume', 'bedsheet', '+25% dodge. Foes that miss get spooked and stunned.'],
-  'cloak+belt': ['Swamp Tonic', 'trollblood', 'Regenerates 4% HP per second.'],
-  'cloak+glove': ["Prankster's Hood", 'trickster', 'Dodging counterattacks for full damage.'],
-  'belt+belt': ["Big Belt Energy", 'titan', '+60% more HP. Grows the hero.'],
-  'belt+glove': ['Hearty Mitts', 'hearty', 'Crits heal 4% max HP.'],
-  'glove+glove': ['Lucky Dice', 'dice', '+30% crit. Crits deal a random 1.2× to 2.6×.'],
-  'spatula+spatula': ['Ladle of Destiny', 'destiny', '+10% attack, ability power and HP. Flips burgers and fate.'],
+  'sword+sword': ['Twin-Forged Greatblade', 'splash', 'Attacks splash 40% damage onto foes nearby.'],
+  'sword+bow':   ['Gale Cutlass', 'twinStrike', 'Every third attack strikes twice.'],
+  'sword+rod':   ['Runeslash Rapier', 'runeStrike', 'After a signature, the next 3 attacks deal double damage.'],
+  'sword+tear':  ['Brook Cleaver', 'brimming', 'Attacks deal up to +40% damage, the fuller the hero\'s mana.'],
+  'sword+vest':  ['Thornwood Sword', 'thorns', 'Reflects 30% of melee damage taken.'],
+  'sword+cloak': ['Moonless Shroud', 'ambush', 'The first attack each siege deals triple damage.'],
+  'sword+belt':  ['Vampire Hatchet', 'lifesteal', 'Heals for 20% of damage dealt.'],
+  'sword+glove': ['Grimgrin Charm', 'execute', 'Crits finish non-boss foes under 20% HP.'],
+  'bow+bow':     ['Hasty Longbow', 'haste', 'Each attack grants +5% attack speed, up to +50%.'],
+  'bow+rod':     ['Thunder Band', 'chainZap', 'Attacks have a 25% chance to chain lightning.'],
+  'bow+tear':    ['Hummingbird Harp', 'manaHit', 'Each attack grants 5 extra mana.'],
+  'bow+vest':    ['Porcupine Plate', 'arrowWard', 'Takes 40% less damage from ranged foes.'],
+  'bow+cloak':   ['Fogstep Boots', 'fogstep', '+30% move speed. Can\'t be slowed.'],
+  'bow+belt':    ['Pep Rally Sash', 'rally', 'Every hero gains +10% attack speed.'],
+  'bow+glove':   ['Squint Monocle', 'farsight', '+40% range.'],
+  'rod+rod':     ['Too-Tall Wizard Hat', 'bigHat', '+50% more ability power. Pointy.'],
+  'rod+tear':    ['Wellspring Staff', 'wellspring', 'Gains 4 mana every second.'],
+  'rod+vest':    ['Snowglobe', 'chill', 'Attacks slow foes 30% for 2s.'],
+  'rod+cloak':   ['Curse-Lace Veil', 'curse', 'Signatures curse foes nearby: they take +20% damage for 4s.'],
+  'rod+belt':    ['Firebird Plume', 'revive', 'Revives once per siege at 50% HP.'],
+  'rod+glove':   ['Bedazzled Scepter', 'sigBoost', 'Signatures deal 40% more damage.'],
+  'tear+tear':   ['Bottomless Teacup', 'refill', 'Refunds 40% mana after a signature.'],
+  'tear+vest':   ['Bubble Mail', 'bubble', 'Starts each siege with a shield worth 25% max HP.'],
+  'tear+cloak':  ['Cup of Plenty', 'teamMana', 'Every hero starts sieges with +20% mana.'],
+  'tear+belt':   ['Second-Wind Kettle', 'kettle', 'Every 10s, heals every hero 10% HP.'],
+  'tear+glove':  ['Sticky Fingers', 'goldFinger', 'Kills by this hero drop +50% gold.'],
+  'vest+vest':   ['Doorframe Cuirass', 'heavyPlate', '+60 more armor. Very heavy. Very safe.'],
+  'vest+cloak':  ['Statue Skin', 'statue', 'Once per siege, below 30% HP, turns to stone for 2s and takes no damage.'],
+  'vest+belt':   ['Ember Mantle', 'emberAura', 'Burns foes nearby for 3% of the hero\'s max HP every second.'],
+  'vest+glove':  ['Can-Opener Gauntlet', 'armorBreak', 'Crits strip 10 armor from the foe, up to 50.'],
+  'cloak+cloak': ['Bedsheet Ghost Costume', 'ghost', '+30% more dodge. Very spooky.'],
+  'cloak+belt':  ['Swamp Tonic', 'regen', 'Regenerates 3% HP every second.'],
+  'cloak+glove': ["Prankster's Hood", 'counter', 'Dodging counterattacks for full damage.'],
+  'belt+belt':   ['Belt of Many Notches', 'bigBelt', '+60% more HP. Grows the hero.'],
+  'belt+glove':  ['Haymakers', 'heavyHands', 'Crits deal bonus damage equal to 5% of the hero\'s max HP.'],
+  'glove+glove': ['Lucky Dice', 'dice', '+20% more crit. Crits deal a random 1.5× to 2.5×.'],
+  'shard+shard': ['Heart of the Twelve', 'twelve', '+15% attack, ability power and HP. It remembers being a crown.'],
 };
-for (const c of COMP_KEYS) FINISHED[c + '+spatula'] = ['Crest', 'emblem', 'Grants the hero a second element.'];
-function itemKey(a, b) { const o = [...COMP_KEYS, 'spatula']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
+for (const c of COMP_KEYS) FINISHED[c + '+shard'] = ['Crest', 'crest', 'Grants the hero a second element.'];
+function itemKey(a, b) { const o = [...COMP_KEYS, 'shard']; return o.indexOf(a) <= o.indexOf(b) ? a + '+' + b : b + '+' + a; }
 // ===== Super Anvil: two finished items forge into one super item. A Hall tech that opens at siege 29. =====
 const SUPER_COST = 40;
 const SUPERS = {
-  sword: ['Worldsplitter', 'Attack +25%. Attacks cleave, hit an extra foe and finish weak ones.'],
-  bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot, hits an extra foe and calls lightning.'],
-  rod: ['Starfall Crown', 'Ability power +35%. Signatures curse foes, can crit and power up the next attacks.'],
+  sword: ['Worldsplitter', 'Attack +25%. Attacks splash, every third strikes twice and crits finish weak foes.'],
+  bow: ['Stormstring', 'Attack speed +25%. Speeds up with every shot and calls lightning 35% of the time.'],
+  rod: ['Starfall Crown', 'Ability power +35% and signatures +20%. Signatures curse foes and double the next 3 attacks.'],
   tear: ['Moonwell Chalice', 'Starts with +30% mana, gains mana every second and from every hit, and refunds mana after a signature.'],
-  vest: ['Castle-Heart Plate', '+80 armor, more for each foe nearby. Reflects 30% of melee damage.'],
-  cloak: ['Phantom Mantle', '+20% dodge. Foes that miss get spooked, and dodges counterattack.'],
-  belt: ["Giant's Heart", 'Max HP +40%. Regenerates 3% HP per second and burns foes nearby.'],
-  glove: ["Fortune's Grin", '+30% crit. Crits roll big, heal and finish weak foes.'],
+  vest: ['Castle-Heart Armor', '+80 armor. Reflects 30% of melee damage and takes 40% less from ranged foes.'],
+  cloak: ['Ghostweave', '+20% dodge. Dodges counterattack.'],
+  belt: ["Giant's Girth", 'Max HP +40%. Regenerates 3% HP per second and burns foes nearby.'],
+  glove: ["Fortune's Favor", '+25% crit. Crits roll big, hit harder and finish weak foes.'],
 };
 // the super's flavour comes from the component the two items share most
 function superKind(a, b) {
-  const n = {}, all = [...a.parts, ...b.parts].filter(p => p !== 'spatula');
+  const n = {}, all = [...a.parts, ...b.parts].filter(p => p !== 'shard');
   for (const p of all) n[p] = (n[p] || 0) + 1;
   let best = all[0] || 'sword'; for (const p of all) if (n[p] > n[best]) best = p; return best;
 }
-function finishedName(parts, el) { const F = FINISHED[itemKey(...parts)]; return F[1] === 'emblem' ? `${ELEMENTS[el].name} Crest` : F[0]; }
-function itemName(it) { if (it.sup) return SUPERS[it.sup][0]; if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'emblem' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
+function finishedName(parts, el) { const F = FINISHED[itemKey(...parts)]; return F[1] === 'crest' ? `${ELEMENTS[el].name} Crest` : F[0]; }
+function itemName(it) { if (it.sup) return SUPERS[it.sup][0]; if (it.parts.length < 2) return COMPONENTS[it.parts[0]].name; const F = FINISHED[itemKey(...it.parts)]; return F[1] === 'crest' ? `${ELEMENTS[it.el].name} Crest` : F[0]; }
 function itemDesc(it) {
   if (it.sup) return `Super item: ${finishedName(it.parts, it.el)} + ${finishedName(it.sub.parts, it.sub.el)}, with both of their powers. ${SUPERS[it.sup][1]}`;
   if (it.parts.length < 2) return COMPONENTS[it.parts[0]].desc;
   const F = FINISHED[itemKey(...it.parts)];
-  if (F[1] === 'emblem') return `The hero gains ${ELEMENTS[it.el].name} as a second element, plus ${COMPONENTS[it.parts.find(p => p !== 'spatula') || 'sword'].desc.toLowerCase()}.`;
-  const stats = it.parts.filter(p => p !== 'spatula').map(p => COMPONENTS[p].desc.replace(/\d+/, n => Math.round(n * 1.25))).join(', ');
-  return `${stats}. ${F[2]}`;
+  if (F[1] === 'crest') return `The hero gains ${ELEMENTS[it.el].name} as a second element, plus ${compStat(it.parts.find(p => p !== 'shard') || 'sword', true)}.`;
+  const ps = it.parts.filter(p => p !== 'shard'), stats = ps.length === 2 && ps[0] === ps[1] ? compStat(ps[0], true, 2) : ps.map(p => compStat(p, true)).join(', ');
+  return stats ? `${stats}. ${F[2]}` : F[2];
 }
 const ITEM_SLOTS = 3;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
@@ -588,7 +591,7 @@ const TECH = {
   // secrets (discovered by encounters)
   goose:    { name: 'Goose Moat',         b: 4, secret: true, cost: 35,  req: [], desc: 'Geese guard the gate and honk at foes that reach the wall, biting for damage.' },
   cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 55,  req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
-  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 50,  req: [], desc: 'Every 18s the bard plays a banger: heroes +40% attack speed for 5s.' },
+  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 50,  req: [], desc: 'Every 18s the bard plays a rousing number: heroes +40% attack speed for 5s.' },
   pigeon:   { name: 'Pigeon Post',        b: 4, secret: true, cost: 40,  req: [], desc: 'Hero drafts offer one more champion.' },
   mimic:    { name: 'Mimic Pantry',       b: 4, secret: true, cost: 65, req: [], desc: 'A friendly mimic spits out a component after every third siege.' },
   intern:   { name: 'Necromancy Intern',  b: 4, secret: true, cost: 60, req: [], desc: 'Hires two skeleton helpers who fight beside your heroes in every siege. They are interns. They are trying their best.' },
@@ -717,7 +720,7 @@ function abilityText(ab, desc, st) { const S = SIG_SCALE[ab] || []; return Strin
 // kind picks the mechanic, so several hazards can share one (mud, slime and snow all slow walkers).
 const HAZARDS = {
   flood:    { kind: 'flood', name: 'Flooded Field', short: 'Flood', col: '#5fb8ff', desc: 'A channel of water crosses the field. Anyone wading through is slowed. Foes stay slowed for a moment after they climb out, and soaked foes take 15% more damage.' },
-  mud:      { kind: 'mud', name: 'Mud Season', short: 'Mud', col: '#a07a4a', desc: 'The field is soup. Everyone on foot moves 25% slower.' },
+  mud:      { kind: 'mud', name: 'Mud Season', short: 'Mud', col: '#a07a4a', desc: 'Ankle-deep mud everywhere. Everyone on foot moves 25% slower.' },
   slime:    { kind: 'mud', name: 'Bog Slime', short: 'Slime', col: '#7ad46a', desc: 'Sticky slime covers the field. Everyone on foot moves 25% slower.' },
   snow:     { kind: 'mud', name: 'Snowdrifts', short: 'Snow', col: '#e8f4ff', desc: 'Deep snow everywhere. Everyone on foot moves 25% slower.' },
   fog:      { kind: 'fog', name: 'Thick Fog', short: 'Fog', col: '#c9d0d8', desc: 'Nobody can see far. Every ranged attacker, yours and theirs, loses 30% range.' },
@@ -756,66 +759,66 @@ const ENCOUNTERS = [
   { id: 'gobunion', title: 'The Goblin Union Is On Strike', text: 'The horde is picketing outside the walls. Their signs say "FAIR WAGES" and "DENTAL" and one just says "ROCKS". A goblin with a megaphone wants to negotiate.',
     opts: [{ label: 'Offer dental', fx: 'gold:-20,mod:fewer', sub: 'Lose 20 gold. Half the strikers stay home next siege.' }, { label: 'Break the strike', fx: 'gold:45,hz:rocks', sub: 'You raid the union fund. Next siege the strikers throw their signs, then their rocks, at everyone.' }] },
   { id: 'gobcatapult', title: 'Catapult Malfunction', text: 'A goblin catapult misfired and launched a sack into your courtyard. The sack is clanking. The catapult is still firing.',
-    opts: [{ label: 'Open the sack', fx: 'item:any,hz:rocks', sub: 'A finished item! The catapult crew wants it back and keeps lobbing rocks all next siege.' }, { label: 'Return to sender', fx: 'gold:30,xpAll:20', sub: 'Throw it back over the wall. The goblins pay a ransom out of confusion.' }] },
-  { id: 'rentdue', title: 'The Rent Is Due', text: 'A goblin in a tiny waistcoat slides an invoice under the gate. Apparently the field outside your castle is a rental. Late fees are payable in rocks.',
-    opts: [{ label: 'Pay the rent', fx: 'pay:30,xpAll:35', sub: 'Spend 30 gold. The goblins throw your heroes a housewarming party.' }, { label: 'Refuse to pay', fx: 'gold:30,hz:rocks', sub: 'The invoice envelope had 30 gold in it. They come to collect next siege, by catapult.' }] },
+    opts: [{ label: 'Open the sack', fx: 'item:any,hz:rocks', sub: 'A finished item. The catapult crew wants it back and keeps lobbing rocks all next siege.' }, { label: 'Return to sender', fx: 'gold:30,xpAll:20', sub: 'Throw it back over the wall. The goblins pay a ransom out of confusion.' }] },
+  { id: 'rentdue', title: 'The Rent Is Due', text: 'A goblin in a tiny waistcoat slides an invoice under the gate. It says the field outside your castle is a rental. Late fees are itemized on a second invoice.',
+    opts: [{ label: 'Pay the rent', fx: 'pay:30,xpAll:35', sub: 'Spend 30 gold. The goblins throw your heroes a housewarming party.' }, { label: 'Refuse to pay', fx: 'gold:30,hz:rocks', sub: 'The invoice envelope had 30 gold in it. Collections arrives next siege with a catapult.' }] },
   { id: 'leakyditch', title: 'The Ditch Is Leaking', text: 'The goblin ditch by your walls sprang a leak. Water is pooling across the field and a frog has declared it a sovereign nation.',
     opts: [{ label: 'Let it flood', fx: 'hz:flood,xpAll:20', sub: 'Foes wade through it next siege: slowed and soaked. Mind your melee heroes, they wade too.' }, { label: 'Patch it', fx: 'pay:20,heal:25', sub: 'Spend 20 gold. The masons patch the ditch and your walls on the way back.' }] },
   { id: 'mudseason', title: 'Mud Season', text: 'It rained for three days. The field is now soup. A pig is having the best week of its life.',
     opts: [{ label: 'Charge pig rides', fx: 'gold:45,hz:mud', sub: 'Big money. Next siege everyone on foot slogs 25% slower, heroes too.' }, { label: 'Lay down planks', fx: 'pay:20,xpAll:30', sub: 'Spend 20 gold. Your heroes learn carpentry.' }] },
-  { id: 'dragoncold', title: 'A Dragon With a Cold', text: 'A dragon is camped beside the field with a terrible cold. Every sneeze sets something on fire. It is very apologetic.',
+  { id: 'dragoncold', title: 'A Dragon With a Cold', text: 'A dragon is camped beside the field with a terrible cold. Every sneeze sets something on fire. It apologizes after each one.',
     opts: [{ label: 'Bring it soup', fx: 'xpAll:25,heal:15', sub: 'It sneezes gratefully onto nothing important.' }, { label: 'Sell tickets', fx: 'gold:55,hz:embers', sub: 'Crowds love it. Next siege burning patches fall on the field and burn anyone in them.' }] },
   { id: 'windmill', title: "The Wizard's Windmill", text: 'A wizard bolted a windmill to your tower. It runs backwards and makes weather. He will not say why.',
     opts: [{ label: 'Switch it on', fx: 'hz:gale,xpOne:80', sub: 'Gale next siege: foes march 20% faster, your heroes attack 20% faster. A hero clings on for 80 XP.' }, { label: 'Sell it for parts', fx: 'gold:40', sub: 'The wizard is offended but takes the money.' }] },
   { id: 'fogman', title: 'Fog Machine Salesman', text: '"It is the future of siege warfare." He pulls a lever. Nobody can see him anymore. He keeps talking.',
-    opts: [{ label: 'Buy the demo model', fx: 'pay:15,hz:fog,mod:fewer', sub: 'Spend 15 gold. Thick fog next siege cuts all ranged attacks by 30%, and a quarter of the horde gets lost in it.' }, { label: 'Find him and shoo him', fx: 'xpAll:25', sub: 'It takes all night. Great cardio.' }] },
+    opts: [{ label: 'Buy the demo model', fx: 'pay:15,hz:fog,mod:fewer', sub: 'Spend 15 gold. Thick fog next siege cuts all ranged attacks by 30%, and a quarter of the horde gets lost in it.' }, { label: 'Find him and shoo him', fx: 'xpAll:25', sub: 'It takes hours. He was behind you the whole time.' }] },
   { id: 'goldrush', title: 'Gold in the Field', text: 'Prospectors struck gold right where the horde likes to march. So did the horde. Everyone is digging.',
     opts: [{ label: 'Let them dig', fx: 'hz:goldrush', sub: 'Next siege foes carry 50% more gold, but all that digging made them 20% tougher.' }, { label: 'Claim it first', fx: 'gold:35', sub: 'You stake the claim. Modest but safe.' }] },
   { id: 'snowday', title: 'A Wizard Sneezed Snow', text: 'It is midsummer. There are four feet of snow on the field. The wizard says "bless me" to himself and leaves.',
-    opts: [{ label: 'Build snow forts', fx: 'hz:snow,heal:20', sub: 'Next siege everyone on foot slogs 25% slower. The snow packs your wall cracks too.' }, { label: 'Sell snowcones', fx: 'gold:40', sub: 'It is very hot. Business is booming.' }] },
+    opts: [{ label: 'Build snow forts', fx: 'hz:snow,heal:20', sub: 'Next siege everyone on foot slogs 25% slower. The snow packs your wall cracks too.' }, { label: 'Sell snowcones', fx: 'gold:40', sub: 'In midsummer, the queue goes twice round the keep.' }] },
   { id: 'gobwedding', title: 'You Are Invited to a Goblin Wedding', text: 'Grubnose\'s cousin is getting married between sieges. The invitation is written in mud. Plus-ones welcome. Weapons mandatory.',
     opts: [{ label: 'Attend and dance', fx: 'xpAll:40,hz:mud', sub: 'Your heroes dance badly but sincerely. The dance floor was the field. It is mud now.' }, { label: 'Object to the marriage', fx: 'duel', sub: 'Your best hero fights the groom. Probably wins.' }] },
   { id: 'gobmom', title: "Grubnose's Mom", text: 'A tiny goblin grandmother is knocking on the gate with a casserole. "Have you seen my boy? Big crown. Smells like feet."',
     opts: [{ label: 'Tell her the truth', fx: 'xpAll:50', sub: 'She cries, hugs every hero, and teaches them a thing or two.' }, { label: 'Lie and take the casserole', fx: 'gold:45,mod:curse', sub: 'It is delicious. The next horde senses your guilt: +30% HP.' }] },
-  { id: 'gobstartup', title: 'Goblin Startup Pitch', text: 'Three goblins in turtlenecks pitch "Uber, but for rocks." They need seed funding. They have a slideshow drawn on a cave wall.',
-    opts: [{ label: 'Invest 40 gold', fx: 'pay:40,gamble', sub: 'A random hero gets equity. It might pay off hugely, or it might be rocks.' }, { label: 'Steal the idea', fx: 'gold:35,hz:rocks', sub: 'You launch it first. The goblins demonstrate the product on your field next siege.' }] },
+  { id: 'gobstartup', title: 'A Goblin Business Plan', text: 'Three goblins with one clipboard each pitch a rock delivery service. They need investors. The business plan is drawn on a cave wall.',
+    opts: [{ label: 'Invest 40 gold', fx: 'pay:40,gamble', sub: 'A random hero becomes a partner. Results will vary. The goblins insist this is normal.' }, { label: 'Steal the idea', fx: 'gold:35,hz:rocks', sub: 'You launch it first. The goblins demonstrate the product on your field next siege.' }] },
   { id: 'gobmime', title: 'A Goblin Mime', text: 'He is trapped in an invisible box. He has been trapped in it since the last siege. He looks genuinely distressed.',
-    opts: [{ label: 'Free him', fx: 'mustache', sub: 'Grateful, he paints a magnificent mustache on a hero. It is somehow real.' }, { label: 'Applaud', fx: 'xpOne:90', sub: 'A hero learns the art of silence. And 90 XP.' }] },
-  { id: 'gobtavern', title: 'The Wrong Tavern', text: 'Your heroes went for drinks and ended up in a goblin tavern. Everyone is staring. The fireplace is very large and very unattended.',
+    opts: [{ label: 'Free him', fx: 'mustache', sub: 'Grateful, he paints a mustache on a hero. It does not wash off.' }, { label: 'Applaud', fx: 'xpOne:90', sub: 'A hero learns the art of silence. And 90 XP.' }] },
+  { id: 'gobtavern', title: 'The Wrong Tavern', text: 'Your heroes went for drinks and ended up in a goblin tavern. Everyone is staring. The fireplace is large and nobody is minding it.',
     opts: [{ label: 'Buy a round for the house', fx: 'pay:30,mod:inspire', sub: 'Spend 30 gold. Heroes +25% attack next siege, mostly from confidence.' }, { label: 'Start a bar fight', fx: 'xpAll:35,hz:embers', sub: 'You win. Someone kicked the fireplace. Embers rain on the field next siege.' }] },
   { id: 'gobfortune', title: 'Goblin Fortune Teller', text: '"I see... a castle. And goblins. Many goblins. Hitting it." She is not wrong. She wants a coin.',
     opts: [{ label: 'Pay for the full reading', fx: 'pay:15,gold:45', sub: 'She reveals where some treasure is buried. It is under her chair.' }, { label: 'Ask about the weather', fx: 'hz:fog,mod:fewer', sub: '"Foggy," she says, and it is. A quarter of the horde gets lost. Ranged attacks lose 30% range.' }] },
   { id: 'goose', title: 'A Goose Has Entered the Keep', text: 'Nobody let it in. It has taken the throne and will not be moved. It honks at the Sky Hammer.',
-    opts: [{ label: 'Befriend the goose', fx: 'secret:goose', sub: 'Discovers the Goose Moat in the Artificers\' Hall' }, { label: 'Chase it out', fx: 'xpAll:30,mod:honked', sub: 'Heroes earn 30 XP. The goose will remember this.' }] },
+    opts: [{ label: 'Befriend the goose', fx: 'secret:goose', sub: 'Discovers the Goose Moat in the Artificers\' Hall' }, { label: 'Chase it out', fx: 'xpAll:30,mod:honked', sub: 'Heroes earn 30 XP. The goose writes something down.' }] },
   { id: 'accountant', title: "The Horde's Accountant", text: 'A goblin in tiny spectacles is auditing your siege. "You killed 40 of our employees. That\'s a lot of paperwork."',
     opts: [{ label: 'Pay the "fine"', fx: 'gold:-25,mod:fewer', sub: 'Lose 25 gold. Next siege has 25% fewer foes.' }, { label: 'Commit light tax fraud', fx: 'gold:60,mod:curse', sub: '+60 gold. Next horde is 30% tougher and furious.' }] },
   { id: 'barrel', title: 'Wizard Stuck in a Barrel', text: '"Don\'t ask how. Just roll me somewhere useful." The barrel is humming.',
     opts: [{ label: 'Roll him to the Armory', fx: 'comp:rod', sub: 'He leaves a Wand of Mild Peril behind' }, { label: 'Roll him downhill', fx: 'xpOne:90,hz:mud', sub: 'A hero chases him for 90 XP. The barrel leaks potion. The field turns to mud.' }] },
   { id: 'trenchcoat', title: 'Three Kobolds in a Trench Coat', text: '"Hello. I am a normal human consultant. I would like to improve your castle." One of the kobolds sneezes.',
-    opts: [{ label: 'Hire the consultant', fx: 'xpAll:35,hz:fog', sub: 'They teach your heroes some tricks. Their smoke machine fogs the next siege.' }, { label: 'Pull off the coat', fx: 'gold:45', sub: 'They scatter. One drops a purse.' }] },
+    opts: [{ label: 'Hire the consultant', fx: 'xpAll:35,hz:fog', sub: 'They teach your heroes some tricks. Their smoke machine fogs the next siege.' }, { label: 'Pull off the coat', fx: 'gold:45', sub: 'They scatter, leaving the consulting fee behind.' }] },
   { id: 'cheese', title: 'The Cheese Wheel of Destiny', text: 'An enormous wheel of cheese is rolling toward the keep. It has been rolling for three days. It is still accelerating.',
     opts: [{ label: 'Catch it with engineering', fx: 'secret:cheese', sub: "Discovers the Cheese Trebuchet" }, { label: 'Eat it', fx: 'heal:30,xpAll:20', sub: 'Repair 30% castle. Heroes +20 XP. Everyone is sleepy.' }] },
   { id: 'mimic', title: 'The Mimic Wants a Hug', text: 'A treasure chest with a long tongue is looking at you with enormous eyes.',
     opts: [{ label: 'Hug it', fx: 'secret:mimic,comp:any', sub: 'It loves you. Discovers the Mimic Pantry and spits out a component.' }, { label: 'Hug it, but nervously', fx: 'item:any', sub: 'It respects the caution and gives you a finished item' }] },
   { id: 'chicken', title: 'A Very Confident Chicken', text: 'A chicken has challenged your strongest champion to a duel. It is doing warm-up stretches.',
     opts: [{ label: 'Accept the duel', fx: 'duel', sub: 'Your strongest hero duels the chicken for honor and XP' }, { label: 'Decline', fx: 'mod:chickens', sub: 'It brings friends to the next siege. Many friends.' }] },
-  { id: 'groupchat', title: "The Horde's Group Chat Leaked", text: '214 unread messages. Mostly memes. One says "everyone attack the left side lol".',
-    opts: [{ label: 'Read the plans', fx: 'mod:fewer,xpAll:15', sub: 'Next siege is smaller. Heroes +15 XP from laughing.' }, { label: 'Reply with a meme', fx: 'mod:partyhats', sub: 'The horde is distracted. They arrive wearing party hats.' }] },
+  { id: 'groupchat', title: "The Horde's Mail Came Here", text: 'The horde\'s mailbag was left at your gate. 214 letters. Mostly complaints about the food. One says "everyone attack the left side".',
+    opts: [{ label: 'Read the plans', fx: 'mod:fewer,xpAll:15', sub: 'Next siege is smaller. Heroes +15 XP from reading the complaints.' }, { label: 'Send party invitations', fx: 'mod:partyhats', sub: 'The horde is distracted. They arrive wearing party hats.' }] },
   { id: 'painter', title: 'The Royal Portrait Painter', text: '"Hold still. Look heroic. No, MORE heroic." Your champion has been posing for six hours.',
     opts: [{ label: 'Add a mustache', fx: 'mustache', sub: 'A random hero grows a magnificent mustache: +5% attack, ability power and HP' }, { label: 'Sell the painting', fx: 'gold:55', sub: '+55 gold. It was a bad painting.' }] },
-  { id: 'trebuchet', title: 'Package Delivered by Mistake', text: 'A crate addressed to "The Other Castle" arrived. It contains a single, very golden spatula.',
-    opts: [{ label: 'Keep it', fx: 'comp:spatula', sub: 'A Golden Ladle. It combines into elemental crests.' }, { label: 'Return to sender', fx: 'gold:60', sub: '+60 gold. The courier is very generous' }] },
+  { id: 'trebuchet', title: 'Package Delivered by Mistake', text: 'A crate addressed to "The Other Castle" arrived. It contains one humming crystal splinter and a feather. A goose feather.',
+    opts: [{ label: 'Keep it', fx: 'comp:shard', sub: 'A Stray Shard. It combines into elemental crests.' }, { label: 'Send it on', fx: 'gold:60', sub: '+60 gold. The courier pays a finder\'s fee.' }] },
   { id: 'intern', title: 'The Necromancy Intern', text: '"I was told to raise the dead but I raised dinner." The roast chicken is walking around. It seems happy.',
     opts: [{ label: 'Give them a job', fx: 'secret:intern', sub: 'Discovers the Necromancy Intern' }, { label: 'Eat the walking dinner', fx: 'xpAll:25,heal:15', sub: 'Heroes +25 XP and the castle is repaired 15%' }] },
   { id: 'bard', title: 'A Bard at the Gate', text: 'Their song about your last siege is wildly exaggerated. In this version, your castle can fly.',
     opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire,hz:gale', sub: 'Heroes +25% attack. The song is so loud it whips up a gale next siege.' }] },
   { id: 'pigeons', title: 'Pigeons With Opinions', text: 'Forty pigeons have landed on the walls and are all looking at you. One has a tiny scroll.',
-    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:20', sub: 'They poop gold. Heroes +20 XP.' }] },
+    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:20', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
   { id: 'hottub', title: 'Hot Spring Under the Keep', text: 'The dwarves dug too deep. They found a hot spring. The dwarves are now refusing to leave the hot spring.',
     opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,heal:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
   { id: 'alchemist', title: 'Free Sample Day', text: 'The alchemist is offering free samples. All the potions are bubbling. One is screaming quietly.',
     opts: [{ label: 'Drink the screaming one', fx: 'gamble', sub: '55%: a random hero gains a huge pile of XP. 45%: they turn tiny for a siege.' }, { label: 'Drink the calm one', fx: 'mod:tonic', sub: 'Heroes start the next siege at full mana' }] },
-  { id: 'mushroom', title: 'A Suspicious Mushroom', text: 'It is red with white dots and smells like levelling up.',
+  { id: 'mushroom', title: 'A Suspicious Mushroom', text: 'It is red with white dots and smells faintly of ambition.',
     opts: [{ label: 'Feed it to a hero', fx: 'mod:giant', sub: 'Heroes are GIANT next siege: +40% HP and bigger' }, { label: 'Feed it to the horde', fx: 'mod:tiny', sub: 'The next horde is tiny. Weaker, but very fast.' }] },
   { id: 'dragon', title: "A Dragon's Garage Sale", text: 'Everything must go. The dragon is downsizing to a smaller cave. Prices are negotiable, and so is the fire.',
     opts: [{ label: 'Buy the mystery box (40g)', fx: 'pay:40,item:any', sub: 'Costs 40 gold. A finished item.' }, { label: 'Haggle aggressively', fx: 'haggle', sub: '50%: two free components. 50%: the castle gets singed.' }] },
@@ -826,7 +829,7 @@ const ENCOUNTERS = [
   { id: 'smith', boon: true, title: 'The Wandering Smith', text: 'A smith with a portable anvil and enormous forearms is passing through. "Coin, a lesson, or a bit of hammering. Pick one."' },
   { id: 'festival', boon: true, title: 'Festival of the Walls', text: 'The townsfolk are throwing a festival because the castle is still standing. Everyone wants to give your heroes something.' },
   { id: 'geode', boon: true, title: 'A Glittering Geode', text: 'Diggers in the cellar hit something sparkly. It hums the castle anthem and seems happy to help.' },
-  { id: 'tinker', boon: true, title: 'The Wandering Tinker', text: 'A tinker with a squeaky cart offers a trade from the pile. Everything on it is, somehow, exactly what you need.' },
+  { id: 'tinker', boon: true, title: 'The Wandering Tinker', text: 'A tinker with a squeaky cart offers a trade from the pile. Everything on it is, suspiciously, exactly what you need.' },
   { id: 'luckycoin', boon: true, title: 'The Lucky Coin', text: 'A coin landed on its edge in the courtyard and stayed there. The court wizard says this is a once-a-century omen. Of what, he is not sure.' },
 ];
 // the three choices on every boon card

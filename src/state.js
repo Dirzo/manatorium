@@ -123,12 +123,12 @@ function lootOptions(run, meta) {
   const n = 3 + (run.tech.scav ? 1 : 0), boss = isBossSiege(run.siege - 1), out = [];
   for (let i = 0; i < n; i++) {
     if (boss) { let key, tries = 0; do { key = itemKey(pick(COMP_KEYS), pick(COMP_KEYS)); } while (out.some(o => o.parts.join('+') === key) && ++tries < 50); out.push({ parts: key.split('+') }); }
-    else { const k = Math.random() < 0.05 && !out.some(o => o.parts[0] === 'spatula') ? 'spatula' : pick(COMP_KEYS.filter(c => !out.some(o => o.parts[0] === c))); out.push({ parts: [k] }); }
+    else { const k = Math.random() < 0.05 && !out.some(o => o.parts[0] === 'shard') ? 'shard' : pick(COMP_KEYS.filter(c => !out.some(o => o.parts[0] === c))); out.push({ parts: [k] }); }
   }
   return out;
 }
 function lootRerollCost(run) { return 12 + 8 * run.lootRerolls; }
-function takeLoot(run, opt) { const it = makeItem(opt.parts); if (it.parts.length === 2 && it.parts.includes('spatula')) it.el = pick(EL_KEYS); run.stash.push(it); run.stats.loot.push({ s: run.siege - 1, parts: it.parts }); return it; }
+function takeLoot(run, opt) { const it = makeItem(opt.parts); if (it.parts.length === 2 && it.parts.includes('shard')) it.el = pick(EL_KEYS); run.stash.push(it); run.stats.loot.push({ s: run.siege - 1, parts: it.parts }); return it; }
 function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.holder); if (h) h.items = h.items.filter(u => u !== it.uid); it.holder = null; }
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
@@ -141,7 +141,7 @@ function giveItem(run, it, h) {
       run.stash = run.stash.filter(x => x !== it && x !== partner);
       const parts = itemKey(partner.parts[0], it.parts[0]).split('+');
       const have = heroElements(run, h);
-      const fused = makeItem(parts, parts.includes('spatula') && parts[0] !== parts[1] ? pick(EL_KEYS.filter(e => !have.includes(e))) : null);
+      const fused = makeItem(parts, parts.includes('shard') && parts[0] !== parts[1] ? pick(EL_KEYS.filter(e => !have.includes(e))) : null);
       run.stash.push(fused); fused.holder = h.uid; h.items.push(fused.uid);
       return { fused };
     }
@@ -221,7 +221,7 @@ function resolveEncounter(run, meta, fxs) {
       case 'item': { const it = randomFinished(); run.stash.push(it); out.push(`Got ${itemName(it)}. Hand it out in the Armory.`); break; }
       case 'xpAll': for (const h of run.roster) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); } out.push(`Every hero gains ${Math.round(n * (1 + 0.1 * run.siege))} XP.`); break;
       case 'xpOne': { const h = pick(run.roster); if (h) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} gains ${v} XP.`); } break; }
-      case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold as an apology.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
+      case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold for taking up your time.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
       case 'hz': if (HAZARDS[arg]) { run.mods.hz = arg; out.push(`Next siege: ${HAZARDS[arg].name}. ${HAZARDS[arg].desc}`); } break;
       case 'reforge': { const list = reforgeable(run); if (!list.length) { const it = randomFinished(); run.stash.push(it); out.push(`You have nothing finished to reforge, so the smith hands you ${itemName(it)} instead.`); break; }
         run.pendingReforge = true; out.push('Pick an item to reforge.'); break; }
@@ -236,7 +236,7 @@ function resolveEncounter(run, meta, fxs) {
       case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +5% attack, ability power and HP.`); } break; }
       case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { const l = addXP(h, Math.round(30 * (1 + 0.1 * run.siege))); if (l) levels.push([h, l]); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled, but learns something. +${Math.round(30 * (1 + 0.1 * run.siege))} XP.`); } break; }
       case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
-      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon respects your hustle. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
+      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon admires your nerve. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
     }
   }
   const modText = { fewer: 'The next siege will be smaller.', curse: 'The next horde is angry about taxes.', chickens: 'Chickens. So many chickens. They are coming next siege.', partyhats: 'The next horde is wearing party hats.', giant: 'Your heroes will be ENORMOUS next siege.', tiny: 'The next horde will be tiny and zoomy.', inspire: 'Heroes +25% attack next siege.', tonic: 'Heroes start the next siege at full mana.', honked: 'The goose will be at the next siege.' };

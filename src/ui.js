@@ -394,7 +394,7 @@ const UI = {
     for (const it of loose) {
       const fuse = sel && it.parts.length === 1 && heroItems(run, sel).find(x => x.parts.length === 1);
       const into = fuse ? FINISHED[itemKey(fuse.parts[0], it.parts[0])] : null;
-      h += `<div class="card item"><img class="px" src="${itemIconURL(it)}" alt=""><div><h4>${esc(itemName(it))} ${it.parts.length === 2 ? '<span class="tier">finished</span>' : ''}</h4><p>${esc(itemDesc(it))}</p>${into ? `<p style="color:var(--gold)">Fuses with ${esc(COMPONENTS[fuse.parts[0]].name)} into <b>${esc(into[1] === 'emblem' ? 'a Crest' : into[0])}</b>.</p>` : ''}</div>
+      h += `<div class="card item"><img class="px" src="${itemIconURL(it)}" alt=""><div><h4>${esc(itemName(it))} ${it.parts.length === 2 ? '<span class="tier">finished</span>' : ''}</h4><p>${esc(itemDesc(it))}</p>${into ? `<p style="color:var(--gold)">Fuses with ${esc(COMPONENTS[fuse.parts[0]].name)} into <b>${esc(into[1] === 'crest' ? 'a Crest' : into[0])}</b>.</p>` : ''}</div>
         ${sel ? `<button class="btn small primary give" data-act="give" data-arg="${it.uid}">${into ? 'Fuse' : 'Give'}</button>` : '<span></span>'}</div>`;
     }
     if (held.length) { h += `<div class="group-title">Carried</div>`; for (const it of held) { const ho = run.roster.find(x => x.uid === it.holder); h += `<div class="card item sm"><img class="px" src="${itemIconURL(it)}" alt=""><div><h4>${esc(itemName(it))}</h4><p>${ho ? esc(heroDisplayName(ho)) : ''}</p></div>${sel && it.holder !== sel.uid ? `<button class="btn small" data-act="give" data-arg="${it.uid}">Move here</button>` : '<span></span>'}</div>`; } }
@@ -404,7 +404,7 @@ const UI = {
     for (const a of ks) { h += `<img class="px" src="${iconURL(COMPONENTS[a].glyph, 2)}" alt="${esc(COMPONENTS[a].name)}">`; for (const b of ks) { const key = itemKey(a, b); h += `<button class="rc ${UI.recipeSel === key ? 'on' : ''}" data-act="recipe" data-arg="${key}" title="${esc(FINISHED[key][0])}"><img class="px" src="${itemIconURL({ parts: key.split('+') }, 2)}" alt="${esc(FINISHED[key][0])}"></button>`; } }
     h += `</div>`;
     if (UI.recipeSel) { const F = FINISHED[UI.recipeSel], [a, b] = UI.recipeSel.split('+'); h += `<p class="rdesc"><b>${esc(F[0])}</b> = ${esc(COMPONENTS[a].name)} + ${esc(COMPONENTS[b].name)}. ${esc(F[2])}</p>`; }
-    else h += `<p class="note">Tap a square to see what two components make. A Golden Ladle with any component makes a Crest: a second element.</p>`;
+    else h += `<p class="note">Tap a square to see what two components make. A Stray Shard with any component makes a Crest: a second element.</p>`;
     return h + `</details>`;
   },
   superAnvilHTML(run) {
@@ -581,10 +581,10 @@ const UI = {
     // components you already hold, and what each offered component would make with them
     const run = G.run, owned = run.stash.filter(it => it.parts.length === 1), keys = [...new Set(owned.map(it => it.parts[0]))];
     const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroDisplayName(hr).split(' ')[0] : 'in the Armory'; };
-    const fin = (a, b) => { const F = FINISHED[itemKey(a, b)]; return F ? (F[1] === 'emblem' ? ['Elemental Crest', 'Gives the hero a second element.'] : [F[0], F[2]]) : null; };
+    const fin = (a, b) => { const F = FINISHED[itemKey(a, b)]; return F ? (F[1] === 'crest' ? ['Elemental Crest', 'Gives the hero a second element.'] : [F[0], F[2]]) : null; };
     opts.forEach((o, i) => { const it = { parts: o.parts, el: null };
       const builds = !boss && o.parts.length === 1 ? keys.map(k => { const f = fin(o.parts[0], k); return f ? `<div class="bld" data-tip="txt:${esc(f[0])}|${esc(f[1])}"><img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt=""><span>+ ${esc(COMPONENTS[k].name)}</span><b>${esc(f[0])}</b></div>` : ''; }).join('') : '';
-      h += `<button class="lcard" data-pick="${i}" style="animation-delay:${i * 0.07}s"><img class="px" src="${itemIconURL(it, 5)}" alt=""><b>${esc(o.parts.length === 2 && o.parts.includes('spatula') ? 'Crest' : itemName(it))}</b><span>${esc(o.parts.length === 2 && o.parts.includes('spatula') ? 'A random second element' : itemDesc(it))}</span>
+      h += `<button class="lcard" data-pick="${i}" style="animation-delay:${i * 0.07}s"><img class="px" src="${itemIconURL(it, 5)}" alt=""><b>${esc(o.parts.length === 2 && o.parts.includes('shard') ? 'Crest' : itemName(it))}</b><span>${esc(o.parts.length === 2 && o.parts.includes('shard') ? 'A random second element' : itemDesc(it))}</span>
         ${!boss && o.parts.length === 1 ? `<div class="blds"><small>${keys.length ? 'Builds with what you have' : 'Nothing to combine with yet'}</small>${builds}</div>` : ''}</button>`; });
     h += `</div>`;
     if (!boss) h += `<div class="owned"><span class="eyebrow">Your components</span>${owned.length ? owned.map(it => `<span class="own"><img class="px" src="${iconURL(COMPONENTS[it.parts[0]].glyph, 2)}" alt=""><b>${esc(COMPONENTS[it.parts[0]].name)}</b><small>${esc(holderName(it))}</small></span>`).join('') : '<span class="note">None yet. This will be your first.</span>'}</div>`;

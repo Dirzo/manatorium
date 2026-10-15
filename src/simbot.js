@@ -29,7 +29,7 @@ function botItemOrder(run, style) {
   const o = run.roster.slice().sort((a, b) => botCarryScore(run, style, b) - botCarryScore(run, style, a));
   run.botCarry = o[0] && o[0].uid; return o;
 }
-function botPairScore(h, a, b) { const w = CARRY_COMPS[botKind(h)]; return (w.includes(a) ? 2 : 0) + (w.includes(b) ? 2 : 0) + (a === b && w.includes(a) ? 0.5 : 0) + (a === 'spatula' || b === 'spatula' ? 1 : 0); }
+function botPairScore(h, a, b) { const w = CARRY_COMPS[botKind(h)]; return (w.includes(a) ? 2 : 0) + (w.includes(b) ? 2 : 0) + (a === b && w.includes(a) ? 0.5 : 0) + (a === 'shard' || b === 'shard' ? 1 : 0); }
 function botGiveItems(run, style) {
   if (style === 'chaos') {
     for (const it of run.stash.filter(x => !x.holder)) {
