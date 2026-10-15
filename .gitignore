@@ -3,3 +3,4 @@ node_modules/
 *.log
 horde-diff.json
 app/www/
+dist/worker/

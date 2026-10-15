@@ -132,7 +132,13 @@ const MOB = {
   wireNative() {
     const P = Capacitor.Plugins || {};
     quiet(() => P.StatusBar.hide());
-    quiet(() => P.SplashScreen.hide());
+    // live updates (app/native.js): the splash stays up while the app hands over to a downloaded copy of the game
+    const live = window.SOL_LIVE ? SOL_LIVE.ready().catch(() => ({})) : Promise.resolve({});
+    live.then(r => {
+      if (r.switching) return;
+      quiet(() => P.SplashScreen.hide());
+      if (r.updated) setTimeout(() => UI.toast('The game was updated to the latest version.'), 1200);
+    });
     if (P.App) {
       quiet(() => P.App.addListener('backButton', () => {
         if (!$('tip').hidden) return UI.tipHide();

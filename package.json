@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "deploy": "npx wrangler deploy",
+    "deploy:worker": "node build.mjs && node tools/deploy-worker.mjs --upload",
     "boss-odds": "node tools/boss-odds.mjs",
     "item-scaling": "node tools/item-scaling.mjs",
     "build:app": "node build.mjs && node tools/build-app.mjs && npx cap sync",
@@ -17,6 +18,7 @@
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.3",
     "@capacitor/splash-screen": "^8.0.2",

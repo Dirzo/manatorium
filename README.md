@@ -14,7 +14,7 @@ Saves are kept in the browser's local storage.
 
 ## Website (Cloudflare)
 
-`wrangler.jsonc` publishes `site/` as the static Cloudflare Worker `manatorium`, live at https://manatorium.noobscrub.workers.dev. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler.
+`wrangler.jsonc` publishes `site/` as the static Cloudflare Worker `manatorium`, live at https://manatorium.noobscrub.workers.dev. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler. `npm run deploy:worker` deploys the site together with the phone app's live updates at `/app/` (see docs/MOBILE.md).
 
 ## Phone app (iOS and Android)
 
