@@ -1067,6 +1067,107 @@ html.m-land #synStrip::-webkit-scrollbar { display: none; }
 #synStrip .syb .cnt { top: -3px; right: -3px; min-width: 12px; height: 12px; font-size: 8px; line-height: 12px; }
 #synStrip .syl b { font-size: 10px; } #synStrip .syl small { font-size: 9px; }
 #synStrip .sybw:not(.on) .syl b { display: none; }
+
+/* ===== V46: lively cards, banners and boss cards ===== */
+.ecard, .lcard { position: relative; }
+.dcard.deal, .ecard.deal, .lcard.deal { animation: cardDeal .62s cubic-bezier(.2,.9,.3,1.2) backwards; animation-delay: calc(var(--i, 0) * 110ms + 60ms); }
+@keyframes cardDeal {
+  0% { opacity: 0; transform: perspective(700px) translateY(70px) rotateY(115deg) rotateZ(-8deg) scale(.7); filter: brightness(2.4); }
+  55% { opacity: 1; transform: perspective(700px) translateY(-10px) rotateY(-14deg) rotateZ(1deg) scale(1.04); filter: brightness(1.35); }
+  80% { transform: perspective(700px) translateY(2px) rotateY(4deg) scale(.99); filter: none; }
+  100% { transform: none; } }
+.dcard::after, .ecard::after, .lcard::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgba(255,255,255,.24), transparent 55%); }
+@media (hover: hover) {
+  .dcard:hover, .ecard:hover, .lcard:hover { transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-6px) scale(1.025); }
+  .dcard:hover::after, .ecard:hover::after, .lcard:hover::after { opacity: 1; }
+  .dcard:hover .dport img { animation: portHop .5s cubic-bezier(.3,1.6,.5,1); }
+}
+@keyframes portHop { 40% { transform: translateY(-7px) scale(1.06); } }
+.dcard:active, .ecard:active, .lcard:active { transform: perspective(700px) translateY(3px) scale(.965) !important; box-shadow: 0 1px 0 var(--ink), 0 0 0 3px var(--gold); transition-duration: .05s; }
+.dcard.bump, .ecard.bump, .lcard.bump { animation: cardBump .38s cubic-bezier(.3,1.6,.5,1); }
+@keyframes cardBump { 0% { transform: scale(.94); } 60% { transform: scale(1.04) rotate(-.6deg); } 100% { transform: none; } }
+.dcard.armed { animation: cardBump .38s cubic-bezier(.3,1.6,.5,1), armedGlow .8s ease-in-out .4s infinite alternate; }
+.dcard.armed .armbar { animation: armPulse .8s ease-in-out infinite alternate; }
+@keyframes armedGlow { to { outline-color: #fff3b0; box-shadow: 0 4px 0 var(--ink), 0 0 18px var(--gold); } }
+@keyframes armPulse { to { filter: brightness(1.2); } }
+.pickghost { position: fixed; z-index: 60; pointer-events: none; animation: pickFly .8s cubic-bezier(.3,.7,.4,1) forwards; }
+.pickghost > * { width: 100%; height: 100%; margin: 0; animation: none !important; transform: none !important; box-shadow: 0 0 0 3px var(--pc), 0 0 34px var(--pc) !important; }
+@keyframes pickFly { 0% { transform: scale(1); } 16% { transform: scale(1.13) rotate(-2deg); filter: brightness(1.8); } 34% { transform: scale(1.06) rotate(1deg); filter: brightness(1.2); } 100% { transform: translateY(-160px) scale(.3) rotate(9deg); opacity: 0; filter: brightness(2); } }
+.pickburst { position: fixed; z-index: 61; width: 0; height: 0; pointer-events: none; }
+.pickburst::before { content: ''; position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--pc); animation: pickRing .55s ease-out forwards; }
+.pickburst i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; background: var(--pc); border: 2px solid #1a1230; transform: rotate(var(--a)); animation: pickSpark .7s cubic-bezier(.2,.8,.4,1) forwards; }
+@keyframes pickRing { from { transform: scale(.2); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes pickSpark { 0% { transform: rotate(var(--a)) translateX(0) scale(var(--s)); } 70% { opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(0) rotate(180deg); opacity: 0; } }
+
+/* living text */
+h2.alive .wd, #banner p .w, .bosscard q .w { display: inline-block; white-space: nowrap; }
+h2.alive .ch { display: inline-block; animation: chIn .45s cubic-bezier(.2,.9,.3,1.6) backwards; animation-delay: calc(var(--i) * 22ms + 80ms); }
+@keyframes chIn { from { opacity: 0; transform: translateY(-22px) scale(1.7) rotate(-14deg); } }
+.sheet.special { animation: sheetIn .3s cubic-bezier(.2,.9,.3,1.2), specialGlow 1.6s ease-in-out .3s infinite alternate; }
+@keyframes specialGlow { to { box-shadow: 0 6px 0 var(--ink), 0 0 0 3px var(--line) inset, 0 0 26px -2px var(--gold); } }
+.sheet.special h2.alive .ch { animation: chIn .45s cubic-bezier(.2,.9,.3,1.6) backwards, chWave 2.2s ease-in-out infinite; animation-delay: calc(var(--i) * 22ms + 80ms), calc(var(--i) * 70ms + 900ms); }
+@keyframes chWave { 0%, 60%, 100% { transform: none; } 15% { transform: translateY(-4px) rotate(-3deg); color: #fff; } 30% { transform: translateY(1px); } }
+h2.hoard { color: var(--gold); }
+
+/* banners */
+#banner .in { position: relative; display: inline-flex; align-items: center; gap: 16px; }
+#banner .bt { text-align: center; }
+#banner .bspr { width: 76px; height: 76px; image-rendering: pixelated; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.4)); }
+@keyframes bsprIn { from { transform: translateY(40px) scale(.2) rotate(-30deg); opacity: 0; } }
+#banner h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chBob 1.5s ease-in-out infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 80ms + 600ms); }
+@keyframes chBob { 0%, 100% { transform: none; } 50% { transform: translateY(-3px); } }
+#banner p .w { animation: wIn .35s ease-out backwards; animation-delay: calc(var(--i) * 70ms + 350ms); }
+@keyframes wIn { from { opacity: 0; transform: translateY(8px); } }
+#banner .k-hero { border-color: var(--bc, var(--gold)); box-shadow: 0 0 30px -4px var(--bc, var(--gold)); }
+#banner .k-hero h2 { color: var(--bc, var(--gold)); }
+#banner .k-hero .bspr { animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards, heroHop .9s ease-in-out 1s infinite; }
+@keyframes heroHop { 0%, 100% { transform: none; } 30% { transform: translateY(-8px) rotate(-4deg); } 55% { transform: translateY(0) scaleY(.92); } }
+#banner .k-boss { background: repeating-linear-gradient(-45deg, rgba(255,40,80,.22) 0 12px, transparent 12px 24px), rgba(40,6,22,.92); background-size: 34px 34px; border-color: #ff3d6e;
+  animation: bannerIn 3.2s forwards, hazard .6s linear infinite, bossPulse .45s ease-in-out infinite alternate; }
+@keyframes hazard { to { background-position: 34px 0; } }
+@keyframes bossPulse { to { box-shadow: 0 0 34px 2px rgba(255,40,80,.7); } }
+#banner .k-boss h2 { color: #ff5d6e; text-shadow: 3px 3px 0 var(--ink), 0 0 16px #ff2a4a; letter-spacing: .14em; }
+#banner .k-boss h2.alive .ch { animation: chSlam .42s cubic-bezier(.2,.9,.3,1.4) backwards, chShake .16s steps(2) infinite; animation-delay: calc(var(--i) * 65ms), calc(var(--i) * 65ms + 420ms); }
+@keyframes chSlam { from { opacity: 0; transform: translateY(-46px) scale(2.8); } 70% { transform: scale(.88); } }
+@keyframes chShake { 0% { transform: translate(1px, -1px); } 50% { transform: translate(-1px, 1px) rotate(-2deg); } 100% { transform: translate(1px, 1px); } }
+#banner .k-boss .bspr { width: 92px; height: 92px; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards, bsprRage .14s steps(2) .8s infinite; filter: drop-shadow(0 0 8px #ff2a4a); }
+@keyframes bsprRage { 0% { transform: translateX(-1px) scale(1.02); } 100% { transform: translateX(1px) scale(.99); } }
+#banner .k-slain { border-color: var(--gold); box-shadow: 0 0 40px -2px var(--gold); overflow: visible; }
+#banner .k-slain::before { content: ''; position: absolute; left: 50%; top: 50%; width: 520px; height: 520px; margin: -260px 0 0 -260px; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255,207,58,.22) 0 10deg, transparent 10deg 24deg); border-radius: 50%; mask: radial-gradient(circle, #000 20%, transparent 65%); -webkit-mask: radial-gradient(circle, #000 20%, transparent 65%); animation: raySpin 6s linear infinite; }
+@keyframes raySpin { to { transform: rotate(360deg); } }
+#banner .k-slain h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chGlint 1.6s linear infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 55ms + 500ms); }
+@keyframes chGlint { 0%, 70%, 100% { color: var(--gold); transform: none; } 80% { color: #fff; transform: translateY(-4px) scale(1.15); } }
+#banner .k-slain .bspr { animation: bsprIn .5s backwards, slainSpin 2.4s ease-in .4s forwards; filter: grayscale(.6) drop-shadow(0 0 6px #fff); }
+@keyframes slainSpin { 40% { transform: rotate(-12deg) translateY(4px); } 100% { transform: rotate(-90deg) translateY(30px) scale(.6); opacity: 0; } }
+#banner .k-alarm { border-color: #ff8a3a; animation: bannerIn 2.6s forwards, alarmFlash .3s steps(2) infinite; }
+@keyframes alarmFlash { 50% { border-color: #ffde3a; box-shadow: 0 0 22px rgba(255,138,58,.7); } }
+#banner .k-alarm h2 { color: #ffb05a; }
+#banner .k-alarm h2.alive .ch { animation: chIn .4s backwards, chShake .2s steps(2) infinite; animation-delay: calc(var(--i) * 30ms), calc(var(--i) * 30ms + 400ms); }
+
+/* boss card (boss warning) and boss rows in the siege scouting list */
+.bosscard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px; border: 3px solid var(--ink); border-radius: 8px;
+  background: repeating-linear-gradient(-45deg, rgba(255,40,80,.16) 0 10px, transparent 10px 20px), linear-gradient(160deg, #4a1028, #1c0a1e); background-size: 28px 28px, auto;
+  box-shadow: 0 4px 0 var(--ink), inset 0 0 0 2px rgba(255,61,110,.6); animation: hazard 1s linear infinite, bossCardPulse 1.1s ease-in-out infinite alternate; }
+.bosscard.mini { background-color: #2a0c26; }
+@keyframes bossCardPulse { to { box-shadow: 0 4px 0 var(--ink), inset 0 0 0 2px #ff3d6e, 0 0 24px -2px rgba(255,61,110,.8); } }
+.bosscard .bcp { display: grid; place-items: center; height: 96px; border: 2px solid var(--ink); border-radius: 6px; background: radial-gradient(circle at 50% 65%, #ff3d6e55, transparent 70%), #2a0a1a; }
+.bosscard .bcp img { width: 84px; height: 84px; animation: bossBreath 1.2s ease-in-out infinite, bossTwitch 3.2s steps(1) infinite; }
+@keyframes bossBreath { 50% { transform: translateY(-3px) scale(1.04, .97); } }
+@keyframes bossTwitch { 0%, 88%, 100% { translate: 0 0; filter: none; } 90% { translate: -2px 0; filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(4); } 93% { translate: 2px 0; } 96% { translate: -1px 0; } }
+.bosscard .btag { display: inline-block; font: 600 12px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: #1a1230; background: #ff3d6e; padding: 1px 8px; border-radius: 4px; animation: alarmFlash .5s steps(2) infinite; border: 2px solid #1a1230; }
+.bosscard h2 { margin: 6px 0 4px; color: #ffd0d8; text-shadow: 2px 2px 0 var(--ink), 0 0 12px #ff2a4a; }
+.bosscard q { display: block; font-family: var(--f-display); color: #ff8a9a; font-size: 14px; }
+.bosscard q .w { animation: wIn .3s ease-out backwards, chShake .2s steps(2) infinite; animation-delay: calc(var(--i) * 90ms + 500ms), calc(var(--i) * 37ms + 1.2s); }
+.intel .foe.boss { border-radius: 4px; animation: foeBoss 1.2s ease-in-out infinite alternate; }
+@keyframes foeBoss { from { box-shadow: 0 0 0 1px rgba(255,61,110,.35); } to { box-shadow: 0 0 0 2px #ff3d6e, 0 0 14px -2px #ff3d6e; background: rgba(255,61,110,.10); } }
+.intel .foe.boss img { animation: bossBreath 1.2s ease-in-out infinite, bossTwitch 3.2s steps(1) infinite; }
+.intel .foe.boss b { color: #ff8a9a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dcard.deal, .ecard.deal, .lcard.deal, h2.alive .ch, #banner h2.alive .ch, #banner p .w, .bosscard, .bosscard *, .intel .foe.boss, .intel .foe.boss img, .sheet.special, .dcard.armed, #banner .in::before, #banner .bspr { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
 </style>
 <div id="app">
   <header class="hud">
@@ -1263,7 +1364,7 @@ const HEROES = [
   { id: 'thessa', name: 'Thessa Windleaf', race: 'elf', cls: 'ranger', tier: 1, ability: 'glacierLance', aName: 'Glacier Lance', aDesc: 'Looses a giant arrow of ice across the whole field. The first foe hit takes {0} and freezes for up to 3.5s, longer the farther it flew. Everything else in its path takes 60% and is slowed.', proj: 'arrow',
     spr: { head: 'elf', skin: SK.tan, hair: '#5fe0e8', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, ability: 'whirlwind', aName: 'Tusk Cyclone', aDesc: 'Hurls a roaring cyclone down the lane. It drags foes into its eye and hits everything inside 10 times for {0}.',
-    spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'axe', metal: '#d8dde8' } },
+    spr: { head: 'orc', skin: SK.orc, hair: '#2b2b2b', hairStyle: 'mohawk', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#d84b3a', weapon: 'greataxe', metal: '#d8dde8' } },
   { id: 'rattle', name: 'Rattlebones', race: 'skeleton', cls: 'guardian', tier: 1, ability: 'cryptGrasp', aName: 'Grasp of the Crypt', aDesc: 'Taunts every foe in a wide circle, then grave hands burst up under the biggest crowd, dealing {0} and binding every foe there for 1.5s.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'horns', hornCol: '#7a6ae0', armor: '#7a6ae0', armor2: '#4b3fa0', cloth: '#4b3fa0', weapon: 'shield', metal: '#f1ecdc' } },
   { id: 'pip', name: 'Pip Puddlefoot', race: 'toad', cls: 'cleric', tier: 1, ability: 'lotusSanctuary', aName: 'Lotus Sanctuary', aDesc: 'A great lotus blooms under your heroes for 4s. Allies inside heal {0} every half second and take 25% less damage, then it bursts to heal {1}.', proj: 'heal',
@@ -1282,7 +1383,7 @@ const HEROES = [
   { id: 'morrow', name: 'Morrow the Hollow', race: 'skeleton', cls: 'mage', tier: 2, ability: 'raiseDead', aName: 'Hollow Legion', aDesc: 'Tears open a bone gate on the field. 2 hollow knights march out with {0} HP and {1} attack and fight until the siege ends.', proj: 'soul',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'hood', armor: '#3b2a5c', armor2: '#24183a', cloth: '#6f4ad8', weapon: 'staff', gem: '#9dff6a' } },
   { id: 'bogs', name: 'Bogsworth', race: 'toad', cls: 'ranger', tier: 2, ability: 'tongueLash', aName: 'Mega Lash', aDesc: 'A tongue the length of the field whips through the enemy line for {1}, then snaps back with the toughest foe, stunning it for 2s and dealing {0}.', proj: 'spit',
-    spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'spear', metal: '#e6f0ff' } },
+    spr: { head: 'toad', skin: SK.toad2, belly: '#ffe3b0', hat: 'bandana', armor: '#3b8f5a', armor2: '#24603a', cloth: '#ffd84a', weapon: 'crossbow', metal: '#e6f0ff' } },
   { id: 'ursa', name: 'Ursa Mossback', race: 'beast', cls: 'guardian', tier: 2, ability: 'thunderRoar', aName: 'Primal Storm', aDesc: 'Taunts every foe in a wide circle and calls a thunderhead over your heroes. Allies gain {0} attack for 4s while lightning strikes nearby foes for {1}.',
     spr: { head: 'beast', skin: '#8a5a32', snout: '#d9b48a', hat: 'none', ears: 'round', armor: '#6aa84f', armor2: '#3f7030', cloth: '#ffd84a', weapon: 'shield', metal: '#d9c38a' } },
   { id: 'zogra', name: 'Zogra Drumhide', race: 'orc', cls: 'cleric', tier: 2, ability: 'warDrums', aName: 'Drums of the Warhost', aDesc: 'Giant spirit drums boom behind your line. Allies get +45% attack speed for 4s and heal {0}, and every beat rolls a shockwave down the field for {1}.', proj: 'heal',
@@ -1293,7 +1394,7 @@ const HEROES = [
   { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, ability: 'rampage', aName: 'Wild Hunt', aDesc: 'Charges through the enemy line with a pack of spirit wolves. Everything in the way takes {0}, the wolves bite for {1}, and Hrolf fights 40% faster for 4s.',
     spr: { head: 'beast', skin: '#9a5a2a', snout: '#e8c49a', hat: 'horns', hornCol: '#f1ecdc', ears: 'round', armor: '#7a4a2a', armor2: '#4a2a1a', cloth: '#e8434d', weapon: 'axe', metal: '#d8dde8', cape: '#5a3a8c' } },
   { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, ability: 'earthsplitter', aName: 'Doomhorn Drop', aDesc: 'Leaps into the sky and crashes into the biggest crowd for {0}, stunning for 1s. The ground splits into lava fissures that burn for {1} a second.',
-    spr: { head: 'orc', skin: '#4faa3a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'hammer', metal: '#ffcf3a', cape: '#e8434d' } },
+    spr: { head: 'orc', skin: '#4faa3a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'flail', metal: '#ffcf3a', cape: '#e8434d' } },
   { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, ability: 'deathMark', aName: 'Danse Macabre', aDesc: 'Marks 4 enemies with a phantom rose. After 1.5s a spectral scythe cuts each for {0}. From Epic up, foes it kills pass the mark on to the nearest enemy.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
   { id: 'croak', name: 'Old Mother Croak', race: 'toad', cls: 'mage', tier: 3, ability: 'greatFlood', aName: 'Tsunami', aDesc: 'A towering wave rolls across the whole field for {0}, pushing every enemy back and slowing them.', proj: 'bubble',
@@ -1336,13 +1437,13 @@ const HEROES = [
   { id: 'lirien', name: 'Lirien Dawnstring', race: 'elf', cls: 'ranger', tier: 3, fixed: 5, ability: 'arrowOfDawn', aName: 'Arrow of Dawn', aDesc: 'Looses one arrow into the sky. It bursts into 20 shards of light over the enemy side, each dealing {0}, and the sunrise heals every ally for {1}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#ffe066', hairStyle: 'long', hat: 'crown', armor: '#ffffff', armor2: '#ffd84a', cloth: '#ff9a4a', weapon: 'bow', cape: '#ffd84a', halo: '#ffffff', wings: '#fff3c0' } },
   { id: 'ribbsby', name: 'Sir Ribbsby', race: 'toad', cls: 'ranger', tier: 1, ability: 'lilyBombs', aName: 'Lily Bombardment', aDesc: 'Lobs 5 giant lily bombs that bounce 3 times along the enemy line, exploding for {0} with every bounce.',
-    spr: { head: 'toad', skin: '#7ad46a', belly: '#f0ffd0', hat: 'tricorn', armor: '#ff7aa8', armor2: '#c04a7a', cloth: '#ffffff', weapon: 'cannon', metal: '#3a8a5a' } },
+    spr: { head: 'toad', skin: '#7ad46a', belly: '#f0ffd0', hat: 'tricorn', armor: '#ff7aa8', armor2: '#c04a7a', cloth: '#ffffff', weapon: 'crossbow', metal: '#3a8a5a' } },
   { id: 'brakka', name: 'Brakka Skullsplitter', race: 'orc', cls: 'berserker', tier: 1, ability: 'bloodMoon', aName: 'Blood Moon', aDesc: 'A blood moon rises as Brakka leaps into the biggest crowd for {0}. The ground there bleeds for 4s: foes take {1} a second and Brakka heals for half of it.',
-    spr: { head: 'orc', skin: '#6aaa3a', hair: '#c02a2a', hairStyle: 'mohawk', hat: 'none', armor: '#5a2a2a', armor2: '#3a1a1a', cloth: '#ff3d3d', weapon: 'axe', metal: '#f1ecdc' } },
+    spr: { head: 'orc', skin: '#6aaa3a', hair: '#c02a2a', hairStyle: 'mohawk', hat: 'none', armor: '#5a2a2a', armor2: '#3a1a1a', cloth: '#ff3d3d', weapon: 'cleaver', metal: '#f1ecdc' } },
   { id: 'haldor', name: 'Haldor Ironbelly', race: 'dwarf', cls: 'berserker', tier: 2, ability: 'anvilDrop', aName: 'Anvil of the Mountain King', aDesc: 'Calls down an anvil the size of a house on the biggest crowd for {0}, stunning for 1.2s. Sparks burst out and hit nearby foes for {1}.',
-    spr: { head: 'dwarf', skin: SK.brown, hair: '#ff6a2a', hat: 'horns', hornCol: '#e8e8f0', armor: '#4a4a5a', armor2: '#2a2a3a', cloth: '#ff8a2a', weapon: 'hammer', metal: '#ffcf3a' } },
+    spr: { head: 'dwarf', skin: SK.brown, hair: '#ff6a2a', hat: 'horns', hornCol: '#e8e8f0', armor: '#4a4a5a', armor2: '#2a2a3a', cloth: '#ff8a2a', weapon: 'maul', metal: '#ffcf3a' } },
   { id: 'bjorna', name: 'Bjorna Frostmaw', race: 'beast', cls: 'berserker', tier: 3, fixed: 4, ability: 'avalanche', aName: 'Avalanche Charge', aDesc: 'A giant spirit bear of ice charges the whole length of the field. Everything in the way takes {0}, is frozen for 1.5s and knocked back. Bjorna fights 50% faster for 4s.',
-    spr: { head: 'beast', skin: '#e8eef8', snout: '#ffffff', ears: 'round', hat: 'none', armor: '#5fa8d8', armor2: '#2a5a8a', cloth: '#ffffff', weapon: 'axe', metal: '#bff4ff', cape: '#9ff6ff', wings: '#d8f6ff' } },
+    spr: { head: 'beast', skin: '#e8eef8', snout: '#ffffff', ears: 'round', hat: 'none', armor: '#5fa8d8', armor2: '#2a5a8a', cloth: '#ffffff', weapon: 'greataxe', metal: '#bff4ff', cape: '#9ff6ff', wings: '#d8f6ff' } },
   { id: 'grimbone', name: 'Grimbone the Reaper', race: 'skeleton', cls: 'berserker', tier: 3, fixed: 5, ability: 'soulHarvest', aName: 'Harvest of Souls', aDesc: 'A scythe as tall as the sky sweeps across the whole field, cutting every enemy for {0}. Each foe it kills sends a soul back that heals Grimbone for {1}.',
     spr: { head: 'skeleton', skin: SK.bone, eye: '#9dff6a', hat: 'hood', armor: '#1a1a2a', armor2: '#0a0a14', cloth: '#3a2a5a', weapon: 'scythe', metal: '#e8ffd0', halo: '#9dff6a', wings: '#3a2a5a' } },
   { id: 'bramble', name: 'Mother Bramble', race: 'beast', cls: 'cleric', tier: 2, ability: 'groveOfRenewal', aName: 'Grove of Renewal', aDesc: 'A great oak bursts up among your heroes. For 4s it heals every ally near it for {0} each second, and its roots bind foes that come close.',
@@ -1419,14 +1520,14 @@ const ENEMIES = {
   chicken: { name: 'Very Confident Chicken', hp: 38, atk: 5, as: 1.2, range: 12, spd: 46, armor: 0, gold: 4, cost: 0.5, kind: 'melee', small: true, spr: { gen: 'bird', body: '#ffffff', wing: '#e8e4d8', beak: '#ffb02e', comb: '#ff3d3d' } },
   goose:   { name: 'The Goose', hp: 520, atk: 6, as: 1.4, range: 12, spd: 52, armor: 10, gold: 45, cost: 3, kind: 'melee', spr: { gen: 'bird', body: '#f4f4f0', wing: '#c8c8d0', beak: '#ff8a1a', neck: true } },
   // bosses
-  grubnose: { name: 'Grubnose the Goblin King', boss: 'mini', hp: 2600, atk: 34, as: 0.8, range: 22, spd: 13, armor: 25, gold: 220, kind: 'melee', scale: 2, skills: ['slam', 'summon:grunt'], spr: { gen: 'humanoid', head: 'goblin', skin: '#7ac83a', hat: 'crown', armor: '#d83a5a', armor2: '#8a1a3a', cloth: '#ffd84a', weapon: 'hammer', metal: '#ffcf3a', cape: '#7a3ad8' } },
+  grubnose: { name: 'Grubnose the Goblin King', boss: 'mini', hp: 2600, atk: 34, as: 0.8, range: 22, spd: 13, armor: 25, gold: 220, kind: 'melee', scale: 2, skills: ['slam', 'summon:grunt'], spr: { gen: 'humanoid', head: 'goblin', skin: '#7ac83a', hat: 'crown', armor: '#d83a5a', armor2: '#8a1a3a', cloth: '#ffd84a', weapon: 'kingclub', metal: '#ffcf3a', cape: '#7a3ad8' } },
   gloop:    { name: 'Mother Gloop', boss: 'mini', hp: 4200, atk: 36, as: 0.7, range: 22, spd: 11, armor: 15, gold: 300, kind: 'melee', scale: 2, split: 'slime', skills: ['slam', 'summon:slimelet'], spr: { gen: 'slime', body: '#5ad84a', eye: '#1a1230', crown: true } },
   wyrm:     { name: 'Vexmora, the Ashen Wyrm', boss: 'big', hp: 14000, atk: 60, as: 0.6, range: 30, spd: 10, armor: 35, gold: 900, kind: 'melee', scale: 3, skills: ['breath', 'gust', 'fireRain'], spr: { gen: 'quad', body: '#5a4a6a', belly: '#ff9a4a', eye: '#ffde3a', wings: true, horns: true } },
   ringmaster:{ name: 'Ringmaster Malgoth', boss: 'mini', hp: 13000, atk: 70, as: 0.8, range: 22, spd: 13, armor: 40, gold: 700, kind: 'melee', scale: 2, skills: ['slam', 'summon:imp', 'fireRain'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff5a5a', hair: '#1a1a1a', hat: 'wizard', armor: '#2a1a4a', armor2: '#1a0f2a', cloth: '#ffd84a', weapon: 'staff', gem: '#ff3a3a', cape: '#ffd84a' } },
   matriarch:{ name: 'The Yeti Matriarch', boss: 'mini', hp: 22000, atk: 95, as: 0.7, range: 22, spd: 12, armor: 50, gold: 1000, kind: 'melee', scale: 2, skills: ['slam', 'summon:snowwolf', 'gust'], spr: { gen: 'humanoid', head: 'beast', skin: '#ffffff', snout: '#9ab0d8', ears: 'round', hat: 'crown', armor: '#e8f0ff', armor2: '#b8c8e8', cloth: '#5fd3ff', weapon: 'none' } },
   sporebaron:{ name: 'The Spore Baron', boss: 'mini', hp: 16000, atk: 80, as: 0.7, range: 22, spd: 12, armor: 40, gold: 800, kind: 'melee', scale: 2, skills: ['slam', 'summon:shroom', 'gust'], spr: { gen: 'humanoid', head: 'goblin', skin: '#f4e4c8', hat: 'wizard', armor: '#8a3ad8', armor2: '#5a1a9a', cloth: '#e84a5a', weapon: 'staff', gem: '#c8ff6a', cape: '#e84a5a' } },
-  trashpaw: { name: 'Big Mama Trashpaw', boss: 'mini', hp: 30000, atk: 110, as: 0.8, range: 22, spd: 14, armor: 55, gold: 1200, kind: 'melee', scale: 2, skills: ['slam', 'summon:bandit', 'fireRain'], spr: { gen: 'humanoid', head: 'beast', skin: '#7a7a8a', snout: '#2a2a3a', ears: 'round', hat: 'none', armor: '#c84a8a', armor2: '#8a2a5a', cloth: '#3a3a4a', weapon: 'hammer', metal: '#c8c8d8', cape: '#5a3a7a' } },
-  pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'sword', metal: '#ffd84a', cape: '#a82a3a' } },
+  trashpaw: { name: 'Big Mama Trashpaw', boss: 'mini', hp: 30000, atk: 110, as: 0.8, range: 22, spd: 14, armor: 55, gold: 1200, kind: 'melee', scale: 2, skills: ['slam', 'summon:bandit', 'fireRain'], spr: { gen: 'humanoid', head: 'beast', skin: '#7a7a8a', snout: '#2a2a3a', ears: 'round', hat: 'none', armor: '#c84a8a', armor2: '#8a2a5a', cloth: '#3a3a4a', weapon: 'pan', metal: '#c8c8d8', cape: '#5a3a7a' } },
+  pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'cutlass', metal: '#ffd84a', cape: '#a82a3a' } },
   shardgoose: { name: 'The Shard-Crowned Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3.2, skills: ['breath', 'slam', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#d8d0f0', beak: '#ff8a1a', neck: true, crown: '#c98aff' } },
   goosegod: { name: 'The Eternal Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3, skills: ['breath', 'slam', 'summon:chicken', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#c8c8d0', beak: '#ff8a1a', neck: true, crown: '#ffd84a' } },
   colossus: { name: 'The Brass Colossus', boss: 'big', hp: 60000, atk: 130, as: 0.5, range: 30, spd: 9, armor: 60, gold: 2500, kind: 'melee', scale: 3, skills: ['laser', 'slam', 'summon:cog'], spr: { gen: 'golem', body: '#e8b84a', trim: '#8a5a2a', eye: '#ff3a5a', crown: true } },
@@ -1468,7 +1569,7 @@ const VAULT_LORE = {
 }; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.5';
+const VERSION = 'phase3.6';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -2132,6 +2233,77 @@ function drawWeapon(g, s, type, hx, hy, atk) {
   }
 }
 
+// Held weapons drawn from small pixel maps. Each map has its hand cell (o: [col,row]) and where
+// that hand sits on the 20x20 body (at: [x,y], defaults below). Letters pick colours:
+// M metal, D dark metal, L sheen (flat), W wood, w dark wood, G gold, g dark gold, R gem,
+// S bowstring, a arrow shaft, f fletching, H hand (skin), C chain, N/I/X iron mid/light/dark,
+// B armour trim, A emblem, k dark haft, F/E muzzle flash.
+const WPN = {
+  sword: {
+    i: { o: [1, 9], r: ['.L..', '.LM.', '.LM.', '.LM.', '.LM.', '.LM.', '.LM.', '.LD.', 'GGGG', '.H..', '.g..'] },
+    a: { o: [2, 5], r: ['......L', '.....LM', '....LM.', '...LM..', '.GLM...', '..HG...', '.g.....'] } },
+  cutlass: {
+    i: { o: [1, 9], r: ['...pP', '..pPP', '..pP.', '.pP..', '.pP..', '.pP..', '.pQ..', 'GGGG.', 'G..G.', 'GH.G.', '.g...'] },
+    a: { o: [2, 5], r: ['.....pP', '.....pP', '....pP.', '...pP..', '.GpP...', 'G.HG...', '.GG....'] } },
+  axe: {
+    i: { o: [1, 8], r: ['.M..L', '.WMML', 'DWMML', '.WMML', '.W..L', '.W...', '.W...', '.W...', '.H...', '.W...', '.w...'] },
+    a: { o: [2, 3], r: ['......L', '....MML', '....MML', 'wWHWWML', '....MML', '......L'] } },
+  greataxe: {
+    i: { o: [2, 12], r: ['..M...L', '.LWMMML', 'LMWMMML', 'LMWMMML', 'LMWMMML', '.LWMMML', '..W..ML', '..W...L', '..W....', '..W....', '..W....', '..W....', '..H....', '..W....', '..w....'], at: [15, 13] },
+    a: { o: [2, 4], r: ['....L.L', '....MMM', '....MMM', '.....M.', 'wWHWWMW', '.....M.', '....MMM', '....MMM', '....L.L'] } },
+  hammer: {
+    i: { o: [1, 8], r: ['.M...', 'MMMMD', 'MGGMD', 'MMMMD', '.W...', '.W...', '.W...', '.W...', '.H...', '.W...', '.w...'] },
+    a: { o: [2, 2], r: ['....MML', '....MGL', 'wWHWMGL', '....MGL', '....MML'] } },
+  maul: {
+    i: { o: [2, 12], r: ['.LLLL.', 'DMMMMD', 'DGGGGD', 'DMMMMD', '.DDDD.', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..H...', '..W...', '..w...'] },
+    a: { o: [2, 3], r: ['...DMML', '...DMML', '...DGGL', 'wWHDGGL', '...DGGL', '...DMML', '...DMML'] } },
+  cleaver: {
+    i: { o: [0, 7], r: ['XNNI', 'XKNI', 'XNNI', 'XNNI', 'XNNI', 'XXXI', 'W...', 'H...', 'w...'] },
+    a: { o: [2, 0], r: ['wWHXXXX', '...NKNN', '...NNNN', '...NNNN', '...IIII'] } },
+  flail: {
+    i: { o: [0, 9], r: ['..M.', '.MLM', 'MMMD', '.MDD', '..M.', '.C..', 'C...', 'W...', 'W...', 'H...', 'w...'] },
+    a: { o: [0, 4], r: ['...M.', '..MLM', '.CMMD', '.W.M.', 'H....'] } },
+  scythe: {
+    i: { o: [7, 13], r: ['..LLLLMM', '.LMMMMMD', 'LM.....k', 'L......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......H', '.......k', '.......k'] },
+    a: { o: [5, 0], r: ['kkkkkHkkkM', '.......LMM', '......LMM.', '.....LM...', '....L.....'] } },
+  daggers: {
+    i: { o: [1, 4], r: ['.L.', '.LM', '.LM', 'GGG', '.H.'] },
+    a: { o: [0, 1], r: ['.GLL.', 'HGMML', '.G...'] },
+    b: { o: [1, 0], r: ['.H.', 'GGG', 'LM.', 'L..'] } },
+  spear: {
+    i: { o: [1, 12], r: ['.L.', 'LMM', 'LMD', '.M.', 'GGG', '.W.', '.W.', '.W.', '.W.', '.W.', '.W.', '.W.', '.H.', '.W.', '.W.', '.w.'] },
+    a: { o: [3, 1], r: ['.....M..', 'wWWHWMML', '.....M..'] } },
+  shield: {
+    i: { o: [2, 5], r: ['MMMMMM', 'MBBBBM', 'MBAABM', 'MBAABM', 'MBBBBM', '.MBBM.', '.MBBM.', '..MM..'] },
+    a: { o: [1, 4], r: ['MMMMMM', 'MBBBBM', 'MBAABM', 'MBAABM', 'MBBBBM', '.MBBM.', '.MBBM.', '..MM..'], at: [15, 11] } },
+  bow: {
+    i: { o: [3, 5], r: ['.Gw...', 'S.WW..', 'S..W..', 'S..WW.', 'S...W.', 'SaaHWL', 'S...W.', 'S..WW.', 'S..W..', 'S.WW..', '.Gw...'], at: [17, 13] },
+    a: { o: [5, 5], r: ['...Gw...', '..S.WW..', '..S..W..', '.S...WW.', '.S....W.', 'SfaaaHWL', '.S....W.', '.S...WW.', '..S..W..', '..S.WW..', '...Gw...'], at: [17, 12] } },
+  crossbow: {
+    i: { o: [3, 4], r: ['....Gw.', '....SW.', '..aaaWL', 'wWWWWWD', 'wW.HwW.', '....SW.', '....Gw.'] },
+    a: { o: [2, 4], r: ['....Gw.', '....SW.', '.....WF', 'wWWWWWD', 'wWH.wW.', '....SW.', '....Gw.'] } },
+  cannon: {
+    i: { o: [4, 4], r: ['.......X', '..IIIIIN', '..NNGNNN', 'wWXXGXXX', 'wW..H..X'] },
+    a: { o: [4, 4], r: ['.......X.', '..IIIIINE', '..NNGNNNF', 'wWXXGXXXE', 'wW..H..X.'] } },
+  kingclub: {
+    i: { o: [1, 11], r: ['G.G.G', 'GGRGG', 'WWWWW', 'MWwWM', 'WWWWW', 'MWWwM', '.WWW.', '.WW..', '.W...', '.W...', '.W...', '.H...', '.w...'] },
+    a: { o: [2, 3], r: ['....M.G', '...WWWG', '..WWwWR', 'wWHWWWG', '..WWWWG', '...WwWG', '....M.G'] } },
+  pan: {
+    i: { o: [2, 9], r: ['.XXX.', 'XNNNX', 'XNINX', 'XNNNX', '.XXX.', '..W..', '..W..', '..W..', '..W..', '..H..'], at: [17, 13] },
+    a: { o: [0, 3], r: ['..XX.', '.XNNX', '.XNIX', 'HWNNX', '.XNNX', '..XX.'] } },
+};
+function weaponPal(s) {
+  const m = s.metal || '#dfe6f5';
+  return { M: [m], D: [shade(m, -0.35)], L: [shade(m, 0.6), 1], W: ['#9a6332'], w: ['#6b4022', 1], G: ['#ffcf3a'], g: ['#c8901a', 1],
+    R: ['#ff3d6e', 1], S: ['#f4f1ff', 1], a: ['#c9a06a', 1], f: ['#ff5d6e', 1], H: [s.skin], C: ['#9a9ab0', 1], K: [OUTLINE, 1],
+    N: ['#6a7488'], I: ['#b4bed2', 1], X: ['#3e465a'], B: [s.armor2 || '#6c7fb8'], A: [s.cape || s.cloth || '#ffcf3a', 1],
+    k: ['#3a2a2a'], P: ['#dfe6f5'], p: ['#ffffff', 1], Q: ['#9aa4b8'], F: ['#ffde3a', 1], E: ['#ff8a3a', 1] };
+}
+function drawWpnMap(g, map, pal, ax, ay) {
+  const [ox, oy] = map.o;
+  map.r.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const p = pal[row[rx]]; if (p) g.set(ax + rx - ox, ay + ry - oy, p[0], !!p[1]); } });
+}
+
 function genHumanoid(s, frame) {
   const g = new PixGrid(20, 20);
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
@@ -2231,7 +2403,14 @@ function genHumanoid(s, frame) {
   // halo floats above whatever is on the head
   if (s.halo) { const hy0 = Math.max(0, hatY - (s.hat && s.hat !== 'none' ? 1 : -1)); g.rect(7, hy0, 11, hy0, s.halo, true); g.set(6, hy0 + 1, s.halo, true); g.set(12, hy0 + 1, s.halo, true); }
   // front arm + weapon
-  if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
+  const wp = WPN[s.weapon];
+  if (wp) {
+    const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
+    if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
+    else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
+    g.set(ax, ay, skin); drawWpnMap(g, map, pal, ax, ay);
+    if (wp.b) drawWpnMap(g, wp.b, pal, 5, 15 + by);
+  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
   else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); drawWeapon(g, s, s.weapon, 12, 14 + by, false); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   return g.finish();
@@ -3472,7 +3651,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
-    FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name); FX.shake(6); FX.sound('boss'); }
+    FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name, { kind: 'boss', spr: 'e:' + id }); FX.shake(6); FX.sound('boss'); }
   if (id === 'goose') FX.text(u.x - 20, u.y - 20, 'HONK', '#ffffff', true, true);
   B.enemies.push(u); return u;
 }
@@ -3617,7 +3796,7 @@ function killUnit(B, u, src) {
   else if (u.id === 'goose') drops = 1;
   for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
-  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name); B.bossKilled = u.def.boss; }
+  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
 }
 
 function chainLightning(B, src, first, dmg, n, color, from) {
@@ -5140,7 +5319,7 @@ const FX = {
   petals() { for (let i = 0; i < 60; i++) FXS.petals.push({ x: rand(0, W), y: rand(-60, 0), vx: rand(5, 25), vy: rand(30, 60), t: 0, life: rand(2, 3.5), color: pick(['#ff9fd0', '#ffffff', '#ffd84a']), spin: rand(0, 6) }); },
   gust() { for (let i = 0; i < 30; i++) FXS.gusts.push({ x: W + rand(0, 60), y: rand(100, 250), len: rand(10, 30), t: 0, life: rand(0.5, 0.9), vx: -rand(300, 420) }); },
   breath(x, y) { for (let i = 0; i < 10; i++) FXS.parts.push({ x, y: y + rand(-3, 3), vx: -rand(120, 200), vy: rand(-30, 40), life: rand(0.4, 0.6), t: 0, color: pick(['#ffde3a', '#ff8a3a', '#ff3d3d']), size: 2, grav: 0 }); },
-  banner(title, sub) { UI.banner(title, sub); },
+  banner(title, sub, o) { UI.banner(title, sub, o); },
   // stacked damage numbers: successive hits on the same target stack upward
   dmg(tgt, amount, kind = 'hit') {
     const id = tgt.uid || 'x', st = FXS.stack[id] || (FXS.stack[id] = { last: -9, n: 0 });
@@ -5234,6 +5413,9 @@ const SFX = {
       case 'buy': T(660, 0.07, 'square', 0.06); T(990, 0.1, 'square', 0.06, 1, 0.06); break;
       case 'level': [523, 659, 784].forEach((f, i) => T(f, 0.1, 'square', 0.06, 1, i * 0.05)); break;
       case 'click': T(1200, 0.03, 'square', 0.04); break;
+      case 'hover': T(1700, 0.025, 'triangle', 0.022); break;
+      case 'flip': N(0.06, 0.1, 2600, 0, 1.4); T(520, 0.05, 'triangle', 0.035, 1.8); break;
+      case 'stamp': N(0.09, 0.22, 420); T(200, 0.1, 'square', 0.09, 0.6); T(1320, 0.22, 'triangle', 0.05, 1, 0.05); T(1760, 0.2, 'triangle', 0.035, 1, 0.1); break;
       case 'error': T(160, 0.15, 'square', 0.08); break;
       case 'victory': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => T(f, 0.16, 'square', 0.07, 1, i * 0.1)); break;
       case 'floor': N(0.3, 0.45, 180, 0, 0.5); T(70, 0.3, 'sine', 0.4, 0.5); break;
@@ -7655,6 +7837,30 @@ const STAT_SRC = {
 };
 const COMBO_GLYPH = { nova: '✹', rain: '☄', wave: '≋', heal: '✚', shield: '⛨', haste: '➹', rage: '✊', freeze: '❄', gold: '◉', shred: '✂', vortex: '◎', critter: '❧', execute: '☠', beam: '═', bolts: 'ϟ', roots: '❦', salt: '✧', candy: '✿', ham: '♨', pinata: '★' };
 const DSRC_ORDER = ['auto', 'ability', 'item', 'element', 'bonus', 'summon'], HSRC_ORDER = ['ability', 'auto', 'lifesteal', 'item', 'element'], TSRC_ORDER = ['melee', 'ranged', 'boss', 'poison', 'other'];
+function aliveText(t) { let i = 0; return String(t).split(' ').map(w => `<span class="wd">${[...w].map(c => `<span class="ch" style="--i:${i++}">${esc(c)}</span>`).join('')}</span>`).join(' '); }
+function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(' '); }
+// card feel: tilt toward the pointer, a soft tick on hover, a squash on press, and a burst when a card is picked
+(function cardFeel() {
+  if (typeof document === 'undefined') return;
+  const SEL = '.dcard, .ecard, .lcard'; let cur = null;
+  document.addEventListener('pointermove', e => {
+    const c = e.target.closest ? e.target.closest(SEL) : null;
+    if (c !== cur) { if (cur) { cur.style.removeProperty('--rx'); cur.style.removeProperty('--ry'); } cur = c; if (c && e.pointerType === 'mouse' && !c.disabled) SFX.play('hover'); }
+    if (!c || e.pointerType !== 'mouse') return;
+    const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    c.style.setProperty('--ry', ((x - 0.5) * 9).toFixed(1) + 'deg'); c.style.setProperty('--rx', ((0.5 - y) * 7).toFixed(1) + 'deg');
+    c.style.setProperty('--mx', Math.round(x * 100) + '%'); c.style.setProperty('--my', Math.round(y * 100) + '%');
+  }, { passive: true });
+  document.addEventListener('click', e => {
+    const c = e.target.closest ? e.target.closest(SEL) : null; if (!c || c.disabled || !c.closest('#modal')) return;
+    const r = c.getBoundingClientRect(), html = c.outerHTML, cs = getComputedStyle(c);
+    const col = (cs.getPropertyValue('--rc') || cs.getPropertyValue('--ec') || '').trim() || '#ffcf3a';
+    setTimeout(() => {
+      if (c.isConnected && !$('modal').hidden) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); return; }
+      UI.pickFX(r, html, col);
+    }, 0);
+  }, true);
+})();
 const UI = {
   pendingGold: 0, shownGold: 0, page: null, techSel: null, recipeSel: null,
   init() {
@@ -7711,7 +7917,33 @@ const UI = {
       el.appendChild(s); setTimeout(() => s.remove(), 1000); }
   },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
-  banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
+  // banners: letters drop in one by one and keep moving; o.kind picks the mood (boss, slain, alarm, hero, info), o.spr shows a sprite
+  banner(title, sub, o = {}) {
+    const T = String(title), k = o.kind || (/SLAIN|falls$/i.test(T) ? 'slain' : /^(BOSS|MINI-BOSS|Boss approaching)/.test(T) ? 'boss' : /OVERTIME|GOT AWAY|fallen/i.test(T) ? 'alarm' : 'info');
+    const spr = o.spr ? `<img class="bspr px" src="${portrait(o.spr, k === 'boss' ? 'atk' : 'idle0')}" alt="">` : '';
+    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+  },
+  // modal headings come alive, cards are dealt in with a flip
+  liven(sh) {
+    sh.querySelectorAll('h2').forEach(h => { if (h.children.length || !h.textContent.trim()) return; h.innerHTML = aliveText(h.textContent); h.classList.add('alive'); });
+    if (sh.querySelector('.bosscard, .snatch, .hoard, .rar-card.r4, .rar-card.r5, .cform, h2.sp')) sh.classList.add('special');
+    const cards = [...sh.querySelectorAll('.dcard, .ecard, .lcard')];
+    cards.forEach((c, i) => { c.style.setProperty('--i', i); c.classList.add('deal'); setTimeout(() => SFX.play('flip'), 90 + i * 110); });
+  },
+  bossCardHTML(id) {
+    const d = ENEMIES[id], q = typeof FURY_LINES !== 'undefined' && FURY_LINES[id] ? FURY_LINES[id][0] : '';
+    return `<div class="bosscard ${d.boss === 'big' ? 'big' : 'mini'}"><div class="bcp"><img class="px" src="${portrait('e:' + id, 'atk')}" alt=""></div><div class="bci"><span class="btag">${d.boss === 'big' ? 'Boss' : 'Mini-boss'}</span><h2 class="sp">${esc(d.name)} is coming</h2>${q ? `<q>${aliveWords(q.charAt(0) + q.slice(1).toLowerCase())}</q>` : ''}</div></div>`;
+  },
+  // the picked card pops, flashes and flies off with a burst of sparks
+  pickFX(r, html, col) {
+    const g = document.createElement('div'); g.className = 'pickghost'; g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--pc:${col}`;
+    g.innerHTML = html.replace(/\sid="[^"]*"/g, '');
+    const b = document.createElement('div'); b.className = 'pickburst'; b.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--pc:${col}`;
+    for (let i = 0; i < 16; i++) b.innerHTML += `<i style="--a:${Math.round(i * 22.5 + Math.random() * 12)}deg;--d:${Math.round(70 + Math.random() * 70)}px;--s:${(0.6 + Math.random() * 0.8).toFixed(2)}"></i>`;
+    document.body.append(g, b); setTimeout(() => { g.remove(); b.remove(); }, 950);
+    SFX.play('stamp'); if (G.touchInput && navigator.vibrate) try { navigator.vibrate(14); } catch (e) {}
+  },
+
   flyTo(src, el, sx, sy, done) {
     const layer = $('fxlayer'); if (layer.childElementCount > 50 || document.hidden || !el) { done && done(); return; }
     const tg = el.getBoundingClientRect(); const im = document.createElement('img'); im.className = 'px'; im.src = src; layer.appendChild(im);
@@ -8091,12 +8323,12 @@ const UI = {
   },
 
   // ----- modals -----
-  modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
+  modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; UI.liven($('sheet')); if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
     const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= ROSTER_CAP ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
-    let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
+    let h = `<span class="eyebrow">Hero draft</span><h2${kind === 'summon' ? ' class="sp"' : ''}>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
@@ -8116,7 +8348,7 @@ const UI = {
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="vaultOk">Hold the walls</button></div>`;
   },
   finaleHTML(run) {
-    return `<span class="eyebrow">The goose is not done</span><h2>It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
+    return `<span class="eyebrow">The goose is not done</span><h2 class="sp">It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
       <p>Your captured champions burst out of the goose's nest and come running back. Everyone fights this one, inside the castle's great hall. Knock the shards out of its crown. Each sixth of its health shakes two loose, and it gets weaker without them.</p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="finaleGo">Into the great hall</button></div>`;
   },
@@ -8131,7 +8363,7 @@ const UI = {
   },
   lootHTML(opts, cost) {
     const boss = opts[0] && opts[0].parts.length === 2;
-    let h = `<span class="eyebrow">Spoils of the siege</span><h2>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
+    let h = `<span class="eyebrow">Spoils of the siege</span><h2${boss ? ' class="sp hoard"' : ''}>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
     // components you already hold, and what each offered component would make with them
     const run = G.run, owned = run.stash.filter(it => it.parts.length === 1), keys = [...new Set(owned.map(it => it.parts[0]))];
     const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroDisplayName(hr).split(' ')[0] : 'in the Armory'; };
@@ -8145,7 +8377,7 @@ const UI = {
     return h + `<div class="row" style="justify-content:flex-end"><button class="btn small" id="lootReroll" ${G.run.gold < cost ? 'disabled' : ''}>Reroll ${COST(cost)}</button></div>`;
   },
   elementHTML(hr, opts) {
-    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
+    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2 class="sp">${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
@@ -8159,7 +8391,7 @@ const UI = {
     return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn small" id="cformLater">Decide later</button></div>`;
   },
   castleHTML(opts) {
-    let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2>Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;
+    let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2 class="sp">Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], P = CASTLE_POWERS[e]; h += `<button class="ecard" data-pick="${i}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb castle"><img class="px" src="${castlePreviewURL(e)}" alt=""></div><h3>${E.name} Castle</h3><b class="pw">${esc(P.name)}</b><p>${esc(P.desc)}</p></button>`; });
     return h + `</div>`;
   },
@@ -8888,7 +9120,7 @@ function showDraft() {
     }));
     function picked(o, h, line) {
       G.selected = h.uid; SFX.play('draft');
-      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line);
+      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line, heroBanner(h));
       TEL.event('draft', { id: o.id, rarity: o.rarity || 0, kind });
       if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
@@ -8907,10 +9139,11 @@ function showMakeRoom(o, back, after) {
   }, 'wide');
 }
 // Legend Summons after the boss at 35 (Legendary) and 40 (God)
+const heroBanner = h => ({ kind: 'hero', spr: heroSpriteKey(h), col: RARITY[h.rarity || 0].col });
 function showSummon() {
   const run = G.run, P = run.pendingSummon; if (!P || !P.opts.length) { run.pendingSummon = null; return nextPost(); }
   G.phase = 'draft'; save(); SFX.play('sig');
-  const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
+  const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line, heroBanner(h)); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
@@ -8945,7 +9178,7 @@ function bossReminder() {
   if (techs.length) lines.push(`<li><b>${techs.length} tech${techs.length > 1 ? 's' : ''}</b> you can afford in the Artificers' Hall right now, like ${esc(TECH[techs[0]].name)}.</li>`);
   if (unplaced.length) lines.push(`<li><b>${unplaced.length} champion${unplaced.length > 1 ? 's are' : ' is'}</b> sitting on the bench.</li>`);
   if (!lines.length) return false;
-  UI.modal(`<span class="eyebrow">Boss siege ${s}</span><h2>${esc(boss.name)} is coming</h2><p class="lede">Get ready first. Bosses hit hard and have a signature move.</p><ul class="nag">${lines.join('')}</ul>
+  UI.modal(`<span class="eyebrow">Boss siege ${s}</span>${UI.bossCardHTML(bossFor(s))}<p class="lede">Get ready first. Bosses hit hard and have a signature move.</p><ul class="nag">${lines.join('')}</ul>
     <div class="row" style="justify-content:flex-end;gap:8px">${loose.length ? '<button class="btn" id="nagArmory">Open the Armory</button>' : ''}${techs.length ? '<button class="btn" id="nagHall">Open the Hall</button>' : ''}<button class="btn primary" id="nagFight">Fight now</button></div>`, sh => {
     const a = sh.querySelector('#nagArmory'), h = sh.querySelector('#nagHall');
     if (a) a.onclick = () => { UI.closeModal(); UI.openPage('armory'); };
@@ -9021,7 +9254,7 @@ function showElement(h) {
   SFX.play('sig');
   UI.modal(UI.elementHTML(h, run.pendingEl.opts), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
     const e = run.pendingEl.opts[+b.dataset.pick]; run.pendingEl = null; h.el = e;
-    SFX.play('draft'); UI.closeModal(); UI.banner(heroDisplayName(h), `${ELEMENTS[e].name} awakened`); TEL.event('element', { id: h.id, el: e, lv: h.level });
+    SFX.play('draft'); UI.closeModal(); UI.banner(heroDisplayName(h), `${ELEMENTS[e].name} awakened`, { kind: 'hero', spr: heroSpriteKey(h), col: ELEMENTS[e].col }); TEL.event('element', { id: h.id, el: e, lv: h.level });
     FX.flash(ELEMENTS[e].col, 0.4);
     changed(); nextPost();
   }), 'wide');
@@ -9031,7 +9264,7 @@ function showCastle() {
   const run = G.run; G.phase = 'castle'; if (!run.pendingCastle) run.pendingCastle = castleOptions(run); save();
   UI.modal(UI.castleHTML(run.pendingCastle), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
     const e = run.pendingCastle[+b.dataset.pick]; run.pendingCastle = null; run.castleEl = e;
-    SFX.play('hammer'); UI.closeModal(); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6); UI.banner(`${ELEMENTS[e].name} Castle`, CASTLE_POWERS[e].name);
+    SFX.play('hammer'); UI.closeModal(); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6); UI.banner(`${ELEMENTS[e].name} Castle`, CASTLE_POWERS[e].name, { kind: 'hero', col: ELEMENTS[e].col });
     TEL.event('castle', { el: e });
     changed(); setTimeout(() => UI.coach('power', $('powerBtn'), `Your castle has a new power: ${CASTLE_POWERS[e].name}. Fire it during a siege with this button or the E key.`), 600);
     nextPost();
@@ -9084,7 +9317,7 @@ function toPrep() {
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
-  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
@@ -9128,7 +9361,7 @@ G.act = function (act, arg) {
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
-      SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
+      SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();

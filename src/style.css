@@ -1062,3 +1062,104 @@ html.m-land #synStrip::-webkit-scrollbar { display: none; }
 #synStrip .syb .cnt { top: -3px; right: -3px; min-width: 12px; height: 12px; font-size: 8px; line-height: 12px; }
 #synStrip .syl b { font-size: 10px; } #synStrip .syl small { font-size: 9px; }
 #synStrip .sybw:not(.on) .syl b { display: none; }
+
+/* ===== V46: lively cards, banners and boss cards ===== */
+.ecard, .lcard { position: relative; }
+.dcard.deal, .ecard.deal, .lcard.deal { animation: cardDeal .62s cubic-bezier(.2,.9,.3,1.2) backwards; animation-delay: calc(var(--i, 0) * 110ms + 60ms); }
+@keyframes cardDeal {
+  0% { opacity: 0; transform: perspective(700px) translateY(70px) rotateY(115deg) rotateZ(-8deg) scale(.7); filter: brightness(2.4); }
+  55% { opacity: 1; transform: perspective(700px) translateY(-10px) rotateY(-14deg) rotateZ(1deg) scale(1.04); filter: brightness(1.35); }
+  80% { transform: perspective(700px) translateY(2px) rotateY(4deg) scale(.99); filter: none; }
+  100% { transform: none; } }
+.dcard::after, .ecard::after, .lcard::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .2s;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 30%), rgba(255,255,255,.24), transparent 55%); }
+@media (hover: hover) {
+  .dcard:hover, .ecard:hover, .lcard:hover { transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-6px) scale(1.025); }
+  .dcard:hover::after, .ecard:hover::after, .lcard:hover::after { opacity: 1; }
+  .dcard:hover .dport img { animation: portHop .5s cubic-bezier(.3,1.6,.5,1); }
+}
+@keyframes portHop { 40% { transform: translateY(-7px) scale(1.06); } }
+.dcard:active, .ecard:active, .lcard:active { transform: perspective(700px) translateY(3px) scale(.965) !important; box-shadow: 0 1px 0 var(--ink), 0 0 0 3px var(--gold); transition-duration: .05s; }
+.dcard.bump, .ecard.bump, .lcard.bump { animation: cardBump .38s cubic-bezier(.3,1.6,.5,1); }
+@keyframes cardBump { 0% { transform: scale(.94); } 60% { transform: scale(1.04) rotate(-.6deg); } 100% { transform: none; } }
+.dcard.armed { animation: cardBump .38s cubic-bezier(.3,1.6,.5,1), armedGlow .8s ease-in-out .4s infinite alternate; }
+.dcard.armed .armbar { animation: armPulse .8s ease-in-out infinite alternate; }
+@keyframes armedGlow { to { outline-color: #fff3b0; box-shadow: 0 4px 0 var(--ink), 0 0 18px var(--gold); } }
+@keyframes armPulse { to { filter: brightness(1.2); } }
+.pickghost { position: fixed; z-index: 60; pointer-events: none; animation: pickFly .8s cubic-bezier(.3,.7,.4,1) forwards; }
+.pickghost > * { width: 100%; height: 100%; margin: 0; animation: none !important; transform: none !important; box-shadow: 0 0 0 3px var(--pc), 0 0 34px var(--pc) !important; }
+@keyframes pickFly { 0% { transform: scale(1); } 16% { transform: scale(1.13) rotate(-2deg); filter: brightness(1.8); } 34% { transform: scale(1.06) rotate(1deg); filter: brightness(1.2); } 100% { transform: translateY(-160px) scale(.3) rotate(9deg); opacity: 0; filter: brightness(2); } }
+.pickburst { position: fixed; z-index: 61; width: 0; height: 0; pointer-events: none; }
+.pickburst::before { content: ''; position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--pc); animation: pickRing .55s ease-out forwards; }
+.pickburst i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; background: var(--pc); border: 2px solid #1a1230; transform: rotate(var(--a)); animation: pickSpark .7s cubic-bezier(.2,.8,.4,1) forwards; }
+@keyframes pickRing { from { transform: scale(.2); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes pickSpark { 0% { transform: rotate(var(--a)) translateX(0) scale(var(--s)); } 70% { opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(0) rotate(180deg); opacity: 0; } }
+
+/* living text */
+h2.alive .wd, #banner p .w, .bosscard q .w { display: inline-block; white-space: nowrap; }
+h2.alive .ch { display: inline-block; animation: chIn .45s cubic-bezier(.2,.9,.3,1.6) backwards; animation-delay: calc(var(--i) * 22ms + 80ms); }
+@keyframes chIn { from { opacity: 0; transform: translateY(-22px) scale(1.7) rotate(-14deg); } }
+.sheet.special { animation: sheetIn .3s cubic-bezier(.2,.9,.3,1.2), specialGlow 1.6s ease-in-out .3s infinite alternate; }
+@keyframes specialGlow { to { box-shadow: 0 6px 0 var(--ink), 0 0 0 3px var(--line) inset, 0 0 26px -2px var(--gold); } }
+.sheet.special h2.alive .ch { animation: chIn .45s cubic-bezier(.2,.9,.3,1.6) backwards, chWave 2.2s ease-in-out infinite; animation-delay: calc(var(--i) * 22ms + 80ms), calc(var(--i) * 70ms + 900ms); }
+@keyframes chWave { 0%, 60%, 100% { transform: none; } 15% { transform: translateY(-4px) rotate(-3deg); color: #fff; } 30% { transform: translateY(1px); } }
+h2.hoard { color: var(--gold); }
+
+/* banners */
+#banner .in { position: relative; display: inline-flex; align-items: center; gap: 16px; }
+#banner .bt { text-align: center; }
+#banner .bspr { width: 76px; height: 76px; image-rendering: pixelated; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.4)); }
+@keyframes bsprIn { from { transform: translateY(40px) scale(.2) rotate(-30deg); opacity: 0; } }
+#banner h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chBob 1.5s ease-in-out infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 80ms + 600ms); }
+@keyframes chBob { 0%, 100% { transform: none; } 50% { transform: translateY(-3px); } }
+#banner p .w { animation: wIn .35s ease-out backwards; animation-delay: calc(var(--i) * 70ms + 350ms); }
+@keyframes wIn { from { opacity: 0; transform: translateY(8px); } }
+#banner .k-hero { border-color: var(--bc, var(--gold)); box-shadow: 0 0 30px -4px var(--bc, var(--gold)); }
+#banner .k-hero h2 { color: var(--bc, var(--gold)); }
+#banner .k-hero .bspr { animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards, heroHop .9s ease-in-out 1s infinite; }
+@keyframes heroHop { 0%, 100% { transform: none; } 30% { transform: translateY(-8px) rotate(-4deg); } 55% { transform: translateY(0) scaleY(.92); } }
+#banner .k-boss { background: repeating-linear-gradient(-45deg, rgba(255,40,80,.22) 0 12px, transparent 12px 24px), rgba(40,6,22,.92); background-size: 34px 34px; border-color: #ff3d6e;
+  animation: bannerIn 3.2s forwards, hazard .6s linear infinite, bossPulse .45s ease-in-out infinite alternate; }
+@keyframes hazard { to { background-position: 34px 0; } }
+@keyframes bossPulse { to { box-shadow: 0 0 34px 2px rgba(255,40,80,.7); } }
+#banner .k-boss h2 { color: #ff5d6e; text-shadow: 3px 3px 0 var(--ink), 0 0 16px #ff2a4a; letter-spacing: .14em; }
+#banner .k-boss h2.alive .ch { animation: chSlam .42s cubic-bezier(.2,.9,.3,1.4) backwards, chShake .16s steps(2) infinite; animation-delay: calc(var(--i) * 65ms), calc(var(--i) * 65ms + 420ms); }
+@keyframes chSlam { from { opacity: 0; transform: translateY(-46px) scale(2.8); } 70% { transform: scale(.88); } }
+@keyframes chShake { 0% { transform: translate(1px, -1px); } 50% { transform: translate(-1px, 1px) rotate(-2deg); } 100% { transform: translate(1px, 1px); } }
+#banner .k-boss .bspr { width: 92px; height: 92px; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards, bsprRage .14s steps(2) .8s infinite; filter: drop-shadow(0 0 8px #ff2a4a); }
+@keyframes bsprRage { 0% { transform: translateX(-1px) scale(1.02); } 100% { transform: translateX(1px) scale(.99); } }
+#banner .k-slain { border-color: var(--gold); box-shadow: 0 0 40px -2px var(--gold); overflow: visible; }
+#banner .k-slain::before { content: ''; position: absolute; left: 50%; top: 50%; width: 520px; height: 520px; margin: -260px 0 0 -260px; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(rgba(255,207,58,.22) 0 10deg, transparent 10deg 24deg); border-radius: 50%; mask: radial-gradient(circle, #000 20%, transparent 65%); -webkit-mask: radial-gradient(circle, #000 20%, transparent 65%); animation: raySpin 6s linear infinite; }
+@keyframes raySpin { to { transform: rotate(360deg); } }
+#banner .k-slain h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chGlint 1.6s linear infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 55ms + 500ms); }
+@keyframes chGlint { 0%, 70%, 100% { color: var(--gold); transform: none; } 80% { color: #fff; transform: translateY(-4px) scale(1.15); } }
+#banner .k-slain .bspr { animation: bsprIn .5s backwards, slainSpin 2.4s ease-in .4s forwards; filter: grayscale(.6) drop-shadow(0 0 6px #fff); }
+@keyframes slainSpin { 40% { transform: rotate(-12deg) translateY(4px); } 100% { transform: rotate(-90deg) translateY(30px) scale(.6); opacity: 0; } }
+#banner .k-alarm { border-color: #ff8a3a; animation: bannerIn 2.6s forwards, alarmFlash .3s steps(2) infinite; }
+@keyframes alarmFlash { 50% { border-color: #ffde3a; box-shadow: 0 0 22px rgba(255,138,58,.7); } }
+#banner .k-alarm h2 { color: #ffb05a; }
+#banner .k-alarm h2.alive .ch { animation: chIn .4s backwards, chShake .2s steps(2) infinite; animation-delay: calc(var(--i) * 30ms), calc(var(--i) * 30ms + 400ms); }
+
+/* boss card (boss warning) and boss rows in the siege scouting list */
+.bosscard { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding: 10px; border: 3px solid var(--ink); border-radius: 8px;
+  background: repeating-linear-gradient(-45deg, rgba(255,40,80,.16) 0 10px, transparent 10px 20px), linear-gradient(160deg, #4a1028, #1c0a1e); background-size: 28px 28px, auto;
+  box-shadow: 0 4px 0 var(--ink), inset 0 0 0 2px rgba(255,61,110,.6); animation: hazard 1s linear infinite, bossCardPulse 1.1s ease-in-out infinite alternate; }
+.bosscard.mini { background-color: #2a0c26; }
+@keyframes bossCardPulse { to { box-shadow: 0 4px 0 var(--ink), inset 0 0 0 2px #ff3d6e, 0 0 24px -2px rgba(255,61,110,.8); } }
+.bosscard .bcp { display: grid; place-items: center; height: 96px; border: 2px solid var(--ink); border-radius: 6px; background: radial-gradient(circle at 50% 65%, #ff3d6e55, transparent 70%), #2a0a1a; }
+.bosscard .bcp img { width: 84px; height: 84px; animation: bossBreath 1.2s ease-in-out infinite, bossTwitch 3.2s steps(1) infinite; }
+@keyframes bossBreath { 50% { transform: translateY(-3px) scale(1.04, .97); } }
+@keyframes bossTwitch { 0%, 88%, 100% { translate: 0 0; filter: none; } 90% { translate: -2px 0; filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(4); } 93% { translate: 2px 0; } 96% { translate: -1px 0; } }
+.bosscard .btag { display: inline-block; font: 600 12px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: #1a1230; background: #ff3d6e; padding: 1px 8px; border-radius: 4px; animation: alarmFlash .5s steps(2) infinite; border: 2px solid #1a1230; }
+.bosscard h2 { margin: 6px 0 4px; color: #ffd0d8; text-shadow: 2px 2px 0 var(--ink), 0 0 12px #ff2a4a; }
+.bosscard q { display: block; font-family: var(--f-display); color: #ff8a9a; font-size: 14px; }
+.bosscard q .w { animation: wIn .3s ease-out backwards, chShake .2s steps(2) infinite; animation-delay: calc(var(--i) * 90ms + 500ms), calc(var(--i) * 37ms + 1.2s); }
+.intel .foe.boss { border-radius: 4px; animation: foeBoss 1.2s ease-in-out infinite alternate; }
+@keyframes foeBoss { from { box-shadow: 0 0 0 1px rgba(255,61,110,.35); } to { box-shadow: 0 0 0 2px #ff3d6e, 0 0 14px -2px #ff3d6e; background: rgba(255,61,110,.10); } }
+.intel .foe.boss img { animation: bossBreath 1.2s ease-in-out infinite, bossTwitch 3.2s steps(1) infinite; }
+.intel .foe.boss b { color: #ff8a9a; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dcard.deal, .ecard.deal, .lcard.deal, h2.alive .ch, #banner h2.alive .ch, #banner p .w, .bosscard, .bosscard *, .intel .foe.boss, .intel .foe.boss img, .sheet.special, .dcard.armed, #banner .in::before, #banner .bspr { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
