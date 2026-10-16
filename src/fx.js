@@ -27,7 +27,7 @@ const FX = {
   petals() { for (let i = 0; i < 60; i++) FXS.petals.push({ x: rand(0, W), y: rand(-60, 0), vx: rand(5, 25), vy: rand(30, 60), t: 0, life: rand(2, 3.5), color: pick(['#ff9fd0', '#ffffff', '#ffd84a']), spin: rand(0, 6) }); },
   gust() { for (let i = 0; i < 30; i++) FXS.gusts.push({ x: W + rand(0, 60), y: rand(100, 250), len: rand(10, 30), t: 0, life: rand(0.5, 0.9), vx: -rand(300, 420) }); },
   breath(x, y) { for (let i = 0; i < 10; i++) FXS.parts.push({ x, y: y + rand(-3, 3), vx: -rand(120, 200), vy: rand(-30, 40), life: rand(0.4, 0.6), t: 0, color: pick(['#ffde3a', '#ff8a3a', '#ff3d3d']), size: 2, grav: 0 }); },
-  banner(title, sub) { UI.banner(title, sub); },
+  banner(title, sub, o) { UI.banner(title, sub, o); },
   // stacked damage numbers: successive hits on the same target stack upward
   dmg(tgt, amount, kind = 'hit') {
     const id = tgt.uid || 'x', st = FXS.stack[id] || (FXS.stack[id] = { last: -9, n: 0 });
@@ -121,6 +121,9 @@ const SFX = {
       case 'buy': T(660, 0.07, 'square', 0.06); T(990, 0.1, 'square', 0.06, 1, 0.06); break;
       case 'level': [523, 659, 784].forEach((f, i) => T(f, 0.1, 'square', 0.06, 1, i * 0.05)); break;
       case 'click': T(1200, 0.03, 'square', 0.04); break;
+      case 'hover': T(1700, 0.025, 'triangle', 0.022); break;
+      case 'flip': N(0.06, 0.1, 2600, 0, 1.4); T(520, 0.05, 'triangle', 0.035, 1.8); break;
+      case 'stamp': N(0.09, 0.22, 420); T(200, 0.1, 'square', 0.09, 0.6); T(1320, 0.22, 'triangle', 0.05, 1, 0.05); T(1760, 0.2, 'triangle', 0.035, 1, 0.1); break;
       case 'error': T(160, 0.15, 'square', 0.08); break;
       case 'victory': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => T(f, 0.16, 'square', 0.07, 1, i * 0.1)); break;
       case 'floor': N(0.3, 0.45, 180, 0, 0.5); T(70, 0.3, 'sine', 0.4, 0.5); break;

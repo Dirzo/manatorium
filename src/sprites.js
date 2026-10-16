@@ -106,6 +106,77 @@ function drawWeapon(g, s, type, hx, hy, atk) {
   }
 }
 
+// Held weapons drawn from small pixel maps. Each map has its hand cell (o: [col,row]) and where
+// that hand sits on the 20x20 body (at: [x,y], defaults below). Letters pick colours:
+// M metal, D dark metal, L sheen (flat), W wood, w dark wood, G gold, g dark gold, R gem,
+// S bowstring, a arrow shaft, f fletching, H hand (skin), C chain, N/I/X iron mid/light/dark,
+// B armour trim, A emblem, k dark haft, F/E muzzle flash.
+const WPN = {
+  sword: {
+    i: { o: [1, 9], r: ['.L..', '.LM.', '.LM.', '.LM.', '.LM.', '.LM.', '.LM.', '.LD.', 'GGGG', '.H..', '.g..'] },
+    a: { o: [2, 5], r: ['......L', '.....LM', '....LM.', '...LM..', '.GLM...', '..HG...', '.g.....'] } },
+  cutlass: {
+    i: { o: [1, 9], r: ['...pP', '..pPP', '..pP.', '.pP..', '.pP..', '.pP..', '.pQ..', 'GGGG.', 'G..G.', 'GH.G.', '.g...'] },
+    a: { o: [2, 5], r: ['.....pP', '.....pP', '....pP.', '...pP..', '.GpP...', 'G.HG...', '.GG....'] } },
+  axe: {
+    i: { o: [1, 8], r: ['.M..L', '.WMML', 'DWMML', '.WMML', '.W..L', '.W...', '.W...', '.W...', '.H...', '.W...', '.w...'] },
+    a: { o: [2, 3], r: ['......L', '....MML', '....MML', 'wWHWWML', '....MML', '......L'] } },
+  greataxe: {
+    i: { o: [2, 12], r: ['..M...L', '.LWMMML', 'LMWMMML', 'LMWMMML', 'LMWMMML', '.LWMMML', '..W..ML', '..W...L', '..W....', '..W....', '..W....', '..W....', '..H....', '..W....', '..w....'], at: [15, 13] },
+    a: { o: [2, 4], r: ['....L.L', '....MMM', '....MMM', '.....M.', 'wWHWWMW', '.....M.', '....MMM', '....MMM', '....L.L'] } },
+  hammer: {
+    i: { o: [1, 8], r: ['.M...', 'MMMMD', 'MGGMD', 'MMMMD', '.W...', '.W...', '.W...', '.W...', '.H...', '.W...', '.w...'] },
+    a: { o: [2, 2], r: ['....MML', '....MGL', 'wWHWMGL', '....MGL', '....MML'] } },
+  maul: {
+    i: { o: [2, 12], r: ['.LLLL.', 'DMMMMD', 'DGGGGD', 'DMMMMD', '.DDDD.', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..H...', '..W...', '..w...'] },
+    a: { o: [2, 3], r: ['...DMML', '...DMML', '...DGGL', 'wWHDGGL', '...DGGL', '...DMML', '...DMML'] } },
+  cleaver: {
+    i: { o: [0, 7], r: ['XNNI', 'XKNI', 'XNNI', 'XNNI', 'XNNI', 'XXXI', 'W...', 'H...', 'w...'] },
+    a: { o: [2, 0], r: ['wWHXXXX', '...NKNN', '...NNNN', '...NNNN', '...IIII'] } },
+  flail: {
+    i: { o: [0, 9], r: ['..M.', '.MLM', 'MMMD', '.MDD', '..M.', '.C..', 'C...', 'W...', 'W...', 'H...', 'w...'] },
+    a: { o: [0, 4], r: ['...M.', '..MLM', '.CMMD', '.W.M.', 'H....'] } },
+  scythe: {
+    i: { o: [7, 13], r: ['..LLLLMM', '.LMMMMMD', 'LM.....k', 'L......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......H', '.......k', '.......k'] },
+    a: { o: [5, 0], r: ['kkkkkHkkkM', '.......LMM', '......LMM.', '.....LM...', '....L.....'] } },
+  daggers: {
+    i: { o: [1, 4], r: ['.L.', '.LM', '.LM', 'GGG', '.H.'] },
+    a: { o: [0, 1], r: ['.GLL.', 'HGMML', '.G...'] },
+    b: { o: [1, 0], r: ['.H.', 'GGG', 'LM.', 'L..'] } },
+  spear: {
+    i: { o: [1, 12], r: ['.L.', 'LMM', 'LMD', '.M.', 'GGG', '.W.', '.W.', '.W.', '.W.', '.W.', '.W.', '.W.', '.H.', '.W.', '.W.', '.w.'] },
+    a: { o: [3, 1], r: ['.....M..', 'wWWHWMML', '.....M..'] } },
+  shield: {
+    i: { o: [2, 5], r: ['MMMMMM', 'MBBBBM', 'MBAABM', 'MBAABM', 'MBBBBM', '.MBBM.', '.MBBM.', '..MM..'] },
+    a: { o: [1, 4], r: ['MMMMMM', 'MBBBBM', 'MBAABM', 'MBAABM', 'MBBBBM', '.MBBM.', '.MBBM.', '..MM..'], at: [15, 11] } },
+  bow: {
+    i: { o: [3, 5], r: ['.Gw...', 'S.WW..', 'S..W..', 'S..WW.', 'S...W.', 'SaaHWL', 'S...W.', 'S..WW.', 'S..W..', 'S.WW..', '.Gw...'], at: [17, 13] },
+    a: { o: [5, 5], r: ['...Gw...', '..S.WW..', '..S..W..', '.S...WW.', '.S....W.', 'SfaaaHWL', '.S....W.', '.S...WW.', '..S..W..', '..S.WW..', '...Gw...'], at: [17, 12] } },
+  crossbow: {
+    i: { o: [3, 4], r: ['....Gw.', '....SW.', '..aaaWL', 'wWWWWWD', 'wW.HwW.', '....SW.', '....Gw.'] },
+    a: { o: [2, 4], r: ['....Gw.', '....SW.', '.....WF', 'wWWWWWD', 'wWH.wW.', '....SW.', '....Gw.'] } },
+  cannon: {
+    i: { o: [4, 4], r: ['.......X', '..IIIIIN', '..NNGNNN', 'wWXXGXXX', 'wW..H..X'] },
+    a: { o: [4, 4], r: ['.......X.', '..IIIIINE', '..NNGNNNF', 'wWXXGXXXE', 'wW..H..X.'] } },
+  kingclub: {
+    i: { o: [1, 11], r: ['G.G.G', 'GGRGG', 'WWWWW', 'MWwWM', 'WWWWW', 'MWWwM', '.WWW.', '.WW..', '.W...', '.W...', '.W...', '.H...', '.w...'] },
+    a: { o: [2, 3], r: ['....M.G', '...WWWG', '..WWwWR', 'wWHWWWG', '..WWWWG', '...WwWG', '....M.G'] } },
+  pan: {
+    i: { o: [2, 9], r: ['.XXX.', 'XNNNX', 'XNINX', 'XNNNX', '.XXX.', '..W..', '..W..', '..W..', '..W..', '..H..'], at: [17, 13] },
+    a: { o: [0, 3], r: ['..XX.', '.XNNX', '.XNIX', 'HWNNX', '.XNNX', '..XX.'] } },
+};
+function weaponPal(s) {
+  const m = s.metal || '#dfe6f5';
+  return { M: [m], D: [shade(m, -0.35)], L: [shade(m, 0.6), 1], W: ['#9a6332'], w: ['#6b4022', 1], G: ['#ffcf3a'], g: ['#c8901a', 1],
+    R: ['#ff3d6e', 1], S: ['#f4f1ff', 1], a: ['#c9a06a', 1], f: ['#ff5d6e', 1], H: [s.skin], C: ['#9a9ab0', 1], K: [OUTLINE, 1],
+    N: ['#6a7488'], I: ['#b4bed2', 1], X: ['#3e465a'], B: [s.armor2 || '#6c7fb8'], A: [s.cape || s.cloth || '#ffcf3a', 1],
+    k: ['#3a2a2a'], P: ['#dfe6f5'], p: ['#ffffff', 1], Q: ['#9aa4b8'], F: ['#ffde3a', 1], E: ['#ff8a3a', 1] };
+}
+function drawWpnMap(g, map, pal, ax, ay) {
+  const [ox, oy] = map.o;
+  map.r.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const p = pal[row[rx]]; if (p) g.set(ax + rx - ox, ay + ry - oy, p[0], !!p[1]); } });
+}
+
 function genHumanoid(s, frame) {
   const g = new PixGrid(20, 20);
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
@@ -205,7 +276,14 @@ function genHumanoid(s, frame) {
   // halo floats above whatever is on the head
   if (s.halo) { const hy0 = Math.max(0, hatY - (s.hat && s.hat !== 'none' ? 1 : -1)); g.rect(7, hy0, 11, hy0, s.halo, true); g.set(6, hy0 + 1, s.halo, true); g.set(12, hy0 + 1, s.halo, true); }
   // front arm + weapon
-  if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
+  const wp = WPN[s.weapon];
+  if (wp) {
+    const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
+    if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
+    else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
+    g.set(ax, ay, skin); drawWpnMap(g, map, pal, ax, ay);
+    if (wp.b) drawWpnMap(g, wp.b, pal, 5, 15 + by);
+  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
   else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); drawWeapon(g, s, s.weapon, 12, 14 + by, false); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   return g.finish();

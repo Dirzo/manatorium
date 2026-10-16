@@ -115,6 +115,30 @@ const STAT_SRC = {
 };
 const COMBO_GLYPH = { nova: '✹', rain: '☄', wave: '≋', heal: '✚', shield: '⛨', haste: '➹', rage: '✊', freeze: '❄', gold: '◉', shred: '✂', vortex: '◎', critter: '❧', execute: '☠', beam: '═', bolts: 'ϟ', roots: '❦', salt: '✧', candy: '✿', ham: '♨', pinata: '★' };
 const DSRC_ORDER = ['auto', 'ability', 'item', 'element', 'bonus', 'summon'], HSRC_ORDER = ['ability', 'auto', 'lifesteal', 'item', 'element'], TSRC_ORDER = ['melee', 'ranged', 'boss', 'poison', 'other'];
+function aliveText(t) { let i = 0; return String(t).split(' ').map(w => `<span class="wd">${[...w].map(c => `<span class="ch" style="--i:${i++}">${esc(c)}</span>`).join('')}</span>`).join(' '); }
+function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(' '); }
+// card feel: tilt toward the pointer, a soft tick on hover, a squash on press, and a burst when a card is picked
+(function cardFeel() {
+  if (typeof document === 'undefined') return;
+  const SEL = '.dcard, .ecard, .lcard'; let cur = null;
+  document.addEventListener('pointermove', e => {
+    const c = e.target.closest ? e.target.closest(SEL) : null;
+    if (c !== cur) { if (cur) { cur.style.removeProperty('--rx'); cur.style.removeProperty('--ry'); } cur = c; if (c && e.pointerType === 'mouse' && !c.disabled) SFX.play('hover'); }
+    if (!c || e.pointerType !== 'mouse') return;
+    const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    c.style.setProperty('--ry', ((x - 0.5) * 9).toFixed(1) + 'deg'); c.style.setProperty('--rx', ((0.5 - y) * 7).toFixed(1) + 'deg');
+    c.style.setProperty('--mx', Math.round(x * 100) + '%'); c.style.setProperty('--my', Math.round(y * 100) + '%');
+  }, { passive: true });
+  document.addEventListener('click', e => {
+    const c = e.target.closest ? e.target.closest(SEL) : null; if (!c || c.disabled || !c.closest('#modal')) return;
+    const r = c.getBoundingClientRect(), html = c.outerHTML, cs = getComputedStyle(c);
+    const col = (cs.getPropertyValue('--rc') || cs.getPropertyValue('--ec') || '').trim() || '#ffcf3a';
+    setTimeout(() => {
+      if (c.isConnected && !$('modal').hidden) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); return; }
+      UI.pickFX(r, html, col);
+    }, 0);
+  }, true);
+})();
 const UI = {
   pendingGold: 0, shownGold: 0, page: null, techSel: null, recipeSel: null,
   init() {
@@ -171,7 +195,33 @@ const UI = {
       el.appendChild(s); setTimeout(() => s.remove(), 1000); }
   },
   toast(msg, err) { const d = document.createElement('div'); d.textContent = msg; if (err) d.className = 'err'; $('toast').appendChild(d); setTimeout(() => d.remove(), 2900); if (err) SFX.play('error'); },
-  banner(title, sub) { $('banner').innerHTML = `<div class="in"><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div>`; },
+  // banners: letters drop in one by one and keep moving; o.kind picks the mood (boss, slain, alarm, hero, info), o.spr shows a sprite
+  banner(title, sub, o = {}) {
+    const T = String(title), k = o.kind || (/SLAIN|falls$/i.test(T) ? 'slain' : /^(BOSS|MINI-BOSS|Boss approaching)/.test(T) ? 'boss' : /OVERTIME|GOT AWAY|fallen/i.test(T) ? 'alarm' : 'info');
+    const spr = o.spr ? `<img class="bspr px" src="${portrait(o.spr, k === 'boss' ? 'atk' : 'idle0')}" alt="">` : '';
+    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+  },
+  // modal headings come alive, cards are dealt in with a flip
+  liven(sh) {
+    sh.querySelectorAll('h2').forEach(h => { if (h.children.length || !h.textContent.trim()) return; h.innerHTML = aliveText(h.textContent); h.classList.add('alive'); });
+    if (sh.querySelector('.bosscard, .snatch, .hoard, .rar-card.r4, .rar-card.r5, .cform, h2.sp')) sh.classList.add('special');
+    const cards = [...sh.querySelectorAll('.dcard, .ecard, .lcard')];
+    cards.forEach((c, i) => { c.style.setProperty('--i', i); c.classList.add('deal'); setTimeout(() => SFX.play('flip'), 90 + i * 110); });
+  },
+  bossCardHTML(id) {
+    const d = ENEMIES[id], q = typeof FURY_LINES !== 'undefined' && FURY_LINES[id] ? FURY_LINES[id][0] : '';
+    return `<div class="bosscard ${d.boss === 'big' ? 'big' : 'mini'}"><div class="bcp"><img class="px" src="${portrait('e:' + id, 'atk')}" alt=""></div><div class="bci"><span class="btag">${d.boss === 'big' ? 'Boss' : 'Mini-boss'}</span><h2 class="sp">${esc(d.name)} is coming</h2>${q ? `<q>${aliveWords(q.charAt(0) + q.slice(1).toLowerCase())}</q>` : ''}</div></div>`;
+  },
+  // the picked card pops, flashes and flies off with a burst of sparks
+  pickFX(r, html, col) {
+    const g = document.createElement('div'); g.className = 'pickghost'; g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;--pc:${col}`;
+    g.innerHTML = html.replace(/\sid="[^"]*"/g, '');
+    const b = document.createElement('div'); b.className = 'pickburst'; b.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--pc:${col}`;
+    for (let i = 0; i < 16; i++) b.innerHTML += `<i style="--a:${Math.round(i * 22.5 + Math.random() * 12)}deg;--d:${Math.round(70 + Math.random() * 70)}px;--s:${(0.6 + Math.random() * 0.8).toFixed(2)}"></i>`;
+    document.body.append(g, b); setTimeout(() => { g.remove(); b.remove(); }, 950);
+    SFX.play('stamp'); if (G.touchInput && navigator.vibrate) try { navigator.vibrate(14); } catch (e) {}
+  },
+
   flyTo(src, el, sx, sy, done) {
     const layer = $('fxlayer'); if (layer.childElementCount > 50 || document.hidden || !el) { done && done(); return; }
     const tg = el.getBoundingClientRect(); const im = document.createElement('img'); im.className = 'px'; im.src = src; layer.appendChild(im);
@@ -551,12 +601,12 @@ const UI = {
   },
 
   // ----- modals -----
-  modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
+  modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; UI.liven($('sheet')); if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
     const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= ROSTER_CAP ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
-    let h = `<span class="eyebrow">Hero draft</span><h2>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
+    let h = `<span class="eyebrow">Hero draft</span><h2${kind === 'summon' ? ' class="sp"' : ''}>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
@@ -576,7 +626,7 @@ const UI = {
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="vaultOk">Hold the walls</button></div>`;
   },
   finaleHTML(run) {
-    return `<span class="eyebrow">The goose is not done</span><h2>It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
+    return `<span class="eyebrow">The goose is not done</span><h2 class="sp">It wants the shards back</h2><p class="lede">The Eternal Goose staggers off the field, and for a moment it is quiet. Then the great doors of the keep explode inward. The goose storms into the castle, smashes the shard vault and puts all twelve elemental shards on as a crown. It honks one demand: GIVE THEM BACK. (They were never its shards.)</p>
       <p>Your captured champions burst out of the goose's nest and come running back. Everyone fights this one, inside the castle's great hall. Knock the shards out of its crown. Each sixth of its health shakes two loose, and it gets weaker without them.</p>
       <div class="row" style="justify-content:flex-end"><button class="btn primary" id="finaleGo">Into the great hall</button></div>`;
   },
@@ -591,7 +641,7 @@ const UI = {
   },
   lootHTML(opts, cost) {
     const boss = opts[0] && opts[0].parts.length === 2;
-    let h = `<span class="eyebrow">Spoils of the siege</span><h2>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
+    let h = `<span class="eyebrow">Spoils of the siege</span><h2${boss ? ' class="sp hoard"' : ''}>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
     // components you already hold, and what each offered component would make with them
     const run = G.run, owned = run.stash.filter(it => it.parts.length === 1), keys = [...new Set(owned.map(it => it.parts[0]))];
     const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroDisplayName(hr).split(' ')[0] : 'in the Armory'; };
@@ -605,7 +655,7 @@ const UI = {
     return h + `<div class="row" style="justify-content:flex-end"><button class="btn small" id="lootReroll" ${G.run.gold < cost ? 'disabled' : ''}>Reroll ${COST(cost)}</button></div>`;
   },
   elementHTML(hr, opts) {
-    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2>${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
+    let h = `<span class="eyebrow">Level ${hr.level} · elemental awakening</span><div class="visitor"><img class="px" src="${portrait(heroSpriteKey(hr), 'atk')}" alt=""><div><h2 class="sp">${esc(HERO_BY_ID[hr.id].name)} awakens</h2><p class="lede">Pick an element. Its bonus grows when two or more heroes share it, and different elements across your heroes form combos.</p></div></div><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
@@ -619,7 +669,7 @@ const UI = {
     return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn small" id="cformLater">Decide later</button></div>`;
   },
   castleHTML(opts) {
-    let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2>Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;
+    let h = `<span class="eyebrow">Siege ${CASTLE_SIEGE} · the keep awakens</span><h2 class="sp">Choose your castle's element</h2><p class="lede">The castle takes on an element and gains a new defense power you fire with <kbd>E</kbd>. Elements your heroes carry are offered first.</p><div class="elcards">`;
     opts.forEach((e, i) => { const E = ELEMENTS[e], P = CASTLE_POWERS[e]; h += `<button class="ecard" data-pick="${i}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb castle"><img class="px" src="${castlePreviewURL(e)}" alt=""></div><h3>${E.name} Castle</h3><b class="pw">${esc(P.name)}</b><p>${esc(P.desc)}</p></button>`; });
     return h + `</div>`;
   },

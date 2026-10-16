@@ -75,7 +75,7 @@ function showDraft() {
     }));
     function picked(o, h, line) {
       G.selected = h.uid; SFX.play('draft');
-      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line);
+      UI.closeModal(); UI.banner(`${HERO_BY_ID[h.id].name}`, line, heroBanner(h));
       TEL.event('draft', { id: o.id, rarity: o.rarity || 0, kind });
       if (kind === 'guild') { G.phase = 'prep'; changed(); UI.openPage('guild'); return; }
       changed(); nextPost();
@@ -94,10 +94,11 @@ function showMakeRoom(o, back, after) {
   }, 'wide');
 }
 // Legend Summons after the boss at 35 (Legendary) and 40 (God)
+const heroBanner = h => ({ kind: 'hero', spr: heroSpriteKey(h), col: RARITY[h.rarity || 0].col });
 function showSummon() {
   const run = G.run, P = run.pendingSummon; if (!P || !P.opts.length) { run.pendingSummon = null; return nextPost(); }
   G.phase = 'draft'; save(); SFX.play('sig');
-  const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
+  const done = (h, line) => { run.pendingSummon = null; G.selected = h.uid; SFX.play('draft'); UI.closeModal(); FX.flash(RARITY[P.tier].col, 0.5); UI.banner(HERO_BY_ID[h.id].name, line, heroBanner(h)); TEL.event('summon', { id: h.id, tier: P.tier }); changed(); nextPost(); };
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
@@ -132,7 +133,7 @@ function bossReminder() {
   if (techs.length) lines.push(`<li><b>${techs.length} tech${techs.length > 1 ? 's' : ''}</b> you can afford in the Artificers' Hall right now, like ${esc(TECH[techs[0]].name)}.</li>`);
   if (unplaced.length) lines.push(`<li><b>${unplaced.length} champion${unplaced.length > 1 ? 's are' : ' is'}</b> sitting on the bench.</li>`);
   if (!lines.length) return false;
-  UI.modal(`<span class="eyebrow">Boss siege ${s}</span><h2>${esc(boss.name)} is coming</h2><p class="lede">Get ready first. Bosses hit hard and have a signature move.</p><ul class="nag">${lines.join('')}</ul>
+  UI.modal(`<span class="eyebrow">Boss siege ${s}</span>${UI.bossCardHTML(bossFor(s))}<p class="lede">Get ready first. Bosses hit hard and have a signature move.</p><ul class="nag">${lines.join('')}</ul>
     <div class="row" style="justify-content:flex-end;gap:8px">${loose.length ? '<button class="btn" id="nagArmory">Open the Armory</button>' : ''}${techs.length ? '<button class="btn" id="nagHall">Open the Hall</button>' : ''}<button class="btn primary" id="nagFight">Fight now</button></div>`, sh => {
     const a = sh.querySelector('#nagArmory'), h = sh.querySelector('#nagHall');
     if (a) a.onclick = () => { UI.closeModal(); UI.openPage('armory'); };
@@ -208,7 +209,7 @@ function showElement(h) {
   SFX.play('sig');
   UI.modal(UI.elementHTML(h, run.pendingEl.opts), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
     const e = run.pendingEl.opts[+b.dataset.pick]; run.pendingEl = null; h.el = e;
-    SFX.play('draft'); UI.closeModal(); UI.banner(heroDisplayName(h), `${ELEMENTS[e].name} awakened`); TEL.event('element', { id: h.id, el: e, lv: h.level });
+    SFX.play('draft'); UI.closeModal(); UI.banner(heroDisplayName(h), `${ELEMENTS[e].name} awakened`, { kind: 'hero', spr: heroSpriteKey(h), col: ELEMENTS[e].col }); TEL.event('element', { id: h.id, el: e, lv: h.level });
     FX.flash(ELEMENTS[e].col, 0.4);
     changed(); nextPost();
   }), 'wide');
@@ -218,7 +219,7 @@ function showCastle() {
   const run = G.run; G.phase = 'castle'; if (!run.pendingCastle) run.pendingCastle = castleOptions(run); save();
   UI.modal(UI.castleHTML(run.pendingCastle), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
     const e = run.pendingCastle[+b.dataset.pick]; run.pendingCastle = null; run.castleEl = e;
-    SFX.play('hammer'); UI.closeModal(); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6); UI.banner(`${ELEMENTS[e].name} Castle`, CASTLE_POWERS[e].name);
+    SFX.play('hammer'); UI.closeModal(); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6); UI.banner(`${ELEMENTS[e].name} Castle`, CASTLE_POWERS[e].name, { kind: 'hero', col: ELEMENTS[e].col });
     TEL.event('castle', { el: e });
     changed(); setTimeout(() => UI.coach('power', $('powerBtn'), `Your castle has a new power: ${CASTLE_POWERS[e].name}. Fire it during a siege with this button or the E key.`), 600);
     nextPost();
@@ -271,7 +272,7 @@ function toPrep() {
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
-  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name);
+  if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
@@ -315,7 +316,7 @@ G.act = function (act, arg) {
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
-      SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
+      SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();
