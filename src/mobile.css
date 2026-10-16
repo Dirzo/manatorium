@@ -1,0 +1,134 @@
+
+/* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
+#safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+#mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
+html.touch { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+html.touch body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+html.touch input, html.touch textarea { -webkit-user-select: text; user-select: text; }
+html.touch kbd, html.touch .fsrec small.note { display: none; }
+html.native .fsrec, html.nofs #fsBtn, html.nofs .fsrec { display: none !important; }
+html.touch #tip { max-width: min(320px, calc(100vw - 16px)); font-size: 13px; }
+
+/* --- shared phone frame: arena fixed in the middle, HUD floating on top --- */
+html.m, html.m body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+html.m #app { position: fixed; inset: 0; max-width: none; padding: 0; margin: 0; display: block; background: #0c1028; }
+html.m .stage { position: fixed; inset: 0; display: block; }
+html.m .stage::before { content: ''; position: fixed; inset: 0; background: linear-gradient(#7cc8ff 0, #bfe6ff 30%, #74d35a 30%, #4a9a3a 100%); filter: saturate(.6) brightness(.4); z-index: 0; }
+html.m .arena-wrap, html.m .arena-wrap.spot { position: fixed !important; left: var(--ax, 0); top: var(--ay, 0); width: var(--aw, 100vw); height: var(--ah, 56.25vw); border: 0; border-radius: 0; box-shadow: none; z-index: 1; }
+html.m #arena { width: 100%; height: 100%; aspect-ratio: auto; }
+html.m .arena-tag { display: none; }
+html.m #prepHint { font-size: 12px; }
+html.m #banner h2 { font-size: clamp(18px, 5vw, 30px); }
+html.m #banner .in { padding: 6px 20px; }
+
+/* top bar: siege, castle, gold, menu */
+html.m .hud { position: fixed; top: 0; left: 0; right: 0; z-index: 12; border-radius: 0; border: 0; border-bottom: 2px solid var(--ink); background: rgba(18, 24, 56, 0.92); backdrop-filter: none; box-shadow: 0 3px 0 rgba(15,20,48,.5);
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; padding: calc(4px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) 4px calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }
+html.m .brand { display: none; }
+html.m .siegeinfo { min-width: 0; max-width: 34vw; flex: 0 1 auto; }
+html.m .siegeinfo b { font-size: 14px; } html.m .siegeinfo small { font-size: 11px; }
+html.m .castlebar { min-width: 70px; max-width: none; flex: 1 1 90px; }
+html.m .castlebar small { font-size: 10px; } html.m .castlebar .bar { height: 10px; }
+html.m .purse .coinbox { font-size: 16px; } html.m .purse .coinbox img { width: 18px; height: 18px; }
+html.m .repairBtn { padding: 3px 6px; font-size: 11px; min-height: 36px; }
+html.m #mMore { display: grid; place-items: center; width: 40px; height: 36px; padding: 0; font-size: 18px; flex: 0 0 auto; }
+html.m #mMenu:not([hidden]) { display: flex; flex-direction: column; gap: 8px; position: fixed; z-index: 45; top: calc(var(--hudH, 44px) + 4px); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); min-width: 190px; padding: 10px; background: var(--panel); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 var(--ink); }
+html.m #mMenu .btn { min-height: 44px; font-size: 14px; padding: 8px 12px; text-align: left; }
+html.m #mMenu #recBadge { font-size: 11px; white-space: normal; max-width: 220px; }
+
+/* facilities (rail) and the action buttons (controls) float beside or under the arena */
+html.m .hud .rail { position: fixed; z-index: 11; display: flex; gap: 8px; margin: 0; }
+html.m .hud .rail button { min-width: 48px; min-height: 48px; padding: 4px 6px; justify-content: center; border-radius: 8px; box-shadow: 0 3px 0 var(--ink); background: var(--panel); }
+html.m .hud .rail button img { width: 30px; height: 30px; }
+html.m .hud .controls { position: fixed; z-index: 11; display: flex; flex-wrap: nowrap; gap: 8px; margin: 0; align-items: stretch; }
+html.m .controls .speed button { min-width: 40px; min-height: 44px; padding: 4px 6px; font-size: 14px; }
+html.m .controls .btn { min-height: 48px; font-size: 14px; padding: 6px 10px; }
+html.m #hammerBtn { font-size: 0; min-width: 56px; display: grid; place-items: center; position: relative; overflow: hidden; }
+html.m #hammerBtn img { width: 30px; height: 30px; }
+html.m #powerBtn { min-width: 56px; font-size: 11px; line-height: 1.1; white-space: normal; position: relative; overflow: hidden; }
+html.m #beginBtn { font-size: 15px; font-weight: 600; }
+html.m #mDet { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-family: var(--f-display); font-size: 11px; color: var(--text); }
+html.m .mdet .ico { font-size: 18px; line-height: 1; }
+html.m .mdet[aria-expanded="true"] { background: var(--gold) !important; color: #2a1a00; }
+
+/* champions: a swipeable card strip along the bottom; details open above it */
+html.m .roster { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; border-radius: 10px 10px 0 0; border: 0; border-top: 2px solid var(--ink); box-shadow: 0 -3px 0 rgba(15,20,48,.5); background: rgba(34, 44, 90, 0.96); backdrop-filter: none; display: flex; flex-direction: column; padding: 0 var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+html.m .roster .pull, html.m #rosterToggle { display: none; }
+html.m .roster > header { border: 0; border-bottom: 2px solid var(--ink); padding: 6px 10px; flex-wrap: nowrap; gap: 8px; align-items: center; }
+html.m .roster > header h2 { font-size: 15px; white-space: nowrap; }
+html.m .roster > header .syn { display: flex !important; flex: 1 1 auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; max-height: none; gap: 8px; padding: 0 0 2px; }
+html.m #statsChart { display: none !important; }
+html.m .roster .rbody, html.m .roster.collapsed .rbody { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; max-height: none; padding: 0; gap: 0; animation: none; overflow: hidden; }
+html.m .roster .rbody > * { max-height: none; }
+html.m .m-det { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+html.m .m-det .inspector, html.m .m-det .team { display: flex; flex-direction: column; max-height: none; overflow: visible; }
+html.m .m-det .inspector .stats { grid-template-columns: repeat(3, 1fr); }
+html.m .roster .cards { display: flex !important; flex-wrap: nowrap; flex: 0 0 auto; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 6px 10px 6px; overscroll-behavior-x: contain; border-top: 2px solid var(--ink); background: rgba(18, 24, 56, 0.6); }
+html.m .roster .cards::-webkit-scrollbar { display: none; }
+html.m .hcard { flex: 0 0 auto; width: 84px; min-width: 0; padding: 4px; gap: 2px; touch-action: none; scroll-snap-align: start; }
+html.m .hcard .port { height: 46px; } html.m .hcard .port img { width: 46px; height: 46px; }
+html.m .hcard b { font-size: 11px; }
+html.m .hcard .lv, html.m .hcard .where { font-size: 9px; }
+html.m .hcard .dmg { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.m .hcard.empty { min-height: 0; width: 120px; }
+
+/* drawers (facilities) and the scout panel cover the arena but leave the card strip */
+html.m .drawer { position: fixed; z-index: 14; top: var(--hudH, 44px); bottom: var(--stripH, 90px); left: 0; width: min(440px, 100vw); border-radius: 0 8px 8px 0; border-top: 2px solid var(--ink); padding-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+html.m .drawer header { padding: 6px 10px; }
+html.m .drawer header h2 { font-size: 17px; }
+html.m #drawerBack { min-height: 40px; min-width: 64px; }
+html.m .intel { display: flex !important; position: fixed; z-index: 14; top: var(--hudH, 44px); bottom: var(--stripH, 90px); right: 0; width: min(340px, 86vw); max-width: none; min-width: 0; border-radius: 8px 0 0 8px; border-right: 0; background: rgba(34, 44, 90, 0.97); padding-right: calc(12px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); transform: translateX(0); transition: transform .22s ease; overflow-y: auto; }
+html.m .intel.closed { transform: translateX(105%); }
+html.m .intab { display: none !important; }
+
+/* buttons inside panels get finger-sized */
+html.touch .drawer .btn, html.touch .sheet .btn, html.touch .inspector .btn { min-height: 40px; }
+html.touch .btn.small { min-height: 36px; }
+html.m .modal { padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) max(8px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) max(8px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) max(8px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }
+html.m .modal .sheet { max-height: 100%; padding: 14px; }
+html.m .sheet h2 { font-size: 22px; }
+html.m #coach { max-width: calc(100vw - 24px); font-size: 14px; }
+html.m #toast { bottom: calc(var(--stripH, 90px) + 8px); }
+html.m #title .wrap { padding-left: max(16px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); padding-right: max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); padding-bottom: calc(40px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+html.m #towerSkip { top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); min-height: 40px; }
+html.m #towerPanel { bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+
+/* --- landscape: facilities down the left, actions down the right, arena between --- */
+html.m-land .hud .rail { flex-direction: column; left: calc(6px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); top: calc(var(--hudH, 44px) + 8px); bottom: calc(var(--stripH, 90px) + 8px); width: 64px; overflow-y: auto; }
+html.m-land .hud .rail button { font-size: 0; gap: 0; width: 64px; flex: 0 0 auto; }
+html.m-land .hud .rail .mdet { font-size: 11px; gap: 2px; }
+html.m-land .hud .controls { flex-direction: column; right: calc(6px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: calc(var(--hudH, 44px) + 8px); bottom: calc(var(--stripH, 90px) + 8px); width: 128px; }
+html.m-land .controls .speed { display: flex; }
+html.m-land .controls .speed button { flex: 1; min-width: 0; }
+html.m-land #hammerBtn, html.m-land #powerBtn { min-height: 52px; }
+html.m-land #beginBtn { margin-top: auto; min-height: 60px; white-space: normal; line-height: 1.15; }
+html.m-land .roster > header { display: none; }
+html.m-land .m-det { display: none; }
+html.m-land .roster.m-details { top: var(--hudH, 44px); border-radius: 0; }
+html.m-land .roster.m-details > header { display: flex; }
+html.m-land .roster.m-details .m-det { display: flex; }
+html.m-land .roster.m-details #mDetX { display: inline-flex; margin-left: auto; }
+html.m-land .roster.m-details .m-det { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+html.m-land .roster.m-details .m-det > * { overflow: visible; }
+html.m-land .hcard .hmeta, html.m-land .hcard .xpbar { display: none; }
+html.m-land .drawer { left: var(--colL, 76px); padding-left: 0; width: min(440px, calc(100vw - var(--colL, 76px) - var(--colR, 140px))); border-radius: 8px 8px 0 0; border-left: 2px solid var(--ink); }
+html.m-land .intel { right: var(--colR, 140px); border-radius: 8px 8px 0 0; padding-right: 12px; width: min(340px, calc(100vw - var(--colL, 76px) - var(--colR, 140px))); }
+html.m-land .intel.closed { transform: translateX(calc(100% + var(--colR, 140px) + 10px)); }
+
+/* --- portrait: arena on top, actions and facilities under it, champions below --- */
+html.m-port .hud { flex-wrap: wrap; row-gap: 4px; }
+html.m-port .siegeinfo { max-width: none; flex: 1 1 0; }
+html.m-port .castlebar { order: 10; flex: 1 1 100%; }
+html.m-port .repairBtn { order: 11; }
+html.m-port .hud .controls { left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: var(--ctlT, 280px); }
+html.m-port #beginBtn { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.m-port .hud .rail { left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: var(--railT, 340px); flex-direction: row; }
+html.m-port .hud .rail button { flex: 1 1 0; flex-direction: row; gap: 6px; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; }
+html.m-port .hud .rail button img { width: 26px; height: 26px; }
+html.m-port #mDet { display: none; }
+html.m-port .roster { top: var(--pTop, 400px); }
+html.m-port .drawer { width: 100vw; border-radius: 0; padding-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
+html.m-port .intel { width: 100vw; border-radius: 0; }
+html.m-port .roster .rbody { flex: 1 1 auto; }
+html.m-land .drawer:not(.open) { transform: translateX(calc(-100% - var(--colL, 76px) - 12px)); }
+html.m-land .roster.m-details { z-index: 14; }

@@ -1,4 +1,9 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#121838">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Siege of Legends</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1168,7 +1173,158 @@ h2.hoard { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .dcard.deal, .ecard.deal, .lcard.deal, h2.alive .ch, #banner h2.alive .ch, #banner p .w, .bosscard, .bosscard *, .intel .foe.boss, .intel .foe.boss img, .sheet.special, .dcard.armed, #banner .in::before, #banner .bspr { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
+
+/* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
+#safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+#mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
+html.touch { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+html.touch body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+html.touch input, html.touch textarea { -webkit-user-select: text; user-select: text; }
+html.touch kbd, html.touch .fsrec small.note { display: none; }
+html.native .fsrec, html.nofs #fsBtn, html.nofs .fsrec { display: none !important; }
+html.touch #tip { max-width: min(320px, calc(100vw - 16px)); font-size: 13px; }
+
+/* --- shared phone frame: arena fixed in the middle, HUD floating on top --- */
+html.m, html.m body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+html.m #app { position: fixed; inset: 0; max-width: none; padding: 0; margin: 0; display: block; background: #0c1028; }
+html.m .stage { position: fixed; inset: 0; display: block; }
+html.m .stage::before { content: ''; position: fixed; inset: 0; background: linear-gradient(#7cc8ff 0, #bfe6ff 30%, #74d35a 30%, #4a9a3a 100%); filter: saturate(.6) brightness(.4); z-index: 0; }
+html.m .arena-wrap, html.m .arena-wrap.spot { position: fixed !important; left: var(--ax, 0); top: var(--ay, 0); width: var(--aw, 100vw); height: var(--ah, 56.25vw); border: 0; border-radius: 0; box-shadow: none; z-index: 1; }
+html.m #arena { width: 100%; height: 100%; aspect-ratio: auto; }
+html.m .arena-tag { display: none; }
+html.m #prepHint { font-size: 12px; }
+html.m #banner h2 { font-size: clamp(18px, 5vw, 30px); }
+html.m #banner .in { padding: 6px 20px; }
+
+/* top bar: siege, castle, gold, menu */
+html.m .hud { position: fixed; top: 0; left: 0; right: 0; z-index: 12; border-radius: 0; border: 0; border-bottom: 2px solid var(--ink); background: rgba(18, 24, 56, 0.92); backdrop-filter: none; box-shadow: 0 3px 0 rgba(15,20,48,.5);
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; padding: calc(4px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) 4px calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }
+html.m .brand { display: none; }
+html.m .siegeinfo { min-width: 0; max-width: 34vw; flex: 0 1 auto; }
+html.m .siegeinfo b { font-size: 14px; } html.m .siegeinfo small { font-size: 11px; }
+html.m .castlebar { min-width: 70px; max-width: none; flex: 1 1 90px; }
+html.m .castlebar small { font-size: 10px; } html.m .castlebar .bar { height: 10px; }
+html.m .purse .coinbox { font-size: 16px; } html.m .purse .coinbox img { width: 18px; height: 18px; }
+html.m .repairBtn { padding: 3px 6px; font-size: 11px; min-height: 36px; }
+html.m #mMore { display: grid; place-items: center; width: 40px; height: 36px; padding: 0; font-size: 18px; flex: 0 0 auto; }
+html.m #mMenu:not([hidden]) { display: flex; flex-direction: column; gap: 8px; position: fixed; z-index: 45; top: calc(var(--hudH, 44px) + 4px); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); min-width: 190px; padding: 10px; background: var(--panel); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 var(--ink); }
+html.m #mMenu .btn { min-height: 44px; font-size: 14px; padding: 8px 12px; text-align: left; }
+html.m #mMenu #recBadge { font-size: 11px; white-space: normal; max-width: 220px; }
+
+/* facilities (rail) and the action buttons (controls) float beside or under the arena */
+html.m .hud .rail { position: fixed; z-index: 11; display: flex; gap: 8px; margin: 0; }
+html.m .hud .rail button { min-width: 48px; min-height: 48px; padding: 4px 6px; justify-content: center; border-radius: 8px; box-shadow: 0 3px 0 var(--ink); background: var(--panel); }
+html.m .hud .rail button img { width: 30px; height: 30px; }
+html.m .hud .controls { position: fixed; z-index: 11; display: flex; flex-wrap: nowrap; gap: 8px; margin: 0; align-items: stretch; }
+html.m .controls .speed button { min-width: 40px; min-height: 44px; padding: 4px 6px; font-size: 14px; }
+html.m .controls .btn { min-height: 48px; font-size: 14px; padding: 6px 10px; }
+html.m #hammerBtn { font-size: 0; min-width: 56px; display: grid; place-items: center; position: relative; overflow: hidden; }
+html.m #hammerBtn img { width: 30px; height: 30px; }
+html.m #powerBtn { min-width: 56px; font-size: 11px; line-height: 1.1; white-space: normal; position: relative; overflow: hidden; }
+html.m #beginBtn { font-size: 15px; font-weight: 600; }
+html.m #mDet { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-family: var(--f-display); font-size: 11px; color: var(--text); }
+html.m .mdet .ico { font-size: 18px; line-height: 1; }
+html.m .mdet[aria-expanded="true"] { background: var(--gold) !important; color: #2a1a00; }
+
+/* champions: a swipeable card strip along the bottom; details open above it */
+html.m .roster { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; border-radius: 10px 10px 0 0; border: 0; border-top: 2px solid var(--ink); box-shadow: 0 -3px 0 rgba(15,20,48,.5); background: rgba(34, 44, 90, 0.96); backdrop-filter: none; display: flex; flex-direction: column; padding: 0 var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+html.m .roster .pull, html.m #rosterToggle { display: none; }
+html.m .roster > header { border: 0; border-bottom: 2px solid var(--ink); padding: 6px 10px; flex-wrap: nowrap; gap: 8px; align-items: center; }
+html.m .roster > header h2 { font-size: 15px; white-space: nowrap; }
+html.m .roster > header .syn { display: flex !important; flex: 1 1 auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; max-height: none; gap: 8px; padding: 0 0 2px; }
+html.m #statsChart { display: none !important; }
+html.m .roster .rbody, html.m .roster.collapsed .rbody { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; max-height: none; padding: 0; gap: 0; animation: none; overflow: hidden; }
+html.m .roster .rbody > * { max-height: none; }
+html.m .m-det { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+html.m .m-det .inspector, html.m .m-det .team { display: flex; flex-direction: column; max-height: none; overflow: visible; }
+html.m .m-det .inspector .stats { grid-template-columns: repeat(3, 1fr); }
+html.m .roster .cards { display: flex !important; flex-wrap: nowrap; flex: 0 0 auto; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 6px 10px 6px; overscroll-behavior-x: contain; border-top: 2px solid var(--ink); background: rgba(18, 24, 56, 0.6); }
+html.m .roster .cards::-webkit-scrollbar { display: none; }
+html.m .hcard { flex: 0 0 auto; width: 84px; min-width: 0; padding: 4px; gap: 2px; touch-action: none; scroll-snap-align: start; }
+html.m .hcard .port { height: 46px; } html.m .hcard .port img { width: 46px; height: 46px; }
+html.m .hcard b { font-size: 11px; }
+html.m .hcard .lv, html.m .hcard .where { font-size: 9px; }
+html.m .hcard .dmg { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.m .hcard.empty { min-height: 0; width: 120px; }
+
+/* drawers (facilities) and the scout panel cover the arena but leave the card strip */
+html.m .drawer { position: fixed; z-index: 14; top: var(--hudH, 44px); bottom: var(--stripH, 90px); left: 0; width: min(440px, 100vw); border-radius: 0 8px 8px 0; border-top: 2px solid var(--ink); padding-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
+html.m .drawer header { padding: 6px 10px; }
+html.m .drawer header h2 { font-size: 17px; }
+html.m #drawerBack { min-height: 40px; min-width: 64px; }
+html.m .intel { display: flex !important; position: fixed; z-index: 14; top: var(--hudH, 44px); bottom: var(--stripH, 90px); right: 0; width: min(340px, 86vw); max-width: none; min-width: 0; border-radius: 8px 0 0 8px; border-right: 0; background: rgba(34, 44, 90, 0.97); padding-right: calc(12px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); transform: translateX(0); transition: transform .22s ease; overflow-y: auto; }
+html.m .intel.closed { transform: translateX(105%); }
+html.m .intab { display: none !important; }
+
+/* buttons inside panels get finger-sized */
+html.touch .drawer .btn, html.touch .sheet .btn, html.touch .inspector .btn { min-height: 40px; }
+html.touch .btn.small { min-height: 36px; }
+html.m .modal { padding: max(8px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) max(8px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))) max(8px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))) max(8px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); }
+html.m .modal .sheet { max-height: 100%; padding: 14px; }
+html.m .sheet h2 { font-size: 22px; }
+html.m #coach { max-width: calc(100vw - 24px); font-size: 14px; }
+html.m #toast { bottom: calc(var(--stripH, 90px) + 8px); }
+html.m #title .wrap { padding-left: max(16px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); padding-right: max(16px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); padding-bottom: calc(40px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+html.m #towerSkip { top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); right: calc(16px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); min-height: 40px; }
+html.m #towerPanel { bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+
+/* --- landscape: facilities down the left, actions down the right, arena between --- */
+html.m-land .hud .rail { flex-direction: column; left: calc(6px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); top: calc(var(--hudH, 44px) + 8px); bottom: calc(var(--stripH, 90px) + 8px); width: 64px; overflow-y: auto; }
+html.m-land .hud .rail button { font-size: 0; gap: 0; width: 64px; flex: 0 0 auto; }
+html.m-land .hud .rail .mdet { font-size: 11px; gap: 2px; }
+html.m-land .hud .controls { flex-direction: column; right: calc(6px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: calc(var(--hudH, 44px) + 8px); bottom: calc(var(--stripH, 90px) + 8px); width: 128px; }
+html.m-land .controls .speed { display: flex; }
+html.m-land .controls .speed button { flex: 1; min-width: 0; }
+html.m-land #hammerBtn, html.m-land #powerBtn { min-height: 52px; }
+html.m-land #beginBtn { margin-top: auto; min-height: 60px; white-space: normal; line-height: 1.15; }
+html.m-land .roster > header { display: none; }
+html.m-land .m-det { display: none; }
+html.m-land .roster.m-details { top: var(--hudH, 44px); border-radius: 0; }
+html.m-land .roster.m-details > header { display: flex; }
+html.m-land .roster.m-details .m-det { display: flex; }
+html.m-land .roster.m-details #mDetX { display: inline-flex; margin-left: auto; }
+html.m-land .roster.m-details .m-det { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+html.m-land .roster.m-details .m-det > * { overflow: visible; }
+html.m-land .hcard .hmeta, html.m-land .hcard .xpbar { display: none; }
+html.m-land .drawer { left: var(--colL, 76px); padding-left: 0; width: min(440px, calc(100vw - var(--colL, 76px) - var(--colR, 140px))); border-radius: 8px 8px 0 0; border-left: 2px solid var(--ink); }
+html.m-land .intel { right: var(--colR, 140px); border-radius: 8px 8px 0 0; padding-right: 12px; width: min(340px, calc(100vw - var(--colL, 76px) - var(--colR, 140px))); }
+html.m-land .intel.closed { transform: translateX(calc(100% + var(--colR, 140px) + 10px)); }
+
+/* --- portrait: arena on top, actions and facilities under it, champions below --- */
+html.m-port .hud { flex-wrap: wrap; row-gap: 4px; }
+html.m-port .siegeinfo { max-width: none; flex: 1 1 0; }
+html.m-port .castlebar { order: 10; flex: 1 1 100%; }
+html.m-port .repairBtn { order: 11; }
+html.m-port .hud .controls { left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: var(--ctlT, 280px); }
+html.m-port #beginBtn { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.m-port .hud .rail { left: calc(8px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px))); right: calc(8px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); top: var(--railT, 340px); flex-direction: row; }
+html.m-port .hud .rail button { flex: 1 1 0; flex-direction: row; gap: 6px; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; }
+html.m-port .hud .rail button img { width: 26px; height: 26px; }
+html.m-port #mDet { display: none; }
+html.m-port .roster { top: var(--pTop, 400px); }
+html.m-port .drawer { width: 100vw; border-radius: 0; padding-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px)); }
+html.m-port .intel { width: 100vw; border-radius: 0; }
+html.m-port .roster .rbody { flex: 1 1 auto; }
+html.m-land .drawer:not(.open) { transform: translateX(calc(-100% - var(--colL, 76px) - 12px)); }
+html.m-land .roster.m-details { z-index: 14; }
+
+/* ===== Store demo: road-ahead screen and title note ===== */
+.rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
+.rah { display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 5px; padding: 4px 8px 4px 4px; }
+.rah img { grid-row: span 2; width: 34px; height: 34px; background: #5a1a36; border: 2px solid var(--ink); border-radius: 3px; }
+.rah b { font-family: var(--f-display); font-weight: 600; font-size: 13px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rah small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.raf { margin: 4px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.raf b { color: var(--gold); font-family: var(--f-display); font-weight: 600; }
+.raact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.raact #demoBuy { font-size: 17px; padding: 10px 18px; flex: 1 1 auto; }
+.raact.sub { justify-content: space-between; }
+#demoMsg:empty { display: none; }
+#title .demonote { margin: 6px 0 0; color: #d6daf7; font-size: 13px; text-align: center; }
+html.native #tPlaytest, html.native #recBadge { display: none !important; }
 </style>
+<!-- covers the bare game screen while the castle art loads, so it never flashes as a green field before the splash -->
+<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"></div>
 <div id="app">
   <header class="hud">
     <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
@@ -10117,10 +10273,334 @@ function boot(hotData) {
   // the opening cinematic plays over the title on a fresh load (not on hot reloads); ?nointro skips it
   // first the Noobscrub Games splash, then the cinematic; ?nointro skips both
   if (!hotData && !/[?&]nointro/.test(location.search)) startSplash(() => startIntro(() => titleEnter())); else titleEnter();
+  $('bootCover')?.remove();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
   try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
   TEL.init();
+}
+
+// ===== Mobile: phone layouts (landscape and portrait), touch controls, and the native app shell =====
+// Loaded after main.js and before boot(). It wraps a few functions instead of editing them, so desktop play is unchanged.
+// Layout mode (html.m) is on for narrow windows and phones; touch features (html.touch) follow the primary pointer.
+// native plugin calls return promises; a missing plugin or a refusal must never surface as an error
+const quiet = f => { try { const r = f(); if (r && r.catch) r.catch(() => { }); } catch (e) { } };
+const MOB = {
+  on: false, land: false, touch: false, native: false, det: false, ready: false,
+  wanted() {
+    const q = location.search;
+    if (/[?&]desktop\b/.test(q)) return false;
+    if (/[?&]mobile\b/.test(q) || MOB.native) return true;
+    return innerWidth < 900 || (MOB.touch && Math.min(innerWidth, innerHeight) <= 600);
+  },
+  init() {
+    MOB.native = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+    MOB.touch = matchMedia('(pointer: coarse)').matches || /[?&]mobile\b/.test(location.search);
+    const de = document.documentElement;
+    de.classList.toggle('touch', MOB.touch); de.classList.toggle('native', MOB.native);
+    if (MOB.touch) $('prepHint').textContent = 'Tap a champion card, then tap the field to place them. Drag to move them.';
+    // a probe that reports the notch and home-bar insets
+    const pr = document.createElement('div'); pr.id = 'safeProbe'; document.body.appendChild(pr); MOB.probe = pr;
+    // phone-only controls: the "more" menu, the details toggle and the details panel wrapper
+    const more = document.createElement('button'); more.id = 'mMore'; more.className = 'btn small'; more.setAttribute('aria-label', 'More options'); more.setAttribute('aria-expanded', 'false'); more.textContent = '☰';
+    document.querySelector('.hud').appendChild(more);
+    const menu = document.createElement('div'); menu.id = 'mMenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
+    menu.innerHTML = '<button class="btn small" id="mIntel">Scouts &amp; stats</button>';
+    document.body.appendChild(menu);
+    more.onclick = e => { e.stopPropagation(); MOB.menu(menu.hidden); };
+    document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== more) MOB.menu(false); });
+    menu.addEventListener('click', e => { if (e.target.closest('button') && e.target.id !== 'soundBtn') setTimeout(() => MOB.menu(false), 0); });
+    $('mIntel').onclick = () => { MOB.details(false); UI.setIntel($('intel').classList.contains('closed'), true); };
+    const det = document.createElement('button'); det.id = 'mDet'; det.className = 'mdet'; det.setAttribute('aria-expanded', 'false'); det.innerHTML = '<span class="ico">☰</span><span>Details</span>';
+    det.onclick = () => MOB.details(!MOB.det);
+    document.querySelector('.hud .rail').appendChild(det);
+    const detX = document.createElement('button'); detX.id = 'mDetX'; detX.className = 'btn small'; detX.textContent = 'Done ▼';
+    detX.onclick = () => MOB.details(false);
+    document.querySelector('#roster > header').appendChild(detX);
+    const box = document.createElement('div'); box.className = 'm-det'; box.id = 'mDetBox'; MOB.box = box;
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => MOB.on && UI.layout()).observe($('rosterCards'));
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => setTimeout(() => UI.layout(), 60));
+    // iOS Safari ignores user-scalable=no; stop pinch zoom from moving the game
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    MOB.wireTouch();
+    if (MOB.native) MOB.wireNative();
+    if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) || MOB.native) de.classList.add('nofs');
+    MOB.ready = true; UI.layout();
+  },
+  menu(open) { $('mMenu').hidden = !open; $('mMore').setAttribute('aria-expanded', String(open)); },
+  details(open) {
+    MOB.det = open; $('roster').classList.toggle('m-details', open); $('mDet').setAttribute('aria-expanded', String(open));
+    if (open) { UI.setIntel(false, true); UI.renderInspector && UI.renderInspector(); }
+    UI.layout();
+  },
+  // switch the DOM between the desktop and phone arrangements
+  sync() {
+    if (!MOB.ready) return;
+    const want = MOB.wanted(), land = innerWidth > innerHeight, de = document.documentElement;
+    MOB.land = land; de.classList.toggle('m-land', want && land); de.classList.toggle('m-port', want && !land);
+    if (want === MOB.on) return;
+    MOB.on = want; de.classList.toggle('m', want);
+    const menu = $('mMenu'), ctl = document.querySelector('.hud .controls'), rb = document.querySelector('#roster .rbody'), cards = $('rosterCards');
+    if (want) {
+      for (const id of ['soundBtn', 'menuBtn', 'fsBtn', 'recBadge']) menu.appendChild($(id));
+      // the arena and stage are their own stacking layers; panels move out so they can sit above the floating buttons
+      document.body.appendChild($('drawer')); document.body.appendChild($('intel'));
+      rb.insertBefore(MOB.box, cards); MOB.box.appendChild($('inspector')); MOB.box.appendChild($('teamPanel'));
+      UI.setRoster(false); UI.setIntel(false, true);
+    } else {
+      for (const id of ['recBadge', 'soundBtn', 'menuBtn', 'fsBtn']) ctl.appendChild($(id));
+      rb.appendChild($('inspector')); rb.appendChild($('teamPanel')); MOB.box.remove();
+      $('arenaWrap').appendChild($('drawer')); document.querySelector('.stage').appendChild($('intel'));
+      MOB.menu(false); MOB.details(false);
+      for (const k of ['--ctlT', '--railT', '--pTop', '--stripH', '--colL', '--colR']) de.style.removeProperty(k);
+    }
+  },
+  safe() { const s = getComputedStyle(MOB.probe); return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0, t: parseFloat(s.paddingTop) || 0, b: parseFloat(s.paddingBottom) || 0 }; },
+  // place the arena and the floating panels around it; the CSS reads these variables
+  layout() {
+    const st = document.documentElement.style, S = MOB.safe(), set = (k, v) => st.setProperty(k, Math.round(v) + 'px');
+    const hud = document.querySelector('.hud').getBoundingClientRect().height;
+    const strip = $('rosterCards').getBoundingClientRect().height + 8 + S.b;
+    let w, h, ax, ay;
+    if (MOB.land) {
+      const colL = document.querySelector('.hud .rail').getBoundingClientRect().width + S.l + 10;
+      const colR = document.querySelector('.hud .controls').getBoundingClientRect().width + S.r + 10;
+      const availW = innerWidth - colL - colR, availH = innerHeight - hud - strip;
+      w = availW; h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
+      ax = colL + (availW - w) / 2; ay = hud + (availH - h) / 2;
+      set('--colL', colL); set('--colR', colR);
+    } else {
+      w = innerWidth - S.l - S.r; h = w * 9 / 16; ax = S.l; ay = hud;
+      const ctlT = ay + h + 6, ctlH = document.querySelector('.hud .controls').getBoundingClientRect().height;
+      const railT = ctlT + ctlH + 6, railH = document.querySelector('.hud .rail').getBoundingClientRect().height;
+      set('--ctlT', ctlT); set('--railT', railT); set('--pTop', railT + railH + 6);
+    }
+    set('--aw', w); set('--ah', h); set('--ax', ax); set('--ay', ay); set('--hudH', hud); set('--rosH', strip); set('--stripH', strip);
+    if (typeof R !== 'undefined' && R.cv) resizeRender();
+  },
+  haptic(kind) {
+    if (!MOB.touch) return;
+    const H = MOB.native && Capacitor.Plugins && Capacitor.Plugins.Haptics;
+    if (H) quiet(() => H.impact({ style: kind === 'heavy' ? 'HEAVY' : kind === 'medium' ? 'MEDIUM' : 'LIGHT' })); else try { if (navigator.vibrate) navigator.vibrate(kind === 'heavy' ? 30 : kind === 'medium' ? 18 : 8); } catch (e) { }
+  },
+  // tips sit above the finger instead of under it
+  showTip(el, x, y) {
+    const t = $('tip'), key = el.dataset && el.dataset.tip;
+    if (key) UI.tipShow(el, x, y);
+    else { const txt = el.getAttribute('title'); if (!txt) return; t.innerHTML = `<p>${esc(txt)}</p>`; t.hidden = false; UI.tipKey = 'title'; UI.tipEl = el; }
+    if (t.hidden) return;
+    const r = t.getBoundingClientRect(), L = Math.max(8, Math.min(innerWidth - r.width - 8, x - r.width / 2));
+    const T = y - r.height - 28 >= 8 ? y - r.height - 28 : Math.min(innerHeight - r.height - 8, y + 28);
+    t.style.left = L + 'px'; t.style.top = T + 'px';
+    MOB.haptic('light');
+  },
+  wireTouch() {
+    // long press shows the same tips a mouse gets on hover
+    let lp = null, eat = false;
+    const clear = () => { if (lp) clearTimeout(lp.t); lp = null; };
+    document.addEventListener('pointerdown', e => {
+      clear(); eat = false; if (e.pointerType === 'mouse') return;
+      const el = e.target.closest && e.target.closest('[data-tip],[title]'); if (!el || el.id === 'arena') return;
+      const x = e.clientX, y = e.clientY;
+      lp = { x, y, t: setTimeout(() => { if (G.drag && G.drag.active) return clear(); if (G.drag) { G.drag = null; } MOB.showTip(el, x, y); eat = true; lp = null; }, 430) };
+    }, true);
+    document.addEventListener('pointermove', e => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) clear(); }, true);
+    document.addEventListener('pointerup', clear, true); document.addEventListener('pointercancel', clear, true);
+    document.addEventListener('click', e => { if (eat) { eat = false; e.preventDefault(); e.stopPropagation(); } }, true);
+    document.addEventListener('contextmenu', e => { if (MOB.touch && !e.target.closest('input,textarea')) e.preventDefault(); });
+    // a scroll that steals the finger ends the drag cleanly
+    document.addEventListener('pointercancel', () => { if (!G.drag) return; G.drag = null; $('ghost').hidden = true; G.hover = null; changed(); });
+  },
+  wireNative() {
+    const P = Capacitor.Plugins || {};
+    quiet(() => P.StatusBar.hide());
+    // live updates (app/native.js): the splash stays up while the app hands over to a downloaded copy of the game
+    const live = window.SOL_LIVE ? SOL_LIVE.ready().catch(() => ({})) : Promise.resolve({});
+    live.then(r => {
+      if (r.switching) return;
+      quiet(() => P.SplashScreen.hide());
+      if (r.updated) setTimeout(() => UI.toast('The game was updated to the latest version.'), 1200);
+    });
+    if (P.App) {
+      quiet(() => P.App.addListener('backButton', () => {
+        if (!$('tip').hidden) return UI.tipHide();
+        if (!$('mMenu').hidden) return MOB.menu(false);
+        if (UI.page) return UI.openPage(null);
+        if (!$('intel').classList.contains('closed')) return UI.setIntel(false, true);
+        if (MOB.det) return MOB.details(false);
+        if (G.armed) { G.armed = null; UI.hud(); return; }
+        if (!$('modal').hidden || TOWER.on) return;
+        if ($('title').hidden && G.run) { showTitle(); return; }
+        quiet(() => P.App.minimizeApp());
+      }));
+      quiet(() => P.App.addListener('pause', () => { try { save(); } catch (e) { } }));
+    }
+  },
+};
+
+// ----- wrap the desktop input handlers (wire() binds them at boot, after this file runs) -----
+const MOB_LIFT = 34; // px the dragged hero floats above the finger so it stays visible
+const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { clientX: e.clientX, clientY: e.clientY - MOB_LIFT, button: e.button, pointerType: e.pointerType } : e;
+{
+  const move0 = docMove, up0 = docUp, down0 = canvasDown, hero0 = heroAtPoint, place0 = placeHero, ham0 = castHammer, coach0 = UI.coach, init0 = UI.init, layout0 = UI.layout;
+  // cards ignore the browser's own panning (it would cancel drags), so a sideways swipe on the strip scrolls it here,
+  // and lifting the finger above the strip turns the swipe into a drag
+  docMove = e => {
+    const d = G.drag, strip = $('rosterCards');
+    if (d && d.fromCard && !d.active && e.pointerType !== 'mouse') {
+      const dx = e.clientX - d.sx, dy = e.clientY - d.sy, above = e.clientY < strip.getBoundingClientRect().top - 16;
+      if (d.scroll && above) { d.scroll = false; }
+      else if (d.scroll || (!above && strip.scrollWidth > strip.clientWidth + 4 && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.5)) {
+        if (!d.scroll) { d.scroll = true; d.sl = strip.scrollLeft + dx; }
+        strip.scrollLeft = d.sl - dx; return;
+      }
+    }
+    return move0(mobEv(e));
+  };
+  docUp = e => up0(mobEv(e));
+  // fingers are wide: pick the nearest hero within a forgiving radius
+  heroAtPoint = function (p) {
+    const hit = hero0(p); if (hit || !MOB.touch) return hit;
+    let best = null, bd = 13; for (const u of G.prepUnits) { if (!u.inst) continue; const d = Math.hypot(p.x - u.x, p.y - (u.y - 8)); if (d < bd) { bd = d; best = u.inst; } }
+    return best;
+  };
+  // tap a card, then tap the field: the selected champion walks to that spot
+  canvasDown = function (e) {
+    if (MOB.touch && e.pointerType !== 'mouse' && G.phase === 'prep' && G.run && G.selected) {
+      const p = toLogical(e), h = G.run.roster.find(x => x.uid === G.selected);
+      if (h && !heroAtPoint(p)) { const s = slotAt(p); if (slotOk(h, s)) { G.mouse = p; placeHero(h, s); UI.coachDone('place'); changed(); return; } if (s && s.type === 'rafter') { UI.toast('Only ranged heroes can stand on the rafters.', true); return; } }
+    }
+    return down0(e);
+  };
+  placeHero = function (h, s) { const r = place0(h, s); MOB.haptic('light'); return r; };
+  castHammer = function () { const r = ham0.apply(this, arguments); if (r) MOB.haptic('heavy'); return r; };
+  // coach lines name keys and drags; on touch they name taps
+  UI.coach = function (key, el, text) {
+    if (MOB.touch && text) text = text.replace('Drag them anywhere on the field, then press Begin siege.', 'Tap their card, then tap a spot on the field (or drag them there). Then tap Begin siege.').replace(', or press Space', '').replace(' or the E key', '');
+    return coach0.call(UI, key, el, text);
+  };
+  // after the desktop init, so its rail wiring never sees the phone-only buttons
+  UI.init = function () { const r = init0.apply(UI, arguments); MOB.init(); return r; };
+  UI.layout = function () { MOB.sync(); return MOB.on ? MOB.layout() : layout0.call(UI); };
+}
+
+// ===== Store demo: the app plays the first three hordes free, then one purchase unlocks the rest =====
+// The limit only applies in the native app (or with ?demo on the web). The purchase itself lives in app/native.js
+// (RevenueCat), which only the app build includes; this file talks to it through window.SOL_IAP.
+const DEMO = {
+  LAST: CASTLE_SIEGE, // the demo ends after the siege 15 boss, right after the elemental castle choice
+  PRICE: '$4.99',     // shown until the store reports the real local price
+  unlocked: false, ready: false, price: null, busy: false,
+  enforced() { return /[?&]demo\b/.test(location.search) || !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); },
+  on() { return DEMO.enforced() && !DEMO.unlocked; },
+  locked(run) { return DEMO.on() && run && run.siege > DEMO.LAST && !run.won; },
+  async init() {
+    try { DEMO.unlocked = localStorage.getItem('sol.unlocked') === '1'; } catch (e) { }
+    if (!window.SOL_IAP) return;
+    try { const r = await SOL_IAP.init(); DEMO.ready = !!r.ready; DEMO.why = r.why || null; DEMO.price = r.price || null; if (r.owned) DEMO.grant(true); }
+    catch (e) { console.warn('store', e); }
+  },
+  grant(quiet) {
+    const was = DEMO.unlocked; DEMO.unlocked = true; try { localStorage.setItem('sol.unlocked', '1'); } catch (e) { }
+    if (quiet || was) return;
+    UI.closeModal(); SFX.play('victory'); FX.flash('#ffcf3a', 0.5);
+    UI.banner('Full game unlocked', 'Seven more hordes await'); TEL.event('unlock', { s: G.run && G.run.siege });
+    if (!$('title').hidden) showTitle();
+  },
+  async buy() {
+    if (DEMO.busy) return;
+    if (!window.SOL_IAP || !DEMO.ready) { UI.toast(DEMO.why === 'no store key' ? 'Purchases are not set up in this build yet.' : 'The store is not reachable right now. Check your connection and try again.', true); if (window.SOL_IAP) DEMO.init(); return; }
+    DEMO.busy = true; DEMO.mark('Opening the store…');
+    const r = await SOL_IAP.buy().catch(e => ({ ok: false, error: e && e.message }));
+    DEMO.busy = false; DEMO.mark('');
+    if (r.ok) DEMO.grant(); else if (!r.cancelled) UI.toast(r.error || 'The purchase did not go through.', true);
+  },
+  async restore() {
+    if (DEMO.busy) return;
+    if (!window.SOL_IAP || !DEMO.ready) { UI.toast('The store is not reachable right now.', true); return; }
+    DEMO.busy = true; DEMO.mark('Checking your purchases…');
+    const r = await SOL_IAP.restore().catch(e => ({ ok: false, error: e && e.message }));
+    DEMO.busy = false; DEMO.mark('');
+    if (r.ok) DEMO.grant(); else UI.toast(r.error || 'No purchase found for this store account.', true);
+  },
+  mark(t) { const m = document.getElementById('demoMsg'); if (m) m.textContent = t; document.querySelectorAll('#demoBuy,#demoRestore').forEach(b => b.disabled = !!t); },
+  // ---- the "road ahead" screen ----
+  html(run) {
+    const hordes = [];
+    for (let s = DEMO.LAST + 5; s <= FINAL_SIEGE; s += 5) { const F = FACTIONS[factionIndex(s)], b = ENEMIES[bossFor(s)];
+      hordes.push(`<div class="rah"><img class="px" src="${portrait('e:' + bossFor(s))}" alt=""><b>${esc(F.name)}</b><small>${s === FINAL_SIEGE ? 'Final boss' : 'Siege ' + s}: ${esc(b ? b.name : '')}</small></div>`); }
+    const done = run && run.siege > DEMO.LAST;
+    return `<span class="eyebrow">${done ? `Demo complete · ${DEMO.LAST} sieges held` : `Free demo · sieges 1 to ${DEMO.LAST}`}</span>
+      <h2>The road ahead</h2>
+      <p class="lede">${done ? `Your keep has held through three hordes. Seven more are marching, and the goose is watching.` : `The demo plays the first three hordes. The full game has seven more.`}</p>
+      <div class="rahs">${hordes.join('')}</div>
+      <ul class="raf">
+        <li><b>Legend Summons.</b> A Legendary champion after siege 35, a God after siege 40.</li>
+        <li><b>Ascension.</b> Raise your favourite legends all the way to God rarity.</li>
+        <li><b>The goose.</b> From siege 46 it carries off a champion before every siege.</li>
+        <li><b>The Shard War.</b> The final battle, fought inside your own great hall.</li>
+      </ul>
+      <p class="note">One purchase unlocks everything, forever, with no ads. Your keep, diamonds and achievements carry over.</p>
+      <div class="raact">
+        <button class="btn primary go" id="demoBuy">Unlock the full game · ${esc(DEMO.price || DEMO.PRICE)}</button>
+        <button class="btn small ghost" id="demoRestore">Restore purchase</button>
+      </div>
+      <p class="note" id="demoMsg" aria-live="polite"></p>
+      <div class="raact sub">${done ? `<button class="btn small" id="demoEnd">End this run and climb the tower</button>` : ''}<button class="btn small ghost" id="demoClose">Not now</button></div>`;
+  },
+  show() {
+    const run = G.run;
+    UI.modal(DEMO.html(run), s => {
+      s.querySelector('#demoBuy').onclick = () => DEMO.buy();
+      s.querySelector('#demoRestore').onclick = () => DEMO.restore();
+      s.querySelector('#demoClose').onclick = () => UI.closeModal();
+      const end = s.querySelector('#demoEnd'); if (end) end.onclick = () => DEMO.endRun();
+      requestAnimationFrame(() => { s.scrollTop = 0; });
+    }, 'wide');
+    TEL.event('paywall', { s: run && run.siege });
+  },
+  // the demo run ends like a fallen keep: the tower climb, records and achievements
+  endRun() {
+    UI.closeModal(); G.phase = 'over'; G.armed = null;
+    TEL.runEnd(G.run, 'demo');
+    UI.banner('The demo ends here', `You held ${G.run.siege - 1} sieges`);
+    setTimeout(() => startTower(), 1800);
+  },
+};
+
+{
+  const begin0 = beginSiege, prep0 = toPrep, title0 = showTitle, boot0 = boot;
+  // Begin siege past the last demo siege opens the road ahead instead
+  beginSiege = function () { if (G.phase === 'prep' && DEMO.locked(G.run)) { DEMO.show(); return; } return begin0.apply(this, arguments); };
+  // reaching siege 16 in the demo shows it once on its own
+  toPrep = function () { const r = prep0.apply(this, arguments); const run = G.run; if (DEMO.locked(run) && !run.demoSeen) { run.demoSeen = true; save(); setTimeout(() => { if (G.phase === 'prep' && $('modal').hidden) DEMO.show(); }, 900); } return r; };
+  // the title says it is a demo and offers the unlock
+  showTitle = function () {
+    const r = title0.apply(this, arguments);
+    const cta = document.querySelector('#title .cta');
+    if (cta && DEMO.on() && !document.getElementById('tUnlock')) {
+      const b = document.createElement('button'); b.className = 'btn primary'; b.id = 'tUnlock'; b.textContent = `Unlock the full game · ${DEMO.price || DEMO.PRICE}`; b.onclick = () => DEMO.show();
+      const n = document.createElement('p'); n.className = 'demonote'; n.textContent = `Free demo: the first ${DEMO.LAST} sieges.`;
+      cta.appendChild(b); cta.after(n);
+    }
+    return r;
+  };
+  // the store answers after boot: refresh the title button with the local price, or drop it if already bought
+  boot = function () {
+    DEMO.init().then(() => { const b = document.getElementById('tUnlock'); if (!b) return; if (!DEMO.on()) { b.remove(); document.querySelectorAll('.demonote').forEach(n => n.remove()); } else b.textContent = `Unlock the full game · ${DEMO.price || DEMO.PRICE}`; });
+    return boot0.apply(this, arguments);
+  };
+}
+
+// ===== Public builds (the website and the phone app): no playtest capture =====
+// Playtest recording (click log, microphone clips, the "Logging playtest" badge, N-key notes) only runs inside
+// the Claude artifact, where the shared playtest log lives. Everywhere else it is switched off before boot.
+if (!(window.claude && window.claude.use)) {
+  REC.init = function () { };
+  REC.startMic = function () { this.asked = true; this.state = 'off'; };
+  REC.flush = function () { };
+  NOTES.open = function () { };
+  UI.recBadge = function () { const b = $('recBadge'); if (b) b.hidden = true; };
 }
 
 loadCastleArt().then(() => { window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? null); });

@@ -1,0 +1,60 @@
+# Builds the Siege of Legends phone apps from this repo.
+# Android: an installable debug APK on every push to the mobile branch (download it from the run's Artifacts).
+# iOS: an unsigned .ipa (sideload it with Sideloadly or AltStore, which sign it with your Apple ID) and a simulator build.
+# Store builds need Cam's Apple developer account and signing; see docs/MOBILE.md.
+name: Mobile app
+
+on:
+  push:
+    branches: [claude/mobile-app-61jip8]
+    paths: ['src/**', 'build.mjs', 'app/**', 'android/**', 'ios/**', 'capacitor.config.json', 'package*.json', 'tools/build-app.mjs', 'tools/app-html.mjs', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm ci
+      - run: node build.mjs && node tools/build-app.mjs && npx cap sync android
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: siege-of-legends-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: node build.mjs && node tools/build-app.mjs && npx cap sync ios
+      - name: Device build (unsigned)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p build/ipa/Payload && cp -R build/App.xcarchive/Products/Applications/App.app build/ipa/Payload/
+          (cd build/ipa && zip -qry ../siege-of-legends-unsigned.ipa Payload)
+      - name: Simulator build
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build
+          (cd build/sim/Build/Products/Debug-iphonesimulator && zip -qry ../../../../siege-of-legends-simulator.zip App.app)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: siege-of-legends-ios-unsigned-ipa
+          path: build/siege-of-legends-unsigned.ipa
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: siege-of-legends-ios-simulator
+          path: build/siege-of-legends-simulator.zip
+          if-no-files-found: error

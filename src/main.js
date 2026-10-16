@@ -586,6 +586,7 @@ function boot(hotData) {
   // the opening cinematic plays over the title on a fresh load (not on hot reloads); ?nointro skips it
   // first the Noobscrub Games splash, then the cinematic; ?nointro skips both
   if (!hotData && !/[?&]nointro/.test(location.search)) startSplash(() => startIntro(() => titleEnter())); else titleEnter();
+  $('bootCover')?.remove();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
   try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }

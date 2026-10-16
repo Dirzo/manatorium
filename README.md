@@ -14,7 +14,20 @@ Saves are kept in the browser's local storage.
 
 ## Website (Cloudflare)
 
-`wrangler.jsonc` publishes `site/` as the static Cloudflare Worker `manatorium`, live at https://manatorium.noobscrub.workers.dev. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler.
+`wrangler.jsonc` publishes `site/` as the static Cloudflare Worker `manatorium`, live at https://manatorium.noobscrub.workers.dev. Connect this repository once under Workers & Pages → Create → Import a repository; after that, every push to the chosen branch redeploys the site. `npm run deploy` deploys by hand with Wrangler. `npm run deploy:worker` deploys the site together with the phone app's live updates at `/app/` (see docs/MOBILE.md).
+
+## Phone app (iOS and Android)
+
+The same game runs as a native app through [Capacitor](https://capacitorjs.com). On phones, in the app or in a mobile browser, the layout switches to a touch version: in landscape the facilities sit down the left side and the actions down the right, and in portrait they sit under the arena. Champions are in a swipeable card strip along the bottom. Tap a card, then tap the field to place that champion, or drag the card there. Press and hold anything for its tooltip. Add `?mobile` or `?desktop` to the URL to force a layout.
+
+```
+npm install
+npm run build:app     # builds the game, packs app/www with bundled fonts, syncs android/ and ios/
+npx cap open android  # opens Android Studio
+npx cap open ios      # opens Xcode (macOS only)
+```
+
+`src/mobile.js` and `src/mobile.css` hold the phone layouts and touch controls. App icons and splash art are in `app/icons` (regenerate them with `npx @capacitor/assets generate --ios --android --assetPath app/icons`). The **Mobile app** GitHub workflow builds an installable debug APK on every push to the mobile branch, and builds the iOS project on request. The app is a free demo of the first 15 sieges with a one-time unlock (`src/demo.js`, RevenueCat in `app/native.js`). Publishing and setting up the unlock are covered in [docs/MOBILE.md](docs/MOBILE.md).
 
 ## Build
 
@@ -39,6 +52,8 @@ node build.mjs        # refreshes dist/manatorium.html, index.html and site/inde
 | `src/lore.js`, `src/achievements.js`, `src/tower.js` | Story beats, achievements and diamonds, end-of-run tower climb |
 | `src/telemetry.js` | Optional playtest logging when hosted as a claude.ai artifact; inert elsewhere |
 | `src/main.js`, `src/shell.html`, `src/style.css` | Game flow, input, layout |
+| `src/mobile.js`, `src/mobile.css` | Phone layouts, touch controls, native app hooks (back button, haptics) |
+| `src/demo.js`, `src/demo.css` | App demo limit (first 15 sieges), the road-ahead screen and the unlock |
 
 ## Balance tools
 
