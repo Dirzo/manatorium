@@ -1222,6 +1222,8 @@ html.m-land .roster.m-details { z-index: 14; }
 #title .demonote { margin: 6px 0 0; color: #d6daf7; font-size: 13px; text-align: center; }
 html.native #tPlaytest, html.native #recBadge { display: none !important; }
 </style>
+<!-- covers the bare game screen while the castle art loads, so it never flashes as a green field before the splash -->
+<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"></div>
 <div id="app">
   <header class="hud">
     <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
@@ -10038,6 +10040,7 @@ function boot(hotData) {
   // the opening cinematic plays over the title on a fresh load (not on hot reloads); ?nointro skips it
   // first the Noobscrub Games splash, then the cinematic; ?nointro skips both
   if (!hotData && !/[?&]nointro/.test(location.search)) startSplash(() => startIntro(() => titleEnter())); else titleEnter();
+  $('bootCover')?.remove();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
   try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
