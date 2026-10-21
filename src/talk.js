@@ -432,7 +432,13 @@ function jawFrames(key) {
 }
 
 // ----- the scene -----
+// Cam 2026-10-21: no boxes. The talk is staged on the field itself and filmed with a panning camera: your voice
+// stands at the gate, the boss rallies the horde at their camp across the field, and the camera swings to whoever
+// talks. Lines appear in comic speech bubbles next to the speaker; narration sits in cinematic bars.
 const TALKUI = { on: false };
+// where everyone stands, in field pixels (the 480x270 field, zoomed so the camera has to pan between them)
+const TK_SPOT = { hero: [226, 222], boss: [410, 222], fallen: [196, 222] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6 };
+const TK_CAMP = [[352, 200, 1.8], [470, 206, 2], [452, 186, 1.6]]; // horde extras around the boss: x, feet y, scale
 function talkDue(run) {
   if (!run || !run.roster.length) return false;
   const key = run.finale === 'ready' ? 'finale' : run.siege;
@@ -441,91 +447,130 @@ function talkDue(run) {
 function showTalk(run, done) {
   const sc = talkScene(run); run.talked = run.finale === 'ready' ? 'finale' : run.siege;
   if (!sc) return done();
-  const T = TALK[sc.f], bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId];
+  const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
   const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '');
-  el.style.setProperty('--tint', F.tint); el.style.setProperty('--sky', F.sky[0]);
-  el.innerHTML = `<div class="tk-stage">
-      <div class="tk-eyebrow">${sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</div>
-      <div class="tk-p tk-me" id="tkHero"><div class="tk-frame"><canvas width="20" height="22"></canvas><i class="tk-puddle"></i></div><b class="tk-name"></b><small class="tk-tag"></small></div>
-      <div class="tk-p tk-gone" id="tkFallen" hidden><div class="tk-frame"><canvas width="20" height="22"></canvas><i class="tk-candle"></i></div><b class="tk-name"></b><small class="tk-tag">Fallen</small></div>
-      <div class="tk-p tk-foe" id="tkBoss"><div class="tk-frame"><canvas width="20" height="22"></canvas></div><b class="tk-name">${esc(E.name)}</b><small class="tk-tag">${sc.boss ? 'Boss' : 'Waiting at siege ' + (Math.floor((run.siege - 1) / 5) * 5 + 5)}</small></div>
+  const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
+  el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${W}" height="${H}"></canvas>
+      ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}
+      <div class="tk-bub" id="tkBub" hidden><b class="tk-who"></b><p></p><span class="tk-more">▼</span></div>
     </div>
-    <div class="tk-box" id="tkBox"><b class="tk-who" id="tkWho"></b><p id="tkText"></p><span class="tk-more">▼</span><div class="tk-opts" id="tkOpts"></div></div>
-    <button class="tk-skip" id="tkSkip">Skip ›</button>`;
+    <div class="tk-bar top"><span class="tk-eyebrow">${sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
+    <div class="tk-bar bot"><p class="tk-narr" id="tkNarr"></p><div class="tk-opts" id="tkOpts"></div></div>`;
   el.hidden = false; TALKUI.on = true;
-  const P = { hero: el.querySelector('#tkHero'), boss: el.querySelector('#tkBoss'), fallen: el.querySelector('#tkFallen') };
-  const cv = { hero: P.hero.querySelector('canvas'), boss: P.boss.querySelector('canvas'), fallen: P.fallen.querySelector('canvas') };
+  const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen') };
   const keys = { boss: 'e:' + bossId };
-  let cur = sc.h;
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h); P.hero.querySelector('.tk-name').textContent = heroName(h); P.hero.querySelector('.tk-tag').textContent = heroTag(h); P.hero.className = 'tk-p tk-me'; P.hero.style.setProperty('--rc', RARITY[h.rarity || 0].col); };
+  let cur = sc.h, k = 4, focusOn = 'hero';
+  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h); A.hero.className = 'tk-a tk-hero'; };
   setHero(sc.h);
-  if (sc.fallen) { keys.fallen = 'h:' + sc.fallen.id; P.fallen.hidden = false; P.fallen.querySelector('.tk-name').textContent = sc.fallen.name; P.hero.classList.add('waiting'); }
-  const mouth = { hero: 0, boss: 0, fallen: 0 };
-  const draw = () => { for (const k of ['hero', 'boss', 'fallen']) { if (!keys[k]) continue; const fr = jawFrames(keys[k]), c = cv[k], g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(fr[mouth[k]], 0, 0); } };
-  let speaker = null, typing = null, beatI = -1, ended = false;
-  const box = el.querySelector('#tkBox'), txt = el.querySelector('#tkText'), who = el.querySelector('#tkWho'), opts = el.querySelector('#tkOpts');
-  // jaw + blips while the text types out
-  let flapT = 0;
-  const tick = () => {
-    if (!TALKUI.on) return;
-    for (const k in mouth) mouth[k] = 0;
-    if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
-    draw(); requestAnimationFrame(tick);
+  if (sc.fallen) { keys.fallen = 'h:' + sc.fallen.id; A.hero.classList.add('waiting'); }
+  // camera: zoom so about 320 x 190 field pixels fill the screen, feet on the lower fifth, then pan to the speaker
+  const layout = () => {
+    const vw = innerWidth, vh = innerHeight; k = Math.min(vw / 320, vh / 190);
+    cam.style.width = W * k + 'px'; cam.style.height = H * k + 'px';
+    for (const n in A) if (A[n]) { const [x, y] = TK_SPOT[n], w = 20 * TK_SCALE[n] * k; Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w * 1.1 + 'px', width: w + 'px', height: w * 1.1 + 'px' }); }
+    pan(focusOn, true); if (speaker) placeBubble(speaker);
   };
-  const blip = who2 => { if (!SFX.on || !SFX.ctx || SFX.ctx.state !== 'running') return; const f = who2 === 'boss' ? (bossId === 'colossus' ? 140 : /goose/.test(bossId) ? 520 : 170) : 380; SFX.tone(f * (0.9 + Math.random() * 0.25), 0.045, bossId === 'colossus' && who2 === 'boss' ? 'square' : 'triangle', 0.035); };
+  const pan = (n, now) => {
+    focusOn = n; const vw = innerWidth, vh = innerHeight;
+    const fx = n === 'both' ? (TK_SPOT.hero[0] + TK_SPOT.boss[0]) / 2 : TK_SPOT[n][0], sx = n === 'boss' ? 0.64 : n === 'both' ? 0.5 : 0.36;
+    const tx = Math.max(vw - W * k, Math.min(0, vw * sx - fx * k)), ty = Math.max(vh - H * k, Math.min(0, vh * 0.82 - TK_SPOT.hero[1] * k));
+    cam.style.transition = now ? 'none' : ''; cam.style.transform = `translate(${tx}px, ${ty}px)`;
+  };
+  // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
+  const fcv = el.querySelector('.tk-field'), fg = fcv.getContext('2d'); fg.imageSmoothingEnabled = false;
+  const bgKey = hall ? 'hall' : sc.f + ':' + (run.castleEl || 'stone');
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(sc.f, run.castleEl);
+  const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
+  const camp = hall ? [] : TK_CAMP.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
+  const mouth = { hero: 0, boss: 0, fallen: 0 };
+  let speaker = null, typing = null, beatI = -1, ended = false, flapT = 0, last = performance.now(), t = 0;
+  const bub = el.querySelector('#tkBub'), btxt = bub.querySelector('p'), who = bub.querySelector('.tk-who'), narr = el.querySelector('#tkNarr'), opts = el.querySelector('#tkOpts');
+  const tick = now => {
+    if (!TALKUI.on) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+    fg.drawImage(R.bg[bgKey], 0, 0);
+    if (hall) { try { drawHallLive(fg, t, null); } catch (e) {} }
+    else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
+      fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s, hop = Math.max(0, Math.sin(t * 5 + m.ph)) * 2;
+      fg.fillStyle = 'rgba(0,0,0,.22)'; fg.fillRect(Math.round(m.x - w * 0.3), Math.round(m.y - 1), Math.round(w * 0.6), 2); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h - hop), w, h); }
+    for (const n in mouth) mouth[n] = 0;
+    if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
+    for (const n of ['hero', 'boss', 'fallen']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); }
+    requestAnimationFrame(tick);
+  };
+  const blip = w => { if (!SFX.on || !SFX.ctx || SFX.ctx.state !== 'running' || !w) return; const f = w === 'boss' ? (bossId === 'colossus' ? 140 : /goose/.test(bossId) ? 520 : 170) : 380; SFX.tone(f * (0.9 + Math.random() * 0.25), 0.045, bossId === 'colossus' && w === 'boss' ? 'square' : 'triangle', 0.035); };
+  // text types into the bubble (or the bottom bar for narration)
   const type = (text, w) => new Promise(res => {
-    typing = { text, n: 0, res }; txt.textContent = ''; box.classList.add('typing');
-    const step = () => { if (!typing || typing.text !== text) return; typing.n += 1; txt.textContent = text.slice(0, typing.n); if (typing.n % 3 === 1 && /\w/.test(text[typing.n - 1])) blip(w);
+    const out = w ? btxt : narr; typing = { text, n: 0, res, out }; out.textContent = ''; el.classList.add('typing');
+    const step = () => { if (!typing || typing.text !== text) return; typing.n += 1; out.textContent = text.slice(0, typing.n); if (typing.n % 3 === 1 && /\w/.test(text[typing.n - 1])) blip(w);
       if (typing.n >= text.length) { finishType(); return; } const ch = text[typing.n - 1]; setTimeout(step, /[.!?]/.test(ch) ? 160 : /,/.test(ch) ? 80 : 22); };
     step();
   });
-  const finishType = () => { if (!typing) return; const r = typing.res; txt.textContent = typing.text; typing = null; box.classList.remove('typing'); r(); };
-  const focus = w => { speaker = w; for (const k in P) P[k].classList.toggle('talking', k === w); box.dataset.who = w; };
+  const finishType = () => { if (!typing) return; const r = typing.res; typing.out.textContent = typing.text; typing = null; el.classList.remove('typing'); r(); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  // speech bubble beside the speaker's head, on the side facing the open field, tail pointing at the mouth
+  const placeBubble = w => { const [x, y] = TK_SPOT[w], half = 10 * TK_SCALE[w], top = (y - 20 * TK_SCALE[w] * 1.02) * k;
+    bub.style.top = Math.max(8, top) + 'px';
+    if (w === 'boss') { bub.style.left = ''; bub.style.right = (W - x + half * 0.55) * k + 'px'; } else { bub.style.right = ''; bub.style.left = (x + half * 0.55) * k + 'px'; } };
+  const say = async w => {
+    speaker = w; for (const n in A) if (A[n]) A[n].classList.toggle('talking', n === w);
+    bub.hidden = true; if (!w) return;
+    const target = w === 'fallen' ? 'hero' : w; if (focusOn !== target) { pan(target); await wait(820); }
+    bub.className = 'tk-bub ' + (w === 'boss' ? 'from-boss' : 'from-hero') + (w === 'boss' && bossId === 'colossus' ? ' robot' : '') + (w === 'fallen' ? ' ghostly' : '');
+    placeBubble(w); bub.hidden = false; btxt.textContent = '';
+    who.textContent = w === 'boss' ? E.name : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTag(cur); };
   const beats = sc.beats.slice();
+  let busy = false;
   const next = async () => {
-    if (ended) return;
+    if (ended || busy) return;
     if (typing) return finishType();
     if (opts.childElementCount) return;
     beatI++;
     const b = beats[beatI];
     if (!b) { if (sc.boss) return choose(); return end(); }
-    if (b.who === 'narrate') { focus(null); who.textContent = ''; box.classList.add('narr'); if (b.swap) { setHero(b.swap); P.hero.classList.add('enter'); SFX.play('draft'); } if (b.succession) { SFX.play('herodie'); }
-      await type(b.text, null); return; }
-    box.classList.remove('narr');
-    if (b.who === 'mishap') { const m = sc.mishap; focus(null); who.textContent = MISHAP_TAG[m.kind]; P.hero.classList.add('mishap', m.kind); SFX.play(m.kind === 'pee' ? 'slurp' : m.kind === 'faint' ? 'thud' : 'whoosh'); FX.shake && FX.shake(4); await type(b.text, null); return; }
-    if (b.who === 'hero' && sc.fallen) { P.hero.classList.remove('waiting'); P.hero.classList.add('enter'); P.fallen.classList.add('gone'); }
-    focus(b.who); who.textContent = b.who === 'boss' ? E.name : heroName(cur);
-    if (b.who === 'boss' && beatI === sc.beats.findIndex(x => x.who === 'boss')) SFX.play(sc.boss ? 'boss' : 'roar');
-    await type(b.text, b.who);
+    busy = true; narr.textContent = '';
+    try {
+      if (b.who === 'narrate') { await say(null); if (b.swap) { pan('hero'); setHero(b.swap); A.hero.classList.add('enter'); SFX.play('draft'); } if (b.succession) { SFX.play('herodie'); }
+        busy = false; await type(b.text, null); return; }
+      if (b.who === 'mishap') { const m = sc.mishap; await say(null); if (focusOn !== 'hero') { pan('hero'); await wait(820); } A.hero.classList.add('mishap', m.kind); SFX.play(m.kind === 'pee' ? 'slurp' : m.kind === 'faint' ? 'thud' : 'whoosh');
+        busy = false; await type(`${MISHAP_TAG[m.kind]}! ${b.text}`, null); return; }
+      if (b.who === 'hero' && sc.fallen) { A.hero.classList.remove('waiting'); A.hero.classList.add('enter'); A.fallen.classList.add('gone'); }
+      await say(b.who);
+      if (b.who === 'boss' && beatI === sc.beats.findIndex(x => x.who === 'boss')) { SFX.play(sc.boss ? 'boss' : 'roar'); A.boss.classList.add('stomp'); }
+      busy = false; await type(b.text, b.who);
+    } finally { busy = false; }
   };
-  const choose = () => {
-    const h = sc.h2 || sc.h; focus('hero'); who.textContent = `${heroName(h)} answers…`; txt.textContent = ''; box.classList.add('choosing');
+  const choose = async () => {
+    const h = cur; await say(null); pan('hero'); narr.textContent = `What does ${heroName(h)} say?`; el.classList.add('choosing');
     opts.innerHTML = TALK_CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(voiceLine(h, c.k), run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
     opts.querySelectorAll('[data-c]').forEach(btn => btn.onclick = async e => {
-      e.stopPropagation(); const c = TALK_CHOICES[+btn.dataset.c]; opts.innerHTML = ''; box.classList.remove('choosing'); SFX.play('stamp');
-      run.mods[c.mod] = true; TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); if (typeof save === 'function') save();
-      focus('hero'); who.textContent = heroName(h); await type(talkFill(voiceLine(h, c.k), run, h), 'hero');
-      await new Promise(r => setTimeout(r, 450));
-      focus('boss'); who.textContent = E.name; SFX.play('roar'); await type(sc.react[c.k], 'boss');
-      await new Promise(r => setTimeout(r, 450));
-      focus('boss'); await type(sc.close, 'boss');
-      beatI = 1e9; box.classList.add('last');
+      e.stopPropagation(); const c = TALK_CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); SFX.play('stamp');
+      run.mods[c.mod] = true; TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
+      busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h), 'hero');
+      await wait(500);
+      busy = true; await say('boss'); busy = false; SFX.play('roar'); A.boss.classList.remove('stomp'); void A.boss.offsetWidth; A.boss.classList.add('stomp'); await type(sc.react[c.k], 'boss');
+      await wait(450);
+      await type(sc.close, 'boss');
+      beatI = 1e9; el.classList.add('last');
     });
   };
   const end = () => {
-    if (ended) return; ended = true; TALKUI.on = false;
+    if (ended) return; ended = true; TALKUI.on = false; removeEventListener('resize', layout);
     // a voice who lost their nerve sits out the boss siege (see placedHeroes); everyone else lines up as before
     if (sc.mishap) { const m = sc.mishap.h; m.fledPlace = m.place; m.place = null; m.fled = true; changed(); }
-    if (sc.boss && !Object.keys(run.mods).some(k => ['taunt', 'firm', 'rallycry'].includes(k))) run.mods.firm = true;
+    if (sc.boss && !Object.keys(run.mods).some(x => ['taunt', 'firm', 'rallycry'].includes(x))) run.mods.firm = true;
     el.classList.add('out'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; done(); }, 260);
   };
-  el.onclick = e => { if (e.target.closest('#tkSkip')) return; if (beatI >= 1e9) return end(); next(); };
+  el.onclick = e => { if (e.target.closest('#tkSkip') || e.target.closest('.tk-opt')) return; if (beatI >= 1e9) return end(); next(); };
   // skip jumps a boss scene straight to the three replies (the pick matters); any other scene just closes
-  el.querySelector('#tkSkip').onclick = e => { e.stopPropagation(); if (sc.boss && beatI < 1e9) { if (opts.childElementCount) return; typing = null;
-    if (sc.mishap && !P.hero.classList.contains('mishap')) { P.hero.classList.add('mishap', sc.mishap.kind); } if (sc.h2) setHero(sc.h2); beatI = beats.length; return choose(); } end(); };
+  el.querySelector('#tkSkip').onclick = e => { e.stopPropagation(); if (sc.boss && beatI < 1e9) { if (opts.childElementCount) return; typing = null; busy = false; el.classList.remove('typing');
+    if (sc.fallen) { A.hero.classList.remove('waiting'); A.fallen.classList.add('gone'); } if (sc.mishap) A.hero.classList.add('mishap', sc.mishap.kind);
+    beatI = beats.length; return choose(); } end(); };
   TALKUI.key = e => { if (!TALKUI.on) return; if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (beatI >= 1e9) return end(); next(); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.querySelector('#tkSkip').click(); } };
   if (!TALKUI.bound) { TALKUI.bound = true; document.addEventListener('keydown', e => TALKUI.key && TALKUI.key(e), true); }
-  requestAnimationFrame(tick); setTimeout(next, 450);
+  addEventListener('resize', layout); layout();
+  requestAnimationFrame(tick); setTimeout(next, 900);
 }

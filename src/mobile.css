@@ -133,12 +133,10 @@ html.m-port .roster .rbody { flex: 1 1 auto; }
 html.m-land .drawer:not(.open) { transform: translateX(calc(-100% - var(--colL, 76px) - 12px)); }
 html.m-land .roster.m-details { z-index: 14; }
 
-/* boss talk on phones: landscape is short, so the portraits and the dialogue box shrink */
-html.m-land .talk { padding: calc(8px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) 10px calc(12px + env(safe-area-inset-left, 0px)); gap: 8px; }
-html.m-land .tk-frame { width: clamp(84px, 30vh, 150px); }
-html.m-land .tk-name { font-size: 13px; } html.m-land .tk-tag { font-size: 10px; }
-html.m-land .tk-box { min-height: 0; padding: 8px 12px 10px; }
-html.m-land .tk-box p { font-size: 14px; min-height: 2.6em; }
-html.m-land .tk-opt { padding: 6px 8px; } html.m-land .tk-opt q { display: none; }
-html.m-port .tk-frame { width: clamp(110px, 38vw, 170px); }
-@media (max-height: 460px) { .tk-frame { width: clamp(84px, 30vh, 150px); } .tk-box p { font-size: 14px; } .tk-opt q { display: none; } }
+/* boss talk on phones: thinner bars, smaller bubbles, replies without the quoted line */
+html.m-land .tk-bar.top { height: calc(30px + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
+html.m-land .tk-bar.bot { min-height: 40px; padding: 6px calc(12px + env(safe-area-inset-right, 0px)) 8px calc(12px + env(safe-area-inset-left, 0px)); }
+html.m-land .tk-bub { max-width: 36vw; padding: 6px 10px 8px; } html.m-land .tk-bub p { font-size: 13px; }
+html.m-land .tk-narr { font-size: 13px; }
+html.m-land .tk-opt { width: 30vw; padding: 5px 8px 6px; } html.m-land .tk-opt q { display: none; }
+@media (max-height: 460px) { .tk-bub p { font-size: 13px; } .tk-opt q { display: none; } .tk-bar.top { height: 30px; } }
