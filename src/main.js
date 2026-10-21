@@ -272,6 +272,12 @@ function toPrep() {
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
+  // Cam 2026-10-21: the horde's boss talks to your voice before every siege (talk.js); banners and coaching wait for it
+  if (talkDue(run)) { save(); return showTalk(run, () => { save(); changed(); prepCues(); }); }
+  prepCues();
+}
+function prepCues() {
+  const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
@@ -335,6 +341,7 @@ function slotOk(h, s) { if (!s) return false; if (s.type === 'rafter') return is
 function occupant(s, except) { return G.run.roster.find(h => h !== except && h.place && h.place.type === s.type && (s.type === 'grid' ? h.place.c === s.c && h.place.r === s.r : h.place.i === s.i)); }
 function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
+  if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };

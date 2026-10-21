@@ -30,7 +30,7 @@ const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarc
 function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
 
 // ----- synergies -----
-function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault); }
+function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault && !h.fled); }
 function synergyCounts(run) {
   const race = {}, cls = {}, seen = new Set();
   for (const h of placedHeroes(run)) {
@@ -293,6 +293,7 @@ function startBattle(run, meta) {
     if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
     if (B.hzK === 'gale') st.as *= 1.2;
     if (teamMana) st.startMana += 0.2;
+    if (run.mods.rallycry) st.startMana += 0.25; // boss talk: rally
     if (rally) st.as *= 1.1;
     const u = makeUnit('hero', { def: d, inst: h, key: heroSpriteKey(h), x: pos.x, y: pos.y, hx: pos.x, hy: pos.y, rafter, maxHp: st.hp, hp: st.hp, st, vscale: st.scale,
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
@@ -322,6 +323,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
   if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
+  if (d.boss && mods.taunt) am *= 1.1; // boss talk: you taunted them
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
   if (mods.partyhats) spdM *= 0.85;
@@ -333,7 +335,7 @@ function spawnEnemy(B, id, opts = {}) {
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
-    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
+    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.5 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
@@ -544,6 +546,7 @@ function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.cre
   R.t += dt; R.swing = (R.t % 2.4) / 2.4; for (const e of R.crew) { e.atkT = 0.1; e.facing = -1; }
   if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
+  if (B.run.mods.firm) dmg *= 0.8; // boss talk: stand firm
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
   if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });

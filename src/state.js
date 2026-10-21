@@ -48,6 +48,8 @@ function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.l
 function addDraftedHero(run, opt) {
   const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].fixed || opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h);
+  // the first legend drafted is the keep's voice in boss talk (talk.js)
+  if (!run.voice) run.voice = { uid: h.uid, id: h.id, name: heroDisplayName(h) };
   run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
   return h;
 }
@@ -281,6 +283,8 @@ function finishSiege(run, meta, B) {
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   run.mods = {};
+  // a voice who lost their nerve before the boss (talk.js) comes back to the line
+  for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
   run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege);
   return rep;
 }
