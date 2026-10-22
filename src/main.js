@@ -438,7 +438,7 @@ function showTitle() {
   const parade = ['brann', 'iria', 'vale', 'grukk', 'thessa', 'rattle', 'pip', 'fenn', 'ursa', 'croak'].map((id, i) => `<img class="px" src="${portrait('h:' + id + (i % 3 === 1 ? ':' + EL_KEYS[i] : ''))}" alt="" style="animation-delay:${i * 0.12}s">`).join('')
     + ['grunt', 'chicken', 'slime', 'goose', 'imp', 'yeti', 'cog'].map((id, i) => `<img class="px" src="${portrait('e:' + id)}" alt="" style="animation-delay:${i * 0.12 + 0.6}s">`).join('');
   const metaHTML = metaLedgerHTML();
-  $('title').innerHTML = `<section class="hero"><canvas id="titleBg" class="px"></canvas><div class="hero-shade"></div>
+  $('title').innerHTML = `<section class="hero"><canvas id="titleBg" class="px"></canvas><div class="hero-shade"></div><button class="btn small tsound" id="tSound" title="Music and effects volume">♪ Sound</button>
     <div class="hero-in">
       <div class="logo"><span class="eyebrow-in">A castle defense auto battler</span><h1 data-t="Siege of Legends">Siege of Legends</h1><p>Fifty sieges. Ten hordes. One goose.</p></div>
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
@@ -462,6 +462,7 @@ function showTitle() {
   const t = $('title');
   wireLedger();
   $('tFs').onclick = () => UI.fullscreen();
+  $('tSound').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(e.currentTarget); };
   $('tPlaytest').onclick = () => { SFX.init(); showPlaytest(); };
   $('tDown').onclick = () => t.querySelector('.wrap').scrollIntoView({ behavior: 'smooth' });
   $('tIntro').onclick = () => startIntro(() => titleEnter());
@@ -550,7 +551,7 @@ function startPlaytest(s) {
   msg.textContent = 'The bot is getting started…'; setTimeout(tick, 30);
 }
 
-function titleEnter() { const t = $('title'); t.classList.remove('enter'); void t.offsetWidth; t.classList.add('enter'); }
+function titleEnter() { MUSIC.start(); const t = $('title'); t.classList.remove('enter'); void t.offsetWidth; t.classList.add('enter'); }
 
 function resumeRun() {
   const run = G.run;
@@ -575,7 +576,7 @@ function wire() {
   $('hammerBtn').onclick = () => { if (G.B && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; SFX.play('click'); UI.hud(); } };
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
   $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
-  $('soundBtn').onclick = () => { SFX.init(); SFX.on = !SFX.on; $('soundBtn').textContent = SFX.on ? 'Sound on' : 'Sound off'; $('soundBtn').setAttribute('aria-pressed', String(SFX.on)); try { localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } };
+  $('soundBtn').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(); };
   $('menuBtn').onclick = () => showTitle();
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input,textarea,select')) return;
@@ -594,11 +595,39 @@ function wire() {
   document.addEventListener('pointerdown', () => SFX.init(), { once: true });
 }
 
+// Sound button: a small panel with music and effects volume (music.js plays the theme)
+const AUDIO = { fx: 1 };
+function setFxVol(v) { AUDIO.fx = v; SFX.on = v > 0; if (SFX.master) SFX.master.gain.value = 0.32 * v; }
+function soundLabel() { const b = $('soundBtn'), off = !SFX.on && MUSIC.vol <= 0; b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
+function loadAudioPrefs() {
+  try { const m = localStorage.getItem('manatorium.music'), f = localStorage.getItem('manatorium.fxvol');
+    if (m !== null) MUSIC.vol = +m; setFxVol(f !== null ? +f : localStorage.getItem('manatorium.sound') === '0' ? 0 : 1); } catch (e) { }
+  soundLabel();
+}
+function saveAudioPrefs() { try { localStorage.setItem('manatorium.music', String(MUSIC.vol)); localStorage.setItem('manatorium.fxvol', String(AUDIO.fx)); localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } soundLabel(); }
+function audioPanel(anchor = $('soundBtn')) {
+  let p = $('audioPop'); if (p) { p.remove(); return; }
+  p = document.createElement('div'); p.id = 'audioPop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Sound');
+  const row = (id, label, v) => `<label class="aprow"><span>${label}</span><input type="range" id="${id}" min="0" max="100" step="5" value="${Math.round(v * 100)}"><b id="${id}V">${v > 0 ? Math.round(v * 100) + '%' : 'Off'}</b></label>`;
+  p.innerHTML = row('apMusic', 'Music', MUSIC.vol) + row('apFx', 'Effects', AUDIO.fx) + '<button class="btn small" id="apMute"></button>';
+  document.body.appendChild(p);
+  const r = anchor.getBoundingClientRect(), w = p.offsetWidth;
+  p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 6) + 'px'; p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
+  const sync = () => { for (const [id, v] of [['apMusic', MUSIC.vol], ['apFx', AUDIO.fx]]) { $(id).value = Math.round(v * 100); $(id + 'V').textContent = v > 0 ? Math.round(v * 100) + '%' : 'Off'; } $('apMute').textContent = MUSIC.vol > 0 || AUDIO.fx > 0 ? 'Mute all' : 'Unmute'; saveAudioPrefs(); };
+  $('apMusic').oninput = e => { MUSIC.setVol(e.target.value / 100); sync(); };
+  $('apFx').oninput = e => { setFxVol(e.target.value / 100); sync(); };
+  $('apFx').onchange = () => SFX.play('coin');
+  $('apMute').onclick = () => { const off = MUSIC.vol > 0 || AUDIO.fx > 0; if (off) { AUDIO.prev = [MUSIC.vol, AUDIO.fx]; MUSIC.setVol(0); setFxVol(0); } else { const [m, f] = AUDIO.prev || [0.5, 1]; MUSIC.setVol(m || 0.5); setFxVol(f || 1); } sync(); };
+  sync();
+  const away = e => { if (!p.contains(e.target) && !anchor.contains(e.target)) { p.remove(); document.removeEventListener('pointerdown', away, true); } };
+  document.addEventListener('pointerdown', away, true);
+}
+
 function boot(hotData) {
   buildAllSprites();
   for (const [k, s] of Object.entries(VISITORS)) buildSprite('npc:' + k, s, false);
   UI.init(); initRender($('arena')); wire();
-  try { if (localStorage.getItem('manatorium.sound') === '0') { SFX.on = false; $('soundBtn').textContent = 'Sound off'; } } catch (e) { }
+  loadAudioPrefs();
   const d = (hotData && hotData.meta && hotData.v === 2) ? hotData : load();
   G.meta = Object.assign(newMeta(), (d && d.meta) || {});
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
