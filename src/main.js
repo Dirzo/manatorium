@@ -119,7 +119,7 @@ function beginSiege() {
   if (G.run.siege > 1) UI.setRoster(true);
   const s = G.run.siege; const F = FACTIONS[factionIndex(s)];
   if (G.run.finale === 'ready') UI.banner('The Shard War', 'Knock the shards loose'); else if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
-  SFX.play('cast');
+  if (!MUSIC.fanfare(isBossSiege(s) || G.run.finale === 'ready' ? 'boss' : 'begin')) SFX.play('cast');
   UI.refresh();
   if (s === 1) setTimeout(() => UI.coach('xp-live', document.querySelector('.hcard .xpbar'), 'Heroes earn experience from kills and from surviving the siege. A hero who falls loses everything they earned this round.'), 1500);
 }
@@ -149,7 +149,7 @@ function endSiege() {
     G.phase = 'report'; G.armed = null;
     const rep = finishSiege(G.run, G.meta, B);
     TEL.siege(G.run, rep);
-    SFX.play('victory');
+    if (!MUSIC.fanfare('win')) SFX.play('victory');
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE && run.finale !== 'ready') { startFinale(run); G.phase = 'finale'; save(); TEL.event('finale', {}); setTimeout(() => showFinale(), 1400); UI.hud(); return; }
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
@@ -163,7 +163,7 @@ function endSiege() {
     setTimeout(() => showReport(rep), 900);
     UI.hud();
   } else {
-    G.phase = 'over'; G.armed = null;
+    G.phase = 'over'; G.armed = null; MUSIC.fanfare('lose');
     TEL.runEnd(G.run, B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde');
     UI.banner('The keep has fallen', `You held ${G.run.siege - 1} sieges`);
     setTimeout(() => startTower(), 2600);
