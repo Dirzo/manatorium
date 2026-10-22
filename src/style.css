@@ -1174,15 +1174,15 @@ h2.hoard { color: var(--gold); }
 .talk.bossy .tk-cam::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 84% 70%, rgba(255,40,80,.18), transparent 45%); pointer-events: none; }
 .talk.mourn .tk-cam::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,16,50,.35), rgba(20,16,50,.1)); pointer-events: none; }
 /* actors */
-.tk-a { position: absolute; transition: filter .3s, opacity .6s, transform .6s; }
+.tk-a { position: absolute; transform-origin: 50% 91%; transition: filter .3s, opacity .6s, transform .6s; }
 .tk-a canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
-.tk-a.talking canvas { animation: tkTalk .32s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-.tk-a:not(.talking) canvas { animation: tkBreathe 1.6s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+.tk-a.talking canvas { animation: tkTalk .32s ease-in-out infinite alternate; transform-origin: 50% 91%; }
+.tk-a:not(.talking) canvas { animation: tkBreathe 1.6s ease-in-out infinite alternate; transform-origin: 50% 91%; }
 @keyframes tkTalk { to { transform: scale(1.02, .975); } }
 @keyframes tkBreathe { to { transform: scale(1, .985); } }
-.tk-shadow { position: absolute; left: 22%; right: 22%; bottom: -2%; height: 7%; border-radius: 50%; background: rgba(0,0,0,.28); }
+.tk-shadow { position: absolute; left: 20%; right: 20%; top: 86%; height: 7%; border-radius: 50%; background: rgba(40,30,20,.32); } /* feet line is at 20/22 of the actor box */
 .tk-a.stomp { animation: tkStomp .45s cubic-bezier(.3,1.6,.5,1); }
-@keyframes tkStomp { 30% { transform: translateY(-6%) scale(1.05); } }
+@keyframes tkStomp { 30% { transform: scale(1.06, .94); } 60% { transform: scale(.97, 1.03); } }
 .tk-a.waiting { opacity: 0; transform: translateX(-40%); }
 .tk-a.enter { animation: tkEnter .6s cubic-bezier(.2,.9,.3,1.2); }
 @keyframes tkEnter { from { opacity: 0; transform: translateX(-60%); } }
@@ -1190,11 +1190,11 @@ h2.hoard { color: var(--gold); }
 .tk-fallen canvas { animation: tkGhost 2s ease-in-out infinite alternate !important; }
 @keyframes tkGhost { to { transform: translateY(-4%); } }
 .tk-fallen.gone { opacity: 0; transform: translateY(-40%); transition: opacity 1.4s, transform 1.6s ease-out; }
-.tk-candle { position: absolute; right: -14%; bottom: 0; width: 7%; height: 14%; background: #f1e6c8; border: 2px solid var(--ink); }
+.tk-candle { position: absolute; right: -14%; top: 77%; width: 7%; height: 14%; background: #f1e6c8; border: 2px solid var(--ink); }
 .tk-candle::after { content: ''; position: absolute; left: 0; top: -60%; width: 100%; height: 50%; background: #ffcf3a; border-radius: 50% 50% 40% 40%; box-shadow: 0 0 14px #ffb03a; animation: tkFlicker .3s steps(2) infinite alternate; }
 @keyframes tkFlicker { to { transform: scaleY(.8) translateX(1px); } }
 /* mishaps */
-.tk-puddle { position: absolute; left: 30%; right: 30%; bottom: -3%; height: 0; background: #ffe14a; border-radius: 50%; opacity: .85; box-shadow: inset 0 -2px 0 #e0b020; }
+.tk-puddle { position: absolute; left: 30%; right: 30%; top: 88%; height: 0; background: #ffe14a; border-radius: 50%; opacity: .85; box-shadow: inset 0 -2px 0 #e0b020; }
 .tk-a.mishap.pee .tk-puddle { animation: tkPuddle 1.8s ease-out forwards; }
 .tk-a.mishap.pee canvas { animation: tkShiver .07s linear infinite alternate !important; }
 @keyframes tkPuddle { to { height: 9%; left: -6%; right: -6%; } }
@@ -1203,7 +1203,7 @@ h2.hoard { color: var(--gold); }
 @keyframes tkFlee { 0% { transform: translateX(0) scaleX(1); } 12% { transform: translateX(4%) scaleX(-1) translateY(-6%); } 100% { transform: translateX(-420%) scaleX(-1); } }
 .tk-a.mishap.flee::after { content: '💨'; position: absolute; left: 30%; bottom: 0; font-size: 2.2em; animation: tkDust .9s ease-out .45s both; }
 @keyframes tkDust { from { opacity: 0; transform: scale(.4); } 40% { opacity: 1; } to { opacity: 0; transform: translateX(-60%) scale(1.5); } }
-.tk-a.mishap.faint canvas { animation: tkFaint .7s cubic-bezier(.5,0,.6,1.4) .3s forwards !important; transform-origin: 50% 100%; }
+.tk-a.mishap.faint canvas { animation: tkFaint .7s cubic-bezier(.5,0,.6,1.4) .3s forwards !important; transform-origin: 50% 91%; }
 @keyframes tkFaint { to { transform: rotate(-90deg) translateX(-8%); } }
 .tk-a.mishap.faint::after { content: '💫'; position: absolute; left: -30%; bottom: 20%; font-size: 1.8em; animation: tkFlicker .4s steps(2) 1s infinite alternate both; }
 /* speech bubble */

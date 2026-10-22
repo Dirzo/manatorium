@@ -437,8 +437,8 @@ function jawFrames(key) {
 // talks. Lines appear in comic speech bubbles next to the speaker; narration sits in cinematic bars.
 const TALKUI = { on: false };
 // where everyone stands, in field pixels (the 480x270 field, zoomed so the camera has to pan between them)
-const TK_SPOT = { hero: [226, 222], boss: [410, 222], fallen: [196, 222] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6 };
-const TK_CAMP = [[352, 200, 1.8], [470, 206, 2], [452, 186, 1.6]]; // horde extras around the boss: x, feet y, scale
+const TK_SPOT = { hero: [226, 186], boss: [410, 186], fallen: [196, 184] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6 };
+const TK_CAMP = [[352, 176, 1.7], [468, 190, 2], [452, 172, 1.5]]; // horde extras around the boss on the road: x, feet y, scale
 function talkDue(run) {
   if (!run || !run.roster.length) return false;
   const key = run.finale === 'ready' ? 'finale' : run.siege;
@@ -448,11 +448,15 @@ function showTalk(run, done) {
   const sc = talkScene(run); run.talked = run.finale === 'ready' ? 'finale' : run.siege;
   if (!sc) return done();
   const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
+  // past the right edge of the field lies the boss's own lair (lairs.js); the camera pans across to it
+  const lair = !hall && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
+  const SPOT = { hero: TK_SPOT.hero, fallen: TK_SPOT.fallen, boss: lair ? [W + lair.bx, 186] : TK_SPOT.boss };
+  const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
   const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
-  el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${W}" height="${H}"></canvas>
+  el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
       ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}
       <div class="tk-bub" id="tkBub" hidden><b class="tk-who"></b><p></p><span class="tk-more">▼</span></div>
     </div>
@@ -468,14 +472,14 @@ function showTalk(run, done) {
   // camera: zoom so about 320 x 190 field pixels fill the screen, feet on the lower fifth, then pan to the speaker
   const layout = () => {
     const vw = innerWidth, vh = innerHeight; k = Math.min(vw / 320, vh / 190);
-    cam.style.width = W * k + 'px'; cam.style.height = H * k + 'px';
-    for (const n in A) if (A[n]) { const [x, y] = TK_SPOT[n], w = 20 * TK_SCALE[n] * k; Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w * 1.1 + 'px', width: w + 'px', height: w * 1.1 + 'px' }); }
+    cam.style.width = WW * k + 'px'; cam.style.height = H * k + 'px';
+    for (const n in A) if (A[n]) { const [x, y] = SPOT[n], w = 20 * TK_SCALE[n] * k; Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w + 'px', width: w + 'px', height: w * 1.1 + 'px' }); } // sprite rows 0-19 above the feet line, jaw rows below
     pan(focusOn, true); if (speaker) placeBubble(speaker);
   };
   const pan = (n, now) => {
-    focusOn = n; const vw = innerWidth, vh = innerHeight;
-    const fx = n === 'both' ? (TK_SPOT.hero[0] + TK_SPOT.boss[0]) / 2 : TK_SPOT[n][0], sx = n === 'boss' ? 0.64 : n === 'both' ? 0.5 : 0.36;
-    const tx = Math.max(vw - W * k, Math.min(0, vw * sx - fx * k)), ty = Math.max(vh - H * k, Math.min(0, vh * 0.82 - TK_SPOT.hero[1] * k));
+    focusOn = n; const vw = innerWidth, vh = innerHeight, feet = el.classList.contains('choosing') ? 0.56 : 0.82; // replies fill the bottom: lift the field
+    const fx = n === 'both' ? (SPOT.hero[0] + SPOT.boss[0]) / 2 : SPOT[n][0], sx = n === 'boss' ? 0.64 : n === 'both' ? 0.5 : 0.36;
+    const tx = Math.max(vw - WW * k, Math.min(0, vw * sx - fx * k)), ty = Math.max(vh - H * k, Math.min(0, vh * feet - SPOT.hero[1] * k));
     cam.style.transition = now ? 'none' : ''; cam.style.transform = `translate(${tx}px, ${ty}px)`;
   };
   // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
@@ -483,7 +487,7 @@ function showTalk(run, done) {
   const bgKey = hall ? 'hall' : sc.f + ':' + (run.castleEl || 'stone');
   if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(sc.f, run.castleEl);
   const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
-  const camp = hall ? [] : TK_CAMP.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
+  const camp = hall ? [] : campSpots.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
   const mouth = { hero: 0, boss: 0, fallen: 0 };
   let speaker = null, typing = null, beatI = -1, ended = false, flapT = 0, last = performance.now(), t = 0;
   const bub = el.querySelector('#tkBub'), btxt = bub.querySelector('p'), who = bub.querySelector('.tk-who'), narr = el.querySelector('#tkNarr'), opts = el.querySelector('#tkOpts');
@@ -494,8 +498,9 @@ function showTalk(run, done) {
     if (hall) { try { drawHallLive(fg, t, null); } catch (e) {} }
     else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
       fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
-    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s, hop = Math.max(0, Math.sin(t * 5 + m.ph)) * 2;
-      fg.fillStyle = 'rgba(0,0,0,.22)'; fg.fillRect(Math.round(m.x - w * 0.3), Math.round(m.y - 1), Math.round(w * 0.6), 2); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h - hop), w, h); }
+    if (lair) { fg.drawImage(R.bg[bgKey], W - 28, 0, 28, H, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s;
+      fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
     for (const n of ['hero', 'boss', 'fallen']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); }
@@ -512,9 +517,9 @@ function showTalk(run, done) {
   const finishType = () => { if (!typing) return; const r = typing.res; typing.out.textContent = typing.text; typing = null; el.classList.remove('typing'); r(); };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   // speech bubble beside the speaker's head, on the side facing the open field, tail pointing at the mouth
-  const placeBubble = w => { const [x, y] = TK_SPOT[w], half = 10 * TK_SCALE[w], top = (y - 20 * TK_SCALE[w] * 1.02) * k;
+  const placeBubble = w => { const [x, y] = SPOT[w], half = 10 * TK_SCALE[w], top = (y - 20 * TK_SCALE[w] * 1.02) * k;
     bub.style.top = Math.max(8, top) + 'px';
-    if (w === 'boss') { bub.style.left = ''; bub.style.right = (W - x + half * 0.55) * k + 'px'; } else { bub.style.right = ''; bub.style.left = (x + half * 0.55) * k + 'px'; } };
+    if (w === 'boss') { bub.style.left = ''; bub.style.right = (WW - x + half * 0.55) * k + 'px'; } else { bub.style.right = ''; bub.style.left = (x + half * 0.55) * k + 'px'; } };
   const say = async w => {
     speaker = w; for (const n in A) if (A[n]) A[n].classList.toggle('talking', n === w);
     bub.hidden = true; if (!w) return;
@@ -544,10 +549,10 @@ function showTalk(run, done) {
     } finally { busy = false; }
   };
   const choose = async () => {
-    const h = cur; await say(null); pan('hero'); narr.textContent = `What does ${heroName(h)} say?`; el.classList.add('choosing');
+    const h = cur; await say(null); el.classList.add('choosing'); pan('hero'); narr.textContent = `What does ${heroName(h)} say?`;
     opts.innerHTML = TALK_CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(voiceLine(h, c.k), run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
     opts.querySelectorAll('[data-c]').forEach(btn => btn.onclick = async e => {
-      e.stopPropagation(); const c = TALK_CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); SFX.play('stamp');
+      e.stopPropagation(); const c = TALK_CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
       run.mods[c.mod] = true; TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
       busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h), 'hero');
       await wait(500);
