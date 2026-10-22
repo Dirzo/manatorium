@@ -1243,3 +1243,14 @@ h2.hoard { color: var(--gold); }
 .tk-skip { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: 2px solid #2a2850; border-radius: 6px; padding: 3px 10px; font-size: 13px; color: var(--muted); }
 .tk-skip:hover { color: var(--text); border-color: var(--line); }
 @media (max-width: 640px) { .tk-bub p { font-size: 15px; } .tk-opt { width: 100%; } }
+/* the post-siege card inside the talk: title over the scene, a visitor on the road, choices as reply cards */
+.tk-card { position: absolute; left: 50%; top: calc(max(44px, 8vh) + 14px); transform: translateX(-50%); text-align: center; pointer-events: none; animation: tkCard .6s cubic-bezier(.2,.9,.3,1.2); transition: opacity .6s, transform .6s; }
+.tk-card span { display: block; font-family: var(--f-display); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #ffe9a8; text-shadow: 0 2px 0 #07060f; }
+.tk-card h2 { margin: 2px 0 0; font-size: clamp(22px, 4vw, 38px); color: #fffdf4; text-shadow: 0 3px 0 #07060f, 0 0 18px rgba(7,6,15,.6); white-space: nowrap; }
+.tk-card.out { opacity: 0; transform: translate(-50%, -30%); }
+@keyframes tkCard { from { opacity: 0; transform: translate(-50%, -40%) scale(.9); } }
+.tk-visitor.enter { animation: tkVisit .9s cubic-bezier(.2,.9,.3,1.1); }
+@keyframes tkVisit { from { opacity: 0; transform: translateX(80%); } }
+.tk-visitor.leave { opacity: 0; transform: translateX(120%); transition: opacity 1s .2s, transform 1.2s ease-in; }
+.tk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; }
+.tk-opt .tk-tags .et { font-size: 10px; } .tk-opt .tk-tags .et:not(.hz) { color: #1a1230; }

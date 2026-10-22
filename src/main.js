@@ -228,6 +228,23 @@ function showCastle() {
 
 function showEncounter() {
   const enc = drawEncounter(G.run, G.lastEnc), story = enc.story ? enc : null; if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 8); G.phase = 'encounter';
+  // Cam 2026-10-22: when the boss talk is up next, the card plays inside that scene and its choices become replies
+  if (!G.run.post.length && !vaultDue(G.run) && talkDue(G.run)) {
+    UI.closeModal(); let picked = null;
+    const pick = i => {
+      const o = enc.opts[i]; if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; }
+      const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy'); TEL.event('encounter', { id: enc.id, opt: i }); picked = o;
+      const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz]; save(); changed();
+      return { lines: r.out.filter(x => x !== 'Pick an item to reforge.').concat(r.levels.map(([h]) => `${heroDisplayName(h)} reached level ${h.level}!`)), hz: hz && hz.name };
+    };
+    const after = () => { save(); changed();
+      if (picked && G.run.pendingReforge) { G.run.pendingReforge = false; return showReforge(enc, items => { if (items && items.length) UI.toast(items.join(' ')); UI.closeModal(); nextPost(); }); }
+      nextPost(); };
+    return showTalk(G.run, after, { enc, pick, fallback: () => { G.run.talked = null; showEncounterCard(enc, story); } });
+  }
+  showEncounterCard(enc, story);
+}
+function showEncounterCard(enc, story) {
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
     const o = enc.opts[+b.dataset.opt]; if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
