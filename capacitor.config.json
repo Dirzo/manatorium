@@ -1,0 +1,12 @@
+{
+  "appId": "com.siegeoflegends.game",
+  "appName": "Siege of Legends",
+  "webDir": "app/www",
+  "backgroundColor": "#0c1028",
+  "android": { "backgroundColor": "#0c1028" },
+  "ios": { "backgroundColor": "#0c1028", "contentInset": "never", "scrollEnabled": false },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 600, "launchAutoHide": false, "backgroundColor": "#0c1028", "showSpinner": false },
+    "StatusBar": { "overlaysWebView": true, "style": "DARK", "backgroundColor": "#00000000" }
+  }
+}
