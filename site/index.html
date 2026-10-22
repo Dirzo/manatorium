@@ -5713,6 +5713,8 @@ const SFX = {
 //   boss  boss sieges and the goose finale: the tune in harmonic minor over a low drone and toms
 //   talk  boss talk scenes: calm, ducked under the dialogue blips
 // fanfare() is the brass: a heraldic call when a siege begins, a flourish on victory, a droopy one on defeat.
+// Cam 2026-10-22: switched off, it wasn't the sound he wanted; a recorded track will replace it. true brings it back.
+const MUSIC_ON = false;
 const MUS_MAJOR = [0, 2, 4, 5, 7, 9, 11], MUS_MINOR = [0, 2, 3, 5, 7, 8, 11];
 // melody: per bar, [step, scale degree from C4, length in 16ths]
 const MUS_MEL = [
@@ -5747,7 +5749,7 @@ const MUS_FANFARE = {
 const MUSIC = {
   ctx: null, out: null, live: false, vol: 0.5, mood: null, bar: 0, step: 0, nextT: 0, timer: 0, hold: 0,
   // called once the splash and intro are done; the scheduler waits for the first tap to unlock audio
-  start() { this.live = true; if (!this.timer) this.timer = setInterval(() => this.tick(), 30); },
+  start() { if (!MUSIC_ON) return; this.live = true; if (!this.timer) this.timer = setInterval(() => this.tick(), 30); },
   setVol(v) { this.vol = v; if (this.out) { this.out.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.08); this.fan.gain.setTargetAtTime(v * 0.9, this.ctx.currentTime, 0.08); } },
   level() { return this.vol * 0.6 * (this.mood === 'talk' ? 0.45 : 1); },
   init() {
@@ -11830,7 +11832,7 @@ function wire() {
 // Sound button: a small panel with music and effects volume (music.js plays the theme)
 const AUDIO = { fx: 1 };
 function setFxVol(v) { AUDIO.fx = v; SFX.on = v > 0; if (SFX.master) SFX.master.gain.value = 0.32 * v; }
-function soundLabel() { const b = $('soundBtn'), off = !SFX.on && MUSIC.vol <= 0; b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
+function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
 function loadAudioPrefs() {
   try { const m = localStorage.getItem('manatorium.music'), f = localStorage.getItem('manatorium.fxvol');
     if (m !== null) MUSIC.vol = +m; setFxVol(f !== null ? +f : localStorage.getItem('manatorium.sound') === '0' ? 0 : 1); } catch (e) { }
@@ -11841,15 +11843,16 @@ function audioPanel(anchor = $('soundBtn')) {
   let p = $('audioPop'); if (p) { p.remove(); return; }
   p = document.createElement('div'); p.id = 'audioPop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Sound');
   const row = (id, label, v) => `<label class="aprow"><span>${label}</span><input type="range" id="${id}" min="0" max="100" step="5" value="${Math.round(v * 100)}"><b id="${id}V">${v > 0 ? Math.round(v * 100) + '%' : 'Off'}</b></label>`;
-  p.innerHTML = row('apMusic', 'Music', MUSIC.vol) + row('apFx', 'Effects', AUDIO.fx) + '<button class="btn small" id="apMute"></button>';
+  p.innerHTML = (MUSIC_ON ? row('apMusic', 'Music', MUSIC.vol) : '') + row('apFx', 'Effects', AUDIO.fx) + '<button class="btn small" id="apMute"></button>';
   document.body.appendChild(p);
   const r = anchor.getBoundingClientRect(), w = p.offsetWidth;
   p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 6) + 'px'; p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
-  const sync = () => { for (const [id, v] of [['apMusic', MUSIC.vol], ['apFx', AUDIO.fx]]) { $(id).value = Math.round(v * 100); $(id + 'V').textContent = v > 0 ? Math.round(v * 100) + '%' : 'Off'; } $('apMute').textContent = MUSIC.vol > 0 || AUDIO.fx > 0 ? 'Mute all' : 'Unmute'; saveAudioPrefs(); };
-  $('apMusic').oninput = e => { MUSIC.setVol(e.target.value / 100); sync(); };
+  const musV = () => MUSIC_ON ? MUSIC.vol : 0;
+  const sync = () => { for (const [id, v] of [['apMusic', MUSIC.vol], ['apFx', AUDIO.fx]]) if ($(id)) { $(id).value = Math.round(v * 100); $(id + 'V').textContent = v > 0 ? Math.round(v * 100) + '%' : 'Off'; } $('apMute').textContent = musV() > 0 || AUDIO.fx > 0 ? 'Mute all' : 'Unmute'; saveAudioPrefs(); };
+  if (MUSIC_ON) $('apMusic').oninput = e => { MUSIC.setVol(e.target.value / 100); sync(); };
   $('apFx').oninput = e => { setFxVol(e.target.value / 100); sync(); };
   $('apFx').onchange = () => SFX.play('coin');
-  $('apMute').onclick = () => { const off = MUSIC.vol > 0 || AUDIO.fx > 0; if (off) { AUDIO.prev = [MUSIC.vol, AUDIO.fx]; MUSIC.setVol(0); setFxVol(0); } else { const [m, f] = AUDIO.prev || [0.5, 1]; MUSIC.setVol(m || 0.5); setFxVol(f || 1); } sync(); };
+  $('apMute').onclick = () => { const off = musV() > 0 || AUDIO.fx > 0; if (off) { AUDIO.prev = [MUSIC.vol, AUDIO.fx]; MUSIC.setVol(0); setFxVol(0); } else { const [m, f] = AUDIO.prev || [0.5, 1]; MUSIC.setVol(m || 0.5); setFxVol(f || 1); } sync(); };
   sync();
   const away = e => { if (!p.contains(e.target) && !anchor.contains(e.target)) { p.remove(); document.removeEventListener('pointerdown', away, true); } };
   document.addEventListener('pointerdown', away, true);

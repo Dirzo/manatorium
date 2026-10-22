@@ -7,6 +7,8 @@
 //   boss  boss sieges and the goose finale: the tune in harmonic minor over a low drone and toms
 //   talk  boss talk scenes: calm, ducked under the dialogue blips
 // fanfare() is the brass: a heraldic call when a siege begins, a flourish on victory, a droopy one on defeat.
+// Cam 2026-10-22: switched off, it wasn't the sound he wanted; a recorded track will replace it. true brings it back.
+const MUSIC_ON = false;
 const MUS_MAJOR = [0, 2, 4, 5, 7, 9, 11], MUS_MINOR = [0, 2, 3, 5, 7, 8, 11];
 // melody: per bar, [step, scale degree from C4, length in 16ths]
 const MUS_MEL = [
@@ -41,7 +43,7 @@ const MUS_FANFARE = {
 const MUSIC = {
   ctx: null, out: null, live: false, vol: 0.5, mood: null, bar: 0, step: 0, nextT: 0, timer: 0, hold: 0,
   // called once the splash and intro are done; the scheduler waits for the first tap to unlock audio
-  start() { this.live = true; if (!this.timer) this.timer = setInterval(() => this.tick(), 30); },
+  start() { if (!MUSIC_ON) return; this.live = true; if (!this.timer) this.timer = setInterval(() => this.tick(), 30); },
   setVol(v) { this.vol = v; if (this.out) { this.out.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.08); this.fan.gain.setTargetAtTime(v * 0.9, this.ctx.currentTime, 0.08); } },
   level() { return this.vol * 0.6 * (this.mood === 'talk' ? 0.45 : 1); },
   init() {
