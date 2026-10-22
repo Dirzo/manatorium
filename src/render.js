@@ -158,8 +158,11 @@ function drawUnit(g, u, t, opts = {}) {
   const fu = u.fury && u.alive !== false ? Math.min(1, u.fury.t / u.fury.dur) : 0;
   const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
   const fs = fu ? Math.round(size * (1 + 0.14 * fu + 0.04 * Math.sin(t * 30))) : size, fx = fu ? x + randi(-1, 1) : x;
+  // a champion standing still plays its own little idle (src/idles.js)
+  const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
-  if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
+  if (idle) drawIdleUnit(g, img, fx, y, fs, flip, idle);
+  else if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
   else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
   g.restore();
   if (u.frozen > 0 && u.alive !== false) { g.globalAlpha = 0.45; g.fillStyle = '#bfeeff'; g.fillRect(x - size / 2 + 3, y - size + 4, size - 6, size - 4); g.globalAlpha = 1; }
@@ -282,12 +285,13 @@ function renderFrame(V, dt) {
   g.imageSmoothingEnabled = false;
   g.drawImage(R.bg[bgKey], 0, 0);
   if (hall) drawHallLive(g, t, B);
+  else if (typeof drawSceneLive === 'function') drawSceneLive(g, run.castleEl, t);
   // clouds
   if (!hall) for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#ac9298' : '#ffffff'; g.fillRect(Math.round(c.x), Math.round(c.y), c.w, 4); g.fillRect(Math.round(c.x + 4), Math.round(c.y - 3), c.w - 10, 3); g.fillRect(Math.round(c.x + c.w * 0.4), Math.round(c.y - 5), c.w * 0.35, 2);
     g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#7d707f' : '#e4ecff'; g.fillRect(Math.round(c.x + 2), Math.round(c.y + 4), c.w - 4, 1); }
   // castle
-  if (!hall) { g.drawImage(buildCastle(run), 0, 0); drawCastleLive(g, t); }
+  if (!hall) { const cv = buildCastle(run); g.drawImage(cv, 0, 0); drawCastleLive(g, t); if (typeof drawCastleAlive === 'function') drawCastleAlive(g, run, t, cv); }
   if (!hall && run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
   // castle damage
   const hpf = run.castle.hp / run.castle.max;

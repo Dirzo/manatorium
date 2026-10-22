@@ -67,6 +67,7 @@ function showDraft() {
   const kind = run.recruitFrom === 'guild' ? 'guild' : run.recruitFrom ? 'recruit' : draftKind(run); G.phase = 'draft'; save();
   UI.modal(UI.draftHTML(run.pendingDraft, kind, draftRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
+      if (!run.pendingDraft) return; // a double tap after the pick
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
       if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
@@ -119,7 +120,7 @@ function beginSiege() {
   if (G.run.siege > 1) UI.setRoster(true);
   const s = G.run.siege; const F = FACTIONS[factionIndex(s)];
   if (G.run.finale === 'ready') UI.banner('The Shard War', 'Knock the shards loose'); else if (!isBossSiege(s)) UI.banner(`Siege ${s}`, G.run.tactic ? `${F.name} · ${TACTICS[G.run.tactic].name}` : F.name);
-  SFX.play('cast');
+  if (!MUSIC.fanfare(isBossSiege(s) || G.run.finale === 'ready' ? 'boss' : 'begin')) SFX.play('cast');
   UI.refresh();
   if (s === 1) setTimeout(() => UI.coach('xp-live', document.querySelector('.hcard .xpbar'), 'Heroes earn experience from kills and from surviving the siege. A hero who falls loses everything they earned this round.'), 1500);
 }
@@ -147,13 +148,15 @@ function endSiege() {
   const B = G.B;
   if (B.done === 'victory') {
     G.phase = 'report'; G.armed = null;
+    const taunted = G.run.mods.taunt; // boss talk: taunting the boss earns a second loot pick
     const rep = finishSiege(G.run, G.meta, B);
     TEL.siege(G.run, rep);
-    SFX.play('victory');
+    if (!MUSIC.fanfare('win')) SFX.play('victory');
     const run = G.run;
     if (rep.siege >= FINAL_SIEGE && run.finale !== 'ready') { startFinale(run); G.phase = 'finale'; save(); TEL.event('finale', {}); setTimeout(() => showFinale(), 1400); UI.hud(); return; }
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
+    if (taunted) run.post.push('loot');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
@@ -163,7 +166,7 @@ function endSiege() {
     setTimeout(() => showReport(rep), 900);
     UI.hud();
   } else {
-    G.phase = 'over'; G.armed = null;
+    G.phase = 'over'; G.armed = null; MUSIC.fanfare('lose');
     TEL.runEnd(G.run, B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde');
     UI.banner('The keep has fallen', `You held ${G.run.siege - 1} sieges`);
     setTimeout(() => startTower(), 2600);
@@ -181,7 +184,8 @@ function nextPost() {
   const run = G.run;
   const elHero = run.roster.find(needsElement);
   if (elHero && !(run.post[0] === 'draft' && !run.roster.length)) return showElement(elHero);
-  const step = run.post.shift(); save();
+  // the encounter stays queued until it is answered, so a reload mid-card (or mid-talk) brings it back
+  const step = run.post[0] === 'encounter' ? 'encounter' : run.post.shift(); save();
   if (!step) return toPrep();
   if (step === 'loot') return showLoot();
   if (step === 'draft') return showDraft();
@@ -228,8 +232,26 @@ function showCastle() {
 
 function showEncounter() {
   const enc = drawEncounter(G.run, G.lastEnc), story = enc.story ? enc : null; if (!story) G.lastEnc = [enc.id, ...G.lastEnc].slice(0, 8); G.phase = 'encounter';
+  // Cam 2026-10-22: when the boss talk is up next, the card plays inside that scene and its choices become replies
+  if (G.run.post.length === 1 && !vaultDue(G.run) && talkDue(G.run)) {
+    UI.closeModal(); let picked = null;
+    const pick = i => {
+      const o = enc.opts[i]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; }
+      const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy'); TEL.event('encounter', { id: enc.id, opt: i }); picked = o;
+      const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz]; save(); changed();
+      return { lines: r.out.filter(x => x !== 'Pick an item to reforge.').concat(r.levels.map(([h]) => `${heroDisplayName(h)} reached level ${h.level}!`)), hz: hz && hz.name };
+    };
+    const after = () => { save(); changed();
+      if (picked && G.run.pendingReforge) { G.run.pendingReforge = false; return showReforge(enc, items => { if (items && items.length) UI.toast(items.join(' ')); UI.closeModal(); nextPost(); }); }
+      nextPost(); };
+    return showTalk(G.run, after, { enc, pick, fallback: () => { G.run.talked = null; showEncounterCard(enc, story); } });
+  }
+  showEncounterCard(enc, story);
+}
+function dropEncounter() { const i = G.run.post.indexOf('encounter'); if (i >= 0) G.run.post.splice(i, 1); }
+function showEncounterCard(enc, story) {
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-    const o = enc.opts[+b.dataset.opt]; if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
+    const o = enc.opts[+b.dataset.opt]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
     const lv = r.levels.map(([h, n]) => `${heroDisplayName(h)} reached level ${h.level}!`);
     const outcome = extra => {
@@ -271,6 +293,13 @@ function toPrep() {
   UI.setRoster(G.run.siege > 1 && G.run.roster.every(h => h.place));
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
+  const run = G.run;
+  // Cam 2026-10-21: the horde's boss talks to your voice before every siege (talk.js); banners and coaching wait for it
+  if (talkDue(run)) { save(); return showTalk(run, () => { save(); changed(); prepCues(); }); }
+  talkSkipped(run); save(); changed();
+  prepCues();
+}
+function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
@@ -317,6 +346,8 @@ G.act = function (act, arg) {
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
+    case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
+      setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
     case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
   }
   changed();
@@ -335,6 +366,7 @@ function slotOk(h, s) { if (!s) return false; if (s.type === 'rafter') return is
 function occupant(s, except) { return G.run.roster.find(h => h !== except && h.place && h.place.type === s.type && (s.type === 'grid' ? h.place.c === s.c && h.place.r === s.r : h.place.i === s.i)); }
 function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
+  if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
@@ -414,7 +446,7 @@ function showTitle() {
   const parade = ['brann', 'iria', 'vale', 'grukk', 'thessa', 'rattle', 'pip', 'fenn', 'ursa', 'croak'].map((id, i) => `<img class="px" src="${portrait('h:' + id + (i % 3 === 1 ? ':' + EL_KEYS[i] : ''))}" alt="" style="animation-delay:${i * 0.12}s">`).join('')
     + ['grunt', 'chicken', 'slime', 'goose', 'imp', 'yeti', 'cog'].map((id, i) => `<img class="px" src="${portrait('e:' + id)}" alt="" style="animation-delay:${i * 0.12 + 0.6}s">`).join('');
   const metaHTML = metaLedgerHTML();
-  $('title').innerHTML = `<section class="hero"><canvas id="titleBg" class="px"></canvas><div class="hero-shade"></div>
+  $('title').innerHTML = `<section class="hero"><canvas id="titleBg" class="px"></canvas><div class="hero-shade"></div><button class="btn small tsound" id="tSound" title="Music and effects volume">♪ Sound</button>
     <div class="hero-in">
       <div class="logo"><span class="eyebrow-in">A castle defense auto battler</span><h1 data-t="Siege of Legends">Siege of Legends</h1><p>Fifty sieges. Ten hordes. One goose.</p></div>
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
@@ -438,6 +470,7 @@ function showTitle() {
   const t = $('title');
   wireLedger();
   $('tFs').onclick = () => UI.fullscreen();
+  $('tSound').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(e.currentTarget); };
   $('tPlaytest').onclick = () => { SFX.init(); showPlaytest(); };
   $('tDown').onclick = () => t.querySelector('.wrap').scrollIntoView({ behavior: 'smooth' });
   $('tIntro').onclick = () => startIntro(() => titleEnter());
@@ -526,7 +559,7 @@ function startPlaytest(s) {
   msg.textContent = 'The bot is getting started…'; setTimeout(tick, 30);
 }
 
-function titleEnter() { const t = $('title'); t.classList.remove('enter'); void t.offsetWidth; t.classList.add('enter'); }
+function titleEnter() { MUSIC.start(); const t = $('title'); t.classList.remove('enter'); void t.offsetWidth; t.classList.add('enter'); }
 
 function resumeRun() {
   const run = G.run;
@@ -534,6 +567,8 @@ function resumeRun() {
   if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
   if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
+  // a reload during the boss talk plays it again (run.talked is set when the scene ends)
+  if (talkDue(run)) showTalk(run, () => { save(); changed(); prepCues(); });
 }
 
 // ----- input wiring -----
@@ -551,7 +586,7 @@ function wire() {
   $('hammerBtn').onclick = () => { if (G.B && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; SFX.play('click'); UI.hud(); } };
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
   $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
-  $('soundBtn').onclick = () => { SFX.init(); SFX.on = !SFX.on; $('soundBtn').textContent = SFX.on ? 'Sound on' : 'Sound off'; $('soundBtn').setAttribute('aria-pressed', String(SFX.on)); try { localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } };
+  $('soundBtn').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(); };
   $('menuBtn').onclick = () => showTitle();
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input,textarea,select')) return;
@@ -570,11 +605,43 @@ function wire() {
   document.addEventListener('pointerdown', () => SFX.init(), { once: true });
 }
 
+// Sound button: a small panel with music and effects volume (music.js plays the theme)
+const AUDIO = { fx: 1 };
+function setFxVol(v) { AUDIO.fx = v; SFX.on = v > 0; if (SFX.master) SFX.master.gain.value = 0.32 * v; }
+function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
+function loadAudioPrefs() {
+  try { const t = localStorage.getItem('manatorium.talk'); if (['all', 'boss', 'off'].includes(t)) TALK_PREF.mode = t; } catch (e) { }
+  try { const m = localStorage.getItem('manatorium.music'), f = localStorage.getItem('manatorium.fxvol');
+    if (m !== null) MUSIC.vol = +m; setFxVol(f !== null ? +f : localStorage.getItem('manatorium.sound') === '0' ? 0 : 1); } catch (e) { }
+  soundLabel();
+}
+function saveAudioPrefs() { try { localStorage.setItem('manatorium.music', String(MUSIC.vol)); localStorage.setItem('manatorium.fxvol', String(AUDIO.fx)); localStorage.setItem('manatorium.sound', SFX.on ? '1' : '0'); } catch (e) { } soundLabel(); }
+function audioPanel(anchor = $('soundBtn')) {
+  let p = $('audioPop'); if (p) { p.remove(); return; }
+  p = document.createElement('div'); p.id = 'audioPop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Sound');
+  const row = (id, label, v) => `<label class="aprow"><span>${label}</span><input type="range" id="${id}" min="0" max="100" step="5" value="${Math.round(v * 100)}"><b id="${id}V">${v > 0 ? Math.round(v * 100) + '%' : 'Off'}</b></label>`;
+  const talkRow = `<label class="aprow"><span>Boss talk</span><select id="apTalk">${[['all', 'Every siege'], ['boss', 'Boss sieges only'], ['off', 'Off']].map(([v, l]) => `<option value="${v}"${TALK_PREF.mode === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  p.innerHTML = (MUSIC_ON ? row('apMusic', 'Music', MUSIC.vol) : '') + row('apFx', 'Effects', AUDIO.fx) + talkRow + '<button class="btn small" id="apMute"></button>';
+  document.body.appendChild(p);
+  const r = anchor.getBoundingClientRect(), w = p.offsetWidth;
+  p.style.top = Math.min(innerHeight - p.offsetHeight - 8, r.bottom + 6) + 'px'; p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + 'px';
+  const musV = () => MUSIC_ON ? MUSIC.vol : 0;
+  const sync = () => { for (const [id, v] of [['apMusic', MUSIC.vol], ['apFx', AUDIO.fx]]) if ($(id)) { $(id).value = Math.round(v * 100); $(id + 'V').textContent = v > 0 ? Math.round(v * 100) + '%' : 'Off'; } $('apMute').textContent = musV() > 0 || AUDIO.fx > 0 ? 'Mute all' : 'Unmute'; saveAudioPrefs(); };
+  if (MUSIC_ON) $('apMusic').oninput = e => { MUSIC.setVol(e.target.value / 100); sync(); };
+  $('apFx').oninput = e => { setFxVol(e.target.value / 100); sync(); };
+  $('apFx').onchange = () => SFX.play('coin');
+  $('apTalk').onchange = e => { TALK_PREF.mode = e.target.value; try { localStorage.setItem('manatorium.talk', TALK_PREF.mode); } catch (er) { } SFX.play('click'); };
+  $('apMute').onclick = () => { const off = musV() > 0 || AUDIO.fx > 0; if (off) { AUDIO.prev = [MUSIC.vol, AUDIO.fx]; MUSIC.setVol(0); setFxVol(0); } else { const [m, f] = AUDIO.prev || [0.5, 1]; MUSIC.setVol(m || 0.5); setFxVol(f || 1); } sync(); };
+  sync();
+  const away = e => { if (!p.contains(e.target) && !anchor.contains(e.target)) { p.remove(); document.removeEventListener('pointerdown', away, true); } };
+  document.addEventListener('pointerdown', away, true);
+}
+
 function boot(hotData) {
   buildAllSprites();
   for (const [k, s] of Object.entries(VISITORS)) buildSprite('npc:' + k, s, false);
   UI.init(); initRender($('arena')); wire();
-  try { if (localStorage.getItem('manatorium.sound') === '0') { SFX.on = false; $('soundBtn').textContent = 'Sound off'; } } catch (e) { }
+  loadAudioPrefs();
   const d = (hotData && hotData.meta && hotData.v === 2) ? hotData : load();
   G.meta = Object.assign(newMeta(), (d && d.meta) || {});
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};

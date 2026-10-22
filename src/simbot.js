@@ -114,6 +114,14 @@ function botMeta(budget) {
   }
   return meta;
 }
+// boss talk for the bots: the voice may lose their nerve, and each style answers the boss its own way
+const BOT_REPLY = { brawler: 'taunt', arcanist: 'rallycry', bulwark: 'firm', balanced: 'firm' };
+function botBossTalk(run, style) {
+  let v = voiceHero(run); if (!v || run.voice.left) { v = run.roster.find(h => !h.vault); run.voice = v ? { uid: v.uid, id: v.id, name: HERO_BY_ID[v.id].name } : null; }
+  if (!isBossSiege(run.siege) && run.finale !== 'ready') return;
+  if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
+  setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
+}
 // one full run. opts: { dt, maxSiege, onSiege }
 function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
@@ -125,6 +133,7 @@ function botPlayRun(style, meta, opts = {}) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
+    botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
     if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
@@ -134,6 +143,7 @@ function botPlayRun(style, meta, opts = {}) {
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     botBuyDrafts(run, draft);
@@ -176,11 +186,13 @@ function playtestStep(P) {
   const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
   botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
   for (const h of run.roster) if (!h.place) autoPlace(run, h);
+  botBossTalk(run, style); const taunted = run.mods.taunt;
   const B = startBattle(run, meta); botBattle(B, 1 / 20, 420);
   if (B.done !== 'victory') { P.losses++; if (B.bossUnit && B.bossUnit.alive) B.bossKilled = B.bossUnit.def.boss;
     for (const e of B.enemies) e.alive = false; B.queue = []; run.castle.hp = Math.max(run.castle.hp, run.castle.max * 0.6); B.done = 'victory'; }
   const rep = finishSiege(run, meta, B);
   if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+  if (taunted && rep.siege < FINAL_SIEGE) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
   if (!run.roster.length) draft();
   botBuyDrafts(run, draft);

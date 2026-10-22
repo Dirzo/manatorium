@@ -1163,3 +1163,109 @@ h2.hoard { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .dcard.deal, .ecard.deal, .lcard.deal, h2.alive .ch, #banner h2.alive .ch, #banner p .w, .bosscard, .bosscard *, .intel .foe.boss, .intel .foe.boss img, .sheet.special, .dcard.armed, #banner .in::before, #banner .bspr { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
+
+/* ===== Boss talk (talk.js): staged on the field with a panning camera, comic speech bubbles, cinematic bars ===== */
+.talk { position: fixed; inset: 0; z-index: 420; overflow: hidden; background: #0c0a1c; cursor: pointer; user-select: none; animation: tkIn .4s ease-out; }
+.talk.out { animation: tkOut .26s ease-in forwards; }
+@keyframes tkIn { from { opacity: 0; } }
+@keyframes tkOut { to { opacity: 0; } }
+.tk-cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: transform .8s cubic-bezier(.55,.05,.35,1); will-change: transform; }
+.tk-field { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.talk.bossy .tk-cam::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 84% 70%, rgba(255,40,80,.18), transparent 45%); pointer-events: none; }
+.talk.mourn .tk-cam::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,16,50,.35), rgba(20,16,50,.1)); pointer-events: none; }
+/* actors */
+.tk-a { position: absolute; transform-origin: 50% 91%; transition: filter .3s, opacity .6s, transform .6s; }
+.tk-a canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.tk-a.talking canvas { animation: tkTalk .32s ease-in-out infinite alternate; transform-origin: 50% 91%; }
+.tk-a:not(.talking) canvas { animation: tkBreathe 1.6s ease-in-out infinite alternate; transform-origin: 50% 91%; }
+@keyframes tkTalk { to { transform: scale(1.02, .975); } }
+@keyframes tkBreathe { to { transform: scale(1, .985); } }
+.tk-shadow { position: absolute; left: 20%; right: 20%; top: 86%; height: 7%; border-radius: 50%; background: rgba(40,30,20,.32); } /* feet line is at 20/22 of the actor box */
+.tk-a.stomp { animation: tkStomp .45s cubic-bezier(.3,1.6,.5,1); }
+@keyframes tkStomp { 30% { transform: scale(1.06, .94); } 60% { transform: scale(.97, 1.03); } }
+.tk-a.waiting { opacity: 0; transform: translateX(-40%); }
+.tk-a.enter { animation: tkEnter .6s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes tkEnter { from { opacity: 0; transform: translateX(-60%); } }
+.tk-fallen { filter: grayscale(1) brightness(1.3) opacity(.6) drop-shadow(0 0 10px #c9d4ff); }
+.tk-fallen canvas { animation: tkGhost 2s ease-in-out infinite alternate !important; }
+@keyframes tkGhost { to { transform: translateY(-4%); } }
+.tk-fallen.gone { opacity: 0; transform: translateY(-40%); transition: opacity 1.4s, transform 1.6s ease-out; }
+.tk-candle { position: absolute; right: -14%; top: 77%; width: 7%; height: 14%; background: #f1e6c8; border: 2px solid var(--ink); }
+.tk-candle::after { content: ''; position: absolute; left: 0; top: -60%; width: 100%; height: 50%; background: #ffcf3a; border-radius: 50% 50% 40% 40%; box-shadow: 0 0 14px #ffb03a; animation: tkFlicker .3s steps(2) infinite alternate; }
+@keyframes tkFlicker { to { transform: scaleY(.8) translateX(1px); } }
+/* mishaps */
+.tk-puddle { position: absolute; left: 30%; right: 30%; top: 88%; height: 0; background: #ffe14a; border-radius: 50%; opacity: .85; box-shadow: inset 0 -2px 0 #e0b020; }
+.tk-a.mishap.pee .tk-puddle { animation: tkPuddle 1.8s ease-out forwards; }
+.tk-a.mishap.pee canvas { animation: tkShiver .07s linear infinite alternate !important; }
+@keyframes tkPuddle { to { height: 9%; left: -6%; right: -6%; } }
+@keyframes tkShiver { from { transform: translateX(-2%); } to { transform: translateX(2%); } }
+.tk-a.mishap.flee canvas { animation: tkFlee 1.4s cubic-bezier(.5,0,.9,.4) .35s forwards !important; }
+@keyframes tkFlee { 0% { transform: translateX(0) scaleX(1); } 12% { transform: translateX(4%) scaleX(-1) translateY(-6%); } 100% { transform: translateX(-420%) scaleX(-1); } }
+.tk-a.mishap.flee::after { content: '💨'; position: absolute; left: 30%; bottom: 0; font-size: 2.2em; animation: tkDust .9s ease-out .45s both; }
+@keyframes tkDust { from { opacity: 0; transform: scale(.4); } 40% { opacity: 1; } to { opacity: 0; transform: translateX(-60%) scale(1.5); } }
+.tk-a.mishap.faint canvas { animation: tkFaint .7s cubic-bezier(.5,0,.6,1.4) .3s forwards !important; transform-origin: 50% 91%; }
+@keyframes tkFaint { to { transform: rotate(-90deg) translateX(-8%); } }
+.tk-a.mishap.faint::after { content: '💫'; position: absolute; left: -30%; bottom: 20%; font-size: 1.8em; animation: tkFlicker .4s steps(2) 1s infinite alternate both; }
+/* speech bubble */
+.tk-bub { position: absolute; max-width: min(380px, 40vw); background: #fffdf4; color: #1a1230; border: 3px solid var(--ink); border-radius: 16px; padding: 10px 14px 12px; box-shadow: 0 5px 0 rgba(15,20,48,.55);
+  animation: tkPop .22s cubic-bezier(.2,1.4,.4,1); pointer-events: none; }
+@keyframes tkPop { from { transform: scale(.6); opacity: 0; } }
+.tk-bub.from-hero { transform-origin: 0 70%; border-top-left-radius: 4px; }
+.tk-bub.from-boss { transform-origin: 100% 70%; border-top-right-radius: 4px; }
+.tk-bub::before, .tk-bub::after { content: ''; position: absolute; top: 14px; width: 0; height: 0; border: 9px solid transparent; }
+.tk-bub.from-hero::before { left: -19px; border-right: 16px solid var(--ink); } .tk-bub.from-hero::after { left: -12px; top: 16px; border-width: 7px; border-right: 12px solid #fffdf4; }
+.tk-bub.from-boss::before { right: -19px; border-left: 16px solid var(--ink); } .tk-bub.from-boss::after { right: -12px; top: 16px; border-width: 7px; border-left: 12px solid #fffdf4; }
+.tk-who { display: block; font-family: var(--f-display); font-size: 12px; letter-spacing: .03em; color: #b0803a; margin-bottom: 2px; }
+.tk-bub.from-boss .tk-who { color: #d42a5a; }
+.tk-bub p { margin: 0; font-size: 17px; line-height: 1.4; font-weight: 600; }
+.tk-bub.robot p { font-family: var(--f-logo); letter-spacing: .04em; }
+.tk-bub.ghostly { background: #e8ecff; opacity: .9; } .tk-bub.ghostly::after { border-right-color: #e8ecff; }
+.tk-more { position: absolute; right: 10px; bottom: 4px; font-size: 11px; color: #b0803a; animation: tkMore .6s ease-in-out infinite alternate; }
+.talk.typing .tk-more { visibility: hidden; }
+@keyframes tkMore { to { transform: translateY(3px); } }
+/* cinematic bars: narration, the reply picks and the skip button live here */
+.tk-bar { position: absolute; left: 0; right: 0; background: #07060f; display: flex; align-items: center; justify-content: center; padding: 0 16px; animation: tkBar .5s cubic-bezier(.2,.9,.3,1); }
+.tk-bar.top { top: 0; height: max(44px, 8vh); } .tk-bar.bot { bottom: 0; min-height: max(56px, 11vh); flex-direction: column; gap: 8px; padding: 10px 16px 14px; }
+.tk-bar.top { --from: -100%; } .tk-bar.bot { --from: 100%; }
+@keyframes tkBar { from { transform: translateY(var(--from)); } }
+.tk-eyebrow { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .16em; font-size: 12px; color: var(--muted); }
+.talk.bossy .tk-eyebrow { color: #ff8aa8; }
+.tk-narr { margin: 0; max-width: 760px; text-align: center; font-size: 16px; font-style: italic; color: #e8e4ff; min-height: 1.4em; }
+.tk-opts { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.tk-opts:empty { display: none; }
+.tk-opt { position: relative; width: min(250px, 30vw); display: flex; flex-direction: column; gap: 3px; text-align: left; background: #fffdf4; color: #1a1230; border: 3px solid var(--ink); border-radius: 16px; border-bottom-left-radius: 4px; padding: 8px 12px 10px;
+  box-shadow: 0 4px 0 rgba(255,255,255,.12); transition: transform .12s; animation: tkPop .25s cubic-bezier(.2,1.4,.4,1) both; }
+.tk-opt:nth-child(2) { animation-delay: .06s; } .tk-opt:nth-child(3) { animation-delay: .12s; }
+.tk-opt:hover, .tk-opt:focus-visible { transform: translateY(-4px) rotate(-1deg); box-shadow: 0 0 0 3px var(--gold); }
+.tk-opt b { font-family: var(--f-display); font-size: 15px; color: #b0803a; }
+.tk-opt q { font-size: 13px; font-weight: 600; }
+.tk-opt span { font-size: 12px; color: #2f8a4a; }
+.tk-skip { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: 2px solid #2a2850; border-radius: 6px; padding: 3px 10px; font-size: 13px; color: var(--muted); }
+.tk-skip:hover { color: var(--text); border-color: var(--line); }
+@media (max-width: 640px) { .tk-bub p { font-size: 15px; } .tk-opt { width: 100%; } }
+/* the post-siege card inside the talk: title over the scene, a visitor on the road, choices as reply cards */
+.tk-card { position: absolute; left: 50%; top: calc(max(44px, 8vh) + 14px); transform: translateX(-50%); text-align: center; pointer-events: none; animation: tkCard .6s cubic-bezier(.2,.9,.3,1.2); transition: opacity .6s, transform .6s; }
+.tk-card span { display: block; font-family: var(--f-display); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #ffe9a8; text-shadow: 0 2px 0 #07060f; }
+.tk-card h2 { margin: 2px 0 0; font-size: clamp(22px, 4vw, 38px); color: #fffdf4; text-shadow: 0 3px 0 #07060f, 0 0 18px rgba(7,6,15,.6); white-space: nowrap; }
+.tk-card.out { opacity: 0; transform: translate(-50%, -30%); }
+@keyframes tkCard { from { opacity: 0; transform: translate(-50%, -40%) scale(.9); } }
+.tk-visitor.enter { animation: tkVisit .9s cubic-bezier(.2,.9,.3,1.1); }
+@keyframes tkVisit { from { opacity: 0; transform: translateX(80%); } }
+.tk-visitor.leave { opacity: 0; transform: translateX(120%); transition: opacity 1s .2s, transform 1.2s ease-in; }
+.tk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; }
+.tk-opt .tk-tags .et { font-size: 10px; } .tk-opt .tk-tags .et:not(.hz) { color: #1a1230; }
+
+/* sound panel under the Sound button: music and effects volume */
+#audioPop { position: fixed; z-index: 9000; width: 230px; display: grid; gap: 8px; background: var(--panel); border: 2px solid var(--ink); border-radius: 6px; padding: 10px 12px; box-shadow: 0 4px 0 var(--ink); }
+#audioPop .aprow { display: grid; grid-template-columns: 56px 1fr 38px; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 13px; }
+#audioPop .aprow b { font-weight: 500; color: var(--muted); text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+#audioPop input[type=range] { width: 100%; accent-color: var(--gold); min-height: 24px; }
+#audioPop #apMute { justify-self: end; }
+.hero .tsound { position: absolute; top: 12px; right: 12px; z-index: 3; }
+/* boss talk: the voice's banner on their card, the talk setting, and the tall-phone bubble (talk.js) */
+.hcard .vflag { position: absolute; right: 2px; bottom: 2px; font-size: 12px; line-height: 1; background: var(--ink); color: var(--gold); padding: 2px 3px; border-radius: 2px; cursor: help; }
+.hcard .vflag.dread { color: var(--rose); animation: vflagShake 2.4s ease-in-out infinite; }
+@keyframes vflagShake { 0%, 88%, 100% { transform: none; } 92% { transform: rotate(-12deg); } 96% { transform: rotate(10deg); } }
+#audioPop .aprow select { grid-column: 2 / 4; font: inherit; background: var(--ink); color: inherit; border: 1px solid rgba(255,255,255,.2); border-radius: 4px; padding: 3px 4px; }
+.talk.portrait .tk-bub { max-width: none; }
+.talk.portrait .tk-bub::before, .talk.portrait .tk-bub::after { display: none; }

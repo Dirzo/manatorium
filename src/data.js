@@ -876,6 +876,9 @@ const TEMPERS = {
                 pair: 'Nap Time', pdesc: 'Both Lazy champions regenerate 2% HP per second.', pfx: s => { s.regen += 0.02; } },
 };
 const TEMPER_KEYS = Object.keys(TEMPERS);
+// each horde's boss rattles two tempers (boss talk): a voice with one of them has a mishap before the boss siege
+const BOSS_DREAD = { grubnose: ['vain', 'paranoid'], gloop: ['vain', 'cowardly'], wyrm: ['cowardly', 'wholesome'], ringmaster: ['paranoid', 'cheerful'], sporebaron: ['lazy', 'deranged'],
+  matriarch: ['honorable', 'lazy'], trashpaw: ['greedy', 'loyal'], colossus: ['optimistic', 'angry'], pinchbeard: ['cruel', 'zealous'], goosegod: ['cowardly', 'heroic'] };
 function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEYS.length)]; }
 
 
