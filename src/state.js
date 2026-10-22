@@ -60,7 +60,7 @@ function swapCost(run) { return Math.round(40 * Math.pow(1.8, ROSTER_CAP - 1 - S
 function teamLevel(run) { const l = run.roster.map(h => h.level).sort((a, b) => a - b); return l.length ? l[Math.floor(l.length / 2)] : joinLevel(run); }
 function swapHero(run, old, opt) {
   for (const it of run.stash) if (it.holder === old.uid) it.holder = null;
-  const g = sellValue(old), place = old.place; run.gold += g; run.roster = run.roster.filter(x => x !== old);
+  voiceLeaves(run, old); const g = sellValue(old), place = old.place; run.gold += g; run.roster = run.roster.filter(x => x !== old);
   const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
   const h = addDraftedHero(run, opt); h.level = Math.max(h.level, old.level);
   if (place) h.place = place;

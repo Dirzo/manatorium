@@ -1,19 +1,19 @@
 // ===== Boss talk (Cam 2026-10-21) =====
 // Before every siege the current horde's boss speaks to the keep, and your starting legend (the "voice") answers.
-// What the voice says depends on their personality (temper). Each boss dreads two tempers: if the voice has one,
-// the boss needles them all horde long, and before the boss siege something embarrassing happens and they sit it out.
-// When the voice falls, a succession scene hands the banner to the oldest surviving legend.
+// What the voice says depends on their personality (temper). Each boss dreads two tempers (BOSS_DREAD in data.js): if the
+// voice has one, the boss needles them all horde long, and before the boss siege something embarrassing happens and they
+// start the fight stunned. When the voice falls, a succession scene hands the banner to the oldest surviving legend.
 // Scenes: siege 1-4 of a horde = boss line, hero reply, boss closer. Siege 5 = longer scene with three replies
-// (Taunt / Stand firm / Rally) that each change the fight a little. Portraits are the in-game sprites with a flapping jaw.
+// (Taunt / Stand firm / Rally) that each trade something for something. Portraits are the in-game sprites with a flapping jaw.
 
 const BOSS_SHORT = { grubnose: 'Grubnose', gloop: 'Mother Gloop', wyrm: 'Vexmora', ringmaster: 'Malgoth', sporebaron: 'Baron', matriarch: 'Matriarch', trashpaw: 'Big Mama', colossus: 'Colossus', pinchbeard: 'Pinchbeard', goosegod: 'Goose', shardgoose: 'Goose' };
 
 // per horde: five scenes (index = siege in the horde - 1). o = opening line, k / g = the opening when the story mood is
 // kind / grudging, t = which kind of reply it calls for, c = the boss's closing line.
-// dread: the two tempers this boss rattles. sniff: closer used instead when the voice has a dreaded temper.
+// sniff: closer used instead when the voice has a dreaded temper.
 // mock: the boss's line about a fallen voice. react: the boss's answer to each boss-siege reply.
 const TALK = [
-  { boss: 'grubnose', dread: ['vain', 'paranoid'],
+  { boss: 'grubnose',
     sniff: 'You. The {temper} one. I can smell it on you. Goblins can smell weakness. Also onions. Mostly onions.',
     mock: 'Where\'s {fallen}? Gone? HAH! Even my bucket outlasted them, and it has a hole in it.',
     react: { taunt: 'MY BUCKET IS NOT SMALL! Get them! Get them TWICE!', firm: 'Hide behind your nice walls, then. I\'ve got a club and nothing to lose.', rally: 'Ooh, speeches. We do speeches too. Ahem. AAAAAAAAH! That was the speech.' },
@@ -24,7 +24,7 @@ const TALK = [
       { t: 'threat', o: 'My scouts counted your windows. Forty-two windows! I have zero windows. I\'m coming for one of yours.', k: 'You\'ve been... nice. Weird. Kings don\'t get nice. I still have to attack you, though. It\'s in the job description.', g: 'Rent. Rocks. KINDLING. I wrote every insult down on a leaf. I\'m coming, and I\'m bringing the leaf.', c: 'Next siege I bring EVERY cousin. Even Steve.' },
       { t: 'showdown', o: 'This is it, castle. Me, my bucket, and every goblin who ever lived in a ditch. Hand over the rafters!', k: 'I don\'t want to do this. Well, I want the rafters. But I don\'t want to do THIS. Hold still, it\'ll be quick.', g: 'You burned my letter. You raised my rent. Today the King of the Goblins takes back his DIGNITY. And your rafters.', c: 'Enough talk! GOBLINS! For the bucket!' },
     ] },
-  { boss: 'gloop', dread: ['vain', 'cowardly'],
+  { boss: 'gloop',
     sniff: 'Ohh, you\'re {temper}, aren\'t you, dear? Mother can tell. You wobble more than I do.',
     mock: '{fallen} has gone soft? Dear me. Softer than me, even, and I\'m mostly pudding.',
     react: { taunt: 'Did you just call me a PUDDLE? I\'ll show you a puddle!', firm: 'Walls don\'t stop water, dearie. They just make it angry.', rally: 'Cheer all you like. I can hear your knees knocking from the bog.' },
@@ -35,7 +35,7 @@ const TALK = [
       { t: 'threat', o: 'The bog is rising, dear. And so is Mother.', k: 'You carried my baby home. I saw. That doesn\'t make this easy. But a mother protects her bog.', g: 'Two lawsuits. Three complaints. Countless popped children. I have run out of patience, and I have plenty of goo.', c: 'Wobble well, little castle. Next time it\'s me.' },
       { t: 'showdown', o: 'I am Mother Gloop, and every drop of this bog is family. Today the family comes home through your gate.', k: 'Let\'s make this quick and gentle, dear. Like a bath. A very large, very upset bath.', g: 'You popped them. All of them. Now Mother pops YOU.', c: 'Children! Mother is HERE!' },
     ] },
-  { boss: 'wyrm', dread: ['cowardly', 'wholesome'],
+  { boss: 'wyrm',
     sniff: 'Oh, a {temper} one. How deliciously tragic. I\'ve already written your scene. You don\'t come off well.',
     mock: '{fallen} is gone? I\'ll write them a lovely obituary. Short. Very short. One adjective.',
     react: { taunt: 'A bad review? Of MY book? Write THAT in your will.', firm: 'Brace all you like. Fire goes over walls.', rally: 'A rousing speech. Derivative, but rousing.' },
@@ -46,7 +46,7 @@ const TALK = [
       { t: 'threat', o: 'The final chapter needs an ending. I\'ve decided it\'s you.', k: 'You were gracious in the interview. "Surprisingly reasonable, for a building." Pity the plot demands I torch you.', g: 'You demanded final edit. FINAL EDIT. From ME. I will edit you with fire.', c: 'Turn the page, castle. It\'s the last one.' },
       { t: 'showdown', o: 'Scales of Woe, final chapter. The wyrm descends. The castle trembles. The heroes, against all odds... no. No, they don\'t.', k: 'I\'ve written you kindly, you know. Brave. Doomed, but brave.', g: 'I\'ll burn you so thoroughly my editor won\'t find the ashes.', c: 'Let the critics watch. RISE, my dead!' },
     ] },
-  { boss: 'ringmaster', dread: ['paranoid', 'cheerful'],
+  { boss: 'ringmaster',
     sniff: 'You there! The {temper} one! I have JUST the act for you. Don\'t worry. It\'s mostly safe.',
     mock: 'Where is {fallen}? Ah. Vanished. And I hadn\'t even done the trick yet!',
     react: { taunt: 'BOOED? Malgoth has never been booed! Twice the fire!', firm: 'Ooh, a defensive act. The audience HATES defensive acts.', rally: 'Applause for the hero! And now, applause for their DOOM!' },
@@ -57,7 +57,7 @@ const TALK = [
       { t: 'threat', o: 'Tomorrow is the grand finale, and you are the volunteer from the audience.', k: 'You helped my imps. Now they want WEEKENDS. You\'ve ruined me. Lovely work, though.', g: 'You heckled the show. Nobody heckles Malgoth. Tomorrow I saw your castle in half, and there is no trick.', c: 'Smile! It\'s nearly showtime.' },
       { t: 'showdown', o: 'For my final trick, I will make your castle... DISAPPEAR!', k: 'No hard feelings, darlings. The show must go on. You just won\'t.', g: 'The ringmaster always gets the last laugh. Usually it\'s maniacal. Today it\'s VERY maniacal.', c: 'Drumroll, imps! DRUMROLL!' },
     ] },
-  { boss: 'sporebaron', dread: ['lazy', 'deranged'],
+  { boss: 'sporebaron',
     sniff: 'Ah, a {temper} sort. Excellent. You\'ll sit still long enough for me to grow on you.',
     mock: 'Ah, {fallen}. Back to the soil. I did warn you. Everything rots, darling.',
     react: { taunt: 'A TOADSTOOL? I am a BARON. Toadstools are the help!', firm: 'Hold your walls. Mold adores a good wall.', rally: 'Inspiring. You\'ll inspire a lovely fungus.' },
@@ -68,7 +68,7 @@ const TALK = [
       { t: 'threat', o: 'Spore season, my dear. Everything rots eventually. I only speed things up.', k: 'You\'ve been so courteous. I\'ll let you keep one room. A damp one.', g: 'You scrubbed my cousin off your pantry wall. I will grow on your GRAVE.', c: 'Tomorrow, the court is in session.' },
       { t: 'showdown', o: 'The Fungal Court is now in session. The charge: being insufficiently decomposed. The sentence: compost.', k: 'Nothing personal. Everything rots. You\'ll make wonderful soil.', g: 'Hear that? That\'s a thousand spores agreeing with me.', c: 'Release the spores! Gently. Then not gently.' },
     ] },
-  { boss: 'matriarch', dread: ['honorable', 'lazy'],
+  { boss: 'matriarch',
     sniff: 'And you. {temper}, according to my clipboard. That\'s a violation too.',
     mock: '{fallen} no longer lives here? I\'ll need the change-of-address form. In triplicate.',
     react: { taunt: 'Did you just call me a CARPET? That\'s an extra fine!', firm: 'Reinforcing your walls without a permit? Another violation.', rally: 'Rallying in a quiet zone. Noted. Fined.' },
@@ -79,7 +79,7 @@ const TALK = [
       { t: 'threat', o: 'Final notice. Tomorrow the HOA performs an inspection. With claws.', k: 'You actually shovelled the path. Nobody shovels the path. It\'s almost a shame to flatten you.', g: 'Seventeen violations. SEVENTEEN. I\'ve run out of forms, so I\'m bringing claws.', c: 'Bylaws are bylaws.' },
       { t: 'showdown', o: 'By the power vested in me by the Frostfang Homeowners Association, I hereby condemn this property.', k: 'You\'ve been an exemplary neighbour. That\'s why I\'m doing this myself.', g: 'I have never, EVER seen a moat this moaty. It ends tonight.', c: 'Clans! Enforce the bylaws!' },
     ] },
-  { boss: 'trashpaw', dread: ['greedy', 'loyal'],
+  { boss: 'trashpaw',
     sniff: 'Ooh, a {temper} one. Mama likes you, sugar. Mama might just keep you.',
     mock: 'Where\'d {fallen} go, sugar? Somebody throw \'em out with the trash?',
     react: { taunt: 'Did you call my babies RATS? They\'re RACCOONS, sugar. Big difference. Teeth.', firm: 'Lock your doors. Mama\'s opened tougher lids than you.', rally: 'Ain\'t that sweet. My babies got a cheer too. It\'s mostly screaming.' },
@@ -90,7 +90,7 @@ const TALK = [
       { t: 'threat', o: 'Family reunion\'s tomorrow, sugar. Everybody\'s comin\'. Uncle Ricketts. The twins. Somebody\'s possum.', k: 'You treated my babies right. Mama remembers kindness. Mama also remembers lasagne.', g: 'You chased my babies with a BROOM. Mama\'s bringin\' the whole family.', c: 'Don\'t wait up.' },
       { t: 'showdown', o: 'Mama\'s home, sugar. Put the kettle on, \'cause we\'re movin\' in.', k: 'I\'m sorry, honey. Forty mouths. A mama does what a mama has to do.', g: 'Nobody chases Big Mama\'s babies with a broom and keeps a nice castle.', c: 'Babies! Raid the pantry!' },
     ] },
-  { boss: 'colossus', dread: ['optimistic', 'angry'], caps: true,
+  { boss: 'colossus', caps: true,
     sniff: 'SCANNING. PERSONALITY: {temper}. COMPATIBILITY WITH SURVIVAL: LOW.',
     mock: 'HERO {fallen}: STATUS OFFLINE. CONDOLENCES.EXE HAS STOPPED WORKING.',
     react: { taunt: 'SCRAP? I AM VINTAGE. RECALCULATING ANGER: INCREASED.', firm: 'WALL STRENGTH NOTED. RECOMMENDED ACTION: HIT HARDER.', rally: 'MORALE DETECTED. MORALE IS NOT IN MY DATABASE.' },
@@ -101,7 +101,7 @@ const TALK = [
       { t: 'threat', o: 'UPDATE INSTALLED. NEW FEATURE: CASTLE REMOVAL. PLEASE.', k: 'YOU GAVE ME OIL. I AM GRATEFUL. GRATITUDE DOES NOT OVERRIDE DIRECTIVE. I AM SORRY.', g: 'YOU IGNORED MY SERVICE REQUEST. TICKET ESCALATED. ESCALATED TO: FISTS.', c: 'PLEASE HOLD.' },
       { t: 'showdown', o: 'DIRECTIVE: FLATTEN CASTLE. PRIORITY: HIGH. POLITENESS: MAXIMUM.', k: 'I WILL DEMOLISH YOU GENTLY. IT IS THE BEST I CAN OFFER.', g: 'WARRANTY VOID. MERCY VOID. EVERYTHING VOID.', c: 'PLEASE. HOLD. STILL.' },
     ] },
-  { boss: 'pinchbeard', dread: ['cruel', 'zealous'],
+  { boss: 'pinchbeard',
     sniff: 'Har! A {temper} one! Ye\'d make a fine pirate, or a fine anchor. Haven\'t decided which.',
     mock: '{fallen}\'s gone to Davy Jones? Shame. They\'d have made a fine deckhand.',
     react: { taunt: 'Me beard is NOT barnacles! ...It\'s partly barnacles. FIRE!', firm: 'Hold yer walls if ye like. The tide always comes in.', rally: 'Ye call that a shanty? THIS is a shanty! YO HO HOOO!' },
@@ -112,7 +112,7 @@ const TALK = [
       { t: 'threat', o: 'Tomorrow we board yer castle, bow to stern. Do castles have a stern? We\'ll find out.', k: 'Ye paid the toll and ye sang along. Ye\'re a decent sort. Pity I\'m a pirate.', g: 'Ye cut me anchor rope. Me ANCHOR. Ye\'ll swab the moat with yer beard.', c: 'Batten down whatever ye\'ve got.' },
       { t: 'showdown', o: 'This be the day the Crab Corsairs take the high ground! Well. The medium ground. A hill.', k: 'No hard feelings, matey. The sea takes what the sea wants, and today it wants yer castle.', g: 'I\'ll pinch every brick off yer walls and sell \'em at port!', c: 'All claws on deck! CHARGE!' },
     ] },
-  { boss: 'goosegod', dread: ['cowardly', 'heroic'],
+  { boss: 'goosegod',
     sniff: 'Honk. (Translation: The {temper} one. I will save you for last. Or first. Whichever is funnier.)',
     mock: 'Honk. (Translation: Where is {fallen}? Oh. Pity. I wanted them for the nest.)',
     react: { taunt: 'HONK?! (Translation: Did you just call me a DUCK?!)', firm: 'Honk. (Translation: Walls. Cute. I have a beak.)', rally: 'HONK HONK. (Translation: My flock has a speech too. It is one word long.)' },
@@ -124,7 +124,7 @@ const TALK = [
       { t: 'showdown', o: 'HOOOOOOONK. (Translation: Every bird in the realm stands behind me. This is the last siege.)', k: 'honk. (Translation: For one moment I almost liked you. The moment has passed.)', g: 'HONK HONK HONK HONK. (Translation: No translation is necessary.)', c: 'HONK!!! (Translation: CHARGE!)' },
     ] },
 ];
-// the finale inside the great hall reuses the goose's dread and reactions
+// the finale inside the great hall reuses the goose's reactions
 const TALK_FINALE = { t: 'showdown', o: 'HOOOOOONK. (Translation: The twelve shards. They are MINE. Give them to me, and nobody gets pecked.)', c: 'HOOOOOONK! (Translation: Then I will take them!)' };
 
 // what the voice says, by temper. Each reply kind has two takes; taunt / firm / rally / oath are the boss-siege replies
@@ -333,15 +333,15 @@ const MISHAP_TAG = { flee: 'Ran away', pee: 'Wet themselves', faint: 'Out cold' 
 function talkVoiceFirst(name) { return name.replace(/^(Sir|Lady|Dame|Queen|Brother|Granny|Old Mother|Mother|The Great|Captain|Shellback) /, '').split(' ')[0]; }
 function voiceRecord(h) { return { uid: h.uid, id: h.id, name: heroDisplayName(h) }; }
 function setVoice(run, h) { run.voice = h ? voiceRecord(h) : null; }
-// who answers this time, and whether the old voice has fallen (permadeath) since the last talk
+// who answers this time, and whether the old voice has fallen (permadeath) or left (sold) since the last talk
 function talkSpeaker(run) {
   const free = run.roster.filter(h => !h.vault);
   if (!run.voice && run.roster.length) setVoice(run, run.roster[0]);
-  const v = run.voice && run.roster.find(h => h.uid === run.voice.uid);
+  const v = voiceHero(run);
   if (v && !v.vault) return { h: v };
   if (v) return free.length ? { h: free[0], stand: true } : null; // the goose has the voice: someone stands in
-  const heir = free[0] || run.roster[0]; if (!heir) return null;
-  const fallen = run.voice; setVoice(run, heir); return { h: heir, fallen };
+  const heir = free[0]; if (!heir) return null; // everyone left is in the goose's nest: no talk this time
+  const old = run.voice; setVoice(run, heir); return old.left ? { h: heir, left: old } : { h: heir, fallen: old };
 }
 
 // ----- lines -----
@@ -353,52 +353,70 @@ function talkFill(s, run, h, extra = {}) {
 function talkFaction(run) { return factionIndex(run.siege); }
 function talkBossId(run) { return run.finale === 'ready' ? 'shardgoose' : bossFor(run.siege); }
 function voiceLine(h, tag) { const V = VOICE[heroTemper(h)] || VOICE.heroic, L = V[tag]; return Array.isArray(L) ? pick(L) : L; }
-function dreads(run, h) { return TALK[talkFaction(run)].dread.includes(heroTemper(h)); }
+function dreads(run, h) { return dreadedBy(TALK[talkFaction(run)].boss, h); }
+function dreadNames(bossId) { return (BOSS_DREAD[bossId] || []).map(t => TEMPERS[t].name); }
+function talkKey(run) { return run.finale === 'ready' ? 'finale' : run.siege; }
 
 // builds the scene for the siege about to start: a list of beats { who: 'boss'|'hero'|'fallen'|'narrate', text }
 function talkScene(run) {
   const sp = talkSpeaker(run); if (!sp) return null;
   const finale = run.finale === 'ready', f = talkFaction(run), T = TALK[f], i = finale ? 4 : (run.siege - 1) % 5, S = finale ? TALK_FINALE : T.s[i];
-  const h = sp.h, mood = run.mood || 0, bossId = talkBossId(run);
+  const h = sp.h, bossId = talkBossId(run);
   const fill = (s, x) => talkFill(s, run, h, x), fillB = (s, x) => T.caps ? fill(s, x).toUpperCase() : fill(s, x);
-  const beats = [], sc = { h, bossId, f, boss: i === 4, finale, beats, stand: sp.stand };
+  const beats = [], sc = { h, bossId, f, boss: i === 4, finale, beats, stand: sp.stand, seenKey: finale ? 'finale' : bossId + ':' + i };
   if (sp.fallen) {
     sc.fallen = sp.fallen; const fn = talkVoiceFirst(sp.fallen.name);
     beats.push({ who: 'narrate', text: `${sp.fallen.name} fell in battle. Their banner passes to ${heroDisplayName(h)}.`, succession: true });
     beats.push({ who: 'boss', text: fillB(T.mock, { fallen: fn }) });
     beats.push({ who: 'hero', text: fill(voiceLine(h, 'oath'), { fallen: fn }) });
   }
+  // a voice who was sold or sent home just hands the banner over
+  if (sp.left) beats.push({ who: 'narrate', text: `${sp.left.name} took the gold and left. Their banner passes to ${heroDisplayName(h)}.` });
   if (sp.stand) beats.push({ who: 'narrate', text: `${run.voice.name} is stuck in the goose's nest. ${heroDisplayName(h)} answers for the keep.` });
+  if (finale) beats.push({ who: 'narrate', text: `Every legend you have left stands in the great hall. The goose wears all twelve shards, and it is not sharing.` });
   // read the mood when the line plays: a story choice made earlier in the same scene can still sway the boss
   const open = () => { const m = run.mood || 0; return i >= 3 && !finale ? (m >= 1 && S.k ? S.k : m <= -1 && S.g ? S.g : S.o) : S.o; };
   let openLine = null; beats.push({ who: 'boss', text: () => openLine || (openLine = fillB(open())) });
   beats.push({ who: 'hero', text: fill(voiceLine(h, S.t)) });
   const scared = dreads(run, h);
   if (sc.boss) {
-    // the boss siege: a dreaded temper loses their nerve before the choice, and the next legend steps up
+    // the first boss talk of a player's life explains the dread (G.meta.seen.dread)
+    if (!finale && !(G.meta.seen && G.meta.seen.dread)) { const [a, b] = dreadNames(bossId); sc.dreadTip = true;
+      beats.push({ who: 'narrate', text: `Every boss dreads two tempers. ${BOSS_SHORT[bossId]} dreads ${a} and ${b} legends: a voice with one of them loses their nerve and starts the boss siege stunned.` }); }
+    // the boss siege: a dreaded temper loses their nerve before the choice and starts the fight stunned; the next legend answers
     const others = run.roster.filter(x => x !== h && !x.vault && x.place);
     const M = MISHAP[bossId] && MISHAP[bossId][heroTemper(h)];
-    if (scared && M && others.length) {
+    if (scared && M && mishapDue(run, h)) {
       const sub = others[0];
       sc.mishap = { h, kind: M[0], sub };
       beats.push({ who: 'mishap', text: fill(M[1]) });
       beats.push({ who: 'boss', text: fillB(T.sniff) });
-      beats.push({ who: 'narrate', text: `${heroDisplayName(h)} sits out this boss siege. ${heroDisplayName(sub)} steps up.`, swap: sub });
-      sc.h2 = sub;
+      beats.push(sub ? { who: 'narrate', text: `${heroDisplayName(h)} will spend the first seconds of the fight recovering. ${heroDisplayName(sub)} answers for the keep.`, swap: sub }
+        : { who: 'narrate', text: `${heroDisplayName(h)} will spend the first seconds of the fight recovering.` });
+      if (sub) sc.h2 = sub;
     }
     sc.close = fillB(S.c);
     sc.react = T.react;
-  } else {
+  } else if (run.siege > 1) {
+    // siege 1 keeps it short for new players: one line each
     beats.push({ who: 'boss', text: scared && i > 0 ? fillB(T.sniff) : fillB(S.c) });
   }
   return sc;
 }
-// boss-siege replies: each changes the fight a little (see spawnEnemy, damageCastle and startBattle in sim.js)
+// boss-siege replies: each is a trade-off (see spawnEnemy, bossPatience, damageCastle and startBattle in sim.js; Cam 2026-10-22)
 const TALK_CHOICES = [
-  { k: 'taunt', mod: 'taunt', label: 'Taunt', sub: 'The boss hits 10% harder, but drops 50% more gold.' },
-  { k: 'firm', mod: 'firm', label: 'Stand firm', sub: 'Your walls take 20% less damage this siege.' },
-  { k: 'rally', mod: 'rallycry', label: 'Rally', sub: 'Every champion starts the siege with a quarter of their mana.' },
+  { k: 'taunt', mod: 'taunt', label: 'Taunt', sub: 'The boss opens with its fury moves, but drops 25% more gold and you get a second loot pick.' },
+  { k: 'firm', mod: 'firm', label: 'Stand firm', sub: 'Your walls take 15% less damage and the boss stays 20% longer before it loses patience.' },
+  { k: 'rally', mod: 'rallycry', label: 'Rally', sub: 'Every champion starts the siege with half their mana.' },
 ];
+// at the finale gold and loot are worth nothing, so Taunt becomes Goad
+const TALK_CHOICES_FINALE = [
+  { k: 'taunt', mod: 'goad', label: 'Goad', sub: 'The goose hits 15% harder, and so do your champions.' },
+  TALK_CHOICES[1], TALK_CHOICES[2],
+];
+// what the reply does, for the scouts panel during the siege
+const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, a second loot pick.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
+  rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.' };
 
 // ----- portraits with a flapping jaw -----
 // jaw: the row the mouth opens on and the columns it spans, in the 20x20 sprite. Heroes share one face layout.
@@ -440,10 +458,18 @@ const TALKUI = { on: false };
 // where everyone stands, in field pixels (the 480x270 field, zoomed so the camera has to pan between them)
 const TK_SPOT = { hero: [226, 186], boss: [410, 186], fallen: [196, 184], visitor: [298, 188] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6, visitor: 2.6 };
 const TK_CAMP = [[352, 176, 1.7], [468, 190, 2], [452, 172, 1.5]]; // horde extras around the boss on the road: x, feet y, scale
+// how much talk the player wants (Sound panel, localStorage manatorium.talk): 'all', 'boss' (boss sieges and the finale) or 'off'
+const TALK_PREF = { mode: 'all' };
+function talkWanted(run) { return TALK_PREF.mode === 'all' || (TALK_PREF.mode === 'boss' && (isBossSiege(run.siege) || run.finale === 'ready')); }
 function talkDue(run) {
-  if (!run || !run.roster.length) return false;
-  const key = run.finale === 'ready' ? 'finale' : run.siege;
-  return run.talked !== key;
+  if (!run || !run.roster.length || !talkWanted(run)) return false;
+  return run.talked !== talkKey(run);
+}
+// a talk the player turned off still counts: the banner is handed on, and a dreaded voice still loses their nerve
+function talkSkipped(run) {
+  if (!run || !run.roster.length || run.talked === talkKey(run)) return;
+  run.talked = talkKey(run); const sp = talkSpeaker(run); if (!sp || !mishapDue(run, sp.h)) return;
+  run.mods.shaken = sp.h.uid; UI.toast(`${heroDisplayName(sp.h)} lost their nerve before ${BOSS_SHORT[talkBossId(run)]} and starts the siege stunned.`, true);
 }
 // the hero's lead-in when they take a post-siege choice, by temper
 const TEMPER_DECIDE = { heroic: 'Right. ', cheerful: 'Ooh! ', honorable: 'Very well. ', wholesome: 'Okay! ', zealous: 'So be it! ', wise: 'Hm. ', loyal: 'For the team. ', optimistic: 'Easy! ',
@@ -452,8 +478,10 @@ const TEMPER_DECIDE = { heroic: 'Right. ', cheerful: 'Ooh! ', honorable: 'Very w
 // field (or the boss answers from the lair when the card is theirs), the choices come up as reply cards, and x.pick(i)
 // resolves the choice and returns the lines to narrate. x.fallback() shows the old card if there is no scene to stage.
 function showTalk(run, done, x = {}) {
-  const sc = talkScene(run); run.talked = run.finale === 'ready' ? 'finale' : run.siege;
-  if (!sc) return x.enc ? x.fallback() : done();
+  // run.talked is only set once the scene ends, so a reload mid-scene plays it again (resumeRun)
+  const sc = talkScene(run);
+  if (!sc) { run.talked = talkKey(run); return x.enc ? x.fallback() : done(); }
+  const fast = !!(G.meta.talkSeen && G.meta.talkSeen[sc.seenKey]); // a scene seen in an earlier run types twice as fast
   const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
   // past the right edge of the field lies the boss's own lair (lairs.js); the camera pans across to it
   const lair = !hall && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
@@ -480,9 +508,12 @@ function showTalk(run, done, x = {}) {
   if (sc.fallen) { keys.fallen = 'h:' + sc.fallen.id; A.hero.classList.add('waiting'); }
   if (encWho === 'visitor') { keys.visitor = encKey; A.visitor.classList.add('waiting'); }
   const card = el.querySelector('#tkCard'); let encLeft = !!enc; // the card's choice is still to be made
+  // replied: a boss reply was picked, so taps only finish lines from here on. gen: bumped by Skip, so a beat still panning in
+  // gives up instead of typing over the replies
+  let portrait = false, camX = 0, replied = false, gen = 0;
   // camera: zoom so about 320 x 190 field pixels fill the screen, feet on the lower fifth, then pan to the speaker
   const layout = () => {
-    const vw = innerWidth, vh = innerHeight; k = Math.min(vw / 320, vh / 190);
+    const vw = innerWidth, vh = innerHeight; k = Math.min(vw / 320, vh / 190); portrait = vh > vw * 1.1; el.classList.toggle('portrait', portrait);
     cam.style.width = WW * k + 'px'; cam.style.height = H * k + 'px';
     for (const n in A) if (A[n]) { const [x, y] = SPOT[n], w = 20 * TK_SCALE[n] * k; Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w + 'px', width: w + 'px', height: w * 1.1 + 'px' }); } // sprite rows 0-19 above the feet line, jaw rows below
     pan(focusOn, true); if (speaker) placeBubble(speaker);
@@ -490,8 +521,10 @@ function showTalk(run, done, x = {}) {
   const pan = (n, now) => {
     focusOn = n; const vw = innerWidth, vh = innerHeight, feet = el.classList.contains('choosing') ? 0.56 : 0.82; // replies fill the bottom: lift the field
     const fx = n === 'both' ? (SPOT.hero[0] + SPOT.boss[0]) / 2 : n === 'visitor' ? (SPOT.hero[0] + SPOT.visitor[0]) / 2 : SPOT[n][0], sx = n === 'boss' ? 0.64 : n === 'both' || n === 'visitor' ? 0.5 : 0.36;
-    const tx = Math.max(vw - WW * k, Math.min(0, vw * sx - fx * k)), ty = Math.max(vh - H * k, Math.min(0, vh * feet - SPOT.hero[1] * k));
-    cam.style.transition = now ? 'none' : ''; cam.style.transform = `translate(${tx}px, ${ty}px)`;
+    const tx = Math.max(vw - WW * k, Math.min(0, vw * sx - fx * k));
+    // a tall phone: the field is a band across the middle (higher while the replies are up), speech bubbles sit in the space above it
+    const ty = portrait ? Math.round((vh - H * k) * (el.classList.contains('choosing') ? 0.3 : 0.5)) : Math.max(vh - H * k, Math.min(0, vh * feet - SPOT.hero[1] * k));
+    camX = tx; cam.style.transition = now ? 'none' : ''; cam.style.transform = `translate(${tx}px, ${ty}px)`;
   };
   // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
   const fcv = el.querySelector('.tk-field'), fg = fcv.getContext('2d'); fg.imageSmoothingEnabled = false;
@@ -523,13 +556,15 @@ function showTalk(run, done, x = {}) {
   const type = (text, w) => new Promise(res => {
     const out = w ? btxt : narr; typing = { text, n: 0, res, out }; out.textContent = ''; el.classList.add('typing');
     const step = () => { if (!typing || typing.text !== text) return; typing.n += 1; out.textContent = text.slice(0, typing.n); if (typing.n % 3 === 1 && /\w/.test(text[typing.n - 1])) blip(w);
-      if (typing.n >= text.length) { finishType(); return; } const ch = text[typing.n - 1]; setTimeout(step, /[.!?]/.test(ch) ? 160 : /,/.test(ch) ? 80 : 22); };
+      if (typing.n >= text.length) { finishType(); return; } const ch = text[typing.n - 1]; setTimeout(step, (/[.!?]/.test(ch) ? 160 : /,/.test(ch) ? 80 : 22) / (fast ? 2 : 1)); };
     step();
   });
   const finishType = () => { if (!typing) return; const r = typing.res; typing.out.textContent = typing.text; typing = null; el.classList.remove('typing'); r(); };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   // speech bubble beside the speaker's head, on the side facing the open field, tail pointing at the mouth
   const placeBubble = w => { const [x, y] = SPOT[w], half = 10 * TK_SCALE[w], top = (y - 20 * TK_SCALE[w] * 1.02) * k;
+    if (portrait) { Object.assign(bub.style, { top: '', right: '', bottom: H * k + 14 + 'px', left: -camX + 12 + 'px', maxWidth: innerWidth - 24 + 'px' }); return; }
+    bub.style.bottom = ''; bub.style.maxWidth = '';
     bub.style.top = Math.max(8, top) + 'px';
     if (w === 'boss') { bub.style.left = ''; bub.style.right = (WW - x + half * 0.55) * k + 'px'; } else { bub.style.right = ''; bub.style.left = (x + half * 0.55) * k + 'px'; } };
   const say = async w => {
@@ -545,11 +580,11 @@ function showTalk(run, done, x = {}) {
   const next = async () => {
     if (ended || busy) return;
     if (typing) return finishType();
-    if (opts.childElementCount) return;
+    if (opts.childElementCount || replied) return;
     beatI++;
     const b = beats[beatI];
     if (!b) { if (sc.boss) return choose(); return end(); }
-    busy = true; narr.textContent = '';
+    busy = true; narr.textContent = ''; const g = gen;
     try {
       // the post-siege card: title over the scene, the visitor walks up (or the boss leans out of the lair) and tells it
       if (b.who === 'enc') { await say(null); card.hidden = false;
@@ -560,10 +595,10 @@ function showTalk(run, done, x = {}) {
       if (b.who === 'narrate') { await say(null); if (b.swap) { pan('hero'); setHero(b.swap); A.hero.classList.add('enter'); SFX.play('draft'); } if (b.succession) { SFX.play('herodie'); }
         if (b.leave && A.visitor) A.visitor.classList.add('leave'); if (b.leave) encDone();
         busy = false; await type(b.text, null); return; }
-      if (b.who === 'mishap') { const m = sc.mishap; await say(null); if (focusOn !== 'hero') { pan('hero'); await wait(820); } A.hero.classList.add('mishap', m.kind); SFX.play(m.kind === 'pee' ? 'slurp' : m.kind === 'faint' ? 'thud' : 'whoosh');
+      if (b.who === 'mishap') { const m = sc.mishap; await say(null); if (focusOn !== 'hero') { pan('hero'); await wait(820); if (g !== gen) return; } A.hero.classList.add('mishap', m.kind); SFX.play(m.kind === 'pee' ? 'slurp' : m.kind === 'faint' ? 'thud' : 'whoosh');
         busy = false; await type(`${MISHAP_TAG[m.kind]}! ${b.text}`, null); return; }
       if (b.who === 'hero' && sc.fallen) { A.hero.classList.remove('waiting'); A.hero.classList.add('enter'); A.fallen.classList.add('gone'); }
-      await say(b.who);
+      await say(b.who); if (g !== gen) return;
       if (b.who === 'boss' && b === sc.beats.find(x => x.who === 'boss')) { SFX.play(sc.boss ? 'boss' : 'roar'); A.boss.classList.add('stomp'); }
       busy = false; await type(typeof b.text === 'function' ? b.text() : b.text, b.who);
     } finally { busy = false; }
@@ -581,12 +616,14 @@ function showTalk(run, done, x = {}) {
       next();
     });
   };
+  const CHOICES = sc.finale ? TALK_CHOICES_FINALE : TALK_CHOICES;
   const choose = async () => {
+    if (replied) return;
     const h = cur; await say(null); el.classList.add('choosing'); pan('hero'); narr.textContent = `What does ${heroName(h)} say?`;
-    opts.innerHTML = TALK_CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(voiceLine(h, c.k), run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
+    opts.innerHTML = CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(voiceLine(h, c.k), run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
     opts.querySelectorAll('[data-c]').forEach(btn => btn.onclick = async e => {
-      e.stopPropagation(); const c = TALK_CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
-      run.mods[c.mod] = true; TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
+      e.stopPropagation(); if (replied) return; replied = true; const c = CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
+      setTalkReply(run, c.mod); TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
       busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h), 'hero');
       await wait(500);
       busy = true; await say('boss'); busy = false; SFX.play('roar'); A.boss.classList.remove('stomp'); void A.boss.offsetWidth; A.boss.classList.add('stomp'); await type(sc.react[c.k], 'boss');
@@ -597,15 +634,19 @@ function showTalk(run, done, x = {}) {
   };
   const end = () => {
     if (ended || encLeft) return; ended = true; TALKUI.on = false; removeEventListener('resize', layout);
-    // a voice who lost their nerve sits out the boss siege (see placedHeroes); everyone else lines up as before
-    if (sc.mishap) { const m = sc.mishap.h; m.fledPlace = m.place; m.place = null; m.fled = true; changed(); }
-    if (sc.boss && !Object.keys(run.mods).some(x => ['taunt', 'firm', 'rallycry'].includes(x))) run.mods.firm = true;
+    run.talked = talkKey(run);
+    // a voice who lost their nerve starts the boss siege stunned (mods.shaken, see startBattle)
+    if (sc.mishap) run.mods.shaken = sc.mishap.h.uid;
+    if (sc.boss && !TALK_REPLIES.some(x => run.mods[x])) run.mods.firm = true;
+    const M = G.meta; M.talkSeen = Object.assign({}, M.talkSeen, { [sc.seenKey]: true }); if (sc.dreadTip) M.seen = Object.assign({}, M.seen, { dread: true });
     el.classList.add('out'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; done(); }, 260);
   };
   el.onclick = e => { if (e.target.closest('#tkSkip') || e.target.closest('.tk-opt')) return; if (beatI >= 1e9) return end(); next(); };
   // skip jumps a boss scene straight to the three replies (the pick matters); any other scene just closes
   // with the card still open, skip jumps to its choices first
   el.querySelector('#tkSkip').onclick = e => { e.stopPropagation();
+    if (replied) return end();
+    gen++;
     if (encLeft && beatI < 1) { if (opts.childElementCount) return; typing = null; busy = false; el.classList.remove('typing'); card.hidden = false; if (A.visitor) A.visitor.classList.remove('waiting'); A[encWho].classList.remove('talking'); beatI = 1; return encChoose(); }
     if (encLeft) return;
     if (sc.boss && beatI < 1e9) { if (opts.childElementCount) return; typing = null; busy = false; el.classList.remove('typing');

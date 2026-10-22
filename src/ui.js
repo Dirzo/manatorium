@@ -139,6 +139,13 @@ function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class=
     }, 0);
   }, true);
 })();
+// the keep's voice in boss talk (talk.js): a banner on their card, and a tip naming the tempers this horde's boss dreads
+function voiceFlag(run, h) {
+  if (!run.voice || run.voice.uid !== h.uid) return '';
+  const boss = bossFor(run.siege), dread = BOSS_DREAD[boss] || [], scared = dreadedBy(boss, h);
+  const tip = `The keep's voice|${heroDisplayName(h)} answers the bosses before every siege. ${ENEMIES[boss].name} dreads ${dread.map(t => TEMPERS[t].name).join(' and ')} legends: a voice with one of those tempers loses their nerve and starts the boss siege stunned.${scared ? ` ${heroDisplayName(h)} is ${TEMPERS[heroTemper(h)].name}.` : ''} You can hand the banner to another legend once per horde.`;
+  return `<span class="vflag ${scared ? 'dread' : ''}" data-tip="txt:${esc(tip)}">⚑</span>`;
+}
 const UI = {
   pendingGold: 0, shownGold: 0, page: null, techSel: null, recipeSel: null,
   init() {
@@ -296,6 +303,8 @@ const UI = {
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
     const tc = run.tactic && TACTICS[run.tactic]; if (tc) h += `<div class="mods tac"><p><b>${tc.icon} Horde tactic: ${esc(tc.name)}.</b> ${esc(tc.desc)}</p></div>`;
     const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
+    Object.assign(modNote, TALK_REPLY_NOTE); const shaken = run.mods.shaken && run.roster.find(x => x.uid === run.mods.shaken);
+    if (shaken) modNote.shaken = `${heroDisplayName(shaken)} lost their nerve and starts the siege stunned.`;
     const mods = Object.keys(run.mods).filter(m => modNote[m]); if (mods.length) h += `<div class="mods">${mods.map(m => `<p>${esc(modNote[m])}</p>`).join('')}</div>`;
     $('intelMain').innerHTML = h;
   },
@@ -566,7 +575,7 @@ const UI = {
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
       const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
-        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
+        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
         <div class="hmeta"><span class="cg" data-tip="cls:${d.cls}">${CLASSES[d.cls].icon}</span><span class="cg tg ${TEMPERS[heroTemper(hr)].side}" data-tip="tmp:${heroTemper(hr)}">${TEMPERS[heroTemper(hr)].icon}</span>${hr.el ? `<span class="eg" data-tip="el:${hr.el}" style="--ec:${ELEMENTS[hr.el].col}"></span>` : ''}${heroItems(run, hr).map(it => `<img class="px hi" src="${itemIconURL(it, 2)}" alt="" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}">`).join('')}</div>
         ${u ? `<div class="live"><i style="width:${Math.max(0, 100 * u.hp / u.maxHp)}%;${u.alive ? '' : 'background:var(--rose)'}"></i></div>` : ''}${pend}</div>`;
@@ -595,6 +604,7 @@ const UI = {
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
         ${ascendBtn(run, h, 'iact')}
+        ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Release this champion for gold. Their items go back to the Armory.">${UI.sellArm === h.uid ? 'Click again to confirm' : `Release for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
