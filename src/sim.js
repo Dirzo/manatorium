@@ -41,6 +41,16 @@ function synergyCounts(run) {
 }
 function synergyTier(def, n) { let t = -1; def.at.forEach((v, i) => { if (n >= v) t = i; }); return t; }
 // temperaments: older saves get one picked from the uid so it never changes
+// ----- boss talk (talk.js stages it, simbot.js plays it for the bots) -----
+function voiceHero(run) { return run.voice ? run.roster.find(h => h.uid === run.voice.uid) || null : null; }
+// a voice who is sold or sent home keeps their record, so the next talk hands the banner on instead of holding a funeral
+function voiceLeaves(run, h) { if (run.voice && run.voice.uid === h.uid) run.voice.left = true; }
+function dreadedBy(bossId, h) { return !!h && (BOSS_DREAD[bossId] || []).includes(heroTemper(h)); }
+// a voice with a temper the boss dreads loses their nerve before the boss siege: they still fight, but start it stunned (mods.shaken)
+function mishapDue(run, h) { return !!h && isBossSiege(run.siege) && run.finale !== 'ready' && !h.vault && dreadedBy(bossFor(run.siege), h); }
+// the boss-siege replies (taunt / firm / rallycry, goad at the finale): only one counts
+const TALK_REPLIES = ['taunt', 'firm', 'rallycry', 'goad'];
+function setTalkReply(run, mod) { for (const k of TALK_REPLIES) delete run.mods[k]; if (mod) run.mods[mod] = true; }
 function heroTemper(h) { if (!h.temper) { let x = 0; for (const c of String(h.uid)) x = (x * 31 + c.charCodeAt(0)) >>> 0; h.temper = TEMPER_KEYS[x % TEMPER_KEYS.length]; } return h.temper; }
 function temperCounts(run) { const c = {}; for (const h of placedHeroes(run)) { const t = heroTemper(h); c[t] = (c[t] || 0) + 1; } return c; }
 function activeSynergies(run) {
@@ -115,7 +125,7 @@ function sellValue(h) { return 10 + 6 * h.level; }
 function sellHero(run, h) {
   if (run.roster.length <= 1) return { err: 'You need at least one champion.' };
   for (const it of run.stash) if (it.holder === h.uid) it.holder = null;
-  run.roster = run.roster.filter(x => x !== h); const g = sellValue(h); run.gold += g; const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
+  voiceLeaves(run, h); run.roster = run.roster.filter(x => x !== h); const g = sellValue(h); run.gold += g; const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
   return { gold: g };
 }
 function trinityActive(run) { const st = new Set(Object.keys(fieldElements(run)).map(e => ELEMENTS[e].style)); return st.size >= 3; }
@@ -293,10 +303,12 @@ function startBattle(run, meta) {
     if (B.hzK === 'fog' && st.range > 40) st.range = Math.max(40, st.range * 0.7);
     if (B.hzK === 'gale') st.as *= 1.2;
     if (teamMana) st.startMana += 0.2;
-    if (run.mods.rallycry) st.startMana += 0.25; // boss talk: rally
+    if (run.mods.rallycry) st.startMana += 0.5; // boss talk: rally
+    if (run.mods.goad) st.atk = Math.round(st.atk * 1.15); // boss talk (finale): goad
     if (rally) st.as *= 1.1;
     const u = makeUnit('hero', { def: d, inst: h, key: heroSpriteKey(h), x: pos.x, y: pos.y, hx: pos.x, hy: pos.y, rafter, maxHp: st.hp, hp: st.hp, st, vscale: st.scale,
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
+    if (run.mods.shaken === h.uid) u.stun = Math.max(u.stun || 0, 5); // boss talk: the voice lost their nerve
     if (st.startShield) u.shield = Math.max(u.shield || 0, u.maxHp * st.startShield);
     B.heroes.push(u);
   }
@@ -323,7 +335,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
   if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
-  if (d.boss && mods.taunt) am *= 1.1; // boss talk: you taunted them
+  if (d.boss && mods.goad) am *= 1.15; // boss talk (finale): you goaded the goose
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
   if (mods.partyhats) spdM *= 0.85;
@@ -335,7 +347,7 @@ function spawnEnemy(B, id, opts = {}) {
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
-    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.5 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
+    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
@@ -343,6 +355,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
   if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
+    if (mods.taunt) for (const sk in u.skillT) u.skillT[sk] = Math.min(u.skillT[sk], 1.5); // boss talk: taunted, it opens with its fury
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name, { kind: 'boss', spr: 'e:' + id }); FX.shake(6); FX.sound('boss'); }
   if (id === 'goose') FX.text(u.x - 20, u.y - 20, 'HONK', '#ffffff', true, true);
@@ -546,7 +559,7 @@ function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.cre
   R.t += dt; R.swing = (R.t % 2.4) / 2.4; for (const e of R.crew) { e.atkT = 0.1; e.facing = -1; }
   if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
-  if (B.run.mods.firm) dmg *= 0.8; // boss talk: stand firm
+  if (B.run.mods.firm) dmg *= 0.85; // boss talk: stand firm
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
   if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
@@ -1114,7 +1127,7 @@ function overtimeCharge(B, u, dt) {
 // Normal bosses leave after the hit (no trophy, no loot). The final boss turns around and comes back.
 function bossLimit(u) { return u.final ? BAL.patFinal : u.def.boss === 'big' ? BAL.patBig : BAL.patMini; }
 function bossPatience(B, u, dt) {
-  if (!u.rage) { u.patT = (u.patT || 0) + dt; u.patMax = u.patMax || bossLimit(u);
+  if (!u.rage) { u.patT = (u.patT || 0) + dt; u.patMax = u.patMax || bossLimit(u) * (B.run.mods.firm ? 1.2 : 1);
     if (!u.warned && u.patT > u.patMax - 10) { u.warned = true; FX.text(u.x, u.y - 34 * u.scale, 'getting impatient...', '#ff9a5c', true); }
     if (u.patT < u.patMax) return false;
     u.rage = { ph: 'taunt', t: 0, hit: new Set() }; u.stun = 0; u.slowAmt = 0; u.target = null; u.taunt = null;
