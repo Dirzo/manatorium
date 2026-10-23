@@ -8,10 +8,12 @@ const BOT_STYLES = {
   chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
 };
 
-function botScoreOpt(style, o) {
+function botScoreOpt(style, o, run) {
   const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
-  return (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  // chase the element the keep already has the most of, toward its castle
+  const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
+  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -75,11 +77,15 @@ function botBuyShop(run, meta, style, reroll) {
   for (let g = 0; g < 40; g++) {
     const cards = run.shop.map((c, i) => c && { c, i, own: run.roster.find(h => h.id === c.id), cost: shopCost(c.id) }).filter(o => o && run.gold >= o.cost);
     let o = cards.filter(o => o.own && (chaos || run.gold - o.cost >= keep / 2)).sort((a, b) => b.cost - a.cost)[0];
-    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c) - botScoreOpt(style, a.c))[0];
+    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c, run) - botScoreOpt(style, a.c, run))[0];
     // a full keep trades its weakest legend for a card two rarities better
     if (!o && !chaos && run.roster.length >= rosterCap(run) && run.gold >= keep) { const weak = run.roster.filter(h => !h.vault).sort((a, b) => heroRarity(a) * 3 + heroStar(a) * 4 - heroRarity(b) * 3 - heroStar(b) * 4)[0];
       const up = weak && cards.filter(o => !o.own && o.c.rarity >= heroRarity(weak) + 2 && heroStar(weak) < 2).sort((a, b) => b.c.rarity - a.c.rarity)[0];
-      if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; } }
+      if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; }
+      // or chases a castle: a card of the keep's top element replaces a lone off-element legend of no higher rarity
+      const fe = fieldElements(run), top = Object.keys(fe).sort((a, b) => fe[b] - fe[a])[0];
+      if (top && fe[top] >= 3 && fe[top] < EL_STACK.at[2]) { const fit = cards.find(o => !o.own && o.c.el === top), off = fit && run.roster.filter(h => !h.vault && h.el !== top && heroStar(h) < 2 && heroRarity(h) <= fit.c.rarity).sort((a, b) => heroRarity(a) - heroRarity(b))[0];
+        if (off) { run.gold -= fit.cost; run.shop[fit.i] = null; swapHero(run, off, fit.c); continue; } } }
     if (o) { const r = buyShopCard(run, o.i); if (r.ok) continue; }
     if (reroll && run.gold - shopRerollCost(run) >= keep + (chaos ? 0 : 4) && (!chaos || Math.random() < 0.5)) { rerollShop(run, meta); continue; }
     break;

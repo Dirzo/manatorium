@@ -3653,12 +3653,13 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.15, foeHp: 1.3, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.6, foeHp: 2.4, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
-// HORDE_DIFF scales each horde (five sieges) so boss k is beaten about half the time with the meta spend in META_CURVE[k]
-const HORDE_DIFF = [1.174, 1.256, 1.116, 1.782, 0.999, 1.098, 0.854, 0.251, 0.247, 0.05];
+// HORDE_DIFF scales each horde (five sieges)
+// retuned 2026-10-23 for the TFT shop with no meta progression: bots win about 1 run in 6
+const HORDE_DIFF = [1.29, 1.256, 1.12, 1.21, 0.77, 0.7, 0.78, 0.098, 0.22, 0.015];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -3668,7 +3669,7 @@ function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) *
 function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s) * lateRamp(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 // TFT-scale gold (Cam 2026-10-23): a whole siege's kills are worth a few coins, growing slowly; bosses add a purse on top
-function killCoins(s) { return 3 + s / 12; }
+function killCoins(s) { return 1.5 + s / 20; }
 const BOSS_PURSE = { mini: 2, big: 3 };
 function waveGoldRef(queue) { let g = 0; for (const q of queue) { const d = q.id && ENEMIES[q.id]; if (d) g += d.gold * (d.boss ? BAL.bossGold : 1) / (q.sw && !d.boss ? q.sw : 1); } return Math.max(1, g); }
 function isBossSiege(s) { return s % 5 === 0; }
@@ -3677,7 +3678,7 @@ const PRESS = { budget: 1.35, elites: 1, gold: 2 };
 function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
 function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
-const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
+const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
 // ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
@@ -5169,7 +5170,11 @@ function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.
 // TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
-function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: pick(EL_KEYS) }; }
+function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: rollElement(run) }; }
+// each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable
+const SEASON = { n: 4, share: 0.7 };
+function runSeason(run) { if (!run) return null; if (!run.season) run.season = EL_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, SEASON.n); return run.season; }
+function rollElement(run) { const s = runSeason(run); return s && Math.random() < SEASON.share ? pick(s) : pick(EL_KEYS); }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
   for (let i = 0; i < n; i++) {
@@ -5192,7 +5197,7 @@ function joinLevel(run) { return 1 + (run.vet || 0); }
 // legends behind the team's best level learn twice as fast, so a late recruit can catch up
 function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.level)); return h.level < top - 1 ? 2 : 1; }
 function addDraftedHero(run, opt) {
-  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].rar, copies: opt.copies || 1, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: opt.el || pick(EL_KEYS), items: [], place: null, mustache: false };
+  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].rar, copies: opt.copies || 1, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: opt.el || rollElement(run), items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h); poolTake(run, h.id, h.copies);
   if (opt.boost && run.pressDraft > 0) run.pressDraft--;
   // the first legend drafted is the keep's voice in boss talk (talk.js)
@@ -8541,10 +8546,12 @@ const BOT_STYLES = {
   chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
 };
 
-function botScoreOpt(style, o) {
+function botScoreOpt(style, o, run) {
   const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
-  return (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  // chase the element the keep already has the most of, toward its castle
+  const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
+  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -8608,11 +8615,15 @@ function botBuyShop(run, meta, style, reroll) {
   for (let g = 0; g < 40; g++) {
     const cards = run.shop.map((c, i) => c && { c, i, own: run.roster.find(h => h.id === c.id), cost: shopCost(c.id) }).filter(o => o && run.gold >= o.cost);
     let o = cards.filter(o => o.own && (chaos || run.gold - o.cost >= keep / 2)).sort((a, b) => b.cost - a.cost)[0];
-    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c) - botScoreOpt(style, a.c))[0];
+    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c, run) - botScoreOpt(style, a.c, run))[0];
     // a full keep trades its weakest legend for a card two rarities better
     if (!o && !chaos && run.roster.length >= rosterCap(run) && run.gold >= keep) { const weak = run.roster.filter(h => !h.vault).sort((a, b) => heroRarity(a) * 3 + heroStar(a) * 4 - heroRarity(b) * 3 - heroStar(b) * 4)[0];
       const up = weak && cards.filter(o => !o.own && o.c.rarity >= heroRarity(weak) + 2 && heroStar(weak) < 2).sort((a, b) => b.c.rarity - a.c.rarity)[0];
-      if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; } }
+      if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; }
+      // or chases a castle: a card of the keep's top element replaces a lone off-element legend of no higher rarity
+      const fe = fieldElements(run), top = Object.keys(fe).sort((a, b) => fe[b] - fe[a])[0];
+      if (top && fe[top] >= 3 && fe[top] < EL_STACK.at[2]) { const fit = cards.find(o => !o.own && o.c.el === top), off = fit && run.roster.filter(h => !h.vault && h.el !== top && heroStar(h) < 2 && heroRarity(h) <= fit.c.rarity).sort((a, b) => heroRarity(a) - heroRarity(b))[0];
+        if (off) { run.gold -= fit.cost; run.shop[fit.i] = null; swapHero(run, off, fit.c); continue; } } }
     if (o) { const r = buyShopCard(run, o.i); if (r.ok) continue; }
     if (reroll && run.gold - shopRerollCost(run) >= keep + (chaos ? 0 : 4) && (!chaos || Math.random() < 0.5)) { rerollShop(run, meta); continue; }
     break;
@@ -9262,7 +9273,8 @@ const UI = {
     // TFT shop (Cam 2026-10-23): five legends for sale, priced by rarity. Copies of a legend you own add up to stars.
     const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold);
     if (!run.shop) rollShop(run, G.meta);
-    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
+    const season = runSeason(run) || [];
+    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="note">In season: ${season.map(e => `<b style="color:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)}</b>`).join(' · ')}. Most legends arrive with one of these. Six of one element on the field wake its castle.</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="scard sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], R = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), left = poolLeft(run, c.id);
@@ -12838,7 +12850,7 @@ const DEMO = {
         <li><b>The goose.</b> From siege 46 it carries off a champion before every siege.</li>
         <li><b>The Shard War.</b> The final battle, fought inside your own great hall.</li>
       </ul>
-      <p class="note">One purchase unlocks everything, forever, with no ads. Your keep, diamonds and achievements carry over.</p>
+      <p class="note">One purchase unlocks everything, forever, with no ads. Your records and achievements carry over.</p>
       <div class="raact">
         <button class="btn primary go" id="demoBuy">Unlock the full game · ${esc(DEMO.price || DEMO.PRICE)}</button>
         <button class="btn small ghost" id="demoRestore">Restore purchase</button>

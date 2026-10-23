@@ -432,7 +432,8 @@ const UI = {
     // TFT shop (Cam 2026-10-23): five legends for sale, priced by rarity. Copies of a legend you own add up to stars.
     const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold);
     if (!run.shop) rollShop(run, G.meta);
-    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
+    const season = runSeason(run) || [];
+    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="note">In season: ${season.map(e => `<b style="color:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)}</b>`).join(' · ')}. Most legends arrive with one of these. Six of one element on the field wake its castle.</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="scard sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], R = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), left = poolLeft(run, c.id);

@@ -26,7 +26,11 @@ function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.
 // TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
-function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: pick(EL_KEYS) }; }
+function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: rollElement(run) }; }
+// each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable
+const SEASON = { n: 4, share: 0.7 };
+function runSeason(run) { if (!run) return null; if (!run.season) run.season = EL_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, SEASON.n); return run.season; }
+function rollElement(run) { const s = runSeason(run); return s && Math.random() < SEASON.share ? pick(s) : pick(EL_KEYS); }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
   for (let i = 0; i < n; i++) {
@@ -49,7 +53,7 @@ function joinLevel(run) { return 1 + (run.vet || 0); }
 // legends behind the team's best level learn twice as fast, so a late recruit can catch up
 function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.level)); return h.level < top - 1 ? 2 : 1; }
 function addDraftedHero(run, opt) {
-  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].rar, copies: opt.copies || 1, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: opt.el || pick(EL_KEYS), items: [], place: null, mustache: false };
+  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].rar, copies: opt.copies || 1, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: opt.el || rollElement(run), items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h); poolTake(run, h.id, h.copies);
   if (opt.boost && run.pressDraft > 0) run.pressDraft--;
   // the first legend drafted is the keep's voice in boss talk (talk.js)
