@@ -26,7 +26,14 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); UI.refresh(); save(); offerComboForm(); }
+function changed() { rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
+// six champions of one element on the field: that element's castle awakens (the first one takes the keep)
+function castleAwakens() {
+  const run = G.run; if (!run || run.finale) return; const had = run.castleEl, e = checkCastleUnlock(run); if (!e) return;
+  SFX.play('hammer'); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6);
+  UI.banner(`${ELEMENTS[e].name} Castle`, had ? `unlocked. Switch to it in the Artificers' Hall` : CASTLE_POWERS[e].name, { kind: 'hero', col: ELEMENTS[e].col }); TEL.event('castle', { el: e, switchable: !!had });
+  if (!had) setTimeout(() => UI.coach('power', $('powerBtn'), `Six ${ELEMENTS[e].name} champions woke the castle. It has a new power: ${CASTLE_POWERS[e].name}. Fire it during a siege with this button or the E key.`), 600);
+}
 // a new element pair on the field: the player chooses which version of the combo to forge
 function offerComboForm() {
   const run = G.run; if (!run || G.phase !== 'prep' || !$('modal').hidden || G.comboAsk) return;
@@ -70,7 +77,7 @@ function showDraft() {
       if (!run.pendingDraft) return; // a double tap after the pick
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
-      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
     }));
@@ -103,13 +110,13 @@ function showSummon() {
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
-      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
     }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
   }, 'wide');
 }
-function summonSkipGold(run) { return Math.round(200 * goldMul(run.siege) / 5) * 5; }
+function summonSkipGold(run) { return 6; }
 
 function beginSiege() {
   if (G.phase !== 'prep') return;
@@ -160,7 +167,6 @@ function endSiege() {
     if (rep.press) run.post.push('loot');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
-    if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -307,11 +313,11 @@ function prepCues() {
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
+  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
   // first time each run you can afford a champion: say so loudly (Cam)
-  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) {
+  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
-    setTimeout(() => { UI.banner('Champion ready to draft', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `You have enough gold to draft your first champion (${draftCost(run)} gold). Open the Guild Hall to recruit them.`); }, 350);
+    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `Five legends are for sale in the Guild Hall. Commons cost 1 gold. Open it to recruit them.`); }, 350);
   }
 }
 
@@ -330,7 +336,19 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
-    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= ROSTER_CAP ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+    case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
+      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
+      if (r.err) return UI.toast(r.err, true);
+      UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
+      if (r.starUp) { SFX.play('level'); FX.flash(RARITY[heroRarity(r.h)].col, 0.35); UI.banner(heroDisplayName(r.h), `rises to ${'★'.repeat(heroStar(r.h))}`, heroBanner(r.h)); }
+      else if (r.merged) { SFX.play('buy'); UI.toast(`${heroDisplayName(r.h)}: ${r.h.copies} copies. ${copiesToNext(r.h) ? `${copiesToNext(r.h)} more for ★${heroStar(r.h) + 1}.` : 'Max stars.'}`); }
+      else { SFX.play('draft'); UI.banner(HERO_BY_ID[r.h.id].name, 'answers the call', heroBanner(r.h)); }
+      break; }
+    case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
+    case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
+    case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
+    case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
+    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
@@ -465,10 +483,10 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
-      <div><b>Recruit legends</b>Start with 2 legends at level 1. Every card rolls a rarity, from Common to God, and each boss you beat opens a rarer tier. Each rarity is +25% power, a bigger body and a stronger signature.</div>
-      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A legend who falls in a siege is gone for good.</div>
-      <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. At level 7 each hero awakens an element; mixed elements form combos.</div>
-      <div><b>Grow the keep</b>Fuse components into items in the Armory, climb the Artificers' tech tree, and at siege 15 your castle turns elemental.</div>
+      <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
+      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
+      <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
+      <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;
   $('title').hidden = false;
   const t = $('title');

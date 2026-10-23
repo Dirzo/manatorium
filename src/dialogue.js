@@ -233,7 +233,7 @@ const TALK_GIST = {
   'Switch it on': 'switch the windmill on', 'Sell it for parts': 'sell the windmill for parts', 'Buy the demo model': 'buy his fog machine', 'Find him and shoo him': 'find that salesman and shoo him off',
   'Let them dig': 'let everyone dig', 'Claim it first': 'stake the claim before they do', 'Build snow forts': 'build snow forts all over the field', 'Sell snowcones': 'sell snowcones by the bucket',
   'Attend and dance': 'go to the wedding and dance badly', 'Object to the marriage': 'stand up and object at the wedding', 'Tell her the truth': 'tell Granny the truth about her boy',
-  'Lie and take the casserole': 'fib to Granny and keep her casserole', 'Invest 40 gold': 'put money into the rock business', 'Steal the idea': 'steal their business plan',
+  'Lie and take the casserole': 'fib to Granny and keep her casserole', 'Invest 4 gold': 'put money into the rock business', 'Steal the idea': 'steal their business plan',
   'Free him': 'get the mime out of his box', 'Applaud': 'give the mime a standing ovation', 'Buy a round for the house': 'buy the whole tavern a drink', 'Start a bar fight': 'start a brawl',
   'Pay for the full reading': 'pay for her whole reading', 'Ask about the weather': 'ask her for a weather forecast instead', 'Befriend the goose': 'make friends with the goose',
   'Chase it out': 'chase that goose off the throne', 'Pay the "fine"': 'pay the accountant his "fine"', 'Commit light tax fraud': 'cook the books, just a little',
@@ -244,7 +244,7 @@ const TALK_GIST = {
   'Give them a job': 'give the intern a job', 'Eat the walking dinner': 'eat dinner before it walks off', 'Build them a stage': 'build the bard a proper stage', 'Let them sing once': 'let the bard sing one song',
   'Read the scroll': 'read the pigeon\'s scroll', 'Feed the pigeons': 'share some bread with the pigeons', 'Build a hot tub': 'turn the spring into a hot tub', 'Pipe it onto the field': 'pipe the hot water onto the field',
   'Drink the screaming one': 'try the screaming potion', 'Drink the calm one': 'try the calm potion', 'Feed it to a hero': 'feed that mushroom to one of us', 'Feed it to the horde': 'slip that mushroom to the horde',
-  'Buy the mystery box (40g)': 'buy the mystery box', 'Haggle aggressively': 'haggle the dragon down hard', 'Quick patch': 'let the masons patch us up', 'Proper job (50g)': 'pay for the proper job',
+  'Buy the mystery box (4g)': 'buy the mystery box', 'Haggle aggressively': 'haggle the dragon down hard', 'Quick patch': 'let the masons patch us up', 'Proper job (5g)': 'pay for the proper job',
   // boon cards
   'Take the gold': 'take the purse', 'Train every hero': 'take the lessons, all of us', 'Reforge an item': 'have something reforged',
 };
@@ -276,7 +276,7 @@ function talkSituation(run, h) {
   const lost = (run.stats && run.stats.fallen || []).filter(f => f.s === last && (!run.voice || f.id !== run.voice.id) && f.id !== h.id).pop();
   if (lost && HERO_BY_ID[lost.id]) s.loss = talkVoiceFirst(HERO_BY_ID[lost.id].name);
   if (run.castle && run.castle.max && run.castle.hp / run.castle.max < 0.4) s.hurt = true;
-  if (run.gold < 20) s.broke = true;
+  if (run.gold < 3) s.broke = true;
   if ((run.mood || 0) >= 1) s.kind = true; else if ((run.mood || 0) <= -1) s.grudge = true;
   return s;
 }

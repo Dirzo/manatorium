@@ -22,14 +22,39 @@ function lateRamp(s) { return 1 + BAL.late * Math.max(0, s - 10) / 40; }
 function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) * hordeDiff(s) * lateRamp(s); }
 function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s) * lateRamp(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
+// TFT-scale gold (Cam 2026-10-23): a whole siege's kills are worth a few coins, growing slowly; bosses add a purse on top
+function killCoins(s) { return 3 + s / 12; }
+const BOSS_PURSE = { mini: 2, big: 3 };
+function waveGoldRef(queue) { let g = 0; for (const q of queue) { const d = q.id && ENEMIES[q.id]; if (d) g += d.gold * (d.boss ? BAL.bossGold : 1) / (q.sw && !d.boss ? q.sw : 1); } return Math.max(1, g); }
 function isBossSiege(s) { return s % 5 === 0; }
 // Press or hold (Cam 2026-10-23): before a regular siege, choose to press the attack for a tougher wave and bigger rewards
-const PRESS = { budget: 1.35, elites: 1, gold: 0.4 };
+const PRESS = { budget: 1.35, elites: 1, gold: 2 };
 function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
 function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
 const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
+
+// ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
+// The scouts report the plan before each siege (run.lanes): how the horde splits, and which lane its elites take.
+const LANES = 3, LANE_NAMES = ['Top', 'Middle', 'Bottom'];
+function laneH() { return GRID.rows * GRID.cell / LANES; }
+function laneOf(y) { return clamp(Math.floor((y - GRID.y) / laneH()), 0, LANES - 1); }
+function laneBand(l) { return { y0: GRID.y + l * laneH() + 5, y1: GRID.y + (l + 1) * laneH() + 1 }; }
+function rollLanes(s, tac) {
+  const heavy = randi(0, LANES - 1), w = [0, 0, 0], big = tac === 'blitz' ? 0.7 : s < 3 ? 0.34 : rand(0.42, 0.58);
+  for (let l = 0; l < LANES; l++) w[l] = l === heavy ? big : (1 - big) / (LANES - 1);
+  return { w, heavy, elite: randi(0, LANES - 1) };
+}
+function pickLane(w) { let x = Math.random(); for (let l = 0; l < w.length; l++) { x -= w[l]; if (x < 0) return l; } return w.length - 1; }
+// may this champion take on that foe? Rafters, bosses, overtime and self-defense ignore lanes; ranged champions also cover the
+// next lane; and once a champion's own lane has been quiet for 2s they rotate to help next door.
+function heroLaneOk(B, u, e) {
+  if (u.rafter || u.lane == null || B.overtime || e.boss || e.target === u || !B.lanes) return true;
+  const d = Math.abs(laneOf(e.y) - u.lane);
+  return d === 0 || (d === 1 && (u.st.range > 40 || (B.laneIdle[u.lane] || 0) > 2));
+}
+function stepLanes(B, dt) { if (!B.lanes) return; const busy = [0, 0, 0]; for (const e of B.enemies) if (e.alive && e.x < W - 4 && !e.boss) busy[laneOf(e.y)]++; for (let l = 0; l < LANES; l++) B.laneIdle[l] = busy[l] ? 0 : (B.laneIdle[l] || 0) + dt; }
 
 function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
 
@@ -77,9 +102,11 @@ function heroBonusPts(run, h) {
   for (const it0 of heroItems(run, h)) for (const it of [it0, it0.sub]) if (it && it.parts.length === 2 && itemKey(...it.parts) === 'shard+shard') bonus += 3;
   return bonus;
 }
-function heroRarity(h) { return h.rarity || 0; }
+function heroRarity(h) { const d = HERO_BY_ID[h.id]; return d && d.rar != null ? d.rar : h.rarity || 0; }
 // which elements are on the field, how many heroes carry each
-const EL_STACK = { at: [2, 3, 4], mul: [1.4, 1.8, 2.2], stat: [0.1, 0.2, 0.3] };
+// element stacks count like races (Cam 2026-10-23): 2, 4 and 6 champions; six of one element unlocks that element's castle
+const EL_STACK = { at: [2, 4, 6], mul: [1.4, 1.9, 2.5], stat: [0.1, 0.22, 0.4] };
+function elTier(n) { let t = -1; EL_STACK.at.forEach((v, i) => { if (n >= v) t = i; }); return t; }
 function fieldElements(run) {
   const n = {};
   for (const h of placedHeroes(run)) for (const e of heroElements(run, h)) n[e] = (n[e] || 0) + 1;
@@ -125,17 +152,18 @@ function toggleCombo(run, key) {
 }
 function setComboForm(run, key, kind) { run.comboForm = Object.assign({}, run.comboForm, { [key]: kind }); if (run.comboOffer) delete run.comboOffer[key]; }
 // releasing a champion pays a little gold back and returns their items to the stash
-function sellValue(h) { return 10 + 6 * h.level; }
+// selling refunds what the copies cost, TFT style (a starred legend loses 1 gold on the way out)
+function sellValue(h) { return shopCost(h.id) * (h.copies || 1) - (heroStar(h) > 1 ? 1 : 0); }
 function sellHero(run, h) {
   if (run.roster.length <= 1) return { err: 'You need at least one champion.' };
   for (const it of run.stash) if (it.holder === h.uid) it.holder = null;
-  voiceLeaves(run, h); run.roster = run.roster.filter(x => x !== h); const g = sellValue(h); run.gold += g; const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
+  voiceLeaves(run, h); run.roster = run.roster.filter(x => x !== h); poolGive(run, h.id, h.copies || 1); const g = sellValue(h); run.gold += g; const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
   return { gold: g };
 }
 function trinityActive(run) { const st = new Set(Object.keys(fieldElements(run)).map(e => ELEMENTS[e].style)); return st.size >= 3; }
 
 function heroStats(h, run, meta, syn) {
-  const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], rar = heroRarity(h), tm = rarityMul(rar), lm = heroLevelMul(h.level), bp = 1 + 0.05 * heroBonusPts(run, h);
+  const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], rar = heroRarity(h), tm = rarityMul(rar) * starMul(h), lm = heroLevelMul(h.level), bp = 1 + 0.05 * heroBonusPts(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
   const sm = 1 + 0.15 * (meta.ranks.banners || 0);
   // no rolled stats any more: rarity (tm) and level (lm) set a legend's power
@@ -143,7 +171,7 @@ function heroStats(h, run, meta, syn) {
   const s = { hp: b.hp * tm * lm * gm * defM, atk: b.atk * tm * lm * gm * adM, as: b.as, range: b.range, spd: b.spd, armor: b.armor + 11 + 4 * rar, mana: b.mana * (rar >= 4 ? 0.75 : 1),
     crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, startMana: 0, manaGain: 1, revive: 0, storm: 0, frost: 0, midas: 0,
     ap: (1 + 0.15 * (meta.ranks.codex || 0)) * bp, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
-    sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: raritySize(rar), rarity: rar, echo: [0, 0, 0, 0.5, 0.75, 1][rar], dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
+    sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: raritySize(rar) * (1 + 0.08 * (heroStar(h) - 1)), rarity: rar, star: heroStar(h), echo: [0, 0, 0, 0.5, 0.75, 1][rar], dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
   if (run.tech.focus) s.sigMul *= 1.25;
   if (s.rank > 0) s.rank += rar; // rarer legends cast a higher-ranked signature
   if (rar >= 2) s.startMana += rar >= 5 ? 1 : 0.35;
@@ -171,9 +199,9 @@ function heroStats(h, run, meta, syn) {
   // elements: power scales with the rolled stat that matches the element's playstyle
   const fe = stackElements(run);
   for (const e of heroElements(run, h)) {
-    const E = ELEMENTS[e]; let p = 1.04 * sm; const nst = Math.min(4, fe[e] || 0);
-    // element stacks: 2, 3 or 4 champions sharing an element power it up and boost their matching stat
-    if (nst >= 2) { p *= EL_STACK.mul[nst - 2]; const b = EL_STACK.stat[nst - 2]; if (E.style === 'ad') s.atk *= 1 + b; else if (E.style === 'ap') s.ap *= 1 + b; else s.hp *= 1 + b; }
+    const E = ELEMENTS[e]; let p = 1.04 * sm; const et = elTier(fe[e] || 0);
+    // element stacks: 2, 4 or 6 champions sharing an element power it up and boost their matching stat
+    if (et >= 0) { p *= EL_STACK.mul[et]; const b = EL_STACK.stat[et]; if (E.style === 'ad') s.atk *= 1 + b; else if (E.style === 'ap') s.ap *= 1 + b; else s.hp *= 1 + b; }
     s.el[e] = p;
     if (E.style === 'ad') s.atk *= 1 + 0.2 * p; else if (E.style === 'ap') s.ap *= 1 + 0.25 * p; else { s.hp *= 1 + 0.2 * p; s.armor += 15 * p; }
     switch (e) {
@@ -241,7 +269,7 @@ function heroStats(h, run, meta, syn) {
 
 // ----- wave generation -----
 function swarmK(s) { return 1 + BAL.swarm * (s - 1); }
-function genWave(s, mods, tac, finale) {
+function genWave(s, mods, tac, finale, lanes) {
   const fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5, cyc = cycleOf(s);
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
@@ -276,6 +304,7 @@ function genWave(s, mods, tac, finale) {
     w.forEach((id, i) => { const cp = capt && ENEMIES[id].elite; if (cp) capt = false; out.push({ t, id, sw: ENEMIES[id].elite ? 1 : sw, rush: last, captain: cp || undefined });
       t += last ? (i % 6 === 5 ? rand(0.5, 0.8) : rand(0.04, 0.12)) : wi === 1 ? rand(0.2, 0.45) : (i % 4 === 3 ? rand(1.2, 1.8) : rand(0.4, 0.8)); }); });
   if (boss) out.push({ t: Math.max(4, t * 0.45), id: boss, boss: true });
+  if (lanes) for (const q of out) if (q.id && !q.boss) q.lane = ENEMIES[q.id].elite ? lanes.elite : pickLane(lanes.w);
   out.sort((a, b) => a.t - b.t);
   return out;
 }
@@ -289,10 +318,15 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready', run.finale === 'ready' ? null : run.lanes || (run.lanes = rollLanes(run.siege, run.tactic))), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
-  B.totalSpawn = B.queue.length;
+  // the horde recruits from your shop: leftover cards may defect and join this siege as elites
+  const F0 = FACTIONS[factionIndex(run.siege)];
+  if (!run.finale && run.siege > 1) for (const c of shopDefectors(run)) B.queue.push({ t: rand(4, 14), id: F0.elite, turncoat: c.id, lane: run.lanes ? run.lanes.elite : undefined });
+  B.queue.sort((a, b) => a.t - b.t); B.defectors = B.queue.filter(q => q.turncoat).map(q => q.turncoat);
+  B.lanes = run.finale === 'ready' ? null : run.lanes; B.laneIdle = [0, 0, 0];
+  B.totalSpawn = B.queue.length; B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
   B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
@@ -316,7 +350,7 @@ function startBattle(run, meta) {
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
     if (run.mods.shaken === h.uid) u.stun = Math.max(u.stun || 0, 5); // boss talk: the voice lost their nerve
     if (st.startShield) u.shield = Math.max(u.shield || 0, u.maxHp * st.startShield);
-    B.heroes.push(u);
+    u.lane = laneOf(u.hy); B.heroes.push(u);
   }
   if (run.tech.intern) for (let i = 0; i < 2; i++) summonThrall(B, B.heroes[0] || { x: GRID.x + 30, y: GRID.y + 60, inst: { level: Math.max(1, run.siege) }, st: { ap: 1 } }, 0.6, 'thrall');
   applyBulwark(B);
@@ -336,8 +370,9 @@ function spawnEnemy(B, id, opts = {}) {
   if (d.boss) { const f = BOSS_TOUGH[id] || 1, big = d.boss === 'big'; const decay = Math.pow(BAL.bossDecay, Math.max(0, s / 5 - 1)); hm = (big ? BAL.bigBoss : BAL.miniBoss) * decay * 75 * f * BAL.bossHp * hpMul(s) / d.hp; am = (big ? BAL.bigAtk : BAL.miniAtk) * 9 * f * atkMul(s) / d.atk; }
   // elites stay well below the siege's boss: never more than eliteCap of a mini-boss
   if (d.elite && !d.boss) hm = Math.min(hm, BAL.eliteCap * BAL.miniBoss * 75 * BAL.bossHp * hpMul(s) / d.hp);
-  const tac = !d.boss && B.run.tactic, cap = !!opts.captain;
+  const tac = !d.boss && B.run.tactic, cap = !!opts.captain, tc = opts.turncoat && HERO_BY_ID[opts.turncoat];
   if (cap) { hm *= 2; am *= 1.4; }
+  if (tc) { hm *= 1 + 0.3 * tc.rar; am *= 1 + 0.15 * tc.rar; }
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
   if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
@@ -349,7 +384,8 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'gale') spdM *= 1.2;
   if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
-  const y = opts.y != null ? opts.y : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
+  const band = opts.lane != null ? laneBand(opts.lane) : null;
+  const y = opts.y != null ? opts.y : band ? rand(band.y0, band.y1) : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
@@ -357,6 +393,8 @@ function spawnEnemy(B, id, opts = {}) {
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
+  // a legend you left in the shop, fighting for the horde (beat them and their copy goes back to the pool)
+  if (tc) { u.turncoat = tc.id; u.key = 'h:' + tc.id; u.nativeFace = 1; u.name = 'Turncoat ' + tc.name.split(' ')[0]; u.scale = 1.1; FX.text(u.x - 20, u.y - 22, 'TURNCOAT', '#c58cff', true, true); }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
@@ -486,17 +524,18 @@ function killUnit(B, u, src) {
     return;
   }
   u.alive = false; u.hp = 0;
+  if (u.turncoat) { poolGive(B.run, u.turncoat, 1); FX.text(u.x, u.y - 26, 'back to the pool', '#c58cff', false, true); }
   B.kills++; if (src) src.kills++; if (B.ach) { if (B.hammering) B.ach.hammer++; if (u.id === 'chicken') B.ach.chickens++; }
   giveXP(B, src && src.owner ? src.owner : src, u.xpv || 0);
   const run = B.run;
-  let g = u.gold * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0) + 0.08 * (B.meta.ranks.chest || 0) + B.goldBonus + (u.hat ? 0.25 : 0));
+  let g = u.gold / (goldMul(B.siege) * BAL.goldK) / B.goldRef * killCoins(B.siege) * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0) + 0.08 * (B.meta.ranks.chest || 0) + B.goldBonus + (u.hat ? 0.25 : 0));
   if (src && src.st && src.st.midas) g *= 1 + src.st.midas;
   if (src && src.st && src.st.greed) g *= 1 + src.st.greed;
   if (src && src.st && src.st.el && src.st.el.treat) { g *= 1.4; const low = B.heroes.filter(h => h.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (low) healUnit(B, src, low, low.maxHp * 0.05, false, 'element'); }
   if (B.pinataT > 0) g *= 3;
-  g = Math.max(1, Math.round(g));
-  run.gold += g; B.goldEarned += g;
-  FX.coins(u.x, u.y - 8 - u.z, g);
+  if (u.boss) g += u.final ? 5 : BOSS_PURSE[u.boss === 'big' ? 'big' : 'mini'];
+  B.coinAcc += g; g = Math.floor(B.coinAcc); B.coinAcc -= g;
+  if (g > 0) { run.gold += g; B.goldEarned += g; FX.coins(u.x, u.y - 8 - u.z, g); }
   FX.particles(u.x, u.y - 6 - u.z, u.boss ? 60 : u.def.elite ? 20 : 9, u.def.spr.body || u.def.spr.skin || '#8fd14f', { spread: u.boss ? 80 : 30 });
   FX.puff(u.x, u.y - u.z, u.scale);
   FX.sound(u.id === 'chicken' ? 'bawk' : u.id === 'goose' ? 'honk' : u.boss ? 'bossdie' : 'kill');
@@ -862,10 +901,11 @@ function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
   const run = B.run;
+  stepLanes(B, dt);
   if (B.bossUnit && B.bossUnit.shards) stepShards(B);
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
-    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain }); B.lastSpawn = B.t; }
+    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, lane: q.lane }); B.lastSpawn = B.t; }
   // overtime: once the last foe has arrived and the fight drags on, heroes hit harder every second.
   // Normal foes still standing after a while stop fighting and charge the wall instead, so a siege always ends.
   if (!B.overtime && !B.queue.length && !(B.bossUnit && B.bossUnit.alive) && B.t - Math.max(B.lastSpawn || 0, B.bossGoneT || 0) > BAL.otStart) {
@@ -973,7 +1013,7 @@ function separate(list) {
 
 function chaseTarget(B, u, groundOnly) {
   let best = null, bs = Infinity;
-  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
+  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb)) || (u.side === 'hero' && !heroLaneOk(B, u, e))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
   return best;
 }
 function moveToward(u, tx, ty, spd, dt) {
@@ -989,7 +1029,7 @@ function rafterJump(B, u) {
   if (!u || !u.alive || !u.rafter || u.leap) return false;
   const tx = CASTLE_X + 40 + rand(0, 20), ty = GRID.y + GRID.rows * GRID.cell / 2 + rand(-16, 16);
   u.rafter = false; u.st.range = u.st.groundRange || u.st.range; u.target = null;
-  u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
+  u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; u.lane = laneOf(ty); FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
 // Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. Safe from permadeath, out for the rest of the siege
@@ -1046,12 +1086,12 @@ function stepHero(B, u, dt) {
     if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
     if (!u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
-      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
+      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && heroLaneOk(B, u, e) && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
     if (!u.target) {
-      if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70));
-      else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120).sort((a, b) => b.x - a.x)[0] || null;
-      else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb)
-        || nearest(B.enemies, u, 150, e => e.target && e.target.side === 'hero' && e.range > 40);
+      if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70), e => heroLaneOk(B, u, e));
+      else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120 && heroLaneOk(B, u, e)).sort((a, b) => b.x - a.x)[0] || null;
+      else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && heroLaneOk(B, u, e) && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb)
+        || nearest(B.enemies, u, 150, e => e.target && e.target.side === 'hero' && e.range > 40 && heroLaneOk(B, u, e));
       // nothing in the hero's zone: chase whatever is left, leakers nearest the castle first
       if (!u.target && !u.rafter) u.target = chaseTarget(B, u, !ranged);
     }
@@ -1109,7 +1149,7 @@ function stepEnemy(B, u, dt) {
       if (u.flying) u.target = nearest(heroes, u, u.range + 30, h => h.rafter) || nearest(heroes, u, Math.max(u.range, 20) + 6);
       // the horde hunts heroes first and only hits the wall when none are close (Cam: combat is about keeping heroes alive)
       else if (u.range > 40) u.target = nearest(heroes, u, u.range + BAL.huntRanged);
-      else u.target = nearest(heroes, u, BAL.huntMelee + 8 * (u.scale - 1), h => !h.rafter);
+      else u.target = nearest(heroes, u, BAL.huntMelee + 8 * (u.scale - 1), h => !h.rafter && (!B.lanes || u.boss || laneOf(h.y) === laneOf(u.y) || dist(h, u) < 36));
     }
   }
   const t = u.target;

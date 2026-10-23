@@ -23,32 +23,34 @@ function newRun(meta) {
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
 function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
-// Legendary and God rolls can also turn up the legends that only exist at that rarity (hero.fixed), and they show up 3x as often
-function draftPool(cands, rarity) { const pool = cands.filter(h => !h.fixed || h.fixed === rarity); return pool.flatMap(h => h.fixed ? [h, h, h] : [h]); }
-function draftCard(id, run, rarity) { const d = HERO_BY_ID[id]; return { id, rarity: d.fixed || (rarity != null ? rarity : rollRarity(draftBosses(run))), temper: rollTemper() }; }
+// TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
+// rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
+function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
+function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: pick(EL_KEYS) }; }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
   for (let i = 0; i < n; i++) {
-    const rar = rollRarity(draftBosses(run)), pool = draftPool(HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id)), rar);
+    let rar = rollRarity(draftBosses(run)), pool = draftPool(HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id)), rar, run);
+    while (!pool.length && rar > 0) pool = draftPool(HEROES.filter(h => !own.has(h.id) && !out.some(o => o.id === h.id)), --rar, run);
     if (!pool.length) break;
-    out.push(draftCard(pick(pool).id, run, rar));
+    out.push(draftCard(pick(pool).id, run));
   }
   if (draftBosses(run) > castleTier(run)) for (const o of out) o.boost = true;
   // a focused search guarantees one card of the class or race you asked for
-  if (focus && out.length) { const rar = out[0].rarity, fits = draftPool(HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id)), rar);
-    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run, rar); }
+  if (focus && out.length) { const rar = out[0].rarity, fits = HEROES.filter(h => !own.has(h.id) && h.rar <= Math.max(rar, 1) && poolLeft(run, h.id) > 0 && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
+    if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run); }
   return out;
 }
 // the first two legends are free; after that each draft costs more the bigger the roster is (losing legends makes it cheaper again)
 function draftCost(run) { const n = Math.max(0, run.roster.length - START_LEGENDS); return Math.round(40 * Math.pow(1.8, n) / 5) * 5; }
-function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 20 + 15 * run.draftRerolls; }
+function draftRerollCost(run) { return run.roster.length === 0 && run.draftRerolls === 0 ? 0 : 2 + run.draftRerolls; }
 // every legend starts at level 1 (Cam); the Veterans meta upgrade still adds its levels
 function joinLevel(run) { return 1 + (run.vet || 0); }
 // legends behind the team's best level learn twice as fast, so a late recruit can catch up
 function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.level)); return h.level < top - 1 ? 2 : 1; }
 function addDraftedHero(run, opt) {
-  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].fixed || opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
-  run.roster.push(h); autoPlace(run, h);
+  const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].rar, copies: opt.copies || 1, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: opt.el || pick(EL_KEYS), items: [], place: null, mustache: false };
+  run.roster.push(h); autoPlace(run, h); poolTake(run, h.id, h.copies);
   if (opt.boost && run.pressDraft > 0) run.pressDraft--;
   // the first legend drafted is the keep's voice in boss talk (talk.js)
   if (!run.voice) run.voice = { uid: h.uid, id: h.id, name: heroDisplayName(h) };
@@ -62,20 +64,69 @@ function swapCost(run) { return Math.round(40 * Math.pow(1.8, ROSTER_CAP - 1 - S
 function teamLevel(run) { const l = run.roster.map(h => h.level).sort((a, b) => a - b); return l.length ? l[Math.floor(l.length / 2)] : joinLevel(run); }
 function swapHero(run, old, opt) {
   for (const it of run.stash) if (it.holder === old.uid) it.holder = null;
-  voiceLeaves(run, old); const g = sellValue(old), place = old.place; run.gold += g; run.roster = run.roster.filter(x => x !== old);
+  voiceLeaves(run, old); const g = sellValue(old), place = old.place; run.gold += g; run.roster = run.roster.filter(x => x !== old); poolGive(run, old.id, old.copies || 1);
   const A = run.stats.ach = run.stats.ach || {}; A.sold = (A.sold || 0) + 1;
   const h = addDraftedHero(run, opt); h.level = Math.max(h.level, old.level);
   if (place) h.place = place;
   return { h, gold: g };
 }
+// ----- the Guild Hall shop -----
+// Each legend has a limited pool of copies (fewer for rarer ones). Three copies make a 2-star legend, nine a 3-star.
+// The horde recruits too: a card left in the shop when a siege starts can defect and fight for the horde (spawnEnemy turncoat).
+const SHOP = { size: 5, reroll: 2, pool: [18, 15, 13, 10, 9, 9], stars: [1, 3, 9], starMul: [1, 1.7, 2.9], base: 5, interestPer: 10, interestMax: 5, defect: 0.25 };
+function poolLeft(run, id) { const P = run.pool = run.pool || {}; return id in P ? P[id] : SHOP.pool[HERO_BY_ID[id].rar]; }
+function poolTake(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.max(0, poolLeft(run, id) - n); }
+function poolGive(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.min(SHOP.pool[HERO_BY_ID[id].rar], poolLeft(run, id) + n); }
+function heroStar(h) { const c = h.copies || 1; return c >= SHOP.stars[2] ? 3 : c >= SHOP.stars[1] ? 2 : 1; }
+function starMul(h) { return SHOP.starMul[heroStar(h) - 1]; }
+function copiesToNext(h) { const s = heroStar(h); return s >= 3 ? 0 : SHOP.stars[s] - (h.copies || 1); }
+function shopSize(run, meta) { return SHOP.size + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
+function shopCost(id) { return HERO_BY_ID[id].rar + 1; }
+function shopOdds(run) { return rarityOdds(draftBosses(run)); }
+function rollShopCard(run) {
+  let rar = rollRarity(draftBosses(run)), pool = [];
+  for (; rar >= 0 && !pool.length; rar--) pool = HEROES.filter(h => h.rar === rar && poolLeft(run, h.id) > 0 && !(run.shop || []).some(c => c && c.id === h.id && poolLeft(run, h.id) < 2));
+  if (!pool.length) return null;
+  // weighted by copies left, so a legend the horde (or you) has drained turns up less
+  let x = Math.random() * pool.reduce((a, h) => a + poolLeft(run, h.id), 0); const d = pool.find(h => (x -= poolLeft(run, h.id)) < 0) || pool[0];
+  const c = draftCard(d.id, run);
+  if (run.tech.lab && Math.random() < 0.33) { const n = fieldElements(run), top = Object.keys(n).sort((a, b) => n[b] - n[a])[0]; if (top) c.el = top; }
+  return c;
+}
+function rollShop(run, meta) {
+  const boosted = draftBosses(run) > castleTier(run), out = [];
+  run.shop = out; for (let i = 0; i < shopSize(run, meta); i++) out.push(rollShopCard(run));
+  if (boosted && run.pressDraft > 0) run.pressDraft--;
+  return out;
+}
+function shopRerollCost(run) { return SHOP.reroll; }
+function rerollShop(run, meta) { const c = shopRerollCost(run); if (run.gold < c) return { err: `A new shop costs ${c} gold.` }; run.gold -= c; run.shopRerolls = (run.shopRerolls || 0) + 1; rollShop(run, meta); return { ok: true }; }
+// buying a copy of a legend you already have adds to their copies (and maybe a star); otherwise they join, if there is room
+function buyShopCard(run, i) {
+  const c = run.shop && run.shop[i]; if (!c) return { err: 'That card is gone.' };
+  const cost = shopCost(c.id); if (run.gold < cost) return { err: `${HERO_BY_ID[c.id].name.split(' ')[0]} costs ${cost} gold. You have ${run.gold}.` };
+  if (poolLeft(run, c.id) <= 0) { run.shop[i] = null; return { err: 'The horde got there first.' }; }
+  const own = run.roster.find(h => h.id === c.id);
+  if (own) { const s0 = heroStar(own); run.gold -= cost; own.copies = (own.copies || 1) + 1; poolTake(run, c.id, 1); run.shop[i] = null; return { ok: true, h: own, merged: true, starUp: heroStar(own) > s0 }; }
+  if (run.roster.length >= rosterCap(run)) return { full: true, card: c, cost };
+  run.gold -= cost; run.shop[i] = null; const h = addDraftedHero(run, c); run.paidDrafts = (run.paidDrafts || 0) + 1; return { ok: true, h };
+}
+// the horde recruits from your leftovers: each card still in the shop may defect when the siege starts
+function shopDefectors(run) {
+  const out = []; if (!run.shop) return out;
+  run.shop.forEach((c, i) => { if (c && Math.random() < SHOP.defect && poolLeft(run, c.id) > 0) { poolTake(run, c.id, 1); out.push(c); run.shop[i] = null; } });
+  return out;
+}
+function interestFor(gold) { return Math.min(SHOP.interestMax, Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
+
 function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
 function summonOptions(run, tier) {
   const own = new Set(run.roster.map(h => h.id));
-  return HEROES.filter(h => h.fixed === tier && !own.has(h.id)).sort(() => Math.random() - 0.5).slice(0, 3).map(h => draftCard(h.id, run, tier));
+  return HEROES.filter(h => h.rar === tier && !own.has(h.id)).sort(() => Math.random() - 0.5).slice(0, 3).map(h => draftCard(h.id, run));
 }
 const ASCEND_COST = [150, 400, 1000, 2500, 6000];
 function maxRarityNow(run) { return rarityOdds(castleTier(run)).reduce((m, v, i) => v ? i : m, 0); }
-function ascendCost(h) { return HERO_BY_ID[h.id].fixed || h.rarity >= 5 ? null : ASCEND_COST[h.rarity || 0]; }
+function ascendCost(h) { return null; } // Ascension is gone: stars from copies replaced it (TFT shop, 2026-10-23)
 function ascendHero(run, h) {
   const c = ascendCost(h); if (c == null) return { err: 'This legend is already as rare as it gets.' };
   if ((h.rarity || 0) + 1 > maxRarityNow(run)) return { err: `Beat more bosses to open ${RARITY[(h.rarity || 0) + 1].name}.` };
@@ -95,7 +146,11 @@ function startFinale(run) {
   run.castle.hp = run.castle.max;
 }
 function addXP(h, v) { h.xp += v; let n = 0; while (h.xp >= xpNeed(h.level) && h.level < 40) { h.xp -= xpNeed(h.level); h.level++; n++; } return n; }
-function needsElement(h) { return h.level >= ELEMENT_LEVEL && !h.el; }
+// elements are rolled when a legend joins (Cam 2026-10-23); older saves roll one the first time they're checked
+function needsElement(h) { if (!h.el) h.el = pick(EL_KEYS); return false; }
+// six champions of one element on the field unlock that element's castle; the first one claims the keep, later ones can be switched to
+function castleUnlocks(run) { const n = fieldElements(run); return EL_KEYS.filter(e => (n[e] || 0) >= EL_STACK.at[2]); }
+function checkCastleUnlock(run) { const fresh = castleUnlocks(run).filter(e => !(run.castleOpen || []).includes(e)); if (!fresh.length) return null; run.castleOpen = [...(run.castleOpen || []), ...fresh]; if (!run.castleEl) run.castleEl = fresh[0]; return fresh[0]; }
 function elementOptions(run, meta, h) {
   const n = 3 + (run.tech.lab ? 1 : 0), have = heroElements(run, h);
   return EL_KEYS.filter(e => !have.includes(e)).sort(() => Math.random() - 0.5).slice(0, n);
@@ -116,8 +171,11 @@ function autoPlace(run, h) {
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
   if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
-  const rows = [3, 2, 4, 1, 5, 0];
-  for (const c of cols) for (const r of rows) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
+  // lanes: melee champions go where the scouts expect the most foes per defender; ranged ones stand mid-field and cover two lanes
+  const L = run.lanes || { w: [1 / 3, 1 / 3, 1 / 3] }, LANE_ROWS = [[1, 0], [3, 2], [4, 5, 6]];
+  const held = [0, 0, 0]; for (const x of run.roster) if (x !== h && x.place && x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
+  const order = ranged ? [1, 0, 2] : [0, 1, 2].sort((a, b) => L.w[b] / (1 + held[b]) - L.w[a] / (1 + held[a]));
+  for (const l of order) for (const c of cols) for (const r of LANE_ROWS[l]) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
 }
 
 // ----- items -----
@@ -131,7 +189,7 @@ function lootOptions(run, meta) {
   }
   return out;
 }
-function lootRerollCost(run) { return 12 + 8 * run.lootRerolls; }
+function lootRerollCost(run) { return 1 + run.lootRerolls; }
 function takeLoot(run, opt) { const it = makeItem(opt.parts); if (it.parts.length === 2 && it.parts.includes('shard')) it.el = pick(EL_KEYS); run.stash.push(it); run.stats.loot.push({ s: run.siege - 1, parts: it.parts }); return it; }
 function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.holder); if (h) h.items = h.items.filter(u => u !== it.uid); it.holder = null; }
 // give an item to a hero; two components on one hero fuse into a finished item
@@ -153,7 +211,7 @@ function giveItem(run, it, h) {
   if (h.items.length >= ITEM_SLOTS) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries ${ITEM_SLOTS} items.` };
   unequipItem(run, it); h.items.push(it.uid); it.holder = h.uid; return { ok: true };
 }
-const UNFORGE_COST = 30;
+const UNFORGE_COST = 3;
 function unforgeItem(run, it) {
   if (it.parts.length < 2) return { err: 'Components cannot be split.' };
   if (run.gold < UNFORGE_COST) return { err: `Splitting costs ${UNFORGE_COST} gold.` };
@@ -204,7 +262,7 @@ function buyTech(run, meta, id) {
   if (id === 'rafters1' || id === 'rafters2') { const ranged = run.roster.filter(h => isRangedHero(h.id) && h.place && h.place.type === 'grid'); for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { const h = ranged.shift(); if (h) h.place = { type: 'rafter', i }; } }
   return { ok: true };
 }
-function repairCost(run) { return 25 + 4 * run.siege; }
+function repairCost(run) { return 2 + Math.floor(run.siege / 10); }
 function repairCastle(run) { const c = repairCost(run); if (run.castle.hp >= run.castle.max) return { err: 'The walls are already whole.' }; if (run.gold < c) return { err: `Masons charge ${c} gold.` }; run.gold -= c; const a = Math.round(run.castle.max * 0.2); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); return { ok: true, a }; }
 
 // ----- reforge: reroll a finished item into a different finished item (same holder, same slot) -----
@@ -223,24 +281,24 @@ function resolveEncounter(run, meta, fxs) {
   for (const fx of fxs.split(',')) {
     const [k, arg] = fx.split(':'); const n = +arg;
     switch (k) {
-      case 'gold': { const g = n > 0 ? Math.round(n * goldMul(run.siege)) : n; run.gold = Math.max(0, run.gold + g); out.push(g >= 0 ? `+${g} gold` : `${g} gold`); break; }
+      case 'gold': { const g = n; run.gold = Math.max(0, run.gold + g); out.push(g >= 0 ? `+${g} gold` : `${g} gold`); break; }
       case 'pay': if (run.gold < n) { out.push(`You only have ${run.gold} gold. The dragon is unimpressed and keeps the box.`); return { out, levels }; } run.gold -= n; out.push(`−${n} gold`); break;
       case 'comp': { const key = arg === 'any' ? pick(COMP_KEYS) : arg; run.stash.push(makeItem([key])); out.push(`Got a ${COMPONENTS[key].name}. Hand it out in the Armory.`); break; }
       case 'item': { const it = randomFinished(); run.stash.push(it); out.push(`Got ${itemName(it)}. Hand it out in the Armory.`); break; }
       case 'xpAll': for (const h of run.roster) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); } out.push(`Every hero gains ${Math.round(n * (1 + 0.1 * run.siege))} XP.`); break;
       case 'xpOne': { const h = pick(run.roster); if (h) { const v = Math.round(n * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} gains ${v} XP.`); } break; }
-      case 'secret': if (run.discovered[arg]) { const g = 40; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold for taking up your time.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
+      case 'secret': if (run.discovered[arg]) { const g = 4; run.gold += g; out.push(`You already know about the ${TECH[arg].name}. They leave ${g} gold for taking up your time.`); } else { run.discovered[arg] = true; out.push(`Discovered: ${TECH[arg].name}. Build it in the Artificers' Hall.`); } break;
       case 'hz': if (HAZARDS[arg]) { run.mods.hz = arg; out.push(`Next siege: ${HAZARDS[arg].name}. ${HAZARDS[arg].desc}`); } break;
       case 'reforge': { const list = reforgeable(run); if (!list.length) { const it = randomFinished(); run.stash.push(it); out.push(`You have nothing finished to reforge, so the smith hands you ${itemName(it)} instead.`); break; }
         run.pendingReforge = true; out.push('Pick an item to reforge.'); break; }
       case 'mod': run.mods[arg] = true; if (arg === 'bossmad') out.push('The boss is coming in a rage.'); break;
       case 'mood': run.mood = (run.mood || 0) + n; out.push(n > 0 ? 'They will remember that kindly.' : 'They will remember that.'); break;
       case 'bossdeal': if ((run.mood || 0) >= 1) { run.mods.bosssoft = true; out.push('They accept. Their heart is not in this siege.'); } else if ((run.mood || 0) <= -1) { run.mods.bossmad = true; out.push('They laugh in your face. After everything you did? The boss is coming in a rage.'); } else out.push('They shrug. Nothing changes.'); break;
-      case 'recruit': { if (run.lastRecruit != null && run.siege - run.lastRecruit < RECRUIT_GAP) { const g = Math.round(35 * goldMul(run.siege)); run.gold += g; out.push(`The champion takes one look at your crowded barracks and leaves ${g} gold as an apology.`); break; } run.lastRecruit = run.siege;
-        if (Math.random() < 0.8) { run.recruitFrom = 'encounter'; run.post.unshift('draft'); out.push('Three champions step forward. You get to pick one.'); break; } const os = run.roster.length < ROSTER_CAP ? draftOptions(run, meta) : []; const o = os[0]; if (!o) { const g = Math.round(40 * goldMul(run.siege)); run.gold += g; out.push(`Your keep is full, so they pay ${g} gold for the trouble instead.`); break; } const h = addDraftedHero(run, o); out.push(`${HERO_BY_ID[h.id].name} joins your keep at level ${h.level}!`); break; }
+      case 'recruit': { if (run.lastRecruit != null && run.siege - run.lastRecruit < RECRUIT_GAP) { const g = 3; run.gold += g; out.push(`The champion takes one look at your crowded barracks and leaves ${g} gold as an apology.`); break; } run.lastRecruit = run.siege;
+        if (Math.random() < 0.8) { run.recruitFrom = 'encounter'; run.post.unshift('draft'); out.push('Three champions step forward. You get to pick one.'); break; } const os = run.roster.length < rosterCap(run) ? draftOptions(run, meta) : []; const o = os[0]; if (!o) { const g = Math.round(40 * goldMul(run.siege)); run.gold += g; out.push(`Your keep is full, so they pay ${g} gold for the trouble instead.`); break; } const h = addDraftedHero(run, o); out.push(`${HERO_BY_ID[h.id].name} joins your keep at level ${h.level}!`); break; }
       case 'heal': { const a = Math.round(run.castle.max * n / 100); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); out.push(`Castle repaired by ${a}.`); break; }
-      case 'maxhp': if (run.gold >= 50) { run.gold -= 50; run.maxhpMul *= 1.15; const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp += run.castle.max - old; out.push('Castle max HP +15%.'); } else out.push('You could not afford the masons. They leave, still eating your bread.'); break;
-      case 'diamonds': { const g = Math.round(20 * n * goldMul(run.siege)); run.gold += g; out.push(`+${g} gold`); break; } // diamonds only come from achievements now
+      case 'maxhp': if (run.gold >= 5) { run.gold -= 5; run.maxhpMul *= 1.15; const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp += run.castle.max - old; out.push('Castle max HP +15%.'); } else out.push('You could not afford the masons. They leave, still eating your bread.'); break;
+      case 'diamonds': { const g = 2 * n; run.gold += g; out.push(`+${g} gold`); break; } // diamonds only come from achievements now
       case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +5% attack, ability power and HP.`); } break; }
       case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { const l = addXP(h, Math.round(30 * (1 + 0.1 * run.siege))); if (l) levels.push([h, l]); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled, but learns something. +${Math.round(30 * (1 + 0.1 * run.siege))} XP.`); } break; }
       case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
@@ -255,11 +313,12 @@ function resolveEncounter(run, meta, fxs) {
 
 // ----- siege end bookkeeping -----
 function finishSiege(run, meta, B) {
-  const s = run.siege; const bounty = Math.round(0.5 * (3 + s) * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0)));
+  // TFT-style income: interest on what you banked, then the siege's pay
+  const s = run.siege, interest = interestFor(run.gold), bounty = SHOP.base + interest;
   run.gold += bounty;
   const xpMul = 1 + (run.tech.drill ? 0.15 : 0) + (run.tech.college ? 0.25 : 0);
   const survive = BAL.xpSurvive + BAL.xpSurviveS * s;
-  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
+  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, interest, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
     // a champion called back keeps what they learned, but misses the reward for holding the line
@@ -290,11 +349,12 @@ function finishSiege(run, meta, B) {
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
-  if (pressOn(run)) { const g = Math.round(B.goldEarned * PRESS.gold); run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
+  if (pressOn(run)) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
-  run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege);
+  run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
+  if (!run.shopLock) rollShop(run, meta);
   return rep;
 }
 
