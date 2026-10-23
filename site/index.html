@@ -1327,6 +1327,18 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .mods.lanes p.lane { margin: 1px 0; font-size: 12px; }
 .mods.lanes p.lane.heavy b { color: #ff7a9a; }
 .mods.lanes .warn { color: #ff7a9a; font-weight: 700; }
+/* star level on cards (Cam 2026-10-23): bronze, silver, gold */
+.stars { font-family: var(--f-display); font-weight: 700; letter-spacing: -1px; line-height: 1; text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; }
+.stars.s1 { color: #e0a060; } .stars.s2 { color: #e8f0ff; } .stars.s3 { color: #ffd94a; filter: drop-shadow(0 0 3px rgba(255,217,74,.8)); }
+.hcard .lv { white-space: nowrap; } .hcard .pstars { display: none; } .hcard .lv .stars { font-size: 13px; margin-left: 1px; }
+.stars.big { font-size: 22px; vertical-align: middle; }
+.swapin .row { gap: 6px; flex-wrap: wrap; } .swapin small { color: var(--gold); }
+.swapin .btn img { width: 20px; height: 20px; vertical-align: middle; margin-right: 3px; }
+/* field / bench divider and empty bench slots in the champion drawer */
+.rdiv { flex: 0 0 100%; grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; padding: 2px 2px 0; font-family: var(--f-display); }
+.rdiv b { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; } .rdiv small { font-size: 11px; color: var(--muted); }
+.rdiv.field b { color: var(--mint); } .rdiv.bench b { color: var(--gold); }
+.hcard.bslot { border-style: dashed; background: transparent; box-shadow: none; opacity: .5; align-items: center; justify-content: center; min-height: 80px; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -1476,6 +1488,13 @@ html.m-land #pressBtn:not([hidden]) { margin-top: auto; min-height: 44px; }
 html.m-land #pressBtn:not([hidden]) + #beginBtn { margin-top: 6px; }
 html.m-port #pressBtn { flex: 0 0 auto; min-width: 0; }
 html.m #pressBtn small { font-size: 9px; }
+html.m .hcard .lv .stars { display: none; }
+html.m .hcard .pstars { display: block; position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); background: var(--ink); border-radius: 3px; padding: 1px 3px 0; line-height: 1; }
+html.m .hcard .pstars .stars { font-size: 12px; }
+html.m .rdiv b { font-size: 11px; } html.m .rdiv small { font-size: 10px; }
+html.m .hcard.bslot { min-height: 60px; }
+html.m .rdiv { flex: 0 0 auto; align-self: stretch; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 4px; border-left: 2px solid var(--ink); writing-mode: vertical-rl; transform: rotate(180deg); }
+html.m .rdiv.field { border-left: 0; }
 
 /* ===== Store demo: road-ahead screen and title note ===== */
 .rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
@@ -2038,15 +2057,16 @@ const CASTLE_POWERS = {
 
 // ===== Items: components combine into finished items =====
 // stat: [value alone, value inside a finished item]; every finished item has one effect no other item shares
+// two item slots per champion (Cam 2026-10-23), so each component hits about 1.4x harder than with three
 const COMPONENTS = {
-  sword:   { name: 'Rusty Shortsword',   glyph: 'sword',   stat: [25, 30], unit: '% attack' },
-  bow:     { name: 'Slingbow',           glyph: 'bow',     stat: [25, 30], unit: '% attack speed' },
-  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',     stat: [30, 35], unit: '% ability power' },
-  tear:    { name: 'Dewdrop Vial',       glyph: 'tear',    stat: [25, 30], unit: '% starting mana', stat2: [20, 25], unit2: '% mana gain' },
-  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    stat: [30, 40], unit: ' armor' },
-  cloak:   { name: 'Dusk Cloak',         glyph: 'cloak',   stat: [10, 15], unit: '% dodge' },
-  belt:    { name: 'Ogre Belt',          glyph: 'belt',    stat: [25, 30], unit: '% max HP' },
-  glove:   { name: 'Knuckle Mitt',       glyph: 'glove',   stat: [20, 25], unit: '% crit chance' },
+  sword:   { name: 'Rusty Shortsword',   glyph: 'sword',   stat: [35, 45], unit: '% attack' },
+  bow:     { name: 'Slingbow',           glyph: 'bow',     stat: [35, 45], unit: '% attack speed' },
+  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',     stat: [45, 50], unit: '% ability power' },
+  tear:    { name: 'Dewdrop Vial',       glyph: 'tear',    stat: [35, 45], unit: '% starting mana', stat2: [30, 35], unit2: '% mana gain' },
+  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    stat: [45, 60], unit: ' armor' },
+  cloak:   { name: 'Dusk Cloak',         glyph: 'cloak',   stat: [15, 20], unit: '% dodge' },
+  belt:    { name: 'Ogre Belt',          glyph: 'belt',    stat: [35, 45], unit: '% max HP' },
+  glove:   { name: 'Knuckle Mitt',       glyph: 'glove',   stat: [30, 35], unit: '% crit chance' },
   shard:   { name: 'Stray Shard',        glyph: 'shard',   desc: 'A splinter of an elemental shard that fell off a certain crown. It hums. Combines into crests.', rare: true },
 };
 function compStat(c, fin, k = 1) { const C = COMPONENTS[c], i = fin ? 1 : 0; if (!C.stat) return ''; return `+${C.stat[i] * k}${C.unit}` + (C.stat2 ? `, +${C.stat2[i] * k}${C.unit2}` : ''); }
@@ -2121,7 +2141,7 @@ function itemDesc(it) {
   const ps = it.parts.filter(p => p !== 'shard'), stats = ps.length === 2 && ps[0] === ps[1] ? compStat(ps[0], true, 2) : ps.map(p => compStat(p, true)).join(', ');
   return stats ? `${stats}. ${F[2]}` : F[2];
 }
-const ITEM_SLOTS = 3;
+const ITEM_SLOTS = 2;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
 const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15, 5: 29 };
 const TECH_LATE_T1 = { wells: 3, vault1: 3 };
@@ -2455,10 +2475,13 @@ function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEY
 
 const LOOT_AFTER = s => s % 3 === 0 || s % 5 === 0;   // a component every third siege, and after bosses
 const ROSTER_CAP = 8;
-// the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions at first, each bunk bought with gold, up to ROSTER_CAP
+// the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
+// the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
-function rosterCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
-function barracksCost(run) { return rosterCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
+const BENCH_SLOTS = 5;
+function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
+function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
+function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
 function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
 const RECRUIT_GAP = 6; // goblin encounters add at most one champion per this many sieges
 
@@ -3964,6 +3987,7 @@ function makeUnit(side, o) {
 }
 
 function startBattle(run, meta) {
+  enforceField(run);
   const syn = activeSynergies(run);
   const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready', run.finale === 'ready' ? null : run.lanes || (run.lanes = rollLanes(run.siege, run.tactic))), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
@@ -5315,8 +5339,15 @@ function castleOptions(run) {
 function cellFree(run, c, r, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'grid' && h.place.c === c && h.place.r === r); }
 function rafterFree(run, i, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'rafter' && h.place.i === i); }
 function isRangedHero(id) { const d = HERO_BY_ID[id]; return CLASS_BASE[d.cls].range > 40; }
+function fieldCount(run, except) { return run.roster.filter(h => h !== except && h.place && !h.vault && !h.fled).length; }
+function fieldFull(run, except) { return !run.finale && fieldCount(run, except) >= fieldCap(run); }
+// more champions on the field than the barracks allow (old saves, champions back from the goose's nest): the weakest go to the bench
+function enforceField(run) {
+  if (run.finale) return; const on = run.roster.filter(h => h.place && !h.vault && !h.fled), cap = fieldCap(run); if (on.length <= cap) return;
+  on.sort((a, b) => heroRarity(b) * 3 + heroStar(b) * 4 + b.level / 10 - (heroRarity(a) * 3 + heroStar(a) * 4 + a.level / 10)).slice(cap).forEach(h => { h.place = null; });
+}
 function autoPlace(run, h) {
-  if (h.vault) return;
+  if (h.vault || fieldFull(run, h)) return;
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
   if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
@@ -6973,11 +7004,21 @@ function drawCathedral(ctx, z, x, y, k, P, fade) { const up = Math.min(1, z.t / 
 const R = { cv: null, ctx: null, lo: null, lctx: null, k: 3, bg: {}, castleKey: '', castle: null, clouds: [], t: 0 };
 function hash(x, y) { let h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
 // the call-back chip over the selected champion during a siege (tap it to pull them into the keep)
-function recallChipPos(u) { return { x: Math.round(u.x) + 7, y: Math.round(u.y - 30 * (u.vscale || 1) - (u.z || 0)) }; }
+function recallChipPos(u) { return { x: Math.round(u.x) + 10, y: Math.round(u.y - 30 * (u.vscale || 1) - (u.z || 0)) }; }
 function drawRecallChip(g, u, t) {
   const p = recallChipPos(u), hot = u.hp < u.maxHp * 0.35 && Math.floor(t * 4) % 2;
   g.fillStyle = OUTLINE; g.fillRect(p.x - 1, p.y - 1, 11, 10); g.fillStyle = hot ? '#ffd84a' : '#9fd8ff'; g.fillRect(p.x, p.y, 9, 8);
   g.fillStyle = OUTLINE; g.fillRect(p.x + 3, p.y + 2, 4, 1); g.fillRect(p.x + 6, p.y + 2, 1, 4); g.fillRect(p.x + 3, p.y + 5, 4, 1); g.fillRect(p.x + 2, p.y + 1, 1, 3); g.fillRect(p.x + 1, p.y + 2, 1, 1);
+}
+// star level over each champion: 1 bronze, 2 silver, 3 gold stars (Cam 2026-10-23)
+const STAR_PX = ['..#..', '#####', '.###.', '.#.#.'], STAR_COL = ['#e0a060', '#e8f0ff', '#ffd94a'];
+function drawStars(g, u, t) {
+  const h = u.inst; if (!h || u.temp) return; const n = heroStar(h), sc = u.scale || 1;
+  const x0 = Math.round(u.x - (n * 6 - 1) / 2), y0 = Math.round(u.y - (u.z || 0) - 21 * sc + (u.flying ? -2 : 0)) - 2 - (u.st && u.st.sigOn ? 2 : 0) - 7;
+  const px = (col, ox, oy) => { g.fillStyle = col; for (let s = 0; s < n; s++) for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) if (STAR_PX[r][c] === '#') g.fillRect(x0 + s * 6 + c + ox, y0 + r + oy, 1, 1); };
+  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) px(OUTLINE, ox, oy);
+  px(STAR_COL[n - 1], 0, 0);
+  if (n === 3 && Math.floor(t * 3) % 3 === 0) { g.fillStyle = '#ffffff'; g.fillRect(x0 + 2, y0 + 1, 1, 1); }
 }
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
@@ -7318,6 +7359,7 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
+  for (const u of units) if (u.alive !== false && u.inst && (u.side === 'hero' || !B)) drawStars(g, u, t);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
   if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t);
@@ -8567,7 +8609,7 @@ function botCarryScore(run, style, h) {
 }
 // carry first, then everyone else by how good a carry they would be
 function botItemOrder(run, style) {
-  const o = run.roster.slice().sort((a, b) => botCarryScore(run, style, b) - botCarryScore(run, style, a));
+  const o = run.roster.slice().sort((a, b) => !!b.place - !!a.place || botCarryScore(run, style, b) - botCarryScore(run, style, a));
   run.botCarry = o[0] && o[0].uid; return o;
 }
 function botPairScore(h, a, b) { const w = CARRY_COMPS[botKind(h)]; return (w.includes(a) ? 2 : 0) + (w.includes(b) ? 2 : 0) + (a === b && w.includes(a) ? 0.5 : 0) + (a === 'shard' || b === 'shard' ? 1 : 0); }
@@ -8612,13 +8654,15 @@ function botCapGoal(s) { return Math.min(ROSTER_CAP, 3 + Math.floor((s - 1) / 4)
 function botBuyShop(run, meta, style, reroll) {
   if (!run.shop) rollShop(run, meta);
   const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
-  while (barracksCost(run) != null && rosterCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  while (barracksCost(run) != null && fieldCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  // new legends while the field has room plus a couple on the bench; copies always (they star up)
+  const room = () => Math.min(rosterCap(run), fieldCap(run) + (chaos ? BENCH_SLOTS : 2));
   for (let g = 0; g < 40; g++) {
     const cards = run.shop.map((c, i) => c && { c, i, own: run.roster.find(h => h.id === c.id), cost: shopCost(c.id) }).filter(o => o && run.gold >= o.cost);
     let o = cards.filter(o => o.own && (chaos || run.gold - o.cost >= keep / 2)).sort((a, b) => b.cost - a.cost)[0];
-    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c, run) - botScoreOpt(style, a.c, run))[0];
+    if (!o && run.roster.length < room()) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c, run) - botScoreOpt(style, a.c, run))[0];
     // a full keep trades its weakest legend for a card two rarities better
-    if (!o && !chaos && run.roster.length >= rosterCap(run) && run.gold >= keep) { const weak = run.roster.filter(h => !h.vault).sort((a, b) => heroRarity(a) * 3 + heroStar(a) * 4 - heroRarity(b) * 3 - heroStar(b) * 4)[0];
+    if (!o && !chaos && run.roster.length >= room() && run.gold >= keep) { const weak = run.roster.filter(h => !h.vault).sort((a, b) => heroRarity(a) * 3 + heroStar(a) * 4 - heroRarity(b) * 3 - heroStar(b) * 4)[0];
       const up = weak && cards.filter(o => !o.own && o.c.rarity >= heroRarity(weak) + 2 && heroStar(weak) < 2).sort((a, b) => b.c.rarity - a.c.rarity)[0];
       if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; }
       // or chases a castle: a card of the keep's top element replaces a lone off-element legend of no higher rarity
@@ -8634,7 +8678,7 @@ function botBuyDrafts(run, draft) { while (run.roster.length >= 1 && run.roster.
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
-  const keep = run.roster.length < rosterCap(run) ? 3 : style !== 'chaos' && run.siege >= 5 ? 10 : 0;
+  const keep = run.roster.length < fieldCap(run) ? 3 : style !== 'chaos' && run.siege >= 5 ? 10 : 0;
   for (let g = 0; g < 20; g++) {
     let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
     ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
@@ -8690,7 +8734,16 @@ function botBossTalk(run, style) {
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
 // bots read the scouts: melee champions are re-placed each siege to match the lanes (chaos keeps wherever they landed)
+// fill the field with the strongest champions; the rest sit on the bench
+function botField(run, style) {
+  const ok = run.roster.filter(h => !h.vault && !h.fled), cap = fieldCap(run);
+  const val = h => style === 'chaos' ? Math.random() : heroRarity(h) * 3 + heroStar(h) * 4 + h.level / 5 + h.items.length;
+  const pickd = ok.slice().sort((a, b) => val(b) - val(a)).slice(0, run.finale ? ok.length : cap);
+  for (const h of ok) if (!pickd.includes(h)) h.place = null;
+  for (const h of pickd) if (!h.place) autoPlace(run, h);
+}
 function botPlace(run, style) {
+  botField(run, style);
   if (style === 'chaos') return;
   const melee = run.roster.filter(h => h.place && h.place.type === 'grid' && !isRangedHero(h.id));
   for (const h of melee) h.place = null;
@@ -8709,8 +8762,8 @@ function botPlayRun(style, meta, opts = {}) {
   for (let i = 0; i < START_LEGENDS; i++) draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
-    botBuyShop(run, meta, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botGiveItems(run, style);
-    checkCastleUnlock(run); botPlace(run, style);
+    botBuyShop(run, meta, style); botField(run, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botField(run, style); botGiveItems(run, style);
+    botPlace(run, style); checkCastleUnlock(run);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     botPress(run, style, log);
@@ -8982,6 +9035,8 @@ function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class=
   }, true);
 })();
 // the keep's voice in boss talk (talk.js): a banner on their card, and a tip naming the tempers this horde's boss dreads
+// star level: 1★ bronze, 2★ silver, 3★ gold, big enough to read on a phone
+function starBadge(h, big) { const s = heroStar(h); return `<span class="stars s${s}${big ? ' big' : ''}" title="${s}-star: ${s < 3 ? `${copiesToNext(h)} more cop${copiesToNext(h) === 1 ? 'y' : 'ies'} for ${s + 1}★` : 'maximum'}">${'★'.repeat(s)}</span>`; }
 function voiceFlag(run, h) {
   if (!run.voice || run.voice.uid !== h.uid) return '';
   const boss = bossFor(run.siege), dread = BOSS_DREAD[boss] || [], scared = dreadedBy(boss, h);
@@ -9286,9 +9341,9 @@ const UI = {
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
-      <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion in the keep">${bc == null ? `Barracks full (${ROSTER_CAP})` : `Bunk ${rosterCap(run) + 1} ${COST(bc)}`}</button>
+      <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion on the field">${bc == null ? `Field full size (${ROSTER_CAP})` : `Field slot ${fieldCap(run) + 1} ${COST(bc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
-    h += `<div class="group-title">Your champions · ${run.roster.length}/${rosterCap(run)}</div><p class="note">Three copies of a legend make it 2★, nine make it 3★ (+70% and +190% power). Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
+    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+70% and +190% power). Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta), star = heroStar(hr), nx = copiesToNext(hr);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : `Signature rank ${st.rank}`;
@@ -9432,16 +9487,20 @@ const UI = {
     if (all.length || nr.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4>${all.length ? '' : '<p class="note">No combos yet. Place 2 champions of one element and 2 of another.</p>'}<div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div>${nrHTML}</section>`; }
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
-    for (const hr of run.roster) {
+    const onField = run.roster.filter(x => x.place || x.vault || x.fled), bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
+    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Field slots grow with barracks bunks in the Guild Hall."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
+    for (const hr of list) {
+      if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
       const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
-        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
+        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level} ${starBadge(hr)}</span>${where}<span class="pstars">${starBadge(hr)}</span>${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
         <div class="hmeta"><span class="cg" data-tip="cls:${d.cls}">${CLASSES[d.cls].icon}</span><span class="cg tg ${TEMPERS[heroTemper(hr)].side}" data-tip="tmp:${heroTemper(hr)}">${TEMPERS[heroTemper(hr)].icon}</span>${hr.el ? `<span class="eg" data-tip="el:${hr.el}" style="--ec:${ELEMENTS[hr.el].col}"></span>` : ''}${heroItems(run, hr).map(it => `<img class="px hi" src="${itemIconURL(it, 2)}" alt="" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}">`).join('')}</div>
         ${u ? `<div class="live"><i style="width:${Math.max(0, 100 * u.hp / u.maxHp)}%;${u.alive ? '' : 'background:var(--rose)'}"></i></div>` : ''}${pend}</div>`;
     }
+    for (let i = bench.length; i < BENCH_SLOTS && G.phase === 'prep'; i++) h += `<div class="hcard bslot" aria-hidden="true"><span>empty</span></div>`;
     $('rosterCards').innerHTML = h;
     $('rosterCards').querySelectorAll('.hcard[data-uid]').forEach(el => {
       el.onpointerdown = e => G.cardDown(e, el.dataset.uid);
@@ -9456,22 +9515,24 @@ const UI = {
     const its = heroItems(run, h);
     const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
       : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
-    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
+    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))} ${starBadge(h, true)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
       <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
       <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
+      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroDisplayName(h).split(' ')[0])} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroDisplayName(x).split(' ')[0])} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
       ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
         return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
-        ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
+        ${h.place ? `<button class="btn small" data-iact="bench" ${run.finale ? 'disabled' : ''}>To the bench</button>` : fieldFull(run, h) ? '' : `<button class="btn small" data-iact="place">Place on the field</button>`}
         ${ascendBtn(run, h, 'iact')}
         ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Release this champion for gold. Their items go back to the Armory.">${UI.sellArm === h.uid ? 'Click again to confirm' : `Release for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
+    el.querySelectorAll('[data-act="swapin"]').forEach(b => b.onclick = () => G.act('swapin', b.dataset.arg));
   },
 
   // ----- modals -----
@@ -11929,7 +11990,7 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
+function changed() { if (G.run && G.phase === 'prep') enforceField(G.run); rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
 // six champions of one element on the field: that element's castle awakens (the first one takes the keep)
 function castleAwakens() {
   const run = G.run; if (!run || run.finale) return; const had = run.castleEl, e = checkCastleUnlock(run); if (!e) return;
@@ -12271,7 +12332,8 @@ G.act = function (act, arg) {
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
       setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
-    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
+    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or add a bunk in the Guild Hall.` : 'No free spot on the field.', true); break;
+    case 'swapin': { if (G.phase !== 'prep') return; const [a, b] = String(arg).split(':'), x = run.roster.find(h => h.uid === a), y = run.roster.find(h => h.uid === b); if (x && y) { swapBench(x, y); G.selected = x.uid; } break; }
   }
   changed();
 };
@@ -12291,10 +12353,20 @@ function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
+  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or add a bunk in the Guild Hall.`, true); return; }
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
   const p = s.type === 'rafter' ? rafterPosition(G.run, s.i) : cellPos(s.c, s.r); FX.puff(p.x, p.y, 0.6);
+}
+// a bench champion takes a field champion's spot; the field champion sits on the bench
+function swapBench(benched, onField) {
+  if (benched.vault || benched.fled) return;
+  const spot = onField.place; if (!spot) return;
+  benched.place = spot.type === 'rafter' && !isRangedHero(benched.id) ? null : spot;
+  if (!benched.place) { onField.place = null; autoPlace(G.run, benched); } else onField.place = null;
+  SFX.play('click'); const p = benched.place && (benched.place.type === 'rafter' ? rafterPosition(G.run, benched.place.i) : cellPos(benched.place.c, benched.place.r)); if (p) FX.puff(p.x, p.y, 0.6);
+  UI.toast(`${heroDisplayName(benched).split(' ')[0]} takes the field. ${heroDisplayName(onField).split(' ')[0]} sits on the bench.`);
 }
 function heroAtPoint(p) { for (const u of G.prepUnits.slice().reverse()) if (u.inst && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2) return u.inst; return null; }
 
@@ -12338,7 +12410,10 @@ function docUp(e) {
   const p = toLogical(e);
   if (d.active) {
     if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
-    else { const r = $('roster').getBoundingClientRect(); if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
+    else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
+      // field champion dropped on a bench card: they trade places
+      if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }
+      else if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
   }
   G.hover = null; changed();
 }
@@ -12574,9 +12649,11 @@ function boot(hotData) {
   // no meta progression (Cam 2026-10-23): every run starts equal. Old diamond upgrades are set aside, not deleted
   if (Object.keys(G.meta.ranks || {}).length || Object.keys(G.meta.spec || {}).length) { G.meta.oldRanks = G.meta.ranks; G.meta.oldSpec = G.meta.spec; }
   G.meta.ranks = {}; G.meta.spec = {};
-  if (G.run && G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, G.run.roster.length - BARRACKS.start);
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
-  if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000); }
+  if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000);
+    // older runs: barracks from the roster size, and two item slots each (a third item goes back to the Armory)
+    if (G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, Math.min(ROSTER_CAP, G.run.roster.filter(h => h.place).length) - BARRACKS.start);
+    for (const h of G.run.roster || []) while (h.items && h.items.length > ITEM_SLOTS) { const it = (G.run.stash || []).find(x => x.uid === h.items[h.items.length - 1]); if (it) unequipItem(G.run, it); else h.items.pop(); } }
   else { G.run = newRun(G.meta); G.hasRun = false; }
   G.phase = 'title';
   rebuildPrepUnits(); UI.refresh();
@@ -12609,7 +12686,7 @@ const MOB = {
     MOB.touch = matchMedia('(pointer: coarse)').matches || /[?&]mobile\b/.test(location.search);
     const de = document.documentElement;
     de.classList.toggle('touch', MOB.touch); de.classList.toggle('native', MOB.native);
-    if (MOB.touch) $('prepHint').textContent = 'Tap a champion card, then tap the field to place them. Drag to move them.';
+    if (MOB.touch) $('prepHint').textContent = 'Tap a champion card, then tap the field to place them, or tap a field champion to swap. Drag to move them.';
     // a probe that reports the notch and home-bar insets
     const pr = document.createElement('div'); pr.id = 'safeProbe'; document.body.appendChild(pr); MOB.probe = pr;
     // phone-only controls: the "more" menu, the details toggle and the details panel wrapper
@@ -12779,6 +12856,8 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   canvasDown = function (e) {
     if (MOB.touch && e.pointerType !== 'mouse' && G.phase === 'prep' && G.run && G.selected) {
       const p = toLogical(e), h = G.run.roster.find(x => x.uid === G.selected);
+      // a bench champion tapped onto a field champion: they trade places
+      const t = heroAtPoint(p); if (h && !h.place && t && t !== h && t.place) { swapBench(h, t); UI.coachDone('place'); changed(); return; }
       if (h && !heroAtPoint(p)) { const s = slotAt(p); if (slotOk(h, s)) { G.mouse = p; placeHero(h, s); UI.coachDone('place'); changed(); return; } if (s && s.type === 'rafter') { UI.toast('Only ranged heroes can stand on the rafters.', true); return; } }
     }
     return down0(e);

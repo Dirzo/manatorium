@@ -1317,3 +1317,15 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .mods.lanes p.lane { margin: 1px 0; font-size: 12px; }
 .mods.lanes p.lane.heavy b { color: #ff7a9a; }
 .mods.lanes .warn { color: #ff7a9a; font-weight: 700; }
+/* star level on cards (Cam 2026-10-23): bronze, silver, gold */
+.stars { font-family: var(--f-display); font-weight: 700; letter-spacing: -1px; line-height: 1; text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; }
+.stars.s1 { color: #e0a060; } .stars.s2 { color: #e8f0ff; } .stars.s3 { color: #ffd94a; filter: drop-shadow(0 0 3px rgba(255,217,74,.8)); }
+.hcard .lv { white-space: nowrap; } .hcard .pstars { display: none; } .hcard .lv .stars { font-size: 13px; margin-left: 1px; }
+.stars.big { font-size: 22px; vertical-align: middle; }
+.swapin .row { gap: 6px; flex-wrap: wrap; } .swapin small { color: var(--gold); }
+.swapin .btn img { width: 20px; height: 20px; vertical-align: middle; margin-right: 3px; }
+/* field / bench divider and empty bench slots in the champion drawer */
+.rdiv { flex: 0 0 100%; grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; padding: 2px 2px 0; font-family: var(--f-display); }
+.rdiv b { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; } .rdiv small { font-size: 11px; color: var(--muted); }
+.rdiv.field b { color: var(--mint); } .rdiv.bench b { color: var(--gold); }
+.hcard.bslot { border-style: dashed; background: transparent; box-shadow: none; opacity: .5; align-items: center; justify-content: center; min-height: 80px; font-family: var(--f-display); font-size: 11px; color: var(--muted); }

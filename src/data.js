@@ -471,15 +471,16 @@ const CASTLE_POWERS = {
 
 // ===== Items: components combine into finished items =====
 // stat: [value alone, value inside a finished item]; every finished item has one effect no other item shares
+// two item slots per champion (Cam 2026-10-23), so each component hits about 1.4x harder than with three
 const COMPONENTS = {
-  sword:   { name: 'Rusty Shortsword',   glyph: 'sword',   stat: [25, 30], unit: '% attack' },
-  bow:     { name: 'Slingbow',           glyph: 'bow',     stat: [25, 30], unit: '% attack speed' },
-  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',     stat: [30, 35], unit: '% ability power' },
-  tear:    { name: 'Dewdrop Vial',       glyph: 'tear',    stat: [25, 30], unit: '% starting mana', stat2: [20, 25], unit2: '% mana gain' },
-  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    stat: [30, 40], unit: ' armor' },
-  cloak:   { name: 'Dusk Cloak',         glyph: 'cloak',   stat: [10, 15], unit: '% dodge' },
-  belt:    { name: 'Ogre Belt',          glyph: 'belt',    stat: [25, 30], unit: '% max HP' },
-  glove:   { name: 'Knuckle Mitt',       glyph: 'glove',   stat: [20, 25], unit: '% crit chance' },
+  sword:   { name: 'Rusty Shortsword',   glyph: 'sword',   stat: [35, 45], unit: '% attack' },
+  bow:     { name: 'Slingbow',           glyph: 'bow',     stat: [35, 45], unit: '% attack speed' },
+  rod:     { name: 'Wand of Mild Peril', glyph: 'rod',     stat: [45, 50], unit: '% ability power' },
+  tear:    { name: 'Dewdrop Vial',       glyph: 'tear',    stat: [35, 45], unit: '% starting mana', stat2: [30, 35], unit2: '% mana gain' },
+  vest:    { name: 'Padded Jerkin',      glyph: 'vest',    stat: [45, 60], unit: ' armor' },
+  cloak:   { name: 'Dusk Cloak',         glyph: 'cloak',   stat: [15, 20], unit: '% dodge' },
+  belt:    { name: 'Ogre Belt',          glyph: 'belt',    stat: [35, 45], unit: '% max HP' },
+  glove:   { name: 'Knuckle Mitt',       glyph: 'glove',   stat: [30, 35], unit: '% crit chance' },
   shard:   { name: 'Stray Shard',        glyph: 'shard',   desc: 'A splinter of an elemental shard that fell off a certain crown. It hums. Combines into crests.', rare: true },
 };
 function compStat(c, fin, k = 1) { const C = COMPONENTS[c], i = fin ? 1 : 0; if (!C.stat) return ''; return `+${C.stat[i] * k}${C.unit}` + (C.stat2 ? `, +${C.stat2[i] * k}${C.unit2}` : ''); }
@@ -554,7 +555,7 @@ function itemDesc(it) {
   const ps = it.parts.filter(p => p !== 'shard'), stats = ps.length === 2 && ps[0] === ps[1] ? compStat(ps[0], true, 2) : ps.map(p => compStat(p, true)).join(', ');
   return stats ? `${stats}. ${F[2]}` : F[2];
 }
-const ITEM_SLOTS = 3;
+const ITEM_SLOTS = 2;
 // the Hall opens one tier at a time so early sieges have fewer, harder choices
 const TECH_OPENS = { 1: 1, 2: 5, 3: 10, 4: 15, 5: 29 };
 const TECH_LATE_T1 = { wells: 3, vault1: 3 };
@@ -888,9 +889,12 @@ function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEY
 
 const LOOT_AFTER = s => s % 3 === 0 || s % 5 === 0;   // a component every third siege, and after bosses
 const ROSTER_CAP = 8;
-// the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions at first, each bunk bought with gold, up to ROSTER_CAP
+// the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
+// the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
-function rosterCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
-function barracksCost(run) { return rosterCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
+const BENCH_SLOTS = 5;
+function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
+function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
+function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
 function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
 const RECRUIT_GAP = 6; // goblin encounters add at most one champion per this many sieges

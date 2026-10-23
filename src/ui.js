@@ -140,6 +140,8 @@ function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class=
   }, true);
 })();
 // the keep's voice in boss talk (talk.js): a banner on their card, and a tip naming the tempers this horde's boss dreads
+// star level: 1★ bronze, 2★ silver, 3★ gold, big enough to read on a phone
+function starBadge(h, big) { const s = heroStar(h); return `<span class="stars s${s}${big ? ' big' : ''}" title="${s}-star: ${s < 3 ? `${copiesToNext(h)} more cop${copiesToNext(h) === 1 ? 'y' : 'ies'} for ${s + 1}★` : 'maximum'}">${'★'.repeat(s)}</span>`; }
 function voiceFlag(run, h) {
   if (!run.voice || run.voice.uid !== h.uid) return '';
   const boss = bossFor(run.siege), dread = BOSS_DREAD[boss] || [], scared = dreadedBy(boss, h);
@@ -444,9 +446,9 @@ const UI = {
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
-      <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion in the keep">${bc == null ? `Barracks full (${ROSTER_CAP})` : `Bunk ${rosterCap(run) + 1} ${COST(bc)}`}</button>
+      <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion on the field">${bc == null ? `Field full size (${ROSTER_CAP})` : `Field slot ${fieldCap(run) + 1} ${COST(bc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
-    h += `<div class="group-title">Your champions · ${run.roster.length}/${rosterCap(run)}</div><p class="note">Three copies of a legend make it 2★, nine make it 3★ (+70% and +190% power). Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
+    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+70% and +190% power). Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta), star = heroStar(hr), nx = copiesToNext(hr);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : `Signature rank ${st.rank}`;
@@ -590,16 +592,20 @@ const UI = {
     if (all.length || nr.length) tp += `<section class="tsec"><h4>Element combos <b>${on.size}/${comboSlots(run)}</b> <small>${G.phase === 'prep' ? 'click to switch' : 'switch between sieges'}</small></h4>${all.length ? '' : '<p class="note">No combos yet. Place 2 champions of one element and 2 of another.</p>'}<div class="tgrid">${all.map(c => `<button class="trait combo ${on.has(c.key) ? 'on' : ''} ${c.castle ? 'cslot' : ''} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="syb combo ${on.has(c.key) ? 'on' : ''}"><span class="orb"></span><span class="glyph">${COMBO_GLYPH[c.kind] || '✦'}</span></span><div><b>${esc(c.name)}</b><small>${on.has(c.key) ? 'ON' : 'off'}</small><p>${esc(c.desc)}</p></div></button>`).join('')}</div>${nrHTML}</section>`; }
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
-    for (const hr of run.roster) {
+    const onField = run.roster.filter(x => x.place || x.vault || x.fled), bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
+    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Field slots grow with barracks bunks in the Guild Hall."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
+    for (const hr of list) {
+      if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
       const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
-        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
+        <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level} ${starBadge(hr)}</span>${where}<span class="pstars">${starBadge(hr)}</span>${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
         <div class="hmeta"><span class="cg" data-tip="cls:${d.cls}">${CLASSES[d.cls].icon}</span><span class="cg tg ${TEMPERS[heroTemper(hr)].side}" data-tip="tmp:${heroTemper(hr)}">${TEMPERS[heroTemper(hr)].icon}</span>${hr.el ? `<span class="eg" data-tip="el:${hr.el}" style="--ec:${ELEMENTS[hr.el].col}"></span>` : ''}${heroItems(run, hr).map(it => `<img class="px hi" src="${itemIconURL(it, 2)}" alt="" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}">`).join('')}</div>
         ${u ? `<div class="live"><i style="width:${Math.max(0, 100 * u.hp / u.maxHp)}%;${u.alive ? '' : 'background:var(--rose)'}"></i></div>` : ''}${pend}</div>`;
     }
+    for (let i = bench.length; i < BENCH_SLOTS && G.phase === 'prep'; i++) h += `<div class="hcard bslot" aria-hidden="true"><span>empty</span></div>`;
     $('rosterCards').innerHTML = h;
     $('rosterCards').querySelectorAll('.hcard[data-uid]').forEach(el => {
       el.onpointerdown = e => G.cardDown(e, el.dataset.uid);
@@ -614,22 +620,24 @@ const UI = {
     const its = heroItems(run, h);
     const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
       : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
-    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
+    const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))} ${starBadge(h, true)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
       <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
       <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
+      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroDisplayName(h).split(' ')[0])} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroDisplayName(x).split(' ')[0])} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
       ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
         return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
-        ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
+        ${h.place ? `<button class="btn small" data-iact="bench" ${run.finale ? 'disabled' : ''}>To the bench</button>` : fieldFull(run, h) ? '' : `<button class="btn small" data-iact="place">Place on the field</button>`}
         ${ascendBtn(run, h, 'iact')}
         ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Release this champion for gold. Their items go back to the Armory.">${UI.sellArm === h.uid ? 'Click again to confirm' : `Release for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
+    el.querySelectorAll('[data-act="swapin"]').forEach(b => b.onclick = () => G.act('swapin', b.dataset.arg));
   },
 
   // ----- modals -----

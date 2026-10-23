@@ -26,7 +26,7 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
+function changed() { if (G.run && G.phase === 'prep') enforceField(G.run); rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
 // six champions of one element on the field: that element's castle awakens (the first one takes the keep)
 function castleAwakens() {
   const run = G.run; if (!run || run.finale) return; const had = run.castleEl, e = checkCastleUnlock(run); if (!e) return;
@@ -368,7 +368,8 @@ G.act = function (act, arg) {
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
       setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
-    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast('No free spot on the field.', true); break;
+    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or add a bunk in the Guild Hall.` : 'No free spot on the field.', true); break;
+    case 'swapin': { if (G.phase !== 'prep') return; const [a, b] = String(arg).split(':'), x = run.roster.find(h => h.uid === a), y = run.roster.find(h => h.uid === b); if (x && y) { swapBench(x, y); G.selected = x.uid; } break; }
   }
   changed();
 };
@@ -388,10 +389,20 @@ function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
+  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or add a bunk in the Guild Hall.`, true); return; }
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
   const p = s.type === 'rafter' ? rafterPosition(G.run, s.i) : cellPos(s.c, s.r); FX.puff(p.x, p.y, 0.6);
+}
+// a bench champion takes a field champion's spot; the field champion sits on the bench
+function swapBench(benched, onField) {
+  if (benched.vault || benched.fled) return;
+  const spot = onField.place; if (!spot) return;
+  benched.place = spot.type === 'rafter' && !isRangedHero(benched.id) ? null : spot;
+  if (!benched.place) { onField.place = null; autoPlace(G.run, benched); } else onField.place = null;
+  SFX.play('click'); const p = benched.place && (benched.place.type === 'rafter' ? rafterPosition(G.run, benched.place.i) : cellPos(benched.place.c, benched.place.r)); if (p) FX.puff(p.x, p.y, 0.6);
+  UI.toast(`${heroDisplayName(benched).split(' ')[0]} takes the field. ${heroDisplayName(onField).split(' ')[0]} sits on the bench.`);
 }
 function heroAtPoint(p) { for (const u of G.prepUnits.slice().reverse()) if (u.inst && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2) return u.inst; return null; }
 
@@ -435,7 +446,10 @@ function docUp(e) {
   const p = toLogical(e);
   if (d.active) {
     if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
-    else { const r = $('roster').getBoundingClientRect(); if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
+    else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
+      // field champion dropped on a bench card: they trade places
+      if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }
+      else if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
   }
   G.hover = null; changed();
 }
@@ -671,9 +685,11 @@ function boot(hotData) {
   // no meta progression (Cam 2026-10-23): every run starts equal. Old diamond upgrades are set aside, not deleted
   if (Object.keys(G.meta.ranks || {}).length || Object.keys(G.meta.spec || {}).length) { G.meta.oldRanks = G.meta.ranks; G.meta.oldSpec = G.meta.spec; }
   G.meta.ranks = {}; G.meta.spec = {};
-  if (G.run && G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, G.run.roster.length - BARRACKS.start);
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
-  if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000); }
+  if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000);
+    // older runs: barracks from the roster size, and two item slots each (a third item goes back to the Armory)
+    if (G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, Math.min(ROSTER_CAP, G.run.roster.filter(h => h.place).length) - BARRACKS.start);
+    for (const h of G.run.roster || []) while (h.items && h.items.length > ITEM_SLOTS) { const it = (G.run.stash || []).find(x => x.uid === h.items[h.items.length - 1]); if (it) unequipItem(G.run, it); else h.items.pop(); } }
   else { G.run = newRun(G.meta); G.hasRun = false; }
   G.phase = 'title';
   rebuildPrepUnits(); UI.refresh();

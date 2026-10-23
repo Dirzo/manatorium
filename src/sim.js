@@ -318,6 +318,7 @@ function makeUnit(side, o) {
 }
 
 function startBattle(run, meta) {
+  enforceField(run);
   const syn = activeSynergies(run);
   const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready', run.finale === 'ready' ? null : run.lanes || (run.lanes = rollLanes(run.siege, run.tactic))), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,

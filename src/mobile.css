@@ -147,3 +147,10 @@ html.m-land #pressBtn:not([hidden]) { margin-top: auto; min-height: 44px; }
 html.m-land #pressBtn:not([hidden]) + #beginBtn { margin-top: 6px; }
 html.m-port #pressBtn { flex: 0 0 auto; min-width: 0; }
 html.m #pressBtn small { font-size: 9px; }
+html.m .hcard .lv .stars { display: none; }
+html.m .hcard .pstars { display: block; position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%); background: var(--ink); border-radius: 3px; padding: 1px 3px 0; line-height: 1; }
+html.m .hcard .pstars .stars { font-size: 12px; }
+html.m .rdiv b { font-size: 11px; } html.m .rdiv small { font-size: 10px; }
+html.m .hcard.bslot { min-height: 60px; }
+html.m .rdiv { flex: 0 0 auto; align-self: stretch; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 4px; border-left: 2px solid var(--ink); writing-mode: vertical-rl; transform: rotate(180deg); }
+html.m .rdiv.field { border-left: 0; }
