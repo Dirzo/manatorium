@@ -155,14 +155,14 @@ function heroStats(h, run, meta, syn) {
   s.startMana += 0.25 * (run.tech.wells ? 1 : 0) + 0.1 * (meta.ranks.codex || 0) + (run.tech.focus ? 0.5 : 0);
   syn = syn || activeSynergies(run);
   const Y = syn;
-  if (d.race === 'human' && Y.human >= 0) { const v = [0.15, 0.3][Y.human] * sm; s.hp *= 1 + v; s.atk *= 1 + v; }
-  if (d.race === 'elf' && Y.elf >= 0) s.as *= 1 + [0.25, 0.55][Y.elf] * sm;
-  if (d.race === 'dwarf' && Y.dwarf >= 0) s.armor += [25, 55][Y.dwarf] * sm;
-  if (d.race === 'orc' && Y.orc >= 0) { s.lifesteal += [0.15, 0.3][Y.orc] * sm; s.atk *= 1 + [0.1, 0.25][Y.orc] * sm; }
-  if (d.race === 'beast' && Y.beast >= 0) { s.crit += [0.25, 0.5][Y.beast] * sm; s.spd *= 1.2; }
-  if (d.cls === 'mage' && Y.mage >= 0) { s.ap *= 1 + [0.3, 0.75][Y.mage] * sm; s.startMana += [0.3, 0.5][Y.mage]; }
-  if (d.cls === 'rogue' && Y.rogue >= 0) { s.dodge += [0.2, 0.35][Y.rogue] * Math.min(sm, 1.4); s.firstStrike = [0.6, 1.5][Y.rogue] * sm; }
-  if (d.cls === 'berserker' && Y.berserker >= 0) s.frenzy = [10, 20][Y.berserker];
+  if (d.race === 'human' && Y.human >= 0) { const v = [0.12, 0.28, 0.5][Y.human] * sm; s.hp *= 1 + v; s.atk *= 1 + v; }
+  if (d.race === 'elf' && Y.elf >= 0) s.as *= 1 + [0.2, 0.45, 0.85][Y.elf] * sm;
+  if (d.race === 'dwarf' && Y.dwarf >= 0) s.armor += [20, 50, 90][Y.dwarf] * sm;
+  if (d.race === 'orc' && Y.orc >= 0) { s.lifesteal += [0.12, 0.25, 0.45][Y.orc] * sm; s.atk *= 1 + [0.08, 0.22, 0.45][Y.orc] * sm; }
+  if (d.race === 'beast' && Y.beast >= 0) { s.crit += [0.2, 0.4, 0.7][Y.beast] * sm; s.spd *= 1 + [0.15, 0.25, 0.4][Y.beast]; }
+  if (d.cls === 'mage' && Y.mage >= 0) { s.ap *= 1 + [0.25, 0.6, 1.2][Y.mage] * sm; s.startMana += [0.25, 0.45, 0.7][Y.mage]; }
+  if (d.cls === 'rogue' && Y.rogue >= 0) { s.dodge += [0.15, 0.3, 0.45][Y.rogue] * Math.min(sm, 1.4); s.firstStrike = [0.5, 1.2, 2.5][Y.rogue] * sm; }
+  if (d.cls === 'berserker' && Y.berserker >= 0) s.frenzy = [8, 16, 30][Y.berserker];
   // temperament: its own trade-off, its pair bonus when a twin is on the field, and team-wide pair bonuses
   const tk = heroTemper(h), T = TEMPERS[tk], tc = temperCounts(run);
   T.fx(s); if (h.place && tc[tk] >= 2 && T.pfx) T.pfx(s);
@@ -325,7 +325,7 @@ function startBattle(run, meta) {
 
 function applyBulwark(B) {
   const g = B.syn.guardian; if (g < 0) return;
-  const pct = [0.12, 0.25][g] * (1 + 0.15 * (B.meta.ranks.banners || 0));
+  const pct = [0.1, 0.22, 0.4][g] * (1 + 0.15 * (B.meta.ranks.banners || 0));
   for (const u of B.heroes) if (u.alive) { u.shield = Math.max(u.shield, u.maxHp * pct); }
   FX.sound('shield');
 }
@@ -436,7 +436,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
     if (crit && src.st.sp.armorBreak && tgt.side === 'enemy') tgt.pry = Math.min(50, (tgt.pry || 0) + 10);
     if (!o.noProc) {
       const E = src.st.el;
-      if (B.syn.toad >= 0) tgt.poison.push({ dps: [4, 10][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
+      if (B.syn.toad >= 0) tgt.poison.push({ dps: [3, 8, 20][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
       if (src.st.frost) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, src.st.frost); }
       if (src.st.storm && Math.random() < src.st.storm) chainLightning(B, src, tgt, src.st.atk * 1.2, 3, '#bff4ff', 'item');
       if (E.fire) tgt.poison.push({ dps: src.st.atk * 0.25 * E.fire, t: 3, src, fire: true, from: 'element' });
@@ -475,8 +475,9 @@ function giveXP(B, killer, v) {
 function killUnit(B, u, src) {
   if (!u.alive) return;
   if (u.side === 'hero') {
-    if (u.def && u.def.race === 'skeleton' && !u.temp && B.syn.skeleton >= 0 && (B.syn.skeleton === 1 ? !u.risen : !B.undyingUsed)) {
-      u.risen = true; B.undyingUsed = true; u.hp = u.maxHp * 0.5; FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
+    const sk = B.syn.skeleton, bone = u.def && u.def.race === 'skeleton';
+    if (!u.temp && sk >= 0 && !u.risen && (bone ? (sk >= 1 || !B.undyingUsed) : sk >= 2 && !B.undyingOther)) {
+      if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
@@ -875,7 +876,7 @@ function stepBattle(B, dt) {
   const anyFoe = B.enemies.some(e => e.alive);
   // regen: cleric synergy, hot tub, nature, troll blood, water below half
   for (const h of B.heroes) if (h.alive && h.st) {
-    let r = (B.syn.cleric >= 0 ? [0.01, 0.025][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
+    let r = (B.syn.cleric >= 0 ? [0.008, 0.02, 0.04][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
     if (h.st.el && h.st.el.water && h.hp < h.maxHp * 0.5) r += 0.03 * h.st.el.water;
     if (r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * r * dt);
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
@@ -1072,7 +1073,7 @@ function stepHero(B, u, dt) {
           const pt = u.def.proj && u.def.proj !== 'heal' ? u.def.proj : (cls === 'mage' || cls === 'cleric' ? 'spark' : 'arrow');
           fireProj(B, u, t, pt, heroAtk(u), { speed: u.rafter ? 360 : pt === 'arrow' || pt === 'arrowGold' ? 300 : 200, rafter: u.rafter });
           if (u.rafter && typeof FXS !== 'undefined') { u.flashT = 0.12; for (let i = 0; i < 4; i++) FXS.parts.push({ x: u.x + 6, y: u.y - 12, vx: rand(10, 40), vy: rand(-20, 5), life: 0.25, t: 0, color: '#ffe680', size: 1, grav: 0 }); }
-          const extraN = cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2][B.syn.ranger] : 0;
+          const extraN = cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2, 4][B.syn.ranger] : 0;
           if (extraN) { const extra = B.enemies.filter(e => e.alive && e !== t && dist(e, u) < u.st.range).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, extraN); for (const e of extra) fireProj(B, u, e, pt, heroAtk(u) * BAL.extraShot, { speed: 300, rafter: u.rafter, from: 'bonus' }); }
           FX.sound(pt === 'arrow' || pt === 'arrowGold' ? 'bow' : 'pew');
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }

@@ -493,10 +493,10 @@ const UI = {
     UI.hallOpen = UI.hallOpen || {};
     const row = k => { const T = TECH[k], st = techState(run, k);
       if (st === 'hidden') return `<div class="trow hidden"><div><b>??? Secret tech</b><p>Found by helping visitors between sieges.</p></div><span class="chip">Rumored</span></div>`;
-      const act = st === 'soon' ? `<span class="chip">Siege ${techOpensAt(k)}</span>` : st === 'locked' ? `<span class="chip">Needs ${esc(T.req.filter(r => !run.tech[r]).map(r => TECH[r].name).join(' + '))}</span>` : `<button class="btn small ${run.gold >= T.cost ? 'primary' : ''}" data-act="tech" data-arg="${k}" ${run.gold < T.cost ? 'disabled' : ''}>Build ${COST(T.cost)}</button>`;
-      return `<div class="trow ${st} ${st === 'open' && run.gold >= T.cost ? 'afford' : ''}"><span class="tt">T${T.t || '★'}</span><div><b>${esc(T.name)}${isNew(k) ? ' <i class="newb">NEW</i>' : ''}</b><p>${esc(T.desc)}</p></div>${act}</div>`; };
+      const act = st === 'sealed' ? `<span class="chip">Sealed</span>` : st === 'soon' ? `<span class="chip">Siege ${techOpensAt(k)}</span>` : st === 'locked' ? `<span class="chip">Needs ${esc(techNeeds(run, k))}</span>` : `<button class="btn small ${run.gold >= T.cost ? 'primary' : ''}" data-act="tech" data-arg="${k}" ${run.gold < T.cost ? 'disabled' : ''}>Build ${COST(T.cost)}</button>`;
+      return `<div class="trow ${st} ${st === 'open' && run.gold >= T.cost ? 'afford' : ''}"><span class="tt">T${T.t || '★'}</span><div><b>${esc(T.name)}${T.path ? ` <i class="tpath">${esc(T.path)} path</i>` : ''}${isNew(k) ? ' <i class="newb">NEW</i>' : ''}</b><p>${esc(T.desc)}${T.fork && !run.tech[k] && st !== 'sealed' && !Object.keys(run.tech).some(x => TECH[x] && TECH[x].fork === T.fork) ? ' <span class="note">Choosing this path seals the other one for this run.</span>' : ''}</p></div>${act}</div>`; };
     const branch = (key, title, icon, ids) => {
-      const built = ids.filter(k => run.tech[k]), rest = ids.filter(k => !run.tech[k]);
+      const built = ids.filter(k => run.tech[k]), rest = ids.filter(k => !run.tech[k] && techState(run, k) !== 'sealed'); ids = ids.filter(k => techState(run, k) !== 'sealed');
       const ready = rest.filter(k => techState(run, k) === 'open'), afford = ready.filter(k => run.gold >= TECH[k].cost).length, fresh = ready.filter(isNew).length;
       const open = key in UI.hallOpen ? UI.hallOpen[key] : (ready.length > 0 || fresh > 0);
       const tags = `${fresh ? `<i class="newb">${fresh} NEW</i>` : ''}${ready.length ? `<span class="rdy ${afford ? 'ok' : ''}">${ready.length} ready</span>` : ''}`;

@@ -1298,6 +1298,7 @@ h2.hoard { color: var(--gold); }
 .talk.portrait .tk-temper.speaking { box-shadow: none; transform: none; } .talk.portrait .tk-temper.speaking b { text-shadow: 0 0 10px rgba(255,214,110,.8); }
 .talk.portrait .tk-temper .tk-tl, .talk.portrait .tk-temper p { display: none; } .talk.portrait .tk-temper b { font-size: 15px; } .talk.portrait .tk-temper em { margin-top: 0; }
 .talk.portrait .tk-eyebrow { display: none; }
+.tpath { font-style: normal; font-size: 10px; font-weight: 500; padding: 0 5px; border-radius: 6px; background: #2a3160; color: #c9cff5; margin-left: 4px; }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -1579,21 +1580,21 @@ function castleRafterY(run) {
 }
 
 const RACES = {
-  human:    { name: 'Human',    color: '#ffd166', desc: n => `Valor: Humans gain +${[15, 30][n]}% HP and attack.`, at: [2, 3] },
-  elf:      { name: 'Elf',      color: '#7cf0b0', desc: n => `Grace: Elves gain +${[25, 55][n]}% attack speed.`, at: [2, 3] },
-  dwarf:    { name: 'Dwarf',    color: '#ffa25e', desc: n => `Stonehide: Dwarves gain +${[25, 55][n]} armor.`, at: [2, 3] },
-  orc:      { name: 'Orc',      color: '#9be05a', desc: n => `Bloodlust: Orcs heal ${[15, 30][n]}% of damage dealt and hit +${[10, 25][n]}% harder.`, at: [2, 3] },
-  skeleton: { name: 'Skeleton', color: '#e9e4ff', desc: n => n ? 'Undying: every Skeleton rises once at 50% HP.' : 'Undying: the first Skeleton to fall rises at 50% HP.', at: [2, 3] },
-  beast:    { name: 'Beastfolk',color: '#ff9fd0', desc: n => `Feral: Beastfolk gain +${[25, 50][n]}% crit chance and +20% speed.`, at: [2, 3] },
-  toad:     { name: 'Toadfolk', color: '#5fd3ff', desc: n => `Bog Venom: every hero's attacks poison for ${[4, 10][n]} damage per second.`, at: [2, 3] },
+  human:    { name: 'Human',    color: '#ffd166', desc: n => `Valor: Humans gain +${[12, 28, 50][n]}% HP and attack.`, at: [2, 4, 6] },
+  elf:      { name: 'Elf',      color: '#7cf0b0', desc: n => `Grace: Elves gain +${[20, 45, 85][n]}% attack speed.`, at: [2, 4, 6] },
+  dwarf:    { name: 'Dwarf',    color: '#ffa25e', desc: n => `Stonehide: Dwarves gain +${[20, 50, 90][n]} armor.`, at: [2, 4, 6] },
+  orc:      { name: 'Orc',      color: '#9be05a', desc: n => `Bloodlust: Orcs heal ${[12, 25, 45][n]}% of damage dealt and hit +${[8, 22, 45][n]}% harder.`, at: [2, 4, 6] },
+  skeleton: { name: 'Skeleton', color: '#e9e4ff', desc: n => ['Undying: the first Skeleton to fall rises at 50% HP.', 'Undying: every Skeleton rises once at 50% HP.', 'Undying: every Skeleton rises once at full HP, and so does the first other champion to fall.'][n], at: [2, 4, 6] },
+  beast:    { name: 'Beastfolk',color: '#ff9fd0', desc: n => `Feral: Beastfolk gain +${[20, 40, 70][n]}% crit chance and +${[15, 25, 40][n]}% speed.`, at: [2, 4, 6] },
+  toad:     { name: 'Toadfolk', color: '#5fd3ff', desc: n => `Bog Venom: every hero's attacks poison for ${[3, 8, 20][n]} damage per second.`, at: [2, 4, 6] },
 };
 const CLASSES = {
-  guardian:  { name: 'Guardian',  icon: '⛨', desc: n => `Bulwark: all heroes start each siege with a ${[12, 25][n]}% HP shield, refreshed every 12s.`, at: [2, 3] },
-  berserker: { name: 'Berserker', icon: '⚔', desc: n => `Frenzy: Berserkers gain +4% attack speed per hit, up to ${[10, 20][n]} stacks.`, at: [2, 3] },
-  ranger:    { name: 'Ranger',    icon: '➶', desc: n => `Volley: Ranger attacks hit ${[1, 2][n]} extra target${n ? 's' : ''}.`, at: [2, 3] },
-  mage:      { name: 'Mage',      icon: '✦', desc: n => `Arcana: Mage abilities deal +${[30, 75][n]}% and Mages start with ${[30, 50][n]}% mana.`, at: [2, 3] },
-  cleric:    { name: 'Cleric',    icon: '✚', desc: n => `Sanctuary: all heroes regenerate ${[1, 2.5][n]}% max HP per second.`, at: [2, 3] },
-  rogue:     { name: 'Rogue',     icon: '◆', desc: n => `Ambush: Rogues dodge ${[20, 35][n]}% of attacks and their first strike deals +${[60, 150][n]}%.`, at: [2, 3] },
+  guardian:  { name: 'Guardian',  icon: '⛨', desc: n => `Bulwark: all heroes start each siege with a ${[10, 22, 40][n]}% HP shield, refreshed every 12s.`, at: [2, 4, 6] },
+  berserker: { name: 'Berserker', icon: '⚔', desc: n => `Frenzy: Berserkers gain +4% attack speed per hit, up to ${[8, 16, 30][n]} stacks.`, at: [2, 4, 6] },
+  ranger:    { name: 'Ranger',    icon: '➶', desc: n => `Volley: Ranger attacks hit ${[1, 2, 4][n]} extra target${n ? 's' : ''}.`, at: [2, 4, 6] },
+  mage:      { name: 'Mage',      icon: '✦', desc: n => `Arcana: Mage abilities deal +${[25, 60, 120][n]}% and Mages start with ${[25, 45, 70][n]}% mana.`, at: [2, 4, 6] },
+  cleric:    { name: 'Cleric',    icon: '✚', desc: n => `Sanctuary: all heroes regenerate ${[0.8, 2, 4][n]}% max HP per second.`, at: [2, 4, 6] },
+  rogue:     { name: 'Rogue',     icon: '◆', desc: n => `Ambush: Rogues dodge ${[15, 30, 45][n]}% of attacks and their first strike deals +${[50, 120, 250][n]}%.`, at: [2, 4, 6] },
 };
 
 const CLASS_BASE = {
@@ -2100,32 +2101,34 @@ function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T
 // ===== Artificers' Hall tech tree =====
 // branch columns: 0 Stonework, 1 Engineering, 2 Alchemy, 3 Logistics ; secret: discovered through encounters
 const TECH_BRANCHES = ['Stonework', 'Engineering', 'Alchemy', 'Logistics'];
+// tech forks (Cam 2026-10-23): tiers 2 and 3 of each branch split into two paths; building into one path seals the other for the run
 const TECH = {
   walls1:   { name: 'Thick Walls',        b: 0, t: 1, cost: 30,  req: [],                 desc: '+25% castle max HP, repaired now.' },
-  fountain: { name: 'Healing Fountain',   b: 0, t: 2, cost: 65,  req: ['walls1'],         desc: 'Repair 10% castle HP after every siege.' },
-  rafters1: { name: 'Rafters',            b: 0, t: 2, cost: 70,  req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
-  walls2:   { name: 'Granite Facing',     b: 0, t: 3, cost: 150, req: ['fountain'],       desc: '+35% castle max HP, repaired now.' },
-  rafters2: { name: 'More Rafters',       b: 0, t: 3, cost: 155, req: ['rafters1'],       desc: 'Two more rafter slots.' },
-  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 320, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take damage back. +30% castle HP.' },
+  fountain: { name: 'Healing Fountain',   fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 65,  req: ['walls1'],         desc: 'Repair 10% castle HP after every siege.' },
+  rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 70,  req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
+  walls2:   { name: 'Granite Facing',     fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 150, req: ['fountain'],       desc: '+35% castle max HP, repaired now.' },
+  rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 155, req: ['rafters1'],       desc: 'Two more rafter slots.' },
+  sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 50,  req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
+  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 320, any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take damage back. +30% castle HP.' },
   ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 40,  req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
-  ballista2:{ name: 'Repeating Ballista', b: 1, t: 2, cost: 100, req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
-  pulleys:  { name: 'Sky Hammer Pulleys', b: 1, t: 2, cost: 85,  req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
-  ballista3:{ name: 'Piercing Bolts',     b: 1, t: 3, cost: 195, req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
-  hammer2:  { name: 'Heavier Hammer',     b: 1, t: 3, cost: 180, req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 100, req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
+  pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 85,  req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
+  ballista3:{ name: 'Piercing Bolts',     fork: 'b1', path: 'Ballista', b: 1, t: 3, cost: 195, req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
+  hammer2:  { name: 'Heavier Hammer',     fork: 'b1', path: 'Sky Hammer', b: 1, t: 3, cost: 180, req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
   superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 350, req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
-  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 300, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
+  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 300, any: true, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
   wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 45,  req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
-  lab:      { name: 'Elemental Lab',      b: 2, t: 2, cost: 110, req: ['wells'],          desc: 'Element choices show 4 cards instead of 3.' },
-  resonance:{ name: 'Resonance Coils',    b: 2, t: 2, cost: 115, req: ['wells'],          desc: 'Element combos are 30% stronger.' },
-  prism:    { name: 'Prism Array',        b: 2, t: 3, cost: 215, req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
-  focus:    { name: 'Signature Focus',    b: 2, t: 3, cost: 195, req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
-  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
+  lab:      { name: 'Elemental Lab',      fork: 'b2', path: 'Signatures', b: 2, t: 2, cost: 110, req: ['wells'],          desc: 'Element choices show 4 cards instead of 3.' },
+  resonance:{ name: 'Resonance Coils',    fork: 'b2', path: 'Combos', b: 2, t: 2, cost: 115, req: ['wells'],          desc: 'Element combos are 30% stronger.' },
+  prism:    { name: 'Prism Array',        fork: 'b2', path: 'Combos', b: 2, t: 3, cost: 215, req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
+  focus:    { name: 'Signature Focus',    fork: 'b2', path: 'Signatures', b: 2, t: 3, cost: 195, req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
+  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 340, any: true, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
   vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 30,  req: [],                 desc: '+15% gold from kills.' },
-  scav:     { name: 'Scavengers',         b: 3, t: 2, cost: 85,  req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
-  drill:    { name: 'Drill Yard',         b: 3, t: 2, cost: 90, req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
-  vault2:   { name: 'Counting House',     b: 3, t: 3, cost: 165, req: ['scav'],           desc: '+20% gold from kills.' },
-  trophy:   { name: 'Trophy Room',        b: 3, t: 3, cost: 185, req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
-  college:  { name: 'War College',        b: 3, t: 4, cost: 320, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
+  scav:     { name: 'Scavengers',         fork: 'b3', path: 'Treasury', b: 3, t: 2, cost: 85,  req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
+  drill:    { name: 'Drill Yard',         fork: 'b3', path: 'Training', b: 3, t: 2, cost: 90, req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
+  vault2:   { name: 'Counting House',     fork: 'b3', path: 'Treasury', b: 3, t: 3, cost: 165, req: ['scav'],           desc: '+20% gold from kills.' },
+  trophy:   { name: 'Trophy Room',        fork: 'b3', path: 'Training', b: 3, t: 3, cost: 185, req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
+  college:  { name: 'War College',        b: 3, t: 4, cost: 320, any: true, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
   // secrets (discovered by encounters)
   goose:    { name: 'Goose Moat',         b: 4, secret: true, cost: 35,  req: [], desc: 'Geese guard the gate and honk at foes that reach the wall, biting for damage.' },
   cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 55,  req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
@@ -3764,14 +3767,14 @@ function heroStats(h, run, meta, syn) {
   s.startMana += 0.25 * (run.tech.wells ? 1 : 0) + 0.1 * (meta.ranks.codex || 0) + (run.tech.focus ? 0.5 : 0);
   syn = syn || activeSynergies(run);
   const Y = syn;
-  if (d.race === 'human' && Y.human >= 0) { const v = [0.15, 0.3][Y.human] * sm; s.hp *= 1 + v; s.atk *= 1 + v; }
-  if (d.race === 'elf' && Y.elf >= 0) s.as *= 1 + [0.25, 0.55][Y.elf] * sm;
-  if (d.race === 'dwarf' && Y.dwarf >= 0) s.armor += [25, 55][Y.dwarf] * sm;
-  if (d.race === 'orc' && Y.orc >= 0) { s.lifesteal += [0.15, 0.3][Y.orc] * sm; s.atk *= 1 + [0.1, 0.25][Y.orc] * sm; }
-  if (d.race === 'beast' && Y.beast >= 0) { s.crit += [0.25, 0.5][Y.beast] * sm; s.spd *= 1.2; }
-  if (d.cls === 'mage' && Y.mage >= 0) { s.ap *= 1 + [0.3, 0.75][Y.mage] * sm; s.startMana += [0.3, 0.5][Y.mage]; }
-  if (d.cls === 'rogue' && Y.rogue >= 0) { s.dodge += [0.2, 0.35][Y.rogue] * Math.min(sm, 1.4); s.firstStrike = [0.6, 1.5][Y.rogue] * sm; }
-  if (d.cls === 'berserker' && Y.berserker >= 0) s.frenzy = [10, 20][Y.berserker];
+  if (d.race === 'human' && Y.human >= 0) { const v = [0.12, 0.28, 0.5][Y.human] * sm; s.hp *= 1 + v; s.atk *= 1 + v; }
+  if (d.race === 'elf' && Y.elf >= 0) s.as *= 1 + [0.2, 0.45, 0.85][Y.elf] * sm;
+  if (d.race === 'dwarf' && Y.dwarf >= 0) s.armor += [20, 50, 90][Y.dwarf] * sm;
+  if (d.race === 'orc' && Y.orc >= 0) { s.lifesteal += [0.12, 0.25, 0.45][Y.orc] * sm; s.atk *= 1 + [0.08, 0.22, 0.45][Y.orc] * sm; }
+  if (d.race === 'beast' && Y.beast >= 0) { s.crit += [0.2, 0.4, 0.7][Y.beast] * sm; s.spd *= 1 + [0.15, 0.25, 0.4][Y.beast]; }
+  if (d.cls === 'mage' && Y.mage >= 0) { s.ap *= 1 + [0.25, 0.6, 1.2][Y.mage] * sm; s.startMana += [0.25, 0.45, 0.7][Y.mage]; }
+  if (d.cls === 'rogue' && Y.rogue >= 0) { s.dodge += [0.15, 0.3, 0.45][Y.rogue] * Math.min(sm, 1.4); s.firstStrike = [0.5, 1.2, 2.5][Y.rogue] * sm; }
+  if (d.cls === 'berserker' && Y.berserker >= 0) s.frenzy = [8, 16, 30][Y.berserker];
   // temperament: its own trade-off, its pair bonus when a twin is on the field, and team-wide pair bonuses
   const tk = heroTemper(h), T = TEMPERS[tk], tc = temperCounts(run);
   T.fx(s); if (h.place && tc[tk] >= 2 && T.pfx) T.pfx(s);
@@ -3934,7 +3937,7 @@ function startBattle(run, meta) {
 
 function applyBulwark(B) {
   const g = B.syn.guardian; if (g < 0) return;
-  const pct = [0.12, 0.25][g] * (1 + 0.15 * (B.meta.ranks.banners || 0));
+  const pct = [0.1, 0.22, 0.4][g] * (1 + 0.15 * (B.meta.ranks.banners || 0));
   for (const u of B.heroes) if (u.alive) { u.shield = Math.max(u.shield, u.maxHp * pct); }
   FX.sound('shield');
 }
@@ -4045,7 +4048,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
     if (crit && src.st.sp.armorBreak && tgt.side === 'enemy') tgt.pry = Math.min(50, (tgt.pry || 0) + 10);
     if (!o.noProc) {
       const E = src.st.el;
-      if (B.syn.toad >= 0) tgt.poison.push({ dps: [4, 10][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
+      if (B.syn.toad >= 0) tgt.poison.push({ dps: [3, 8, 20][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
       if (src.st.frost) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, src.st.frost); }
       if (src.st.storm && Math.random() < src.st.storm) chainLightning(B, src, tgt, src.st.atk * 1.2, 3, '#bff4ff', 'item');
       if (E.fire) tgt.poison.push({ dps: src.st.atk * 0.25 * E.fire, t: 3, src, fire: true, from: 'element' });
@@ -4084,8 +4087,9 @@ function giveXP(B, killer, v) {
 function killUnit(B, u, src) {
   if (!u.alive) return;
   if (u.side === 'hero') {
-    if (u.def && u.def.race === 'skeleton' && !u.temp && B.syn.skeleton >= 0 && (B.syn.skeleton === 1 ? !u.risen : !B.undyingUsed)) {
-      u.risen = true; B.undyingUsed = true; u.hp = u.maxHp * 0.5; FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
+    const sk = B.syn.skeleton, bone = u.def && u.def.race === 'skeleton';
+    if (!u.temp && sk >= 0 && !u.risen && (bone ? (sk >= 1 || !B.undyingUsed) : sk >= 2 && !B.undyingOther)) {
+      if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
@@ -4484,7 +4488,7 @@ function stepBattle(B, dt) {
   const anyFoe = B.enemies.some(e => e.alive);
   // regen: cleric synergy, hot tub, nature, troll blood, water below half
   for (const h of B.heroes) if (h.alive && h.st) {
-    let r = (B.syn.cleric >= 0 ? [0.01, 0.025][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
+    let r = (B.syn.cleric >= 0 ? [0.008, 0.02, 0.04][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
     if (h.st.el && h.st.el.water && h.hp < h.maxHp * 0.5) r += 0.03 * h.st.el.water;
     if (r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * r * dt);
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
@@ -4681,7 +4685,7 @@ function stepHero(B, u, dt) {
           const pt = u.def.proj && u.def.proj !== 'heal' ? u.def.proj : (cls === 'mage' || cls === 'cleric' ? 'spark' : 'arrow');
           fireProj(B, u, t, pt, heroAtk(u), { speed: u.rafter ? 360 : pt === 'arrow' || pt === 'arrowGold' ? 300 : 200, rafter: u.rafter });
           if (u.rafter && typeof FXS !== 'undefined') { u.flashT = 0.12; for (let i = 0; i < 4; i++) FXS.parts.push({ x: u.x + 6, y: u.y - 12, vx: rand(10, 40), vy: rand(-20, 5), life: 0.25, t: 0, color: '#ffe680', size: 1, grav: 0 }); }
-          const extraN = cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2][B.syn.ranger] : 0;
+          const extraN = cls === 'ranger' && B.syn.ranger >= 0 ? [1, 2, 4][B.syn.ranger] : 0;
           if (extraN) { const extra = B.enemies.filter(e => e.alive && e !== t && dist(e, u) < u.st.range).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, extraN); for (const e of extra) fireProj(B, u, e, pt, heroAtk(u) * BAL.extraShot, { speed: 300, rafter: u.rafter, from: 'bonus' }); }
           FX.sound(pt === 'arrow' || pt === 'arrowGold' ? 'bow' : 'pew');
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
@@ -5247,19 +5251,23 @@ function forgeSuper(run, a, b) {
 }
 
 // ----- Artificers' Hall -----
+function techSealedBy(run, id) { const T = TECH[id]; return T.fork ? Object.keys(run.tech).find(k => TECH[k] && TECH[k].fork === T.fork && TECH[k].path !== T.path) || null : null; }
+function techNeeds(run, id) { const T = TECH[id], miss = T.req.filter(r => !run.tech[r]).map(r => TECH[r].name); return T.any ? miss.join(' or ') : miss.join(' and '); }
 function techState(run, id) {
   const T = TECH[id];
   if (run.tech[id]) return 'done';
   if (T.secret && !run.discovered[id]) return 'hidden';
+  if (techSealedBy(run, id)) return 'sealed';
   if (run.siege < techOpensAt(id)) return 'soon';
-  if (T.req.every(r => run.tech[r])) return 'open';
+  if (T.any ? T.req.some(r => run.tech[r]) : T.req.every(r => run.tech[r])) return 'open';
   return 'locked';
 }
 function buyTech(run, meta, id) {
   const T = TECH[id], st = techState(run, id);
   if (st === 'done') return { err: 'Already built.' };
   if (st === 'hidden') return { err: 'Nobody knows how to build that yet.' };
-  if (st === 'locked') return { err: `Needs ${T.req.filter(r => !run.tech[r]).map(r => TECH[r].name).join(' and ')} first.` };
+  if (st === 'sealed') return { err: `You took the ${TECH[techSealedBy(run, id)].path} path. ${T.path} is sealed this run.` };
+  if (st === 'locked') return { err: `Needs ${techNeeds(run, id)} first.` };
   if (run.gold < T.cost) return { err: `You need ${T.cost - run.gold} more gold.` };
   run.gold -= T.cost; run.tech[id] = 1; run.stats.techs.push({ s: run.siege, id });
   if (['walls1', 'walls2', 'bastion'].includes(id)) { const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp = Math.min(run.castle.max, run.castle.hp + (run.castle.max - old)); }
@@ -9151,10 +9159,10 @@ const UI = {
     UI.hallOpen = UI.hallOpen || {};
     const row = k => { const T = TECH[k], st = techState(run, k);
       if (st === 'hidden') return `<div class="trow hidden"><div><b>??? Secret tech</b><p>Found by helping visitors between sieges.</p></div><span class="chip">Rumored</span></div>`;
-      const act = st === 'soon' ? `<span class="chip">Siege ${techOpensAt(k)}</span>` : st === 'locked' ? `<span class="chip">Needs ${esc(T.req.filter(r => !run.tech[r]).map(r => TECH[r].name).join(' + '))}</span>` : `<button class="btn small ${run.gold >= T.cost ? 'primary' : ''}" data-act="tech" data-arg="${k}" ${run.gold < T.cost ? 'disabled' : ''}>Build ${COST(T.cost)}</button>`;
-      return `<div class="trow ${st} ${st === 'open' && run.gold >= T.cost ? 'afford' : ''}"><span class="tt">T${T.t || '★'}</span><div><b>${esc(T.name)}${isNew(k) ? ' <i class="newb">NEW</i>' : ''}</b><p>${esc(T.desc)}</p></div>${act}</div>`; };
+      const act = st === 'sealed' ? `<span class="chip">Sealed</span>` : st === 'soon' ? `<span class="chip">Siege ${techOpensAt(k)}</span>` : st === 'locked' ? `<span class="chip">Needs ${esc(techNeeds(run, k))}</span>` : `<button class="btn small ${run.gold >= T.cost ? 'primary' : ''}" data-act="tech" data-arg="${k}" ${run.gold < T.cost ? 'disabled' : ''}>Build ${COST(T.cost)}</button>`;
+      return `<div class="trow ${st} ${st === 'open' && run.gold >= T.cost ? 'afford' : ''}"><span class="tt">T${T.t || '★'}</span><div><b>${esc(T.name)}${T.path ? ` <i class="tpath">${esc(T.path)} path</i>` : ''}${isNew(k) ? ' <i class="newb">NEW</i>' : ''}</b><p>${esc(T.desc)}${T.fork && !run.tech[k] && st !== 'sealed' && !Object.keys(run.tech).some(x => TECH[x] && TECH[x].fork === T.fork) ? ' <span class="note">Choosing this path seals the other one for this run.</span>' : ''}</p></div>${act}</div>`; };
     const branch = (key, title, icon, ids) => {
-      const built = ids.filter(k => run.tech[k]), rest = ids.filter(k => !run.tech[k]);
+      const built = ids.filter(k => run.tech[k]), rest = ids.filter(k => !run.tech[k] && techState(run, k) !== 'sealed'); ids = ids.filter(k => techState(run, k) !== 'sealed');
       const ready = rest.filter(k => techState(run, k) === 'open'), afford = ready.filter(k => run.gold >= TECH[k].cost).length, fresh = ready.filter(isNew).length;
       const open = key in UI.hallOpen ? UI.hallOpen[key] : (ready.length > 0 || fresh > 0);
       const tags = `${fresh ? `<i class="newb">${fresh} NEW</i>` : ''}${ready.length ? `<span class="rdy ${afford ? 'ok' : ''}">${ready.length} ready</span>` : ''}`;

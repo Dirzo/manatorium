@@ -181,19 +181,23 @@ function forgeSuper(run, a, b) {
 }
 
 // ----- Artificers' Hall -----
+function techSealedBy(run, id) { const T = TECH[id]; return T.fork ? Object.keys(run.tech).find(k => TECH[k] && TECH[k].fork === T.fork && TECH[k].path !== T.path) || null : null; }
+function techNeeds(run, id) { const T = TECH[id], miss = T.req.filter(r => !run.tech[r]).map(r => TECH[r].name); return T.any ? miss.join(' or ') : miss.join(' and '); }
 function techState(run, id) {
   const T = TECH[id];
   if (run.tech[id]) return 'done';
   if (T.secret && !run.discovered[id]) return 'hidden';
+  if (techSealedBy(run, id)) return 'sealed';
   if (run.siege < techOpensAt(id)) return 'soon';
-  if (T.req.every(r => run.tech[r])) return 'open';
+  if (T.any ? T.req.some(r => run.tech[r]) : T.req.every(r => run.tech[r])) return 'open';
   return 'locked';
 }
 function buyTech(run, meta, id) {
   const T = TECH[id], st = techState(run, id);
   if (st === 'done') return { err: 'Already built.' };
   if (st === 'hidden') return { err: 'Nobody knows how to build that yet.' };
-  if (st === 'locked') return { err: `Needs ${T.req.filter(r => !run.tech[r]).map(r => TECH[r].name).join(' and ')} first.` };
+  if (st === 'sealed') return { err: `You took the ${TECH[techSealedBy(run, id)].path} path. ${T.path} is sealed this run.` };
+  if (st === 'locked') return { err: `Needs ${techNeeds(run, id)} first.` };
   if (run.gold < T.cost) return { err: `You need ${T.cost - run.gold} more gold.` };
   run.gold -= T.cost; run.tech[id] = 1; run.stats.techs.push({ s: run.siege, id });
   if (['walls1', 'walls2', 'bastion'].includes(id)) { const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp = Math.min(run.castle.max, run.castle.hp + (run.castle.max - old)); }

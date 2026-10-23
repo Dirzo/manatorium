@@ -1288,3 +1288,4 @@ h2.hoard { color: var(--gold); }
 .talk.portrait .tk-temper.speaking { box-shadow: none; transform: none; } .talk.portrait .tk-temper.speaking b { text-shadow: 0 0 10px rgba(255,214,110,.8); }
 .talk.portrait .tk-temper .tk-tl, .talk.portrait .tk-temper p { display: none; } .talk.portrait .tk-temper b { font-size: 15px; } .talk.portrait .tk-temper em { margin-top: 0; }
 .talk.portrait .tk-eyebrow { display: none; }
+.tpath { font-style: normal; font-size: 10px; font-weight: 500; padding: 0 5px; border-radius: 6px; background: #2a3160; color: #c9cff5; margin-left: 4px; }
