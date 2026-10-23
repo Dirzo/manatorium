@@ -106,7 +106,7 @@ function heroBonusPts(run, h) {
 function heroRarity(h) { const d = HERO_BY_ID[h.id]; return d && d.rar != null ? d.rar : h.rarity || 0; }
 // which elements are on the field, how many heroes carry each
 // element stacks count like races (Cam 2026-10-23): 2, 4 and 6 champions; six of one element unlocks that element's castle
-const EL_LEAN = { ad: 0.2, ap: 0.25, def: 0.2 };
+const EL_LEAN = { ad: 0.3, ap: 0.35, def: 0.3 };
 const EL_STACK = { at: [2, 4, 6], mul: [1.4, 1.9, 2.5], stat: [0.1, 0.22, 0.4] };
 function elTier(n) { let t = -1; EL_STACK.at.forEach((v, i) => { if (n >= v) t = i; }); return t; }
 function fieldElements(run) {
@@ -205,8 +205,8 @@ function heroStats(h, run, meta, syn) {
     const E = ELEMENTS[e], et = elTier(fe[e] || 0), p = sm * (1 + 0.5 * (et + 1));
     s.el[e] = p; s.sty[e] = et + 1;
     const b = EL_STACK.stat[et] || 0;
-    if (E.style === 'ad') s.atk *= 1 + EL_LEAN.ad + b; else if (E.style === 'ap') s.ap *= 1 + EL_LEAN.ap + b; else { s.hp *= 1 + EL_LEAN.def + b; s.armor += 12; }
-    styleStats(s, e, et + 1);
+    if (E.style === 'ad') s.atk *= 1 + EL_LEAN.ad * p + b; else if (E.style === 'ap') s.ap *= 1 + EL_LEAN.ap * p + b; else { s.hp *= 1 + EL_LEAN.def * p + b; s.armor += 12 * p; }
+    styleStats(s, e, et + 1, p);
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: a component gives its stat (a bit more inside a finished item); a finished item adds one effect of its own

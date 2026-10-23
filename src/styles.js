@@ -8,7 +8,7 @@ const STYLE_INFO = {
   light:     { style: 'Lantern bearer', role: 'Beacon', how: 'Never chases. Stands beside the most hurt ally, and every hit also heals that ally. Hits blind foes.',
     tiers: ['Each hit heals the ally for 30% of its damage.', 'Every 4th hit is a flash that blinds every foe nearby.', 'The first ally to fall each siege gets back up at 30% HP.'] },
   lightning: { style: 'Hop', role: 'Skirmisher', how: 'Every attack hops it to a different foe, zapping whatever it passes.',
-    tiers: ['Each hop arcs to one foe on the way.', 'Hops cross lanes. Every 3rd hop drops a bolt where it lands.', 'Lightning champions are linked by a live wire that zaps foes crossing it.'] },
+    tiers: ['Hops reach further.', 'Hops cross lanes. Every 3rd hop drops a bolt where it lands.', 'Lightning champions are linked by a live wire that zaps foes crossing it.'] },
   fire:      { style: 'Firewalk', role: 'Charger', how: 'Charges into the thickest crowd and leaves a burning trail.',
     tiers: ['The trail burns for 3s.', 'Burning foes burst when they die and set their neighbours alight.', 'The trail becomes a wall of fire that lasts twice as long.'] },
   water:     { style: 'Pushback', role: 'Tide', how: 'Holds its lane. Hits shove foes back, and a foe shoved into another foe hurts both.',
@@ -34,14 +34,20 @@ const styLv = (u, e) => (u.st && u.st.sty && u.st.sty[e]) || 0;
 function styleLine(e, lv) { const I = STYLE_INFO[e]; return lv > 0 ? I.tiers[lv - 1] : I.how; }
 
 // small stat leans that go with each style (applied in heroStats)
-function styleStats(s, e, lv) {
+function styleStats(s, e, lv, p) {
   switch (e) {
-    case 'dark': s.lifesteal += 0.1; break;
-    case 'lightning': s.as *= 1.2; break;
-    case 'fire': s.spd *= 1.25; break;
-    case 'nature': s.hp *= 1.3; s.regen += 0.01; s.reflect += 0.15 + 0.05 * lv; break;
-    case 'salty': s.crit += 0.1; s.hp *= 1.1; break;
-    case 'meat': s.hp *= 1.4; s.armor += 18; s.scale *= 1.15; break;
+    case 'dark': s.lifesteal += 0.12 * p; break;
+    case 'light': s.crit += 0.1 * p; break;
+    case 'lightning': s.as *= 1 + 0.25 * p; break;
+    case 'fire': s.spd *= 1.25; s.sigMul *= 1 + 0.2 * p; break;
+    case 'water': s.regen += 0.006 * p; break;
+    case 'nature': s.hp *= 1 + 0.25 * p; s.regen += 0.01 * p; s.reflect += 0.15 * p; break;
+    case 'salty': s.crit += 0.12; s.critMul += 0.3; s.hp *= 1.1; break;
+    case 'sweet': s.as *= 1 + 0.08 * p; break;
+    case 'meat': s.hp *= 1 + 0.35 * p; s.armor += 15 * p; s.scale *= 1.15; break;
+    case 'treat': s.greed += 0.1 * p; break;
+    case 'ice': s.armor += 8 * p; break;
+    case 'void': s.ap *= 1 + 0.08 * p; break;
   }
 }
 
@@ -197,7 +203,7 @@ function styleAttacked(B, u, t) {
   const lv = styLv(u, 'lightning'), R = SL([50, 62, 76, 90], lv), melee = u.st.range <= 40;
   const nx = styleFoes(B, e => e !== t && dist(e, u) < R && (melee ? !e.flying && dist(e, u.h0) < 120 + 20 * lv : true) && (lv >= 2 || heroLaneOk(B, u, e))).sort((a, b) => dist(a, u) - dist(b, u))[0];
   if (!nx) return;
-  if (lv >= 1) { const mid = { x: (u.x + nx.x) / 2, y: (u.y + nx.y) / 2 }, z = nearest(B.enemies, mid, 26, e => e !== nx && e !== t); if (z) { dealDamage(B, u, z, u.st.atk * 0.6, { noProc: true, kind: 'magic', from: 'element' }); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: z.x, y: z.y - 8 }], '#9ff6ff'); } }
+  { const mid = { x: (u.x + nx.x) / 2, y: (u.y + nx.y) / 2 }, z = nearest(B.enemies, mid, 26, e => e !== nx && e !== t); if (z) { dealDamage(B, u, z, u.st.atk * 0.6, { noProc: true, kind: 'magic', from: 'element' }); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: z.x, y: z.y - 8 }], '#9ff6ff'); } }
   if (melee) { FX.afterimage(u); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: nx.x, y: nx.y - 8 }], '#9ff6ff'); u.x = nx.x + (nx.x > u.x ? -9 : 9); u.y = nx.y; }
   u.target = nx; u.sx.hopT = B.t + 1 / heroAS(u) + 0.1; u.retarget = 1 / heroAS(u) + 0.1; u.cd = Math.min(u.cd, 0.18 / Math.max(0.2, heroAS(u)) + u.cd * 0.7);
   u.sx.hop = (u.sx.hop || 0) + 1;
