@@ -3733,9 +3733,13 @@ const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarc
 // ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
 // The scouts report the plan before each siege (run.lanes): how the horde splits, and which lane its elites take.
 const LANES = 3, LANE_NAMES = ['Top', 'Middle', 'Bottom'];
+// lanes follow the placement grid's rows (Cam 2026-10-23: a champion dropped in a lane must belong to it): 2, 3 and 2 rows
+const LANE_ROWS = [2, 3, 2], LANE_EDGE = [0, 2, 5, 7];
 function laneH() { return GRID.rows * GRID.cell / LANES; }
-function laneOf(y) { return clamp(Math.floor((y - GRID.y) / laneH()), 0, LANES - 1); }
-function laneBand(l) { return { y0: GRID.y + l * laneH() + 5, y1: GRID.y + (l + 1) * laneH() + 1 }; }
+function laneSpan(l) { return { y0: GRID.y + LANE_EDGE[l] * GRID.cell, y1: GRID.y + LANE_EDGE[l + 1] * GRID.cell }; }
+// unit feet stand 6px below the centre of their cell (cellPos), so the same offset decides the lane
+function laneOf(y) { const r = Math.floor((y - 6 - GRID.y) / GRID.cell); return r < LANE_EDGE[1] ? 0 : r < LANE_EDGE[2] ? 1 : 2; }
+function laneBand(l) { const S = laneSpan(l); return { y0: S.y0 + 6 + 5, y1: S.y1 + 6 - 5 }; }
 function rollLanes(s, tac) {
   const heavy = randi(0, LANES - 1), w = [0, 0, 0], big = tac === 'blitz' ? 0.7 : s < 3 ? 0.34 : rand(0.42, 0.58);
   for (let l = 0; l < LANES; l++) w[l] = l === heavy ? big : (1 - big) / (LANES - 1);
@@ -7558,16 +7562,27 @@ function drawUnit(g, u, t, opts = {}) {
 // pulsing red chevrons on the right edge show where the horde walks in
 // prep only: faint dashed lines between the three lanes, so placement reads at a glance
 function drawLaneLines(g, t, V) {
-  // Cam 2026-10-23: lanes have to read clearly while placing. Bands alternate, dividers are solid, the lane under the cursor lights up
-  const lh = laneH(), hl = V.hover && V.hover.type === 'grid' ? laneOf(cellPos(V.hover.c, V.hover.r).y) : -1;
-  for (let l = 0; l < LANES; l++) { const y0 = Math.round(GRID.y + l * lh + 6), y1 = Math.round(GRID.y + (l + 1) * lh + 6);
-    g.fillStyle = l === hl ? 'rgba(255,216,74,0.16)' : l % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(10,14,40,0.07)'; g.fillRect(CASTLE_X + 6, y0, W - CASTLE_X - 6, y1 - y0); }
-  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * lh + 6); g.fillStyle = 'rgba(15,20,48,0.35)'; g.fillRect(CASTLE_X + 6, y + 1, W - CASTLE_X - 6, 1); g.fillStyle = 'rgba(255,255,255,0.45)'; for (let x = CASTLE_X + 6; x < W - 4; x += 8) g.fillRect(x, y, 6, 1); }
+  // Cam 2026-10-23: lanes have to read clearly while placing. Bands alternate and the lane under the cursor lights up
+  const hl = V.hover && V.hover.type === 'grid' ? laneOf(cellPos(V.hover.c, V.hover.r).y) : -1;
+  for (let l = 0; l < LANES; l++) { const S = laneSpan(l);
+    g.fillStyle = l === hl ? 'rgba(255,216,74,0.16)' : l % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(10,14,40,0.07)'; g.fillRect(CASTLE_X + 6, S.y0, W - CASTLE_X - 6, S.y1 - S.y0); }
+}
+// always: a row of wooden stakes with torches on every lane border, so the three lanes read as separate paths (Cam 2026-10-23)
+function drawLaneFences(g, t) {
+  for (let l = 1; l < LANES; l++) { const y = Math.round(laneSpan(l).y0), x0 = GRID.x + GRID.courtCols * GRID.cell + 4, x1 = W - 30;
+    g.fillStyle = 'rgba(26,18,48,0.25)'; g.fillRect(x0, y + 1, x1 - x0, 2);
+    for (let x = x0; x < x1; x += 7) { const lean = ((x * 7) % 3) - 1;
+      g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 6, 4, 8); g.fillStyle = '#8a5a2a'; g.fillRect(x, y - 5, 2, 6); g.fillStyle = '#c9a35a'; g.fillRect(x, y - 5, 1, 5);
+      g.fillStyle = '#e8e2d0'; g.fillRect(x + (lean > 0 ? 1 : 0), y - 7, 1, 2); }
+    for (let x = x0 + 18; x < x1; x += 56) { const f = Math.floor(t * 10 + x) % 3;
+      g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 14, 3, 15); g.fillStyle = '#5a3a1a'; g.fillRect(x, y - 13, 1, 13); g.fillStyle = '#3a2410'; g.fillRect(x - 1, y - 14, 3, 2);
+      g.fillStyle = '#ff6a3d'; g.fillRect(x - 1, y - 18 + (f === 1 ? 1 : 0), 3, 4 - (f === 1 ? 1 : 0)); g.fillStyle = '#ffd23a'; g.fillRect(x, y - 17 + f % 2, 1, 2); if (f === 2) { g.fillStyle = '#ffffff'; g.fillRect(x, y - 16, 1, 1); }
+      g.globalAlpha = 0.12 + 0.04 * f; g.fillStyle = '#ffb02e'; g.fillRect(x - 5, y - 20, 11, 9); g.globalAlpha = 1; } }
 }
 // prep only, at hi-res: each lane's name and how much of the horde the scouts expect in it
 function drawLaneLabels(ctx, k, run) {
   const L = run.lanes; ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE;
-  for (let l = 0; l < LANES; l++) { const y = (GRID.y + (l + 0.5) * laneH() + 6) * k, x = (W - 34) * k;
+  for (let l = 0; l < LANES; l++) { const S = laneSpan(l), y = ((S.y0 + S.y1) / 2) * k, x = (W - 34) * k;
     ctx.font = `700 ${5.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8;
     const name = LANE_NAMES[l].toUpperCase() + ' LANE'; ctx.strokeText(name, x, y - 4 * k); ctx.fillText(name, x, y - 4 * k);
     if (L && L.w) { ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = l === L.heavy ? '#ff9a9a' : '#c9cff5'; const sub = `${Math.round(L.w[l] * 100)}% of the horde${L.elite === l ? ' · elites' : ''}`; ctx.strokeText(sub, x, y + 3 * k); ctx.fillText(sub, x, y + 3 * k); } }
@@ -7717,6 +7732,8 @@ function renderFrame(V, dt) {
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
+  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t, V);
+  if (run.finale !== 'ready') drawLaneFences(g, t);
   drawSpellDecals(g); drawStyleGround(g, B, t); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
@@ -7734,7 +7751,6 @@ function renderFrame(V, dt) {
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
-  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t, V);
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();
