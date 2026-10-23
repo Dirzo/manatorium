@@ -133,7 +133,7 @@ const VOICE = {
   heroic: {
     greet: ['Turn back, {boss}. This gate is guarded, and I am the guard.', 'I am {me}, and while I stand, this keep stands.'],
     gripe: ['Your troubles are real, {boss}. Taking them out on innocent walls is not the answer.', 'I hear you. And I will still defeat you. Both can be true.'],
-    offer: ['The keep is not for sale. Not for gold, not for rafters, not for anything.', 'A hero does not bargain with the people at the gate.'],
+    offer: ['The keep is not for sale. Not for gold, not for favours, not for anything.', 'A hero does not bargain with the people at the gate.'],
     threat: ['Then come. I will be standing exactly here.', 'Every threat you make only steels my resolve.'],
     showdown: ['This ends today, {boss}. One way or the other, the songs will remember it.', 'Stand behind me, everyone. I go first.'],
     taunt: 'You call that a horde, {boss}? I have fought scarier breakfasts.',
@@ -182,7 +182,7 @@ const VOICE = {
     oath: '{fallen} burned bright. I will burn brighter, for them.' },
   wise: {
     greet: ['I have studied your kind, {boss}. You are predictable, and you are loud.', 'I am {me}. I already know how this ends.'],
-    gripe: ['Your problem, {boss}, is that you chose to solve it with violence.', 'Every grievance has a cause. Yours is mostly the ditch.'],
+    gripe: ['Your problem, {boss}, is that you chose to solve it with violence.', 'Every grievance has a cause. Yours is mostly yourself.'],
     offer: ['I have weighed your offer. It weighs nothing.', 'No. And I knew you would ask.'],
     threat: ['We will be ready. We always are.', 'A wise keep prepares before the threat. We did.'],
     showdown: ['Patience, everyone. Let them come to us.', 'You have shown me every move you have, {boss}. Now I show you mine.'],
@@ -212,8 +212,8 @@ const VOICE = {
     oath: '{fallen} is in a better place. Probably a nicer castle. I\'ll make this one worth coming back to.' },
   angry: {
     greet: ['WHAT do you WANT, {boss}?!', 'I am {me}, and I am ALREADY annoyed with you!'],
-    gripe: ['I DON\'T CARE ABOUT YOUR BUCKET!', 'Oh, boo hoo! COME HERE AND SAY THAT!'],
-    offer: ['NO! And how DARE you!', 'Shove your deal up your ditch!'],
+    gripe: ['I DON\'T CARE ABOUT YOUR PROBLEMS!', 'Oh, boo hoo! COME HERE AND SAY THAT!'],
+    offer: ['NO! And how DARE you!', 'Take your deal and SHOVE OFF!'],
     threat: ['GOOD! COME ON, THEN!', 'Tomorrow?! WHY NOT RIGHT NOW?!'],
     showdown: ['I have been ANGRY all week and YOU are the reason!', 'RRRRAAAAAGH! THAT\'S MY BATTLE CRY! ALSO MY MOOD!'],
     taunt: 'YOU! YES, YOU, {boss}! YOU\'RE THE WORST!',
@@ -276,7 +276,7 @@ const VOICE = {
     offer: ['It\'s a trap. It\'s always a trap.', 'Why would you offer that? Unless... no. NO.'],
     threat: ['I knew you\'d say that. I wrote it down last week.', 'I\'ve booby-trapped the walls. And the bed. And the soup.'],
     showdown: ['I\'ve been preparing for this for years, {boss}. Years!', 'Everyone check behind you. Now check again.'],
-    taunt: 'I know your secret, {boss}. All of them. Even the bucket one.',
+    taunt: 'I know your secret, {boss}. All of them. Even the embarrassing one.',
     firm: 'Seal the walls! Seal the windows! Seal the... oh, everything!',
     rally: 'Stay sharp! Trust no one! Except us. Mostly.',
     oath: '{fallen} is gone. They got to them. They won\'t get to me.' },
@@ -347,8 +347,11 @@ function talkSpeaker(run) {
 // ----- lines -----
 function talkFill(s, run, h, extra = {}) {
   const T = TALK[talkFaction(run)], boss = talkBossId(run);
-  const v = Object.assign({ boss: BOSS_SHORT[boss] || ENEMIES[boss].name, me: talkVoiceFirst(heroDisplayName(h)), temper: TEMPERS[heroTemper(h)].name.toLowerCase() }, extra);
-  return s.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
+  const top = TALK_TOPIC[boss] || {};
+  const v = Object.assign({ boss: BOSS_SHORT[boss] || ENEMIES[boss].name, me: talkVoiceFirst(heroDisplayName(h)), temper: TEMPERS[heroTemper(h)].name.toLowerCase(), jab: top.jab }, extra);
+  if (v.q != null && v.topic == null) v.topic = v.q;
+  // {Q} = the value capitalised, {BOSS} / {TOPIC} = shouted
+  return s.replace(/\{(\w+)\}/g, (m, k) => { if (v[k] != null) return v[k]; const x = v[k.toLowerCase()]; if (x == null) return m; return k.length === 1 ? x.charAt(0).toUpperCase() + x.slice(1) : String(x).toUpperCase(); });
 }
 function talkFaction(run) { return factionIndex(run.siege); }
 function talkBossId(run) { return run.finale === 'ready' ? 'shardgoose' : bossFor(run.siege); }
@@ -377,7 +380,11 @@ function talkScene(run) {
   // read the mood when the line plays: a story choice made earlier in the same scene can still sway the boss
   const open = () => { const m = run.mood || 0; return i >= 3 && !finale ? (m >= 1 && S.k ? S.k : m <= -1 && S.g ? S.g : S.o) : S.o; };
   let openLine = null; beats.push({ who: 'boss', text: () => openLine || (openLine = fillB(open())) });
-  beats.push({ who: 'hero', text: fill(voiceLine(h, S.t)) });
+  // the voice answers the boss's line in their own temper, about what the boss just said ({q}), and brings up how the
+  // run is going: a champion lost last siege, cracked walls, the boss's mood late in the horde, an empty purse at an offer
+  const q = (TALK_TOPIC[bossId] || {})[S.t], late = i >= 3 && !finale;
+  const asides = ['loss', 'hurt'].concat(late ? ['kind', 'grudge'] : [], S.t === 'offer' ? ['broke'] : []);
+  let reply = null; beats.push({ who: 'hero', text: () => reply || (reply = fill(voiceLine(h, S.t), { q }) + (run.siege > 1 && !sc.boss ? talkTail(sc, run, h, asides) : '')) });
   const scared = dreads(run, h);
   if (sc.boss) {
     // the first boss talk of a player's life explains the dread (G.meta.seen.dread)
@@ -398,8 +405,8 @@ function talkScene(run) {
     sc.close = fillB(S.c);
     sc.react = T.react;
   } else if (run.siege > 1) {
-    // siege 1 keeps it short for new players: one line each
-    beats.push({ who: 'boss', text: scared && i > 0 ? fillB(T.sniff) : fillB(S.c) });
+    // siege 1 keeps it short for new players: one line each. Otherwise the boss answers the tone of the reply first
+    beats.push({ who: 'boss', text: scared && i > 0 ? fillB(T.sniff) : fillB(bossRetort(sc, h) + ' ' + S.c) });
   }
   return sc;
 }
@@ -423,27 +430,21 @@ const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, 
 const JAW = { hero: [9, 8, 12], grubnose: [9, 8, 12], gloop: [14, 5, 10], wyrm: [12, 1, 6], ringmaster: [9, 7, 12], sporebaron: [10, 7, 11],
   matriarch: [9, 3, 8], trashpaw: [9, 4, 9], colossus: [4, 7, 11], pinchbeard: [10, 6, 13], goosegod: [4, 0, 4], shardgoose: [4, 0, 4] };
 const JAW_CACHE = {};
-// frames 0 (shut), 1 (open) and 2 (wide) for a sprite key: the jaw and everything under it in the mouth columns drops down
+// frames 0 (shut), 1 (open) and 2 (wide) for a sprite key. Only the mouth moves (Cam 2026-10-23: the whole torso was
+// bobbing): the body stays put and the mouth opens as a dark gap on the jaw row, a row deeper when wide, with the lip
+// pixels kept at both corners and a tongue in the middle of the wide frame.
 function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
   ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height;
   const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = JAW[id] || JAW.hero;
-  const base = src.getContext('2d').getImageData(0, 0, W, H);
   const frames = [0, 1, 2].map(gap => {
     const c = document.createElement('canvas'); c.width = W; c.height = H + 2; const g = c.getContext('2d');
-    if (!gap) { g.drawImage(src, 0, 0); return c; }
-    const d = g.createImageData(W, H + 2), px = (x, y) => { const i = (y * W + x) * 4; return base.data.slice(i, i + 4); };
-    const put = (x, y, p) => { const i = (y * W + x) * 4; d.data.set(p, i); };
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const inJaw = x >= x0 && x <= x1 && y >= jy;
-      put(x, inJaw ? y + gap : y, px(x, y));
-    }
-    // the rows the jaw left behind: dark mouth inside, lips at the edges, tongue in the middle when wide
-    for (let k = 0; k < gap; k++) for (let x = x0; x <= x1; x++) {
-      const above = px(x, jy - 1), below = px(x, jy);
-      if (above[3] < 128 && below[3] < 128) continue;
-      const edge = x === x0 || x === x1;
-      put(x, jy + k, edge ? (below[3] > 128 ? below : above) : (gap === 2 && k === 1 && Math.abs(x - (x0 + x1) / 2) < 1.5 ? [255, 106, 138, 255] : [42, 10, 30, 255]));
+    g.drawImage(src, 0, 0); if (!gap) return c;
+    const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128;
+    for (let k = 0; k < gap; k++) for (let x = x0 + 1; x < x1; x++) {
+      const y = jy + k; if (!op(x, y)) continue;
+      const i = (y * W + x) * 4, tongue = gap === 2 && k === 1 && Math.abs(x - (x0 + x1) / 2) < 1.5;
+      d.data.set(tongue ? [255, 106, 138, 255] : [42, 10, 30, 255], i);
     }
     g.putImageData(d, 0, 0); return c;
   });
@@ -471,9 +472,6 @@ function talkSkipped(run) {
   run.talked = talkKey(run); const sp = talkSpeaker(run); if (!sp || !mishapDue(run, sp.h)) return;
   run.mods.shaken = sp.h.uid; UI.toast(`${heroDisplayName(sp.h)} lost their nerve before ${BOSS_SHORT[talkBossId(run)]} and starts the siege stunned.`, true);
 }
-// the hero's lead-in when they take a post-siege choice, by temper
-const TEMPER_DECIDE = { heroic: 'Right. ', cheerful: 'Ooh! ', honorable: 'Very well. ', wholesome: 'Okay! ', zealous: 'So be it! ', wise: 'Hm. ', loyal: 'For the team. ', optimistic: 'Easy! ',
-  angry: 'FINE. ', deranged: 'Hee hee. ', greedy: 'Worth it. ', cowardly: 'Um... ', vain: 'Obviously. ', cruel: 'Good. ', paranoid: 'Suspicious, but... ', lazy: 'Ugh. ' };
 // x.enc: the post-siege encounter card (lore.js) plays inside the scene first (Cam 2026-10-22). Its visitor walks onto the
 // field (or the boss answers from the lair when the card is theirs), the choices come up as reply cards, and x.pick(i)
 // resolves the choice and returns the lines to narrate. x.fallback() shows the old card if there is no scene to stage.
@@ -490,12 +488,14 @@ function showTalk(run, done, x = {}) {
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
   const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
+  const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTag(h)} personality picks the words.`;
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
       ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}${encWho === 'visitor' ? actor('visitor') : ''}
       <div class="tk-bub" id="tkBub" hidden><b class="tk-who"></b><p></p><span class="tk-more">▼</span></div>
     </div>
+    <div class="tk-temper" id="tkTemper"></div>
     ${enc ? `<div class="tk-card" id="tkCard" hidden><span>${enc.story ? `The story so far · ${esc(FACTIONS[enc.f].name)}` : 'Between the sieges'}</span><h2>${esc(enc.title)}</h2></div>` : ''}
     <div class="tk-bar top"><span class="tk-eyebrow">${sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
     <div class="tk-bar bot"><p class="tk-narr" id="tkNarr"></p><div class="tk-opts" id="tkOpts"></div></div>`;
@@ -503,7 +503,12 @@ function showTalk(run, done, x = {}) {
   const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen'), visitor: el.querySelector('#tk-visitor') };
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h); A.hero.className = 'tk-a tk-hero'; };
+  const tcard = el.querySelector('#tkTemper');
+  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h); A.hero.className = 'tk-a tk-hero';
+    const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
+    tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
+    tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
+      + (dread ? `<em>${esc(BOSS_SHORT[bossId])} dreads ${esc(T.name)} legends</em>` : ''); };
   setHero(sc.h);
   if (sc.fallen) { keys.fallen = 'h:' + sc.fallen.id; A.hero.classList.add('waiting'); }
   if (encWho === 'visitor') { keys.visitor = encKey; A.visitor.classList.add('waiting'); }
@@ -568,7 +573,7 @@ function showTalk(run, done, x = {}) {
     bub.style.top = Math.max(8, top) + 'px';
     if (w === 'boss') { bub.style.left = ''; bub.style.right = (WW - x + half * 0.55) * k + 'px'; } else { bub.style.right = ''; bub.style.left = (x + half * 0.55) * k + 'px'; } };
   const say = async w => {
-    speaker = w; for (const n in A) if (A[n]) A[n].classList.toggle('talking', n === w);
+    speaker = w; for (const n in A) if (A[n]) A[n].classList.toggle('talking', n === w); tcard.classList.toggle('speaking', w === 'hero');
     bub.hidden = true; if (!w) return;
     const target = w === 'fallen' ? 'hero' : w; if (focusOn !== target) { pan(target); await wait(820); }
     bub.className = 'tk-bub ' + (w === 'boss' ? 'from-boss' : 'from-hero') + (w === 'boss' && bossId === 'colossus' ? ' robot' : '') + (w === 'fallen' ? ' ghostly' : '');
@@ -605,26 +610,31 @@ function showTalk(run, done, x = {}) {
   };
   // the card's choices as reply cards; the hero says the pick out loud, then the narrator tells what came of it
   const encChoose = () => {
-    const h = cur; el.classList.add('choosing'); pan(encWho === 'boss' ? 'boss' : 'visitor'); narr.textContent = enc.boon ? 'Every choice here is good. Pick what your keep needs.' : `What does ${heroName(h)} do?`;
+    const h = cur; el.classList.add('choosing'); pan(encWho === 'boss' ? 'boss' : 'visitor'); narr.textContent = enc.boon ? `Every choice here is good. Pick what your keep needs. ${tempHint(h)}` : `What does ${heroName(h)} do? ${tempHint(h)}`;
     opts.innerHTML = enc.opts.map((o, i) => `<button class="tk-opt" data-e="${i}"><b>${esc(o.label)}</b><i class="tk-tags">${encTags(o.fx).map(t => `<i class="et ${t.k}">${esc(t.s)}</i>`).join('')}</i>${o.sub ? `<span>${esc(o.sub)}</span>` : ''}</button>`).join('');
     busy = false;
     opts.querySelectorAll('[data-e]').forEach(btn => btn.onclick = e => {
       e.stopPropagation(); const i = +btn.dataset.e, o = enc.opts[i]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); SFX.play('stamp');
-      const r = x.pick(i), said = (TEMPER_DECIDE[heroTemper(h)] || '') + o.label + (/[.!?]$/.test(o.label) ? '' : '.');
+      // read the run before the pick changes it: the aside is about why they chose it (cracked walls, an empty purse)
+      const st = encStance(o), said = encSay(run, h, o) + talkTail(sc, run, h, st === 'mend' ? ['hurt'] : st === 'loot' ? ['broke'] : []);
+      const aside = encBossAside(sc, enc, o), r = x.pick(i);
       const lines = r.lines.join(' ') + (r.hz && !r.lines.join(' ').includes(r.hz) ? ` Field hazard next siege: ${r.hz}.` : '');
-      beats.splice(beatI + 1, 0, sc.fallen ? { who: 'narrate', text: said } : { who: 'hero', text: said }, { who: 'narrate', text: lines || 'Done.', leave: true });
+      // a new voice still waiting to step in: the narrator tells what they chose
+      beats.splice(beatI + 1, 0, sc.fallen ? { who: 'narrate', text: `${heroName(h)} decides to ${encGist(o)}.` } : { who: 'hero', text: said },
+        ...(aside ? [{ who: 'boss', text: talkFill(aside, run, h) }] : []), { who: 'narrate', text: lines || 'Done.', leave: true });
       next();
     });
   };
   const CHOICES = sc.finale ? TALK_CHOICES_FINALE : TALK_CHOICES;
   const choose = async () => {
     if (replied) return;
-    const h = cur; await say(null); el.classList.add('choosing'); pan('hero'); narr.textContent = `What does ${heroName(h)} say?`;
-    opts.innerHTML = CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(voiceLine(h, c.k), run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
+    const h = cur; await say(null); el.classList.add('choosing'); pan('hero'); narr.textContent = `What does ${heroName(h)} do? ${tempHint(h)}`;
+    // the cards say what the reply does; the voice picks the words once it is chosen (Cam 2026-10-23)
+    opts.innerHTML = CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(TALK_INTENT[c.mod] || TALK_INTENT[c.k], run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
     opts.querySelectorAll('[data-c]').forEach(btn => btn.onclick = async e => {
       e.stopPropagation(); if (replied) return; replied = true; const c = CHOICES[+btn.dataset.c]; opts.innerHTML = ''; narr.textContent = ''; el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
       setTalkReply(run, c.mod); TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
-      busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h), 'hero');
+      busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h) + talkTail(sc, run, h, ['loss', 'hurt', 'kind', 'grudge']), 'hero');
       await wait(500);
       busy = true; await say('boss'); busy = false; SFX.play('roar'); A.boss.classList.remove('stomp'); void A.boss.offsetWidth; A.boss.classList.add('stomp'); await type(sc.react[c.k], 'boss');
       await wait(450);
