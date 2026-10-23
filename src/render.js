@@ -1,6 +1,13 @@
 // ===== Arena renderer =====
 const R = { cv: null, ctx: null, lo: null, lctx: null, k: 3, bg: {}, castleKey: '', castle: null, clouds: [], t: 0 };
 function hash(x, y) { let h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
+// the call-back chip over the selected champion during a siege (tap it to pull them into the keep)
+function recallChipPos(u) { return { x: Math.round(u.x) + 7, y: Math.round(u.y - 30 * (u.vscale || 1) - (u.z || 0)) }; }
+function drawRecallChip(g, u, t) {
+  const p = recallChipPos(u), hot = u.hp < u.maxHp * 0.35 && Math.floor(t * 4) % 2;
+  g.fillStyle = OUTLINE; g.fillRect(p.x - 1, p.y - 1, 11, 10); g.fillStyle = hot ? '#ffd84a' : '#9fd8ff'; g.fillRect(p.x, p.y, 9, 8);
+  g.fillStyle = OUTLINE; g.fillRect(p.x + 3, p.y + 2, 4, 1); g.fillRect(p.x + 6, p.y + 2, 1, 4); g.fillRect(p.x + 3, p.y + 5, 4, 1); g.fillRect(p.x + 2, p.y + 1, 1, 3); g.fillRect(p.x + 1, p.y + 2, 1, 1);
+}
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
 function initRender(canvas) {
@@ -333,6 +340,7 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
+  if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B);
   // zones
   if (B) for (const z of B.zones) {

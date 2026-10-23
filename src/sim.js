@@ -23,6 +23,10 @@ function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) *
 function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s) * lateRamp(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
+// Press or hold (Cam 2026-10-23): before a regular siege, choose to press the attack for a tougher wave and bigger rewards
+const PRESS = { budget: 1.35, elites: 1, gold: 0.4 };
+function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
+function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
 const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
@@ -242,6 +246,7 @@ function genWave(s, mods, tac, finale) {
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
   if (mods.fewer) budget *= 0.75;
+  if (mods.press) budget *= PRESS.budget;
   if (tac === 'swarm') budget *= 1.5; if (tac === 'shieldwall') budget *= 0.85;
   const list = [];
   const boss = finale ? 'shardgoose' : isBossSiege(s) ? bossFor(s) : null;
@@ -249,6 +254,7 @@ function genWave(s, mods, tac, finale) {
   let elites = within >= 3 ? 1 + Math.floor(s / 14) : within === 2 && s > 5 ? 1 : 0;
   if (cyc > 0) elites += 1;
   if (tac === 'captain') elites = Math.max(1, elites);
+  if (mods.press) elites += PRESS.elites;
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
   const sw = swarmK(s) * BAL.thin; budget *= sw;
@@ -283,7 +289,7 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
@@ -984,6 +990,15 @@ function rafterJump(B, u) {
   u.rafter = false; u.st.range = u.st.groundRange || u.st.range; u.target = null;
   u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
+}
+// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. Safe from permadeath, out for the rest of the siege
+function recallsMax(run) { return 1 + (run.tech.sally ? 1 : 0); }
+function recallsLeft(B) { return recallsMax(B.run) - (B.recalled || 0); }
+function recallHero(B, u) {
+  if (!u || !u.alive || u.temp || u.leap || u.dash || recallsLeft(B) <= 0 || B.done) return false;
+  u.alive = false; u.recalled = true; u.target = null; B.recalled = (B.recalled || 0) + 1;
+  for (const e of B.enemies) if (e.target === u) e.target = null;
+  FX.puff(u.x, u.y, 1); FX.text(u.x, u.y - 24, 'CALLED BACK', '#9fd8ff', true); FX.sound('whoosh'); return true;
 }
 // how grand a signature looks: signature power x ability power, square-rooted, about 1 early and up to 3 late
 function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3.6, Math.sqrt((st.sigMul || 1) * (st.ap || 1)) * (1 + 0.12 * (st.rarity || 0)))); }

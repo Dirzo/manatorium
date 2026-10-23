@@ -91,6 +91,9 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .speed button { border: 0; background: var(--panel-2); padding: 6px 10px; font-family: var(--f-display); }
 .speed button[aria-pressed="true"] { background: var(--sky); color: #04202e; }
 .hammerbtn { position: relative; overflow: hidden; }
+.pressbtn { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.pressbtn small { font-size: 10px; opacity: .75; font-weight: 400; }
+.pressbtn.on { background: #ff9a3c; color: #2a1000; box-shadow: 0 0 0 2px #ffd84a inset; }
 .hammerbtn .cdfill { position: absolute; inset: 0; background: rgba(15,20,48,0.65); transform-origin: left; pointer-events: none; }
 .hammerbtn.armed { background: var(--rose); color: #2a0010; animation: pulse .6s infinite alternate; }
 @keyframes pulse { to { filter: brightness(1.25); } }
@@ -1440,6 +1443,10 @@ html.m-land .tk-opt { width: 30vw; padding: 5px 8px 6px; } html.m-land .tk-opt q
 html.m-land .tk-card { top: calc(34px + env(safe-area-inset-top, 0px)); } html.m-land .tk-card h2 { font-size: 20px; }
 html.m-land .tk-temper { top: calc(36px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); padding: 4px 8px; width: min(180px, 30vw); }
 html.m-land .tk-temper b { font-size: 14px; } html.m-land .tk-temper p { font-size: 11px; } html.m-land .tk-temper .tk-tl { display: none; }
+html.m-land #pressBtn:not([hidden]) { margin-top: auto; min-height: 44px; }
+html.m-land #pressBtn:not([hidden]) + #beginBtn { margin-top: 6px; }
+html.m-port #pressBtn { flex: 0 0 auto; min-width: 0; }
+html.m #pressBtn small { font-size: 9px; }
 
 /* ===== Store demo: road-ahead screen and title note ===== */
 .rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
@@ -1478,6 +1485,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
       <div class="speed" role="group" aria-label="Game speed"><button id="sp1" aria-pressed="true">1×</button><button id="sp2" aria-pressed="false">2×</button><button id="sp4" aria-pressed="false">4×</button></div>
       <button class="btn hammerbtn" id="hammerBtn" disabled><span class="cdfill" id="hammerCd"></span><img class="px" id="hammerIcon" alt="">Sky Hammer <kbd>Q</kbd></button>
       <button class="btn powerbtn" id="powerBtn" hidden disabled><span class="cdfill" id="powerCd"></span><span id="powerName">Power</span> <kbd>E</kbd></button>
+      <button class="btn pressbtn" id="pressBtn" hidden aria-pressed="false" title="Press the attack: a tougher siege for double loot, more gold and a better next draft">⚑ Hold</button>
       <button class="btn go" id="beginBtn">Begin siege <kbd>Space</kbd></button>
       <span id="recBadge" class="recb" hidden></span>
       <button class="btn ghost small" id="soundBtn" aria-pressed="true" title="Music and effects volume">♪ Sound</button>
@@ -3624,6 +3632,10 @@ function hpMul(s) { return foeRamp(s, BAL.foeHp) * Math.pow(BAL.hpBase, s - 1) *
 function atkMul(s) { return foeRamp(s, BAL.foeAtk) * Math.pow(BAL.atkBase, s - 1) * Math.sqrt(hordeDiff(s) * lateRamp(s)); }
 function goldMul(s) { return 1 + 0.04 * (s - 1); }
 function isBossSiege(s) { return s % 5 === 0; }
+// Press or hold (Cam 2026-10-23): before a regular siege, choose to press the attack for a tougher wave and bigger rewards
+const PRESS = { budget: 1.35, elites: 1, gold: 0.4 };
+function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
+function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
 const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.7, shardgoose: 2.5 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
@@ -3843,6 +3855,7 @@ function genWave(s, mods, tac, finale) {
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
   if (mods.fewer) budget *= 0.75;
+  if (mods.press) budget *= PRESS.budget;
   if (tac === 'swarm') budget *= 1.5; if (tac === 'shieldwall') budget *= 0.85;
   const list = [];
   const boss = finale ? 'shardgoose' : isBossSiege(s) ? bossFor(s) : null;
@@ -3850,6 +3863,7 @@ function genWave(s, mods, tac, finale) {
   let elites = within >= 3 ? 1 + Math.floor(s / 14) : within === 2 && s > 5 ? 1 : 0;
   if (cyc > 0) elites += 1;
   if (tac === 'captain') elites = Math.max(1, elites);
+  if (mods.press) elites += PRESS.elites;
   for (let i = 0; i < elites && budget > ENEMIES[F.elite].cost; i++) { list.push(F.elite); budget -= ENEMIES[F.elite].cost; }
   // swarm: later sieges send more, individually weaker foes for the same total power, so the horde looks bigger every time
   const sw = swarmK(s) * BAL.thin; budget *= sw;
@@ -3884,7 +3898,7 @@ function makeUnit(side, o) {
 
 function startBattle(run, meta) {
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready'), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   B.totalSpawn = B.queue.length;
@@ -4586,6 +4600,15 @@ function rafterJump(B, u) {
   u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
+// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. Safe from permadeath, out for the rest of the siege
+function recallsMax(run) { return 1 + (run.tech.sally ? 1 : 0); }
+function recallsLeft(B) { return recallsMax(B.run) - (B.recalled || 0); }
+function recallHero(B, u) {
+  if (!u || !u.alive || u.temp || u.leap || u.dash || recallsLeft(B) <= 0 || B.done) return false;
+  u.alive = false; u.recalled = true; u.target = null; B.recalled = (B.recalled || 0) + 1;
+  for (const e of B.enemies) if (e.target === u) e.target = null;
+  FX.puff(u.x, u.y, 1); FX.text(u.x, u.y - 24, 'CALLED BACK', '#9fd8ff', true); FX.sound('whoosh'); return true;
+}
 // how grand a signature looks: signature power x ability power, square-rooted, about 1 early and up to 3 late
 function sigPower(u) { const st = u && u.st; if (!st) return 1; return Math.max(0.8, Math.min(3.6, Math.sqrt((st.sigMul || 1) * (st.ap || 1)) * (1 + 0.12 * (st.rarity || 0)))); }
 function castSignature(B, u) {
@@ -5065,7 +5088,7 @@ function newRun(meta) {
 // Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
-function draftBosses(run) { return castleTier(run); }
+function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
 // Legendary and God rolls can also turn up the legends that only exist at that rarity (hero.fixed), and they show up 3x as often
 function draftPool(cands, rarity) { const pool = cands.filter(h => !h.fixed || h.fixed === rarity); return pool.flatMap(h => h.fixed ? [h, h, h] : [h]); }
 function draftCard(id, run, rarity) { const d = HERO_BY_ID[id]; return { id, rarity: d.fixed || (rarity != null ? rarity : rollRarity(draftBosses(run))), temper: rollTemper() }; }
@@ -5076,6 +5099,7 @@ function draftOptions(run, meta, focus) {
     if (!pool.length) break;
     out.push(draftCard(pick(pool).id, run, rar));
   }
+  if (draftBosses(run) > castleTier(run)) for (const o of out) o.boost = true;
   // a focused search guarantees one card of the class or race you asked for
   if (focus && out.length) { const rar = out[0].rarity, fits = draftPool(HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id)), rar);
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run, rar); }
@@ -5091,6 +5115,7 @@ function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.l
 function addDraftedHero(run, opt) {
   const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].fixed || opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h);
+  if (opt.boost && run.pressDraft > 0) run.pressDraft--;
   // the first legend drafted is the keep's voice in boss talk (talk.js)
   if (!run.voice) run.voice = { uid: h.uid, id: h.id, name: heroDisplayName(h) };
   run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
@@ -5299,16 +5324,17 @@ function finishSiege(run, meta, B) {
   const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
-    const gained = u.alive ? Math.round((u.xp + survive) * xpMul * catchUpMul(run, h)) : 0;
+    // a champion called back keeps what they learned, but misses the reward for holding the line
+    const safe = u.alive || u.recalled, gained = safe ? Math.round((u.xp + (u.alive ? survive : 0)) * xpMul * catchUpMul(run, h)) : 0;
     const lv = addXP(h, gained);
-    if (!u.alive) run.stats.deaths++;
+    if (!safe) run.stats.deaths++;
     const bs = heroBattleStats(B, u);
-    rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: u.alive,
-      xp: gained, lost: u.alive ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
+    rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: safe, recalled: !!u.recalled,
+      xp: gained, lost: safe ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
   }
   // permadeath (Cam 2026-10-15): a legend who falls in a siege is gone for good; their items go back to the stash
   rep.fallen = [];
-  for (const u of B.heroes.filter(h => !h.temp && !h.alive)) { const h = u.inst; if (!run.roster.includes(h)) continue;
+  for (const u of B.heroes.filter(h => !h.temp && !h.alive && !h.recalled)) { const h = u.inst; if (!run.roster.includes(h)) continue;
     for (const it of run.stash) if (it.holder === h.uid) it.holder = null; h.items = [];
     run.roster = run.roster.filter(x => x !== h); rep.fallen.push({ uid: h.uid, id: h.id, rarity: heroRarity(h), level: h.level, name: heroDisplayName(h) });
     (run.stats.fallen = run.stats.fallen || []).push({ s, id: h.id, rarity: heroRarity(h), lv: h.level }); }
@@ -5325,6 +5351,8 @@ function finishSiege(run, meta, B) {
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
+  // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
+  if (pressOn(run)) { const g = Math.round(B.goldEarned * PRESS.gold); run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
@@ -6797,6 +6825,13 @@ function drawCathedral(ctx, z, x, y, k, P, fade) { const up = Math.min(1, z.t / 
 // ===== Arena renderer =====
 const R = { cv: null, ctx: null, lo: null, lctx: null, k: 3, bg: {}, castleKey: '', castle: null, clouds: [], t: 0 };
 function hash(x, y) { let h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
+// the call-back chip over the selected champion during a siege (tap it to pull them into the keep)
+function recallChipPos(u) { return { x: Math.round(u.x) + 7, y: Math.round(u.y - 30 * (u.vscale || 1) - (u.z || 0)) }; }
+function drawRecallChip(g, u, t) {
+  const p = recallChipPos(u), hot = u.hp < u.maxHp * 0.35 && Math.floor(t * 4) % 2;
+  g.fillStyle = OUTLINE; g.fillRect(p.x - 1, p.y - 1, 11, 10); g.fillStyle = hot ? '#ffd84a' : '#9fd8ff'; g.fillRect(p.x, p.y, 9, 8);
+  g.fillStyle = OUTLINE; g.fillRect(p.x + 3, p.y + 2, 4, 1); g.fillRect(p.x + 6, p.y + 2, 1, 4); g.fillRect(p.x + 3, p.y + 5, 4, 1); g.fillRect(p.x + 2, p.y + 1, 1, 3); g.fillRect(p.x + 1, p.y + 2, 1, 1);
+}
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
 function initRender(canvas) {
@@ -7129,6 +7164,7 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
+  if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B);
   // zones
   if (B) for (const z of B.zones) {
@@ -8446,6 +8482,8 @@ function botBattle(B, dt, maxT) {
   while (!B.done && t < maxT) {
     stepBattle(B, dt); t += dt;
     if (B.hammer.cd <= 0 && !B.hammer.pending) { const e = densest(B.enemies.filter(e => e.x < 360), 30); if (e) castHammer(B, e.x, e.y); }
+    // call back a badly hurt champion while the rest can still hold the line
+    if (recallsLeft(B) > 0 && B.queue.length + B.enemies.filter(e => e.alive).length > 3) { const live = B.heroes.filter(h => h.alive && !h.temp); const u = live.length > 2 && live.filter(h => h.hp < h.maxHp * 0.22).sort((a, b) => (b.inst.rarity || 0) * 5 + b.inst.level - (a.inst.rarity || 0) * 5 - a.inst.level)[0]; if (u) recallHero(B, u); }
     if (B.run.castleEl && B.cpow.cd <= 0) { const e = densest(B.enemies, 40); if (e && (B.enemies.filter(x => x.alive).length > 5 || e.boss)) castCastlePower(B, e.x, e.y); }
   }
   if (!B.done) B.done = 'timeout';
@@ -8470,6 +8508,11 @@ function botBossTalk(run, style) {
   if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
+// press the attack when the last siege went cleanly and the walls are healthy
+function botPress(run, style, log) {
+  const last = log[log.length - 1];
+  run.press = style === 'chaos' ? Math.random() < 0.3 : !!last && last.deaths === 0 && last.castle >= 70 && run.castle.hp >= run.castle.max * 0.6 && !isBossSiege(run.siege + 1);
+}
 // one full run. opts: { dt, maxSiege, onSiege }
 function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
@@ -8481,6 +8524,7 @@ function botPlayRun(style, meta, opts = {}) {
     botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
+    botPress(run, style, log);
     botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
@@ -8491,6 +8535,7 @@ function botPlayRun(style, meta, opts = {}) {
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
@@ -8882,6 +8927,8 @@ const UI = {
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
+    const pr = $('pressBtn'); pr.hidden = G.phase !== 'prep' || !canPress(run);
+    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · 2× loot</small>' : '⚑ Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
     else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : 'The keep fell'; }
@@ -8946,7 +8993,7 @@ const UI = {
   renderStats() {
     const run = G.run, B = G.B, box = $('statsChart'); if (!box || !run) return;
     let rows; const live = B && G.phase === 'siege';
-    if (live) rows = B.heroes.filter(u => !u.temp && u.inst).map(u => Object.assign({ uid: u.inst.uid, id: u.inst.id, alive: u.alive }, heroBattleStats(B, u)));
+    if (live) rows = B.heroes.filter(u => !u.temp && u.inst).map(u => Object.assign({ uid: u.inst.uid, id: u.inst.id, alive: u.alive || !!u.recalled }, heroBattleStats(B, u)));
     else rows = (run.lastStats || []).filter(r => run.roster.some(h => h.uid === r.uid));
     UI.statsData = {};
     if (!rows.length) { box.innerHTML = ''; box.hidden = true; const tc = $('teamChart'); if (tc) tc.innerHTML = '<p class="note">Fills in once a siege starts.</p>'; UI.tipRefresh(); return; }
@@ -9186,7 +9233,7 @@ const UI = {
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
-      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
+      const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
         <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
@@ -9213,7 +9260,9 @@ const UI = {
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
-      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button></div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
+      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
+        if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
+        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
         ${ascendBtn(run, h, 'iact')}
@@ -9305,7 +9354,7 @@ const UI = {
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
       h += `<div class="xrow ${hr.alive ? '' : 'dead'}"><img class="px" src="${portrait(inst ? heroSpriteKey(inst) : 'h:' + hr.id)}" alt=""><div><b>${esc(inst ? heroDisplayName(inst) : HERO_BY_ID[hr.id].name)}</b>
-        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
+        ${hr.recalled ? `<span class="xpgain">+${hr.xp} XP · called back in time</span>` : hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
         <div class="xpbar big" data-from="${hr.levels ? 0 : Math.min(100, 100 * hr.fromXp / xpNeed(hr.fromLv))}" data-to="${Math.min(100, 100 * hr.toXp / xpNeed(hr.toLv))}"><i></i></div></div>
         <div class="lvl">${hr.levels ? `<span class="lvup">LEVEL UP</span><b>Lv ${hr.fromLv} → ${hr.toLv}</b>` : `<b>Lv ${hr.toLv}</b>`}</div></div>`; }
     h += `</div><div class="eyebrow" style="margin-top:8px">Battle stats${mvp ? ` · MVP ${esc(HERO_BY_ID[mvp.id].name)}` : ''}</div>${UI.statsChartHTML(rep.heroes, 'Hover a bar', true)}`;
@@ -11815,6 +11864,7 @@ function endSiege() {
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
     if (taunted) run.post.push('loot');
+    if (rep.press) run.post.push('loot');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
@@ -11998,6 +12048,7 @@ G.act = function (act, arg) {
     case 'h-items': UI.openPage('armory'); return;
     case 'pickhero': G.select(arg); return;
     case 'h-bench': hero.place = null; break;
+    case 'h-recall': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && recallHero(G.B, u)) { TEL.event('recall', { id: hero.id, s: run.siege, hp: Math.round(100 * u.hp / u.maxHp) }); UI.renderInspector(); UI.hud(); } return; }
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
@@ -12051,6 +12102,8 @@ function canvasDown(e) {
   const p = toLogical(e); G.mouse = p;
   if (G.phase === 'siege' && G.B && G.armed === 'hammer') { if (castHammer(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
   if (G.phase === 'siege' && G.B && G.armed === 'power') { if (castCastlePower(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
+  if (G.phase === 'siege' && G.B && G.selected && !G.B.done && recallsLeft(G.B) > 0) { const u = G.B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === G.selected);
+    if (u) { const c = recallChipPos(u); if (p.x >= c.x - 3 && p.x <= c.x + 12 && p.y >= c.y - 3 && p.y <= c.y + 11) { G.act('h-recall', u.inst.uid); return; } } }
   if (G.phase === 'siege' && G.B) { const u = G.B.heroes.find(u => u.alive && !u.temp && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2); if (u) { if (u.rafter && G.selected === u.inst.uid) { if (rafterJump(G.B, u)) UI.renderInspector(); } else G.select(u.inst.uid); } return; }
   if (G.phase !== 'prep') return;
   const h = heroAtPoint(p);
@@ -12238,6 +12291,7 @@ function wire() {
   document.addEventListener('pointermove', docMove);
   document.addEventListener('pointerup', docUp);
   $('beginBtn').onclick = () => { SFX.init(); beginSiege(); };
+  $('pressBtn').onclick = () => { if (G.phase !== 'prep' || !canPress(G.run)) return; G.run.press = !G.run.press; SFX.play('click'); TEL.event('press', { on: G.run.press, s: G.run.siege }); save(); UI.hud(); };
   $('sp1').onclick = () => { G.speed = 1; UI.hud(); };
   $('sp2').onclick = () => { G.speed = 2; UI.hud(); };
   $('sp4').onclick = () => { G.speed = 4; UI.hud(); };
@@ -12255,6 +12309,7 @@ function wire() {
     else if (e.key === 'c' || e.key === 'C') UI.setRoster(!$('roster').classList.contains('collapsed'));
     else if (e.key === 's' || e.key === 'S') UI.setIntel($('intel').classList.contains('closed'));
     else if (e.key === '1') { G.speed = 1; UI.hud(); } else if (e.key === '2') { G.speed = 2; UI.hud(); } else if (e.key === '4') { G.speed = 4; UI.hud(); }
+    else if ((e.key === 'r' || e.key === 'R') && G.B && G.phase === 'siege' && G.selected) G.act('h-recall', G.selected);
     else if ((e.key === 'q' || e.key === 'Q') && G.B && G.phase === 'siege' && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; UI.hud(); }
     else if (e.key === 'e' || e.key === 'E') armPower();
     else if (e.key === 'Escape') { if (G.armed) { G.armed = null; UI.hud(); } else if (UI.page) UI.openPage(null); }

@@ -157,6 +157,7 @@ function endSiege() {
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
     if (taunted) run.post.push('loot');
+    if (rep.press) run.post.push('loot');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
@@ -340,6 +341,7 @@ G.act = function (act, arg) {
     case 'h-items': UI.openPage('armory'); return;
     case 'pickhero': G.select(arg); return;
     case 'h-bench': hero.place = null; break;
+    case 'h-recall': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && recallHero(G.B, u)) { TEL.event('recall', { id: hero.id, s: run.siege, hp: Math.round(100 * u.hp / u.maxHp) }); UI.renderInspector(); UI.hud(); } return; }
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
@@ -393,6 +395,8 @@ function canvasDown(e) {
   const p = toLogical(e); G.mouse = p;
   if (G.phase === 'siege' && G.B && G.armed === 'hammer') { if (castHammer(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
   if (G.phase === 'siege' && G.B && G.armed === 'power') { if (castCastlePower(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
+  if (G.phase === 'siege' && G.B && G.selected && !G.B.done && recallsLeft(G.B) > 0) { const u = G.B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === G.selected);
+    if (u) { const c = recallChipPos(u); if (p.x >= c.x - 3 && p.x <= c.x + 12 && p.y >= c.y - 3 && p.y <= c.y + 11) { G.act('h-recall', u.inst.uid); return; } } }
   if (G.phase === 'siege' && G.B) { const u = G.B.heroes.find(u => u.alive && !u.temp && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2); if (u) { if (u.rafter && G.selected === u.inst.uid) { if (rafterJump(G.B, u)) UI.renderInspector(); } else G.select(u.inst.uid); } return; }
   if (G.phase !== 'prep') return;
   const h = heroAtPoint(p);
@@ -580,6 +584,7 @@ function wire() {
   document.addEventListener('pointermove', docMove);
   document.addEventListener('pointerup', docUp);
   $('beginBtn').onclick = () => { SFX.init(); beginSiege(); };
+  $('pressBtn').onclick = () => { if (G.phase !== 'prep' || !canPress(G.run)) return; G.run.press = !G.run.press; SFX.play('click'); TEL.event('press', { on: G.run.press, s: G.run.siege }); save(); UI.hud(); };
   $('sp1').onclick = () => { G.speed = 1; UI.hud(); };
   $('sp2').onclick = () => { G.speed = 2; UI.hud(); };
   $('sp4').onclick = () => { G.speed = 4; UI.hud(); };
@@ -597,6 +602,7 @@ function wire() {
     else if (e.key === 'c' || e.key === 'C') UI.setRoster(!$('roster').classList.contains('collapsed'));
     else if (e.key === 's' || e.key === 'S') UI.setIntel($('intel').classList.contains('closed'));
     else if (e.key === '1') { G.speed = 1; UI.hud(); } else if (e.key === '2') { G.speed = 2; UI.hud(); } else if (e.key === '4') { G.speed = 4; UI.hud(); }
+    else if ((e.key === 'r' || e.key === 'R') && G.B && G.phase === 'siege' && G.selected) G.act('h-recall', G.selected);
     else if ((e.key === 'q' || e.key === 'Q') && G.B && G.phase === 'siege' && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; UI.hud(); }
     else if (e.key === 'e' || e.key === 'E') armPower();
     else if (e.key === 'Escape') { if (G.armed) { G.armed = null; UI.hud(); } else if (UI.page) UI.openPage(null); }

@@ -81,6 +81,9 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 600; margin: 0; tex
 .speed button { border: 0; background: var(--panel-2); padding: 6px 10px; font-family: var(--f-display); }
 .speed button[aria-pressed="true"] { background: var(--sky); color: #04202e; }
 .hammerbtn { position: relative; overflow: hidden; }
+.pressbtn { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.pressbtn small { font-size: 10px; opacity: .75; font-weight: 400; }
+.pressbtn.on { background: #ff9a3c; color: #2a1000; box-shadow: 0 0 0 2px #ffd84a inset; }
 .hammerbtn .cdfill { position: absolute; inset: 0; background: rgba(15,20,48,0.65); transform-origin: left; pointer-events: none; }
 .hammerbtn.armed { background: var(--rose); color: #2a0010; animation: pulse .6s infinite alternate; }
 @keyframes pulse { to { filter: brightness(1.25); } }

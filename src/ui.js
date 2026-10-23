@@ -269,6 +269,8 @@ const UI = {
     if (run.castleEl) { const P = CASTLE_POWERS[run.castleEl]; $('powerName').textContent = P.name; pb.style.setProperty('--ec', ELEMENTS[run.castleEl].col);
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
+    const pr = $('pressBtn'); pr.hidden = G.phase !== 'prep' || !canPress(run);
+    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · 2× loot</small>' : '⚑ Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
     else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : 'The keep fell'; }
@@ -333,7 +335,7 @@ const UI = {
   renderStats() {
     const run = G.run, B = G.B, box = $('statsChart'); if (!box || !run) return;
     let rows; const live = B && G.phase === 'siege';
-    if (live) rows = B.heroes.filter(u => !u.temp && u.inst).map(u => Object.assign({ uid: u.inst.uid, id: u.inst.id, alive: u.alive }, heroBattleStats(B, u)));
+    if (live) rows = B.heroes.filter(u => !u.temp && u.inst).map(u => Object.assign({ uid: u.inst.uid, id: u.inst.id, alive: u.alive || !!u.recalled }, heroBattleStats(B, u)));
     else rows = (run.lastStats || []).filter(r => run.roster.some(h => h.uid === r.uid));
     UI.statsData = {};
     if (!rows.length) { box.innerHTML = ''; box.hidden = true; const tc = $('teamChart'); if (tc) tc.innerHTML = '<p class="note">Fills in once a siege starts.</p>'; UI.tipRefresh(); return; }
@@ -573,7 +575,7 @@ const UI = {
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
-      const pend = u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
+      const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
         <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level}</span>${where}${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
@@ -600,7 +602,9 @@ const UI = {
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
-      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button></div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
+      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
+        if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
+        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench">Bench</button>` : `<button class="btn small" data-iact="place">Place</button>`}
         ${ascendBtn(run, h, 'iact')}
@@ -692,7 +696,7 @@ const UI = {
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
       h += `<div class="xrow ${hr.alive ? '' : 'dead'}"><img class="px" src="${portrait(inst ? heroSpriteKey(inst) : 'h:' + hr.id)}" alt=""><div><b>${esc(inst ? heroDisplayName(inst) : HERO_BY_ID[hr.id].name)}</b>
-        ${hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
+        ${hr.recalled ? `<span class="xpgain">+${hr.xp} XP · called back in time</span>` : hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
         <div class="xpbar big" data-from="${hr.levels ? 0 : Math.min(100, 100 * hr.fromXp / xpNeed(hr.fromLv))}" data-to="${Math.min(100, 100 * hr.toXp / xpNeed(hr.toLv))}"><i></i></div></div>
         <div class="lvl">${hr.levels ? `<span class="lvup">LEVEL UP</span><b>Lv ${hr.fromLv} → ${hr.toLv}</b>` : `<b>Lv ${hr.toLv}</b>`}</div></div>`; }
     h += `</div><div class="eyebrow" style="margin-top:8px">Battle stats${mvp ? ` · MVP ${esc(HERO_BY_ID[mvp.id].name)}` : ''}</div>${UI.statsChartHTML(rep.heroes, 'Hover a bar', true)}`;

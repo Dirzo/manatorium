@@ -22,7 +22,7 @@ function newRun(meta) {
 // Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
-function draftBosses(run) { return castleTier(run); }
+function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
 // Legendary and God rolls can also turn up the legends that only exist at that rarity (hero.fixed), and they show up 3x as often
 function draftPool(cands, rarity) { const pool = cands.filter(h => !h.fixed || h.fixed === rarity); return pool.flatMap(h => h.fixed ? [h, h, h] : [h]); }
 function draftCard(id, run, rarity) { const d = HERO_BY_ID[id]; return { id, rarity: d.fixed || (rarity != null ? rarity : rollRarity(draftBosses(run))), temper: rollTemper() }; }
@@ -33,6 +33,7 @@ function draftOptions(run, meta, focus) {
     if (!pool.length) break;
     out.push(draftCard(pick(pool).id, run, rar));
   }
+  if (draftBosses(run) > castleTier(run)) for (const o of out) o.boost = true;
   // a focused search guarantees one card of the class or race you asked for
   if (focus && out.length) { const rar = out[0].rarity, fits = draftPool(HEROES.filter(h => !own.has(h.id) && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id)), rar);
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run, rar); }
@@ -48,6 +49,7 @@ function catchUpMul(run, h) { const top = Math.max(0, ...run.roster.map(x => x.l
 function addDraftedHero(run, opt) {
   const h = { uid: nuid(), id: opt.id, rarity: HERO_BY_ID[opt.id].fixed || opt.rarity || 0, level: joinLevel(run), xp: 0, temper: opt.temper || rollTemper(), el: null, items: [], place: null, mustache: false };
   run.roster.push(h); autoPlace(run, h);
+  if (opt.boost && run.pressDraft > 0) run.pressDraft--;
   // the first legend drafted is the keep's voice in boss talk (talk.js)
   if (!run.voice) run.voice = { uid: h.uid, id: h.id, name: heroDisplayName(h) };
   run.stats.drafts.push({ s: run.siege, id: opt.id, rarity: opt.rarity || 0, kind: draftKind(run) });
@@ -256,16 +258,17 @@ function finishSiege(run, meta, B) {
   const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
-    const gained = u.alive ? Math.round((u.xp + survive) * xpMul * catchUpMul(run, h)) : 0;
+    // a champion called back keeps what they learned, but misses the reward for holding the line
+    const safe = u.alive || u.recalled, gained = safe ? Math.round((u.xp + (u.alive ? survive : 0)) * xpMul * catchUpMul(run, h)) : 0;
     const lv = addXP(h, gained);
-    if (!u.alive) run.stats.deaths++;
+    if (!safe) run.stats.deaths++;
     const bs = heroBattleStats(B, u);
-    rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: u.alive,
-      xp: gained, lost: u.alive ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
+    rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: safe, recalled: !!u.recalled,
+      xp: gained, lost: safe ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
   }
   // permadeath (Cam 2026-10-15): a legend who falls in a siege is gone for good; their items go back to the stash
   rep.fallen = [];
-  for (const u of B.heroes.filter(h => !h.temp && !h.alive)) { const h = u.inst; if (!run.roster.includes(h)) continue;
+  for (const u of B.heroes.filter(h => !h.temp && !h.alive && !h.recalled)) { const h = u.inst; if (!run.roster.includes(h)) continue;
     for (const it of run.stash) if (it.holder === h.uid) it.holder = null; h.items = [];
     run.roster = run.roster.filter(x => x !== h); rep.fallen.push({ uid: h.uid, id: h.id, rarity: heroRarity(h), level: h.level, name: heroDisplayName(h) });
     (run.stats.fallen = run.stats.fallen || []).push({ s, id: h.id, rarity: heroRarity(h), lv: h.level }); }
@@ -282,6 +285,8 @@ function finishSiege(run, meta, B) {
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
+  // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
+  if (pressOn(run)) { const g = Math.round(B.goldEarned * PRESS.gold); run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
