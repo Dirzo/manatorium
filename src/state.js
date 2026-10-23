@@ -170,8 +170,15 @@ function castleOptions(run) {
 function cellFree(run, c, r, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'grid' && h.place.c === c && h.place.r === r); }
 function rafterFree(run, i, except) { return !run.roster.some(h => h !== except && h.place && h.place.type === 'rafter' && h.place.i === i); }
 function isRangedHero(id) { const d = HERO_BY_ID[id]; return CLASS_BASE[d.cls].range > 40; }
+function fieldCount(run, except) { return run.roster.filter(h => h !== except && h.place && !h.vault && !h.fled).length; }
+function fieldFull(run, except) { return !run.finale && fieldCount(run, except) >= fieldCap(run); }
+// more champions on the field than the barracks allow (old saves, champions back from the goose's nest): the weakest go to the bench
+function enforceField(run) {
+  if (run.finale) return; const on = run.roster.filter(h => h.place && !h.vault && !h.fled), cap = fieldCap(run); if (on.length <= cap) return;
+  on.sort((a, b) => heroRarity(b) * 3 + heroStar(b) * 4 + b.level / 10 - (heroRarity(a) * 3 + heroStar(a) * 4 + a.level / 10)).slice(cap).forEach(h => { h.place = null; });
+}
 function autoPlace(run, h) {
-  if (h.vault) return;
+  if (h.vault || fieldFull(run, h)) return;
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
   if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];

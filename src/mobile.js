@@ -16,7 +16,7 @@ const MOB = {
     MOB.touch = matchMedia('(pointer: coarse)').matches || /[?&]mobile\b/.test(location.search);
     const de = document.documentElement;
     de.classList.toggle('touch', MOB.touch); de.classList.toggle('native', MOB.native);
-    if (MOB.touch) $('prepHint').textContent = 'Tap a champion card, then tap the field to place them. Drag to move them.';
+    if (MOB.touch) $('prepHint').textContent = 'Tap a champion card, then tap the field to place them, or tap a field champion to swap. Drag to move them.';
     // a probe that reports the notch and home-bar insets
     const pr = document.createElement('div'); pr.id = 'safeProbe'; document.body.appendChild(pr); MOB.probe = pr;
     // phone-only controls: the "more" menu, the details toggle and the details panel wrapper
@@ -186,6 +186,8 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   canvasDown = function (e) {
     if (MOB.touch && e.pointerType !== 'mouse' && G.phase === 'prep' && G.run && G.selected) {
       const p = toLogical(e), h = G.run.roster.find(x => x.uid === G.selected);
+      // a bench champion tapped onto a field champion: they trade places
+      const t = heroAtPoint(p); if (h && !h.place && t && t !== h && t.place) { swapBench(h, t); UI.coachDone('place'); changed(); return; }
       if (h && !heroAtPoint(p)) { const s = slotAt(p); if (slotOk(h, s)) { G.mouse = p; placeHero(h, s); UI.coachDone('place'); changed(); return; } if (s && s.type === 'rafter') { UI.toast('Only ranged heroes can stand on the rafters.', true); return; } }
     }
     return down0(e);
