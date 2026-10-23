@@ -30,7 +30,7 @@ const ACHIEVEMENTS = [
   { id: 'tech10', group: 'Castle', name: 'Tech Tycoon', desc: "Build 10 techs in the Artificers' Hall in one run.", dia: 21, test: run => Object.keys(run.tech).length >= 10 },
   { id: 'castleEl', group: 'Castle', name: 'The Keep Awakens', desc: 'Give your castle an element.', dia: 11, test: run => !!run.castleEl },
   { id: 'walls', group: 'Castle', name: 'Not a Scratch', desc: 'End siege 10 with the castle at full HP.', dia: 21, test: run => (A_(run).fullWalls || 0) >= 10 },
-  { id: 'rich', group: 'Castle', name: 'Dragon Hoard', desc: 'Hold 500 gold at once.', dia: 14, test: run => (A_(run).maxGold || 0) >= 500 },
+  { id: 'rich', group: 'Castle', name: 'Dragon Hoard', desc: 'Hold 50 gold at once.', dia: 14, test: run => (A_(run).maxGold || 0) >= 50 },
   // stories and silliness
   { id: 'landlord', group: 'Stories', name: 'Good Landlord', desc: 'Let Grubnose rent the moat.', dia: 14, test: run => (run.storySeen || []).includes('story0_0') && !!run.discovered.goose },
   { id: 'kind', group: 'Stories', name: 'Kill Them With Kindness', desc: 'Beat 3 bosses who were holding back because you were nice to them.', dia: 29, test: run => (A_(run).soft || 0) >= 3 },

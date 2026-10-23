@@ -1,6 +1,13 @@
 // ===== Arena renderer =====
 const R = { cv: null, ctx: null, lo: null, lctx: null, k: 3, bg: {}, castleKey: '', castle: null, clouds: [], t: 0 };
 function hash(x, y) { let h = x * 374761393 + y * 668265263; h = (h ^ (h >> 13)) * 1274126177; return ((h ^ (h >> 16)) >>> 0) / 4294967295; }
+// the call-back chip over the selected champion during a siege (tap it to pull them into the keep)
+function recallChipPos(u) { return { x: Math.round(u.x) + 7, y: Math.round(u.y - 30 * (u.vscale || 1) - (u.z || 0)) }; }
+function drawRecallChip(g, u, t) {
+  const p = recallChipPos(u), hot = u.hp < u.maxHp * 0.35 && Math.floor(t * 4) % 2;
+  g.fillStyle = OUTLINE; g.fillRect(p.x - 1, p.y - 1, 11, 10); g.fillStyle = hot ? '#ffd84a' : '#9fd8ff'; g.fillRect(p.x, p.y, 9, 8);
+  g.fillStyle = OUTLINE; g.fillRect(p.x + 3, p.y + 2, 4, 1); g.fillRect(p.x + 6, p.y + 2, 1, 4); g.fillRect(p.x + 3, p.y + 5, 4, 1); g.fillRect(p.x + 2, p.y + 1, 1, 3); g.fillRect(p.x + 1, p.y + 2, 1, 1);
+}
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
 function initRender(canvas) {
@@ -141,7 +148,7 @@ function drawUnit(g, u, t, opts = {}) {
   const S = SPR[u.key] || ensureSprite(u.key); if (!S) return;
   const sc = (S.scale || u.scale || 1) * (u.vscale || 1), size = Math.round(20 * sc);
   const fr = opts.frame || unitFrame(u, t);
-  const nativeFace = u.side === 'enemy' ? -1 : 1;
+  const nativeFace = u.nativeFace || (u.side === 'enemy' ? -1 : 1);
   const flip = (u.facing || nativeFace) !== nativeFace;
   const bob = u.flying ? Math.round(Math.sin((t + (u.phase || 0)) * 6) * 1.5) : 0;
   const x = Math.round(u.x), y = Math.round(u.y - (u.z || 0) + bob);
@@ -176,11 +183,18 @@ function drawUnit(g, u, t, opts = {}) {
 }
 
 // pulsing red chevrons on the right edge show where the horde walks in
-function drawSpawnArrows(g, t, live) {
+// prep only: faint dashed lines between the three lanes, so placement reads at a glance
+function drawLaneLines(g, t) {
+  g.fillStyle = 'rgba(255,255,255,0.16)';
+  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * laneH() + 6); for (let x = CASTLE_X + 8; x < W - 8; x += 8) g.fillRect(x, y, 4, 1); }
+}
+function drawSpawnArrows(g, t, live, lanes) {
   const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
   for (let i = 0; i < 3; i++) {
-    const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3);
-    for (let j = 0; j < 3; j++) {
+    const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3), n = lanes ? (i === lanes.heavy && lanes.w[i] > 0.4 ? 3 : lanes.w[i] > 0.3 ? 2 : 1) : 3;
+    // the lane the scouts expect the elites in gets a gold crown marker
+    if (lanes && lanes.elite === i && !live) { const x = W - 40, y = cy - 3; g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 1, 9, 6); g.fillStyle = '#ffd84a'; g.fillRect(x, y + 1, 7, 3); g.fillRect(x, y - 1, 1, 2); g.fillRect(x + 3, y - 1, 1, 2); g.fillRect(x + 6, y - 1, 1, 2); }
+    for (let j = 0; j < n; j++) {
       const ph = (t * 1.6 + j / 3) % 1, x = Math.round(W - 6 - ph * 22), a = Math.sin(ph * Math.PI);
       g.globalAlpha = a * (live ? 0.9 : 0.75);
       g.fillStyle = OUTLINE; for (let d = -5; d <= 5; d++) g.fillRect(x + Math.abs(d) - 1, cy + d, 4, 1);
@@ -333,7 +347,9 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
-  if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B);
+  if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
+  if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
+  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t);
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();

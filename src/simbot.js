@@ -8,10 +8,12 @@ const BOT_STYLES = {
   chaos:    { name: 'Chaos',    focus: null,  comps: null,                                 techs: null, desc: 'Picks at random. The baseline for "a new player clicking things".' },
 };
 
-function botScoreOpt(style, o) {
+function botScoreOpt(style, o, run) {
   const S = BOT_STYLES[style]; if (style === 'chaos') return Math.random();
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
-  return (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  // chase the element the keep already has the most of, toward its castle
+  const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
+  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -58,18 +60,42 @@ function botGiveItems(run, style) {
   for (const it of loose().filter(x => x.parts.length === 1)) { const h = order.find(h => h.items.length < ITEM_SLOTS && !heroItems(run, h).some(x => x.parts.length === 1)); if (h) giveItem(run, it, h); }
   // late game: the carry forges its two best finished items into a super item
   const c = order[0];
-  if (c && superAnvilOpen(run) && run.gold >= SUPER_COST + 20 && !heroItems(run, c).some(x => x.sup)) {
+  if (c && superAnvilOpen(run) && run.gold >= SUPER_COST + 2 && !heroItems(run, c).some(x => x.sup)) {
     const fin = heroItems(run, c).filter(x => x.parts.length === 2 && !x.sup);
     if (fin.length >= 2) { fin.sort((x, y) => botPairScore(c, ...y.parts) - botPairScore(c, ...x.parts)); forgeSuper(run, fin[0], fin[1]); }
   }
 }
 // bots save for drafts on roughly the old free schedule (3 by siege 5, 4 by 9, 5 by 11, then one per boss)
 function botRosterGoal(s) { return s <= 1 ? 1 : s <= 4 ? 2 : s <= 8 ? 3 : s <= 10 ? 4 : Math.min(ROSTER_CAP, 5 + Math.floor((s - 11) / 5)); }
-function botBuyDrafts(run, draft) { while (run.roster.length >= 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
+// bots shop TFT style: copies of legends they own first, then new legends while there is room, bunks on a schedule,
+// then rerolls with whatever is left above the interest they want to keep
+function botCapGoal(s) { return Math.min(ROSTER_CAP, 3 + Math.floor((s - 1) / 4)); }
+function botBuyShop(run, meta, style, reroll) {
+  if (!run.shop) rollShop(run, meta);
+  const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
+  while (barracksCost(run) != null && rosterCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  for (let g = 0; g < 40; g++) {
+    const cards = run.shop.map((c, i) => c && { c, i, own: run.roster.find(h => h.id === c.id), cost: shopCost(c.id) }).filter(o => o && run.gold >= o.cost);
+    let o = cards.filter(o => o.own && (chaos || run.gold - o.cost >= keep / 2)).sort((a, b) => b.cost - a.cost)[0];
+    if (!o && run.roster.length < rosterCap(run)) o = cards.filter(o => !o.own).sort((a, b) => botScoreOpt(style, b.c, run) - botScoreOpt(style, a.c, run))[0];
+    // a full keep trades its weakest legend for a card two rarities better
+    if (!o && !chaos && run.roster.length >= rosterCap(run) && run.gold >= keep) { const weak = run.roster.filter(h => !h.vault).sort((a, b) => heroRarity(a) * 3 + heroStar(a) * 4 - heroRarity(b) * 3 - heroStar(b) * 4)[0];
+      const up = weak && cards.filter(o => !o.own && o.c.rarity >= heroRarity(weak) + 2 && heroStar(weak) < 2).sort((a, b) => b.c.rarity - a.c.rarity)[0];
+      if (up) { run.gold -= up.cost; run.shop[up.i] = null; swapHero(run, weak, up.c); continue; }
+      // or chases a castle: a card of the keep's top element replaces a lone off-element legend of no higher rarity
+      const fe = fieldElements(run), top = Object.keys(fe).sort((a, b) => fe[b] - fe[a])[0];
+      if (top && fe[top] >= 3 && fe[top] < EL_STACK.at[2]) { const fit = cards.find(o => !o.own && o.c.el === top), off = fit && run.roster.filter(h => !h.vault && h.el !== top && heroStar(h) < 2 && heroRarity(h) <= fit.c.rarity).sort((a, b) => heroRarity(a) - heroRarity(b))[0];
+        if (off) { run.gold -= fit.cost; run.shop[fit.i] = null; swapHero(run, off, fit.c); continue; } } }
+    if (o) { const r = buyShopCard(run, o.i); if (r.ok) continue; }
+    if (reroll && run.gold - shopRerollCost(run) >= keep + (chaos ? 0 : 4) && (!chaos || Math.random() < 0.5)) { rerollShop(run, meta); continue; }
+    break;
+  }
+}
+function botBuyDrafts(run, draft) { while (run.roster.length >= 1 && run.roster.length < rosterCap(run) && run.gold >= draftCost(run)) { run.gold -= draftCost(run); run.paidDrafts = (run.paidDrafts || 0) + 1; draft(); } }
 function botShop(run, meta, style) {
   const S = BOT_STYLES[style];
   if (run.castle.hp < run.castle.max * 0.4) repairCastle(run);
-  const keep = run.roster.length < botRosterGoal(run.siege + 1) ? draftCost(run) : 0;
+  const keep = run.roster.length < rosterCap(run) ? 3 : style !== 'chaos' && run.siege >= 5 ? 10 : 0;
   for (let g = 0; g < 20; g++) {
     let ids = S.techs || Object.keys(TECH).sort(() => Math.random() - 0.5);
     ids = ids.concat(Object.keys(TECH).filter(k => TECH[k].secret));
@@ -98,6 +124,8 @@ function botBattle(B, dt, maxT) {
   while (!B.done && t < maxT) {
     stepBattle(B, dt); t += dt;
     if (B.hammer.cd <= 0 && !B.hammer.pending) { const e = densest(B.enemies.filter(e => e.x < 360), 30); if (e) castHammer(B, e.x, e.y); }
+    // call back a badly hurt champion while the rest can still hold the line
+    if (recallsLeft(B) > 0 && B.queue.length + B.enemies.filter(e => e.alive).length > 3) { const live = B.heroes.filter(h => h.alive && !h.temp); const u = live.length > 2 && live.filter(h => h.hp < h.maxHp * 0.22).sort((a, b) => (b.inst.rarity || 0) * 5 + b.inst.level - (a.inst.rarity || 0) * 5 - a.inst.level)[0]; if (u) recallHero(B, u); }
     if (B.run.castleEl && B.cpow.cd <= 0) { const e = densest(B.enemies, 40); if (e && (B.enemies.filter(x => x.alive).length > 5 || e.boss)) castCastlePower(B, e.x, e.y); }
   }
   if (!B.done) B.done = 'timeout';
@@ -122,6 +150,18 @@ function botBossTalk(run, style) {
   if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
+// bots read the scouts: melee champions are re-placed each siege to match the lanes (chaos keeps wherever they landed)
+function botPlace(run, style) {
+  if (style === 'chaos') return;
+  const melee = run.roster.filter(h => h.place && h.place.type === 'grid' && !isRangedHero(h.id));
+  for (const h of melee) h.place = null;
+  for (const h of melee.sort((a, b) => (HERO_BY_ID[b.id].cls === 'guardian') - (HERO_BY_ID[a.id].cls === 'guardian'))) autoPlace(run, h);
+}
+// press the attack when the last siege went cleanly and the walls are healthy
+function botPress(run, style, log) {
+  const last = log[log.length - 1];
+  run.press = style === 'chaos' ? Math.random() < 0.3 : !!last && last.deaths === 0 && last.castle >= 70 && run.castle.hp >= run.castle.max * 0.6 && !isBossSiege(run.siege + 1);
+}
 // one full run. opts: { dt, maxSiege, onSiege }
 function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
@@ -130,9 +170,11 @@ function botPlayRun(style, meta, opts = {}) {
   for (let i = 0; i < START_LEGENDS; i++) draft();
   let cause = 'cap';
   while (run.siege <= maxSiege) {
-    botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+    botBuyShop(run, meta, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botGiveItems(run, style);
+    checkCastleUnlock(run); botPlace(run, style);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
+    botPress(run, style, log);
     botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
@@ -143,19 +185,16 @@ function botPlayRun(style, meta, opts = {}) {
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
-    botBuyDrafts(run, draft);
     // Legend Summons: take the best card; a full keep sends home its weakest legend
     const tier = summonTier(rep.siege); if (tier) { const os = summonOptions(run, tier); if (os.length) { const o = os.sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0];
-      if (run.roster.length >= ROSTER_CAP) swapHero(run, run.roster.slice().sort((a, b) => (a.rarity || 0) * 50 + a.level - (b.rarity || 0) * 50 - b.level)[0], o);
+      if (run.roster.length >= rosterCap(run)) swapHero(run, run.roster.slice().sort((a, b) => (a.rarity || 0) * 50 + a.level - (b.rarity || 0) * 50 - b.level)[0], o);
       else { const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); } } }
-    // spare gold goes into ascending the strongest legends
-    for (const h of run.roster.slice().sort((a, b) => b.level - a.level)) { const c = ascendCost(h); if (c != null && run.gold >= c + 200 && (h.rarity || 0) < maxRarityNow(run)) ascendHero(run, h); }
-    if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
-    if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null;
+    if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
   return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
@@ -184,7 +223,7 @@ function playtestStart(meta, target, style, el) {
 }
 function playtestStep(P) {
   const { run, meta, style, draft } = P; if (run.siege >= P.target) return true;
-  botBuyDrafts(run, draft); botGiveItems(run, style); botShop(run, meta, style);
+  botBuyShop(run, meta, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botGiveItems(run, style); checkCastleUnlock(run);
   for (const h of run.roster) if (!h.place) autoPlace(run, h);
   botBossTalk(run, style); const taunted = run.mods.taunt;
   const B = startBattle(run, meta); botBattle(B, 1 / 20, 420);
@@ -195,11 +234,10 @@ function playtestStep(P) {
   if (taunted && rep.siege < FINAL_SIEGE) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
   if (!run.roster.length) draft();
-  botBuyDrafts(run, draft);
-  if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.castleEl = pick(castleOptions(run));
+  checkCastleUnlock(run);
   run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
   resolveEncounter(run, meta, pick(drawEncounter(run).opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
-  if (run.post.includes('draft') && run.roster.length < ROSTER_CAP) draft(); run.post = []; run.recruitFrom = null; run.mods = {};
+  if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null; run.mods = {};
   botGiveItems(run, style); for (const h of run.roster) if (!h.place) autoPlace(run, h);
   return run.siege >= P.target;
 }

@@ -26,7 +26,14 @@ function rebuildPrepUnits() {
   if (G.drag && G.drag.active && G.mouse && G.drag.overCanvas) G.prepUnits.push({ key: heroSpriteKey(G.drag.h), x: G.mouse.x, y: G.mouse.y + 8, side: 'hero', facing: 1, inst: null, hp: 1, maxHp: 1, atkT: 0 });
 }
 
-function changed() { rebuildPrepUnits(); UI.refresh(); save(); offerComboForm(); }
+function changed() { rebuildPrepUnits(); castleAwakens(); UI.refresh(); save(); offerComboForm(); }
+// six champions of one element on the field: that element's castle awakens (the first one takes the keep)
+function castleAwakens() {
+  const run = G.run; if (!run || run.finale) return; const had = run.castleEl, e = checkCastleUnlock(run); if (!e) return;
+  SFX.play('hammer'); FX.shake(10); FX.flash(ELEMENTS[e].col, 0.6);
+  UI.banner(`${ELEMENTS[e].name} Castle`, had ? `unlocked. Switch to it in the Artificers' Hall` : CASTLE_POWERS[e].name, { kind: 'hero', col: ELEMENTS[e].col }); TEL.event('castle', { el: e, switchable: !!had });
+  if (!had) setTimeout(() => UI.coach('power', $('powerBtn'), `Six ${ELEMENTS[e].name} champions woke the castle. It has a new power: ${CASTLE_POWERS[e].name}. Fire it during a siege with this button or the E key.`), 600);
+}
 // a new element pair on the field: the player chooses which version of the combo to forge
 function offerComboForm() {
   const run = G.run; if (!run || G.phase !== 'prep' || !$('modal').hidden || G.comboAsk) return;
@@ -70,7 +77,7 @@ function showDraft() {
       if (!run.pendingDraft) return; // a double tap after the pick
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
-      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
     }));
@@ -103,13 +110,13 @@ function showSummon() {
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
-      if (run.roster.length >= ROSTER_CAP) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
     }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
   }, 'wide');
 }
-function summonSkipGold(run) { return Math.round(200 * goldMul(run.siege) / 5) * 5; }
+function summonSkipGold(run) { return 6; }
 
 function beginSiege() {
   if (G.phase !== 'prep') return;
@@ -157,9 +164,9 @@ function endSiege() {
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
     if (taunted) run.post.push('loot');
+    if (rep.press) run.post.push('loot');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
-    if (rep.siege === CASTLE_SIEGE && !run.castleEl) run.post.push('castle');
     const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
     run.post.push('encounter');
     run.lastRep = rep; save();
@@ -306,11 +313,11 @@ function prepCues() {
   if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is where you buy new champions. Each one costs more, so save gold between sieges.'), 600);
+  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
   // first time each run you can afford a champion: say so loudly (Cam)
-  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < ROSTER_CAP && run.gold >= draftCost(run)) {
+  if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
-    setTimeout(() => { UI.banner('Champion ready to draft', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `You have enough gold to draft your first champion (${draftCost(run)} gold). Open the Guild Hall to recruit them.`); }, 350);
+    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `Five legends are for sale in the Guild Hall. Commons cost 1 gold. Open it to recruit them.`); }, 350);
   }
 }
 
@@ -329,7 +336,19 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
-    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= ROSTER_CAP ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
+    case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
+      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
+      if (r.err) return UI.toast(r.err, true);
+      UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
+      if (r.starUp) { SFX.play('level'); FX.flash(RARITY[heroRarity(r.h)].col, 0.35); UI.banner(heroDisplayName(r.h), `rises to ${'★'.repeat(heroStar(r.h))}`, heroBanner(r.h)); }
+      else if (r.merged) { SFX.play('buy'); UI.toast(`${heroDisplayName(r.h)}: ${r.h.copies} copies. ${copiesToNext(r.h) ? `${copiesToNext(r.h)} more for ★${heroStar(r.h) + 1}.` : 'Max stars.'}`); }
+      else { SFX.play('draft'); UI.banner(HERO_BY_ID[r.h.id].name, 'answers the call', heroBanner(r.h)); }
+      break; }
+    case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
+    case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
+    case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
+    case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
+    case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
     case 'unequip': { const it = run.stash.find(x => x.uid === arg); if (it) unequipItem(run, it); break; }
     case 'unforge': { const it = run.stash.find(x => x.uid === arg); r = unforgeItem(run, it); if (r.err) return UI.toast(r.err, true); SFX.play('click'); break; }
@@ -340,6 +359,7 @@ G.act = function (act, arg) {
     case 'h-items': UI.openPage('armory'); return;
     case 'pickhero': G.select(arg); return;
     case 'h-bench': hero.place = null; break;
+    case 'h-recall': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && recallHero(G.B, u)) { TEL.event('recall', { id: hero.id, s: run.siege, hp: Math.round(100 * u.hp / u.maxHp) }); UI.renderInspector(); UI.hud(); } return; }
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
     case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
       SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
@@ -393,6 +413,8 @@ function canvasDown(e) {
   const p = toLogical(e); G.mouse = p;
   if (G.phase === 'siege' && G.B && G.armed === 'hammer') { if (castHammer(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
   if (G.phase === 'siege' && G.B && G.armed === 'power') { if (castCastlePower(G.B, p.x, p.y)) { G.armed = null; UI.hud(); } return; }
+  if (G.phase === 'siege' && G.B && G.selected && !G.B.done && recallsLeft(G.B) > 0) { const u = G.B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === G.selected);
+    if (u) { const c = recallChipPos(u); if (p.x >= c.x - 3 && p.x <= c.x + 12 && p.y >= c.y - 3 && p.y <= c.y + 11) { G.act('h-recall', u.inst.uid); return; } } }
   if (G.phase === 'siege' && G.B) { const u = G.B.heroes.find(u => u.alive && !u.temp && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2); if (u) { if (u.rafter && G.selected === u.inst.uid) { if (rafterJump(G.B, u)) UI.renderInspector(); } else G.select(u.inst.uid); } return; }
   if (G.phase !== 'prep') return;
   const h = heroAtPoint(p);
@@ -452,7 +474,7 @@ function showTitle() {
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
         <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
         <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
-      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Diamonds <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
     </div>
     <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
     <div class="wrap">
@@ -460,11 +482,11 @@ function showTitle() {
     <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small><button class="btn small" id="tIntro">▶ Replay intro</button></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
-      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
-      <div><b>Recruit legends</b>Start with 2 legends at level 1. Every card rolls a rarity, from Common to God, and each boss you beat opens a rarer tier. Each rarity is +25% power, a bigger body and a stronger signature.</div>
-      <div><b>Earn everything</b>No starting gold. Kills drop gold, foes drop items, and heroes level only by fighting. A legend who falls in a siege is gone for good.</div>
-      <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. At level 7 each hero awakens an element; mixed elements form combos.</div>
-      <div><b>Grow the keep</b>Fuse components into items in the Armory, climb the Artificers' tech tree, and at siege 15 your castle turns elemental.</div>
+      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
+      <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
+      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
+      <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
+      <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;
   $('title').hidden = false;
   const t = $('title');
@@ -480,13 +502,13 @@ function showTitle() {
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
 }
 // ----- Keep Ledger: meta progression in tabs -----
-const META_TABS = [['keep', 'Castle'], ['champs', 'Champions'], ['specs', 'Class specs'], ['ach', 'Achievements']];
+const META_TABS = [['ach', 'Achievements']]; // the diamond upgrades and class specs are gone (Cam 2026-10-23); every run starts equal
 const META_GROUP = { masonry: 'keep', hammer: 'keep', chest: 'keep', drills: 'champs', codex: 'champs', banners: 'champs', muster: 'champs', veterans: 'champs' };
-let LEDGER_TAB = 'keep';
+let LEDGER_TAB = 'ach';
 function metaLedgerHTML() {
   const M0 = G.meta; M0.spec = M0.spec || {}; M0.ach = M0.ach || {};
   const spent = metaSpent(M0), achN = ACHIEVEMENTS.filter(a => M0.ach[a.id]).length;
-  let h = `<header><div><span class="eyebrow">Paid in diamonds · kept forever · ${spent} spent so far</span><h2>The Keep Ledger</h2></div><div class="coinbox num" style="font-size:22px;color:var(--sky)">${DIA(M0.diamonds)}</div></header>
+  let h = `<header><div><span class="eyebrow">Trophies from every run · ${achN} of ${ACHIEVEMENTS.length}</span><h2>The Keep Ledger</h2></div></header>
     <nav class="ltabs">${META_TABS.map(([k, n]) => `<button class="ltab ${LEDGER_TAB === k ? 'on' : ''}" data-ltab="${k}">${n}${k === 'ach' ? ` <small>${achN}/${ACHIEVEMENTS.length}</small>` : ''}</button>`).join('')}</nav>`;
   if (LEDGER_TAB === 'keep' || LEDGER_TAB === 'champs') {
     h += `<div class="metagrid">`;
@@ -508,9 +530,9 @@ function metaLedgerHTML() {
   } else {
     const groups = [...new Set(ACHIEVEMENTS.map(a => a.group))];
     for (const g of groups) { h += `<div class="group-title">${esc(g)}</div><div class="achgrid">`;
-      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span><em>${DIA(a.dia)}</em></div>`; }
+      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
       h += `</div>`; }
-    h += `<p class="note">Achievements are the only way to earn diamonds. Each pays once, when the run ends. All of them together pay exactly enough to buy every upgrade in the ledger.</p>`;
+    h += `<p class="note">Every run starts equal: no upgrades carry over. Achievements are trophies, checked when a run ends.</p>`;
   }
   return h;
 }
@@ -580,6 +602,7 @@ function wire() {
   document.addEventListener('pointermove', docMove);
   document.addEventListener('pointerup', docUp);
   $('beginBtn').onclick = () => { SFX.init(); beginSiege(); };
+  $('pressBtn').onclick = () => { if (G.phase !== 'prep' || !canPress(G.run)) return; G.run.press = !G.run.press; SFX.play('click'); TEL.event('press', { on: G.run.press, s: G.run.siege }); save(); UI.hud(); };
   $('sp1').onclick = () => { G.speed = 1; UI.hud(); };
   $('sp2').onclick = () => { G.speed = 2; UI.hud(); };
   $('sp4').onclick = () => { G.speed = 4; UI.hud(); };
@@ -597,6 +620,7 @@ function wire() {
     else if (e.key === 'c' || e.key === 'C') UI.setRoster(!$('roster').classList.contains('collapsed'));
     else if (e.key === 's' || e.key === 'S') UI.setIntel($('intel').classList.contains('closed'));
     else if (e.key === '1') { G.speed = 1; UI.hud(); } else if (e.key === '2') { G.speed = 2; UI.hud(); } else if (e.key === '4') { G.speed = 4; UI.hud(); }
+    else if ((e.key === 'r' || e.key === 'R') && G.B && G.phase === 'siege' && G.selected) G.act('h-recall', G.selected);
     else if ((e.key === 'q' || e.key === 'Q') && G.B && G.phase === 'siege' && G.B.hammer.cd <= 0) { G.armed = G.armed === 'hammer' ? null : 'hammer'; UI.hud(); }
     else if (e.key === 'e' || e.key === 'E') armPower();
     else if (e.key === 'Escape') { if (G.armed) { G.armed = null; UI.hud(); } else if (UI.page) UI.openPage(null); }
@@ -644,6 +668,10 @@ function boot(hotData) {
   loadAudioPrefs();
   const d = (hotData && hotData.meta && hotData.v === 2) ? hotData : load();
   G.meta = Object.assign(newMeta(), (d && d.meta) || {});
+  // no meta progression (Cam 2026-10-23): every run starts equal. Old diamond upgrades are set aside, not deleted
+  if (Object.keys(G.meta.ranks || {}).length || Object.keys(G.meta.spec || {}).length) { G.meta.oldRanks = G.meta.ranks; G.meta.oldSpec = G.meta.spec; }
+  G.meta.ranks = {}; G.meta.spec = {};
+  if (G.run && G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, G.run.roster.length - BARRACKS.start);
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
   if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000); }
   else { G.run = newRun(G.meta); G.hasRun = false; }
