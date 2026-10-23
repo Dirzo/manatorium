@@ -106,6 +106,7 @@ function heroBonusPts(run, h) {
 function heroRarity(h) { const d = HERO_BY_ID[h.id]; return d && d.rar != null ? d.rar : h.rarity || 0; }
 // which elements are on the field, how many heroes carry each
 // element stacks count like races (Cam 2026-10-23): 2, 4 and 6 champions; six of one element unlocks that element's castle
+const EL_LEAN = { ad: 0.2, ap: 0.25, def: 0.2 };
 const EL_STACK = { at: [2, 4, 6], mul: [1.4, 1.9, 2.5], stat: [0.1, 0.22, 0.4] };
 function elTier(n) { let t = -1; EL_STACK.at.forEach((v, i) => { if (n >= v) t = i; }); return t; }
 function fieldElements(run) {
@@ -197,23 +198,15 @@ function heroStats(h, run, meta, syn) {
   T.fx(s); if (h.place && tc[tk] >= 2 && T.pfx) T.pfx(s);
   for (const k in tc) if (tc[k] >= 2 && TEMPERS[k].team) TEMPERS[k].team(s);
   s.armor = Math.max(0, s.armor);
-  // elements: power scales with the rolled stat that matches the element's playstyle
-  const fe = stackElements(run);
+  // elements: each one is a fighting style (styles.js). A small stat lean toward the element's playstyle stays;
+  // stacks of 2, 4 and 6 raise the style's level (s.sty) instead of multiplying stats (Cam 2026-10-23)
+  const fe = stackElements(run); s.sty = {};
   for (const e of heroElements(run, h)) {
-    const E = ELEMENTS[e]; let p = 1.04 * sm; const et = elTier(fe[e] || 0);
-    // element stacks: 2, 4 or 6 champions sharing an element power it up and boost their matching stat
-    if (et >= 0) { p *= EL_STACK.mul[et]; const b = EL_STACK.stat[et]; if (E.style === 'ad') s.atk *= 1 + b; else if (E.style === 'ap') s.ap *= 1 + b; else s.hp *= 1 + b; }
-    s.el[e] = p;
-    if (E.style === 'ad') s.atk *= 1 + 0.2 * p; else if (E.style === 'ap') s.ap *= 1 + 0.25 * p; else { s.hp *= 1 + 0.2 * p; s.armor += 15 * p; }
-    switch (e) {
-      case 'light': s.crit += 0.15 * p; break;
-      case 'lightning': s.as *= 1 + 0.3 * p; break;
-      case 'nature': s.hp *= 1 + 0.3 * p; s.regen += 0.01 * p; s.reflect += 0.2 * p; break;
-      case 'dark': s.lifesteal += 0.18 * p; break;
-      case 'salty': s.crit += 0.2; s.critMul = BAL.critMul + 0.4; break;
-      case 'meat': s.hp *= 1 + 0.45 * p; s.armor += 20 * p; s.scale *= 1.25; break;
-      case 'fire': s.sigMul *= 1 + 0.25 * p; break;
-    }
+    const E = ELEMENTS[e], et = elTier(fe[e] || 0), p = sm * (1 + 0.5 * (et + 1));
+    s.el[e] = p; s.sty[e] = et + 1;
+    const b = EL_STACK.stat[et] || 0;
+    if (E.style === 'ad') s.atk *= 1 + EL_LEAN.ad + b; else if (E.style === 'ap') s.ap *= 1 + EL_LEAN.ap + b; else { s.hp *= 1 + EL_LEAN.def + b; s.armor += 12; }
+    styleStats(s, e, et + 1);
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: a component gives its stat (a bit more inside a finished item); a finished item adds one effect of its own
@@ -450,7 +443,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (src && src.side === 'hero' && src.st && src.st.sp.brimming && !o.sig && src.maxMana > 0) amount *= 1 + 0.4 * Math.min(1, src.mana / src.maxMana);
   if (tgt.side === 'hero' && tgt.stoneT > B.t) return 0;
   if (tgt.side === 'hero' && o.ranged && tgt.st.sp.arrowWard) amount *= 0.6;
-  if (src && src.side === 'hero' && src.st && src.st.el.salty && src.grumble) amount *= 1 + 0.02 * src.grumble;
+  if (B.sty) amount *= styleDmgMul(B, src, tgt, o, amount);
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
@@ -458,7 +451,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
   const armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred - (tgt.pry || 0);
   let dmg = amount * armorFactor(armor);
-  if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.15; if (tgt.curseT > 0) dmg *= 1.2; }
+  if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.2; if (tgt.curseT > 0) dmg *= 1.2; }
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
@@ -469,25 +462,16 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   else if (!src && tgt.side === 'enemy') tgt.ccBy = null;
   if (tgt.side === 'hero') addTo(tgt.tsrc, !src ? 'other' : src.boss ? 'boss' : o.ranged ? 'ranged' : 'melee', dmg);
   if (dmg >= 1 && !o.quiet) FX.dmg(tgt, dmg, tgt.side === 'hero' ? 'taken' : crit ? 'crit' : o.sig ? 'sig' : o.kind || 'hit');
-  if (tgt.side === 'hero') { if (tgt.st.sigOn) tgt.mana = Math.min(tgt.maxMana, tgt.mana + 3 * tgt.st.manaGain); if (tgt.st.el.salty) tgt.grumble = Math.min(25, tgt.grumble + 1); }
+  if (tgt.side === 'hero') { if (tgt.st.sigOn) tgt.mana = Math.min(tgt.maxMana, tgt.mana + 3 * tgt.st.manaGain); if (tgt.sty) styleHurt(B, tgt, src, o); }
   if (src && src.side === 'hero' && src.st) {
     if (src.st.lifesteal) healUnit(B, src, src, dmg * src.st.lifesteal, true, 'lifesteal');
     if (crit && src.st.sp.heavyHands && !o.noProc && tgt.alive) dealDamage(B, src, tgt, src.maxHp * 0.05, { from: 'item', noProc: true, noCrit: true, quiet: true });
     if (crit && src.st.sp.armorBreak && tgt.side === 'enemy') tgt.pry = Math.min(50, (tgt.pry || 0) + 10);
     if (!o.noProc) {
-      const E = src.st.el;
       if (B.syn.toad >= 0) tgt.poison.push({ dps: [3, 8, 20][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
       if (src.st.frost) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, src.st.frost); }
       if (src.st.storm && Math.random() < src.st.storm) chainLightning(B, src, tgt, src.st.atk * 1.2, 3, '#bff4ff', 'item');
-      if (E.fire) tgt.poison.push({ dps: src.st.atk * 0.25 * E.fire, t: 3, src, fire: true, from: 'element' });
-      if (E.water) tgt.soakT = 3;
-      if (E.ice) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, 0.3); if (src.hits % 4 === 3) { tgt.stun = Math.max(tgt.stun, (tgt.boss ? 0.3 : 0.8) * E.ice); tgt.frozen = 0.8; FX.particles(tgt.x, tgt.y - 8, 8, ['#bfeeff', '#ffffff'], { spread: 12 }); } }
-      if (E.lightning && src.hits % 3 === 2) chainLightning(B, src, tgt, src.st.atk * 0.6 * E.lightning, 3, '#9ff6ff', 'element');
-      if (E.light) tgt.blindT = 2;
-      if (E.void) tgt.shred = Math.min(30 * E.void, tgt.shred + 3 * E.void);
-      if (E.sweet) { tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.15); }
-      if (E.treat && !tgt.boss && Math.random() < 0.12) { tgt.stun = Math.max(tgt.stun, 0.6); FX.text(tgt.x, tgt.y - 22, 'ooh, a snack', '#ffb02e'); }
-      if (E.dark && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.1) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#8a5ad8', true); tgt.hp = 0; }
+      if (src.sty) styleHit(B, src, tgt, dmg, o);
       if (crit && src.st.sp.execute && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.2) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#ff3d6e', true); tgt.hp = 0; }
       if (src.st.sp.splash) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.4, { from: 'item', noProc: true, quiet: true });
       if (src.st.sp.manaHit && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
@@ -519,6 +503,7 @@ function killUnit(B, u, src) {
     if (!u.temp && sk >= 0 && !u.risen && (bone ? (sk >= 1 || !B.undyingUsed) : sk >= 2 && !B.undyingOther)) {
       if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
+    if (B.sty && styleSave(B, u)) return;
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
@@ -533,7 +518,7 @@ function killUnit(B, u, src) {
   let g = u.gold / (goldMul(B.siege) * BAL.goldK) / B.goldRef * killCoins(B.siege) * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0) + 0.08 * (B.meta.ranks.chest || 0) + B.goldBonus + (u.hat ? 0.25 : 0));
   if (src && src.st && src.st.midas) g *= 1 + src.st.midas;
   if (src && src.st && src.st.greed) g *= 1 + src.st.greed;
-  if (src && src.st && src.st.el && src.st.el.treat) { g *= 1.4; const low = B.heroes.filter(h => h.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (low) healUnit(B, src, low, low.maxHp * 0.05, false, 'element'); }
+  if (B.sty) g *= styleKill(B, src, u);
   if (B.pinataT > 0) g *= 3;
   if (u.boss) g += u.final ? 5 : BOSS_PURSE[u.boss === 'big' ? 'big' : 'mini'];
   B.coinAcc += g; g = Math.floor(B.coinAcc); B.coinAcc -= g;
@@ -919,13 +904,11 @@ function stepBattle(B, dt) {
   // regen: cleric synergy, hot tub, nature, troll blood, water below half
   for (const h of B.heroes) if (h.alive && h.st) {
     let r = (B.syn.cleric >= 0 ? [0.008, 0.02, 0.04][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
-    if (h.st.el && h.st.el.water && h.hp < h.maxHp * 0.5) r += 0.03 * h.st.el.water;
     if (r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * r * dt);
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
   }
-  // sweet aura, ember mantle, kettle
-  const sweet = B.heroes.filter(h => h.alive && h.st && h.st.el && h.st.el.sweet);
-  for (const h of B.heroes) if (h.alive) h.auraAs = sweet.some(s => dist(s, h) < 60) ? 0.15 * Math.max(...sweet.map(s => s.st.el.sweet)) : 0;
+  // fighting styles (styles.js), ember mantle, kettle
+  styleTick(B, dt);
   B.kettleT += dt; const tick = B.kettleT >= 1; if (tick) B.kettleT = 0;
   for (const h of B.heroes) if (h.alive && h.st && h.st.sp) {
     if (tick && h.st.sp.emberAura) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
@@ -1077,6 +1060,7 @@ function stepHero(B, u, dt) {
   if (u.dash) { const D = u.dash; D.t -= dt; if (D.t <= 0) { const e = D.ts[D.i]; if (e && e.alive) { FX.afterimage(u); u.x = e.x - 6; u.y = e.y; dealDamage(B, u, e, D.dmg != null ? D.dmg : S(u) * D.mul, { sig: true }); FX.slash(e.x, e.y - 8, 1, '#ffffff', true); FX.sound('slash'); } D.i++; D.t = 0.11; if (D.i >= D.ts.length) u.dash = null; } return; }
   if (u.stun > 0) return;
   if (u.spin > 0) { u.spin -= dt; u.spinTick -= dt; u.atkT = 0.1; if (u.spinTick <= 0) { u.spinTick = 0.25; for (const e of inRadius(B.enemies, u, 28 + 3 * RK(u))) dealDamage(B, u, e, u.spinDmg || S(u) * 0.6, { sig: true }); FX.ring(u.x, u.y - 6, 26, '#ffffff'); } const t = nearest(B.enemies, u, 140); if (t) moveToward(u, t.x, t.y, u.st.spd * 0.8, dt); return; }
+  if (u.sty && styleStep(B, u, dt)) return;
   if (!u.temp && u.st.sigOn && u.mana >= u.maxMana && B.enemies.some(e => e.alive)) {
     if (castSignature(B, u)) return;
     u.mana = u.maxMana * 0.8;
@@ -1085,11 +1069,12 @@ function stepHero(B, u, dt) {
   u.retarget -= dt;
   if (u.retarget <= 0 || !u.target || !u.target.alive) {
     u.retarget = 0.3; u.target = null;
-    if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
+    const held = u.sty && styleTarget(B, u);
+    if (held) {} else if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
-    if (!u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
+    if (!held && !u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
       u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && heroLaneOk(B, u, e) && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
-    if (!u.target) {
+    if (!held && !u.target) {
       if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70), e => heroLaneOk(B, u, e));
       else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120 && heroLaneOk(B, u, e)).sort((a, b) => b.x - a.x)[0] || null;
       else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && heroLaneOk(B, u, e) && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb)
@@ -1101,7 +1086,7 @@ function stepHero(B, u, dt) {
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
-    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
+    if (d > reach) { if (!u.rafter && !u.noMove) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
     else {
       u.facing = t.x >= u.x ? 1 : -1;
       u.cd -= dt;
@@ -1120,10 +1105,11 @@ function stepHero(B, u, dt) {
           FX.sound(pt === 'arrow' || pt === 'arrowGold' ? 'bow' : 'pew');
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
         // Gale Cutlass: every third attack strikes twice
+        if (u.sty) styleAttacked(B, u, t);
         if (u.st.sp.twinStrike && !u.healing && u.hits % 3 === 0 && t.alive) { if (ranged) fireProj(B, u, t, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u), { speed: 300, rafter: u.rafter, from: 'item' }); else dealDamage(B, u, t, heroAtk(u), { from: 'item' }); }
       }
     }
-  } else if (!u.rafter) {
+  } else if (!u.rafter && !u.noMove) {
     const dh = dist(u, { x: u.hx, y: u.hy }); if (dh > 2) moveToward(u, u.hx, u.hy, u.st.spd, dt); else u.facing = 1;
   }
 }
@@ -1132,6 +1118,7 @@ function stepEnemy(B, u, dt) {
   u.moving = false;
   if (u.rage) { bossPatience(B, u, dt); return; }
   if (u.stun > 0) return;
+  if (u.lureT > 0 && styleLured(B, u, dt)) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it

@@ -1,6 +1,6 @@
 import fs from 'fs'; import vm from 'vm';
 const dir = new URL('../src/', import.meta.url).pathname;
-const code = ['data.js', 'sim.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,botMeta,BAL,HERO_BY_ID,heroItems};';
+const code = ['data.js', 'sim.js', 'styles.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,botMeta,BAL,HERO_BY_ID,heroItems};';
 const ctx = { FX: new Proxy({}, { get: () => () => {} }), Math, console, Object, Array, Set, JSON, Date }; vm.createContext(ctx); vm.runInContext(code, ctx);
 const A = ctx.__api; if (process.env.BAL) Object.assign(A.BAL, JSON.parse(process.env.BAL));
 const C = {}; const orig = ctx.finishSiege;

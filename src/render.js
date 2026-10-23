@@ -342,7 +342,7 @@ function renderFrame(V, dt) {
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
-  drawSpellDecals(g); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
+  drawSpellDecals(g); drawStyleGround(g, B, t); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
@@ -377,6 +377,7 @@ function renderFrame(V, dt) {
     else if (w.type === 'cheese') { const x0 = Math.round(w.x), y0 = Math.round(w.y), sp = Math.floor(t * 12) % 2; g.fillStyle = OUTLINE; g.fillRect(x0 - 7, y0 - 13, 14, 14); g.fillStyle = '#ffd84a'; g.fillRect(x0 - 6, y0 - 12, 12, 12); g.fillStyle = '#ffb02e'; g.fillRect(x0 - 6, y0 - 7 + sp, 12, 2); g.fillStyle = '#e8a020'; g.fillRect(x0 - 3 + sp * 3, y0 - 10, 2, 2); g.fillRect(x0 + 2 - sp * 3, y0 - 4, 2, 2); }
     else if (w.type === 'quake') { g.fillStyle = '#8a6a2a'; g.fillRect(Math.round(w.x) - 2, Math.round(w.y) - 4, 4, 4); g.fillStyle = '#c9a35a'; g.fillRect(Math.round(w.x) - 1, Math.round(w.y) - 7, 2, 3); }
   }
+  drawStyleOver(g, B, t);
   // projectiles
   if (B) for (const p of B.projs) drawProj(g, p);
   // sky hammer

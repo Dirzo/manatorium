@@ -29,10 +29,9 @@ function abilityTipHTML(ab) {
 }
 function elTipHTML(e) {
   const E = ELEMENTS[e]; if (!E) return '';
-  const base = { ad: '+20% attack', ap: '+25% Ability power', def: '+20% HP and +15 armor' }[E.style];
-  return `<b style="color:${E.col}">${esc(E.name)}</b><p>${esc(E.desc)}</p><div class="trec">Best stat: ${statLine(E.style)}</div>
-    <p>Element power starts at 104%. Two or more ${esc(E.name)} heroes on the field multiply it by 1.4.</p>
-    <p>Every ${esc(E.name)} hero gets ${base} × element power. ${esc(EL_SCALE[e] || '')}</p>`;
+  const I = STYLE_INFO[e], base = { ad: '+10% attack', ap: '+12% Ability power', def: '+10% HP and +8 armor' }[E.style];
+  return `<b style="color:${E.col}">${esc(E.name)}: ${esc(I.style)}</b><p><i>${esc(I.role)}.</i> ${esc(I.how)}</p>${I.tiers.map((t, i) => `<div class="ttier"><b>${EL_STACK.at[i]}</b><span>${esc(t)}${i === 2 ? ` The ${esc(E.name)} castle wakes.` : ''}</span></div>`).join('')}
+    <p class="note">Every ${esc(E.name)} champion also gets ${base}. Best stat: ${statLine(E.style)}</p>`;
 }
 function rarityTipHTML(r) {
   const Rr = RARITY[r]; if (!Rr) return '';

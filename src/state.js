@@ -11,9 +11,9 @@ function castleGrowth(run) { return Math.pow(1.3, castleTier(run)); }
 function castleTier(run) { return run.stats && run.stats.bosses ? run.stats.bosses.length : 0; }
 
 function newRun(meta) {
-  const run = { v: 2, runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), startedAt: Date.now(), siege: 1, gold: 0, roster: [], stash: [], tech: {}, discovered: {}, castleEl: null,
+  const run = { v: 2, runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), startedAt: Date.now(), siege: 1, gold: START_GOLD, roster: [], stash: [], tech: {}, discovered: {}, castleEl: null,
     vet: meta.ranks.veterans || 0, mods: {}, castle: { hp: 0, max: 0 }, stats: { kills: 0, gold: 0, bosses: [], dmgByHero: {}, deaths: 0, drafts: [], loot: [], encounters: [], techs: [] }, history: [], diamondsFound: 0,
-    phase: 'draft', draftRerolls: 0, lootRerolls: 0, maxhpMul: 1 };
+    phase: 'draft', draftRerolls: 0, lootRerolls: 0, maxhpMul: 1, heraldDue: true };
   run.castle.max = castleMaxFor(run, meta); run.castle.hp = run.castle.max;
   return run;
 }
@@ -30,6 +30,13 @@ function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: r
 // each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable
 const SEASON = { n: 4, share: 0.7 };
 function runSeason(run) { if (!run) return null; if (!run.season) run.season = EL_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, SEASON.n); return run.season; }
+// a new horde brings a new season (Cam 2026-10-23): the two in-season elements you field most stay, two new ones arrive
+function rotateSeason(run) {
+  const old = runSeason(run).slice(), n = fieldElements(run);
+  const keep = old.sort((a, b) => (n[b] || 0) - (n[a] || 0) || Math.random() - 0.5).slice(0, SEASON.n - 2);
+  const fresh = EL_KEYS.filter(e => !old.includes(e)).sort(() => Math.random() - 0.5).slice(0, SEASON.n - keep.length);
+  run.season = [...keep, ...fresh]; run.seasonNew = fresh; run.heraldDue = true;
+}
 function rollElement(run) { const s = runSeason(run); return s && Math.random() < SEASON.share ? pick(s) : pick(EL_KEYS); }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
@@ -364,7 +371,8 @@ function finishSiege(run, meta, B) {
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
-  run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
+  run.siege++; if (factionIndex(run.siege) !== factionIndex(run.siege - 1) && run.siege < FINAL_SIEGE) rotateSeason(run);
+  run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
   if (!run.shopLock) rollShop(run, meta);
   return rep;
 }
