@@ -301,19 +301,26 @@ function toPrep() {
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
+  if (run.heraldDue && !run.finale) { save(); return showHerald(() => toPrep()); }
   // Cam 2026-10-21: the horde's boss talks to your voice before every siege (talk.js); banners and coaching wait for it
   if (talkDue(run)) { save(); return showTalk(run, () => { save(); changed(); prepCues(); }); }
   talkSkipped(run); save(); changed();
   prepCues();
 }
+// the herald names this horde's four in-season elements and shows how each one fights (herald.js)
+function showHerald(done) {
+  const run = G.run; SFX.play('sig');
+  UI.modal(heraldHTML(run), s => { heraldDemos(s); s.querySelector('#heraldGo').onclick = () => { const first = run.heraldDue && run.siege === 1; run.heraldDue = false; run.seasonNew = null; save(); UI.closeModal(); if (done) done(); else if (first) UI.openPage('guild'); }; }, 'wide');
+}
 function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
-  if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
+  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends for your three lanes, then close the shop and press Begin siege.'); }, 300); }
+  else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
+  if (run.siege === 2 && !run.shopIntro) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
@@ -336,6 +343,7 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
+    case 'herald': { if (G.phase !== 'prep') return; SFX.play('click'); showHerald(() => { UI.openPage('guild'); }); return; }
     case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
       if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);

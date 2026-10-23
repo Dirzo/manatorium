@@ -1340,6 +1340,30 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .rdiv.field b { color: var(--mint); } .rdiv.bench b { color: var(--gold); }
 .hcard.bslot { border-style: dashed; background: transparent; box-shadow: none; opacity: .5; align-items: center; justify-content: center; min-height: 80px; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
 
+/* ----- the herald: this horde's four in-season elements and how each one fights (herald.js) ----- */
+.hrld { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr)); gap: 10px; margin-top: 8px; }
+.hlcard { background: var(--panel-2); border-radius: 6px; border-top: 3px solid var(--ec); padding: 10px; display: grid; gap: 7px; align-content: start; min-width: 0; animation: hcardIn .35s ease-out both; }
+@keyframes hcardIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.hlcard .hhd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.hlcard .hhd b { font-family: var(--f-logo); font-size: 18px; color: var(--ec); }
+.hlcard .hhd span { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.hlcard canvas.hdemo { width: 100%; height: auto; image-rendering: pixelated; border-radius: 3px; border: 1px solid var(--ink); }
+.hlcard p { margin: 0; font-size: 13px; line-height: 1.4; }
+.hlcard p b { color: var(--ec); }
+.hlcard .htiers { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.hlcard .htiers div { display: grid; grid-template-columns: 16px 1fr; gap: 6px; }
+.hlcard .htiers b { color: var(--ec); font-family: var(--f-logo); }
+.hlcard .htiers .on { color: var(--text); }
+.hlcard .htiers .past { opacity: .7; }
+.hlcard small { color: var(--muted); font-size: 11px; }
+.seasonpills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seasonpills > small { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.sypill { font: 700 13px var(--f-body); color: var(--ec); background: var(--panel-2); border: 1px solid var(--ec); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.sypill small { color: var(--muted); font-weight: 400; }
+.sypill.on { box-shadow: 0 0 0 1px var(--ec) inset, 0 0 8px -2px var(--ec); }
+.scard.tierup { box-shadow: 0 0 0 2px var(--ec), 0 0 14px -2px var(--ec); }
+.scard.tierup small { color: var(--ec); }
+
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
 #mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
@@ -1693,7 +1717,8 @@ const RARITY_ODDS = [
 ];
 function rarityOdds(bosses) { return RARITY_ODDS[Math.max(0, Math.min(RARITY_ODDS.length - 1, bosses || 0))]; }
 function rollRarity(bosses) { const o = rarityOdds(bosses); let x = Math.random() * 100; for (let i = 0; i < o.length; i++) { x -= o[i]; if (x < 0) return i; } return 0; }
-const START_LEGENDS = 2;
+const START_GOLD = 5;
+const START_LEGENDS = 1; // Cam 2026-10-23: one free legend, then 5 gold and the shop before the first siege
 
 // Sprite palettes
 const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', orc2: '#a7d94a', bone: '#f1ecdc', toad: '#56c46a', toad2: '#ff8f3a', fur: '#c98a4a', fur2: '#e8e1d0', gob: '#8fd14f', blue: '#7fb4ff' };
@@ -3775,6 +3800,7 @@ function heroBonusPts(run, h) {
 function heroRarity(h) { const d = HERO_BY_ID[h.id]; return d && d.rar != null ? d.rar : h.rarity || 0; }
 // which elements are on the field, how many heroes carry each
 // element stacks count like races (Cam 2026-10-23): 2, 4 and 6 champions; six of one element unlocks that element's castle
+const EL_LEAN = { ad: 0.3, ap: 0.35, def: 0.3 };
 const EL_STACK = { at: [2, 4, 6], mul: [1.4, 1.9, 2.5], stat: [0.1, 0.22, 0.4] };
 function elTier(n) { let t = -1; EL_STACK.at.forEach((v, i) => { if (n >= v) t = i; }); return t; }
 function fieldElements(run) {
@@ -3866,23 +3892,15 @@ function heroStats(h, run, meta, syn) {
   T.fx(s); if (h.place && tc[tk] >= 2 && T.pfx) T.pfx(s);
   for (const k in tc) if (tc[k] >= 2 && TEMPERS[k].team) TEMPERS[k].team(s);
   s.armor = Math.max(0, s.armor);
-  // elements: power scales with the rolled stat that matches the element's playstyle
-  const fe = stackElements(run);
+  // elements: each one is a fighting style (styles.js). A small stat lean toward the element's playstyle stays;
+  // stacks of 2, 4 and 6 raise the style's level (s.sty) instead of multiplying stats (Cam 2026-10-23)
+  const fe = stackElements(run); s.sty = {};
   for (const e of heroElements(run, h)) {
-    const E = ELEMENTS[e]; let p = 1.04 * sm; const et = elTier(fe[e] || 0);
-    // element stacks: 2, 4 or 6 champions sharing an element power it up and boost their matching stat
-    if (et >= 0) { p *= EL_STACK.mul[et]; const b = EL_STACK.stat[et]; if (E.style === 'ad') s.atk *= 1 + b; else if (E.style === 'ap') s.ap *= 1 + b; else s.hp *= 1 + b; }
-    s.el[e] = p;
-    if (E.style === 'ad') s.atk *= 1 + 0.2 * p; else if (E.style === 'ap') s.ap *= 1 + 0.25 * p; else { s.hp *= 1 + 0.2 * p; s.armor += 15 * p; }
-    switch (e) {
-      case 'light': s.crit += 0.15 * p; break;
-      case 'lightning': s.as *= 1 + 0.3 * p; break;
-      case 'nature': s.hp *= 1 + 0.3 * p; s.regen += 0.01 * p; s.reflect += 0.2 * p; break;
-      case 'dark': s.lifesteal += 0.18 * p; break;
-      case 'salty': s.crit += 0.2; s.critMul = BAL.critMul + 0.4; break;
-      case 'meat': s.hp *= 1 + 0.45 * p; s.armor += 20 * p; s.scale *= 1.25; break;
-      case 'fire': s.sigMul *= 1 + 0.25 * p; break;
-    }
+    const E = ELEMENTS[e], et = elTier(fe[e] || 0), p = sm * (1 + 0.5 * (et + 1));
+    s.el[e] = p; s.sty[e] = et + 1;
+    const b = EL_STACK.stat[et] || 0;
+    if (E.style === 'ad') s.atk *= 1 + EL_LEAN.ad * p + b; else if (E.style === 'ap') s.ap *= 1 + EL_LEAN.ap * p + b; else { s.hp *= 1 + EL_LEAN.def * p + b; s.armor += 12 * p; }
+    styleStats(s, e, et + 1, p);
   }
   if (trinityActive(run)) { s.hp *= 1.12 * sm; s.atk *= 1.12 * sm; }
   // items: a component gives its stat (a bit more inside a finished item); a finished item adds one effect of its own
@@ -4119,7 +4137,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (src && src.side === 'hero' && src.st && src.st.sp.brimming && !o.sig && src.maxMana > 0) amount *= 1 + 0.4 * Math.min(1, src.mana / src.maxMana);
   if (tgt.side === 'hero' && tgt.stoneT > B.t) return 0;
   if (tgt.side === 'hero' && o.ranged && tgt.st.sp.arrowWard) amount *= 0.6;
-  if (src && src.side === 'hero' && src.st && src.st.el.salty && src.grumble) amount *= 1 + 0.02 * src.grumble;
+  if (B.sty) amount *= styleDmgMul(B, src, tgt, o, amount);
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
@@ -4127,7 +4145,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (B.otT && src) amount *= src.side === 'hero' ? 1 + BAL.otRamp * B.otT : 1;
   const armor = tgt.side === 'hero' ? tgt.st.armor + tgt.armorBuff : tgt.armor - tgt.shred - (tgt.pry || 0);
   let dmg = amount * armorFactor(armor);
-  if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.15; if (tgt.curseT > 0) dmg *= 1.2; }
+  if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.2; if (tgt.curseT > 0) dmg *= 1.2; }
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
@@ -4138,25 +4156,16 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   else if (!src && tgt.side === 'enemy') tgt.ccBy = null;
   if (tgt.side === 'hero') addTo(tgt.tsrc, !src ? 'other' : src.boss ? 'boss' : o.ranged ? 'ranged' : 'melee', dmg);
   if (dmg >= 1 && !o.quiet) FX.dmg(tgt, dmg, tgt.side === 'hero' ? 'taken' : crit ? 'crit' : o.sig ? 'sig' : o.kind || 'hit');
-  if (tgt.side === 'hero') { if (tgt.st.sigOn) tgt.mana = Math.min(tgt.maxMana, tgt.mana + 3 * tgt.st.manaGain); if (tgt.st.el.salty) tgt.grumble = Math.min(25, tgt.grumble + 1); }
+  if (tgt.side === 'hero') { if (tgt.st.sigOn) tgt.mana = Math.min(tgt.maxMana, tgt.mana + 3 * tgt.st.manaGain); if (tgt.sty) styleHurt(B, tgt, src, o); }
   if (src && src.side === 'hero' && src.st) {
     if (src.st.lifesteal) healUnit(B, src, src, dmg * src.st.lifesteal, true, 'lifesteal');
     if (crit && src.st.sp.heavyHands && !o.noProc && tgt.alive) dealDamage(B, src, tgt, src.maxHp * 0.05, { from: 'item', noProc: true, noCrit: true, quiet: true });
     if (crit && src.st.sp.armorBreak && tgt.side === 'enemy') tgt.pry = Math.min(50, (tgt.pry || 0) + 10);
     if (!o.noProc) {
-      const E = src.st.el;
       if (B.syn.toad >= 0) tgt.poison.push({ dps: [3, 8, 20][B.syn.toad] * (1 + 0.04 * B.siege) * (1 + 0.15 * (B.meta.ranks.banners || 0)), t: 3, src, from: 'bonus' });
       if (src.st.frost) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, src.st.frost); }
       if (src.st.storm && Math.random() < src.st.storm) chainLightning(B, src, tgt, src.st.atk * 1.2, 3, '#bff4ff', 'item');
-      if (E.fire) tgt.poison.push({ dps: src.st.atk * 0.25 * E.fire, t: 3, src, fire: true, from: 'element' });
-      if (E.water) tgt.soakT = 3;
-      if (E.ice) { tgt.slowT = 2; tgt.slowAmt = Math.max(tgt.slowAmt, 0.3); if (src.hits % 4 === 3) { tgt.stun = Math.max(tgt.stun, (tgt.boss ? 0.3 : 0.8) * E.ice); tgt.frozen = 0.8; FX.particles(tgt.x, tgt.y - 8, 8, ['#bfeeff', '#ffffff'], { spread: 12 }); } }
-      if (E.lightning && src.hits % 3 === 2) chainLightning(B, src, tgt, src.st.atk * 0.6 * E.lightning, 3, '#9ff6ff', 'element');
-      if (E.light) tgt.blindT = 2;
-      if (E.void) tgt.shred = Math.min(30 * E.void, tgt.shred + 3 * E.void);
-      if (E.sweet) { tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.15); }
-      if (E.treat && !tgt.boss && Math.random() < 0.12) { tgt.stun = Math.max(tgt.stun, 0.6); FX.text(tgt.x, tgt.y - 22, 'ooh, a snack', '#ffb02e'); }
-      if (E.dark && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.1) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#8a5ad8', true); tgt.hp = 0; }
+      if (src.sty) styleHit(B, src, tgt, dmg, o);
       if (crit && src.st.sp.execute && !tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.2) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#ff3d6e', true); tgt.hp = 0; }
       if (src.st.sp.splash) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.4, { from: 'item', noProc: true, quiet: true });
       if (src.st.sp.manaHit && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
@@ -4188,6 +4197,7 @@ function killUnit(B, u, src) {
     if (!u.temp && sk >= 0 && !u.risen && (bone ? (sk >= 1 || !B.undyingUsed) : sk >= 2 && !B.undyingOther)) {
       if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
+    if (B.sty && styleSave(B, u)) return;
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
@@ -4202,7 +4212,7 @@ function killUnit(B, u, src) {
   let g = u.gold / (goldMul(B.siege) * BAL.goldK) / B.goldRef * killCoins(B.siege) * (1 + (run.tech.vault1 ? 0.15 : 0) + (run.tech.vault2 ? 0.2 : 0) + 0.08 * (B.meta.ranks.chest || 0) + B.goldBonus + (u.hat ? 0.25 : 0));
   if (src && src.st && src.st.midas) g *= 1 + src.st.midas;
   if (src && src.st && src.st.greed) g *= 1 + src.st.greed;
-  if (src && src.st && src.st.el && src.st.el.treat) { g *= 1.4; const low = B.heroes.filter(h => h.alive).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (low) healUnit(B, src, low, low.maxHp * 0.05, false, 'element'); }
+  if (B.sty) g *= styleKill(B, src, u);
   if (B.pinataT > 0) g *= 3;
   if (u.boss) g += u.final ? 5 : BOSS_PURSE[u.boss === 'big' ? 'big' : 'mini'];
   B.coinAcc += g; g = Math.floor(B.coinAcc); B.coinAcc -= g;
@@ -4588,13 +4598,11 @@ function stepBattle(B, dt) {
   // regen: cleric synergy, hot tub, nature, troll blood, water below half
   for (const h of B.heroes) if (h.alive && h.st) {
     let r = (B.syn.cleric >= 0 ? [0.008, 0.02, 0.04][B.syn.cleric] * banner : 0) + (run.tech.hottub ? 0.012 : 0) + (h.st.regen || 0);
-    if (h.st.el && h.st.el.water && h.hp < h.maxHp * 0.5) r += 0.03 * h.st.el.water;
     if (r) h.hp = Math.min(h.maxHp, h.hp + h.maxHp * r * dt);
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
   }
-  // sweet aura, ember mantle, kettle
-  const sweet = B.heroes.filter(h => h.alive && h.st && h.st.el && h.st.el.sweet);
-  for (const h of B.heroes) if (h.alive) h.auraAs = sweet.some(s => dist(s, h) < 60) ? 0.15 * Math.max(...sweet.map(s => s.st.el.sweet)) : 0;
+  // fighting styles (styles.js), ember mantle, kettle
+  styleTick(B, dt);
   B.kettleT += dt; const tick = B.kettleT >= 1; if (tick) B.kettleT = 0;
   for (const h of B.heroes) if (h.alive && h.st && h.st.sp) {
     if (tick && h.st.sp.emberAura) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
@@ -4746,6 +4754,7 @@ function stepHero(B, u, dt) {
   if (u.dash) { const D = u.dash; D.t -= dt; if (D.t <= 0) { const e = D.ts[D.i]; if (e && e.alive) { FX.afterimage(u); u.x = e.x - 6; u.y = e.y; dealDamage(B, u, e, D.dmg != null ? D.dmg : S(u) * D.mul, { sig: true }); FX.slash(e.x, e.y - 8, 1, '#ffffff', true); FX.sound('slash'); } D.i++; D.t = 0.11; if (D.i >= D.ts.length) u.dash = null; } return; }
   if (u.stun > 0) return;
   if (u.spin > 0) { u.spin -= dt; u.spinTick -= dt; u.atkT = 0.1; if (u.spinTick <= 0) { u.spinTick = 0.25; for (const e of inRadius(B.enemies, u, 28 + 3 * RK(u))) dealDamage(B, u, e, u.spinDmg || S(u) * 0.6, { sig: true }); FX.ring(u.x, u.y - 6, 26, '#ffffff'); } const t = nearest(B.enemies, u, 140); if (t) moveToward(u, t.x, t.y, u.st.spd * 0.8, dt); return; }
+  if (u.sty && styleStep(B, u, dt)) return;
   if (!u.temp && u.st.sigOn && u.mana >= u.maxMana && B.enemies.some(e => e.alive)) {
     if (castSignature(B, u)) return;
     u.mana = u.maxMana * 0.8;
@@ -4754,11 +4763,12 @@ function stepHero(B, u, dt) {
   u.retarget -= dt;
   if (u.retarget <= 0 || !u.target || !u.target.alive) {
     u.retarget = 0.3; u.target = null;
-    if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
+    const held = u.sty && styleTarget(B, u);
+    if (held) {} else if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
-    if (!u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
+    if (!held && !u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
       u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && heroLaneOk(B, u, e) && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
-    if (!u.target) {
+    if (!held && !u.target) {
       if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70), e => heroLaneOk(B, u, e));
       else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120 && heroLaneOk(B, u, e)).sort((a, b) => b.x - a.x)[0] || null;
       else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && heroLaneOk(B, u, e) && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb)
@@ -4770,7 +4780,7 @@ function stepHero(B, u, dt) {
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
-    if (d > reach) { if (!u.rafter) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
+    if (d > reach) { if (!u.rafter && !u.noMove) { moveToward(u, t.x - (ranged ? 0 : 9 * Math.sign(t.x - u.x || 1)), t.y, u.st.spd * (1 - u.slowAmt) * hzSpd(B, u), dt); } }
     else {
       u.facing = t.x >= u.x ? 1 : -1;
       u.cd -= dt;
@@ -4789,10 +4799,11 @@ function stepHero(B, u, dt) {
           FX.sound(pt === 'arrow' || pt === 'arrowGold' ? 'bow' : 'pew');
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
         // Gale Cutlass: every third attack strikes twice
+        if (u.sty) styleAttacked(B, u, t);
         if (u.st.sp.twinStrike && !u.healing && u.hits % 3 === 0 && t.alive) { if (ranged) fireProj(B, u, t, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u), { speed: 300, rafter: u.rafter, from: 'item' }); else dealDamage(B, u, t, heroAtk(u), { from: 'item' }); }
       }
     }
-  } else if (!u.rafter) {
+  } else if (!u.rafter && !u.noMove) {
     const dh = dist(u, { x: u.hx, y: u.hy }); if (dh > 2) moveToward(u, u.hx, u.hy, u.st.spd, dt); else u.facing = 1;
   }
 }
@@ -4801,6 +4812,7 @@ function stepEnemy(B, u, dt) {
   u.moving = false;
   if (u.rage) { bossPatience(B, u, dt); return; }
   if (u.stun > 0) return;
+  if (u.lureT > 0 && styleLured(B, u, dt)) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it
@@ -4890,6 +4902,330 @@ function castHammer(B, x, y) {
   FX.sound('whoosh'); return true;
 }
 function hammerCooldown(run, meta) { return Math.max(10, 34 - 2 * (meta.ranks.hammer || 0) - (run.tech.pulleys ? 6 : 0)); }
+
+// ===== Elemental fighting styles (Cam 2026-10-23) =====
+// Every element changes how a champion fights: where it stands, who it picks and what its hits do.
+// Style level per element (st.sty): 0 alone, 1 with 2 on the field, 2 with 4, 3 with 6 (six also wakes the castle).
+// u.sty is the champion's own element and sets targeting and movement; a crest's second element only adds its on-hit part.
+const STYLE_INFO = {
+  dark:      { style: 'Shadowstep', role: 'Assassin',   how: 'Blinks behind the horde to hit the weakest foe, archers and healers first, then blinks home.',
+    tiers: ['A blink every 5s. The first hit after a blink deals +60%.', 'A kill refunds the blink. Finishes non-boss foes under 12%.', 'Each blink leaves a shadow clone that fights for 4s.'] },
+  light:     { style: 'Lantern bearer', role: 'Beacon', how: 'Never chases. Stands beside the most hurt ally, and every hit also heals that ally. Hits blind foes.',
+    tiers: ['Each hit heals the ally for 30% of its damage.', 'Every 4th hit is a flash that blinds every foe nearby.', 'The first ally to fall each siege gets back up at 30% HP.'] },
+  lightning: { style: 'Hop', role: 'Skirmisher', how: 'Every attack hops it to a different foe, zapping whatever it passes.',
+    tiers: ['Hops reach further.', 'Hops cross lanes. Every 3rd hop drops a bolt where it lands.', 'Lightning champions are linked by a live wire that zaps foes crossing it.'] },
+  fire:      { style: 'Firewalk', role: 'Charger', how: 'Charges into the thickest crowd and leaves a burning trail.',
+    tiers: ['The trail burns for 3s.', 'Burning foes burst when they die and set their neighbours alight.', 'The trail becomes a wall of fire that lasts twice as long.'] },
+  water:     { style: 'Pushback', role: 'Tide', how: 'Holds its lane. Hits shove foes back, and a foe shoved into another foe hurts both.',
+    tiers: ['Bigger shoves. Collisions deal damage.', 'Every 5th hit is a wave that pushes back its whole lane.', 'Pushed foes are soaked and take +20% damage.'] },
+  ice:       { style: 'Frost ring', role: 'Warden', how: 'Stands in a ring of frost that slows foes, and always targets the fastest foe in reach.',
+    tiers: ['The ring slows foes by 25%.', 'The ring grows. A foe that stays inside for 3s freezes solid.', 'Frozen foes shatter when killed and hurt foes around them.'] },
+  nature:    { style: 'Rooted', role: 'Grove', how: 'Never moves from where you put it. Roots grab a foe at range and drag it in. Thorns hurt attackers.',
+    tiers: ['A root every 4s.', 'Plants a sapling that taunts foes near it.', 'Every root heals all Nature champions.'] },
+  void:      { style: 'Yank', role: 'Displacer', how: 'Yanks the most dangerous back-row foe (archer, healer, caster) into the middle of your heroes. Hits shred armour.',
+    tiers: ['A yank every 6s.', 'A yanked foe lands stunned with its armour shredded.', 'Each yank pulls three foes into one pile.'] },
+  salty:     { style: 'Grudge', role: 'Duelist', how: 'Locks onto whatever hit it last and will not switch until it is dead. Every hit on it hits harder.',
+    tiers: ['+8% damage per hit on its grudge.', 'Its grudge is taunted and can only fight the Salty champion.', 'Killing a grudge passes the rage to the nearest Salty ally.'] },
+  sweet:     { style: 'Buddy', role: 'Sidekick', how: 'Sticks to your strongest ally, copies their target and gives them a sugar rush. Hits make foes sticky.',
+    tiers: ['The buddy attacks 25% faster.', 'The buddy also deals +20% damage. Three sticky hits glue a foe in place.', 'Every Sweet champion picks a different buddy and the rush doubles.'] },
+  meat:      { style: 'Intercept', role: 'Bodyguard', how: 'Steps in front of whichever ally is taking the most damage and taunts foes around it. Grows as it gets hurt.',
+    tiers: ['Taunts last longer.', 'Takes 30% of the damage aimed at allies next to it.', 'At half HP it swells and slams the ground.'] },
+  treat:     { style: 'Snack toss', role: 'Lure', how: 'Tosses snacks that pull foes toward your strongest hitter. Hunts elites and gold carriers first.',
+    tiers: ['A lure every 6s.', 'Kills drop healing snacks, and +40% gold.', 'Snacks explode in candy when the lure ends.'] },
+};
+for (const e in STYLE_INFO) ELEMENTS[e].desc = `${STYLE_INFO[e].role}. ${STYLE_INFO[e].how}`;
+const SL = (a, lv) => a[Math.max(0, Math.min(a.length - 1, lv))];
+const styLv = (u, e) => (u.st && u.st.sty && u.st.sty[e]) || 0;
+function styleLine(e, lv) { const I = STYLE_INFO[e]; return lv > 0 ? I.tiers[lv - 1] : I.how; }
+
+// small stat leans that go with each style (applied in heroStats)
+function styleStats(s, e, lv, p) {
+  switch (e) {
+    case 'dark': s.lifesteal += 0.12 * p; break;
+    case 'light': s.crit += 0.1 * p; break;
+    case 'lightning': s.as *= 1 + 0.25 * p; break;
+    case 'fire': s.spd *= 1.25; s.sigMul *= 1 + 0.2 * p; break;
+    case 'water': s.regen += 0.006 * p; break;
+    case 'nature': s.hp *= 1 + 0.25 * p; s.regen += 0.01 * p; s.reflect += 0.15 * p; break;
+    case 'salty': s.crit += 0.12; s.critMul += 0.3; s.hp *= 1.1; break;
+    case 'sweet': s.as *= 1 + 0.08 * p; break;
+    case 'meat': s.hp *= 1 + 0.35 * p; s.armor += 15 * p; s.scale *= 1.15; break;
+    case 'treat': s.greed += 0.1 * p; break;
+    case 'ice': s.armor += 8 * p; break;
+    case 'void': s.ap *= 1 + 0.08 * p; break;
+  }
+}
+
+function styleInit(B) {
+  B.styInit = true; B.styLv = {}; B.fire = []; B.pulls = []; B.snacks = []; B.wires = []; B.styT = 0;
+  for (const u of B.heroes) if (u.st && u.st.sty) {
+    for (const e in u.st.sty) B.styLv[e] = Math.max(B.styLv[e] || 0, u.st.sty[e]);
+    u.sty = u.inst && u.inst.el && u.st.sty[u.inst.el] != null ? u.inst.el : Object.keys(u.st.sty)[0] || null;
+    u.h0 = { x: u.hx, y: u.hy }; u.sx = { cd: 1.5 + Math.random(), hop: 0 };
+    if (u.sty === 'nature' && !u.rafter) u.noMove = true;
+  }
+  B.sty = B.heroes.some(u => u.sty);
+}
+
+// once per frame, before the heroes move
+function styleTick(B, dt) {
+  if (!B.styInit) styleInit(B);
+  for (const h of B.heroes) h.auraAs = 0, h.sweetDmg = 0;
+  if (!B.sty) return;
+  const lvF = B.styLv;
+  B.styT += dt; const slow = B.styT >= 0.5; if (slow) B.styT = 0;
+  // who is getting hurt (for Meat), refreshed twice a second
+  if (slow) for (const h of B.heroes) { h.recentDmg = (h.recentDmg || 0) * 0.6 + (h.taken - (h.takenPrev || 0)); h.takenPrev = h.taken; }
+  for (const u of B.heroes) {
+    if (!u.alive || !u.sty) continue;
+    const lv = styLv(u, u.sty);
+    if (u.sty === 'ice' && !u.rafter) {
+      const R = SL([26, 34, 46, 54], lv), sl = SL([0.15, 0.25, 0.3, 0.35], lv);
+      for (const e of B.enemies) if (e.alive && !e.flying && dist(e, u) < R) {
+        e.slowT = Math.max(e.slowT, 0.3); e.slowAmt = Math.max(e.slowAmt, sl); e.inRing = 0.2;
+        if (lv >= 2) { e.iceT = (e.iceT || 0) + dt; if (e.iceT >= 3) { e.iceT = 0; e.stun = Math.max(e.stun, e.boss ? 0.4 : 1.2); e.frozen = e.boss ? 0.4 : 1.2; FX.particles(e.x, e.y - 8, 8, ['#bfeeff', '#ffffff'], { spread: 12 }); FX.text(e.x, e.y - 20, 'frozen', '#bfeeff'); } }
+      }
+    }
+    if (u.sty === 'sweet' && u.buddy && u.buddy.alive) {
+      const b = u.buddy, k = lv >= 3 ? 2 : 1;
+      b.auraAs = Math.max(b.auraAs, SL([0.15, 0.25, 0.25, 0.25], lv) * k); b.sweetDmg = Math.max(b.sweetDmg, (lv >= 2 ? 0.2 : 0.08) * k);
+    }
+  }
+  for (const e of B.enemies) if (e.iceT && !(e.inRing > 0)) e.iceT = Math.max(0, e.iceT - dt); else if (e.inRing > 0) e.inRing -= dt;
+  // fire trail
+  for (const f of B.fire) { f.t += dt; f.tick -= dt; if (f.tick <= 0) { f.tick = 0.5; for (const e of B.enemies) if (e.alive && !e.flying && Math.abs(e.x - f.x) < f.r && Math.abs(e.y - f.y) < f.r * 0.7) e.poison.push({ dps: f.dps, t: 1, src: f.src, fire: true, from: 'element' }); } }
+  B.fire = B.fire.filter(f => f.t < f.life);
+  // roots and yanks drag foes across the field
+  for (const p of B.pulls) { const e = p.e; p.t += dt; if (!e.alive) { p.done = true; continue; }
+    const k = Math.min(1, p.t / p.dur), q = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2; e.x = p.sx + (p.tx - p.sx) * q; e.y = p.sy + (p.ty - p.sy) * q; e.stun = Math.max(e.stun, 0.05);
+    if (k >= 1) { p.done = true; if (p.land) p.land(e); } }
+  B.pulls = B.pulls.filter(p => !p.done);
+  // snacks: lured foes walk to them; at Treat 6 they explode when the lure ends
+  for (const s of B.snacks) { s.t += dt; if (s.t >= s.life) { s.done = true;
+    if (s.boom) { for (const e of inRadius(B.enemies, s, 26)) dealDamage(B, s.src, e, s.src.st.atk * 2, { noProc: true, kind: 'magic', from: 'element' }); FX.explode(s.x, s.y - 4, 24, ['#ffb02e', '#ff8ad8', '#ffffff']); FX.sound('boom'); } } }
+  B.snacks = B.snacks.filter(s => !s.done);
+  // the live wire between Lightning champions at 6
+  B.wires.length = 0;
+  if ((lvF.lightning || 0) >= 3) { const L = B.heroes.filter(h => h.alive && h.sty === 'lightning').sort((a, b) => a.y - b.y);
+    for (let i = 0; i + 1 < L.length; i++) { const a = L[i], b = L[i + 1]; B.wires.push([a, b]);
+      if (slow) for (const e of B.enemies) if (e.alive && segDist(e, a, b) < 7) dealDamage(B, a, e, a.st.atk * 0.5, { noProc: true, kind: 'magic', from: 'element', quiet: true }); } }
+  // clones and saplings that run out
+  for (const h of B.heroes) if (h.alive && h.lifeT != null) { h.lifeT -= dt; if (h.lifeT <= 0) { h.alive = false; h.hp = 0; FX.particles(h.x, h.y - 8, 8, '#8a5ad8', { spread: 12 }); } }
+}
+function segDist(p, a, b) { const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy || 1, k = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l)); return Math.hypot(p.x - a.x - k * dx, p.y - a.y - k * dy); }
+// holding styles (Light, Ice) still answer foes beating on the wall
+const wallUnderAttack = B => B.enemies.some(e => e.alive && e.siegeT != null && B.t - e.siegeT < 2);
+const styleFoes = (B, f) => B.enemies.filter(e => e.alive && e.x < W - 6 && !e.onRafter && !e.climb && (!f || f(e)));
+const backRow = e => (e.range > 40 ? 2 : 0) + (e.def && e.def.kind === 'healer' ? 2 : 0) + (e.def && e.def.elite ? 1 : 0);
+function pullFoe(B, src, e, tx, ty, col, land) {
+  if (B.pulls.some(p => p.e === e)) return;
+  B.pulls.push({ e, src, sx: e.x, sy: e.y, tx: clamp(tx, CASTLE_X + 20, W - 10), ty: clamp(ty, GRID.y + 4, GRID.y + GRID.rows * GRID.cell - 4), t: 0, dur: 0.45, col, land });
+  e.stun = Math.max(e.stun, 0.5); e.target = null;
+}
+
+// per hero, every frame. Returns true when the style used the frame (a blink)
+function styleStep(B, u, dt) {
+  if (!B.styInit) styleInit(B);
+  const e0 = u.sty; if (!e0 || u.rafter) return false;
+  const lv = styLv(u, e0), S = u.sx, foesUp = B.enemies.some(e => e.alive);
+  if (foesUp) S.cd -= dt;
+  S.look = (S.look || 0) - dt; const look = S.look <= 0; if (look) S.look = 0.4;
+  switch (e0) {
+    case 'dark': {
+      if (S.deep > 0) { S.deep -= dt; if (S.deep <= 0 || ((!u.target || !u.target.alive) && !nearest(B.enemies, u, 40))) { FX.afterimage(u); u.x = u.h0.x; u.y = u.h0.y; S.deep = 0; u.target = null; FX.ring(u.x, u.y - 6, 10, '#8a5ad8'); } return false; }
+      if (S.cd <= 0) { const v = styleFoes(B, e => !e.flying || u.st.range > 40).sort((a, b) => (backRow(b) - backRow(a)) || (a.hp / a.maxHp - b.hp / b.maxHp))[0];
+        if (!v) return false; S.cd = SL([7, 5, 4.5, 4], lv); FX.afterimage(u); u.x = clamp(v.x + 9, CASTLE_X + 20, W - 8); u.y = v.y; u.facing = -1; u.target = v; u.retarget = 1; S.deep = 3; S.bonus = true;
+        FX.ring(u.x, u.y - 6, 12, '#8a5ad8'); FX.sound('whoosh');
+        if (lv >= 3) { summonThrall(B, u, 0.45, u.key, { name: 'Shadow', col: '#8a5ad8' }); const c = B.heroes[B.heroes.length - 1]; c.lifeT = 4; c.x = u.x; c.y = u.y + 6; c.hx = c.x; c.hy = c.y; c.shade = true; }
+        return true; }
+      break; }
+    case 'light': if (look) { const w = B.heroes.filter(h => h.alive && h !== u && !h.temp && !h.rafter && h.hp < h.maxHp * 0.92).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; u.ward = w || null;
+      const p = w ? { x: w.x - 11, y: w.y + 3 } : u.h0; u.hx = p.x; u.hy = p.y; } break;
+    case 'sweet': if (look) { const taken = new Set(lv >= 3 ? B.heroes.filter(h => h !== u && h.sty === 'sweet' && h.buddy).map(h => h.buddy) : []);
+      const pow = h => h.st.atk * heroAS(h) * Math.max(1, h.st.ap);
+      const b = B.heroes.filter(h => h.alive && h !== u && !h.temp && !h.rafter && !taken.has(h)).sort((a, b) => (a.sty === 'sweet') - (b.sty === 'sweet') || pow(b) - pow(a))[0];
+      u.buddy = b || null; const p = b ? { x: b.x - 9, y: b.y + 5 } : u.h0; u.hx = p.x; u.hy = p.y; } break;
+    case 'meat': {
+      if (look) { const g = B.heroes.filter(h => h.alive && h !== u && !h.temp && !h.rafter && (h.recentDmg || 0) > h.maxHp * 0.03).sort((a, b) => b.recentDmg - a.recentDmg)[0];
+        u.guard = g || null; const p = g ? { x: g.x + 11, y: g.y } : u.h0; u.hx = p.x; u.hy = p.y; }
+      if (S.cd <= 0) { const near = inRadius(B.enemies, u, 30).filter(e => !e.flying); if (near.length) { S.cd = 3; const tt = SL([1, 1.5, 1.8, 2], lv); for (const e of near) { e.taunt = u; e.tauntT = Math.max(e.tauntT, tt); } FX.ring(u.x, u.y - 6, 26, '#ff6a6a'); FX.text(u.x, u.y - 26, 'OI!', '#ff6a6a'); } }
+      u.vscale = u.st.scale * (1 + 0.35 * (1 - u.hp / u.maxHp));
+      break; }
+    case 'nature': if (S.cd <= 0) {
+      const v = styleFoes(B, e => !e.flying && dist(e, u) < 120 && dist(e, u) > 22).sort((a, b) => backRow(b) - backRow(a) || dist(a, u) - dist(b, u))[0];
+      if (v) { S.cd = SL([5, 4, 3.5, 3], lv);
+        if (v.boss) { v.stun = Math.max(v.stun, 0.4); FX.text(v.x, v.y - 24, 'rooted', '#6fdc5a'); }
+        else pullFoe(B, u, v, u.x + 13, u.y + rand(-4, 4), '#6fdc5a', e => { e.stun = Math.max(e.stun, 0.5); });
+        FX.particles(v.x, v.y - 2, 6, ['#6fdc5a', '#2f8a3a'], { spread: 8, up: true });
+        if (lv >= 3) for (const h of B.heroes) if (h.alive && h.sty === 'nature') healUnit(B, u, h, h.maxHp * 0.04, true, 'element');
+      } else S.cd = 0.4; }
+      if (lv >= 2 && !S.sapling && foesUp) { S.sapling = true; summonThrall(B, u, 0.8, 'sapling', { name: 'Sapling', col: '#6fdc5a' }); const sp = B.heroes[B.heroes.length - 1]; sp.x = sp.hx = u.x + 22; sp.y = sp.hy = u.y; sp.noMove = true; sp.st.atk = 0; sp.st.spd = 0; sp.sapling = true; sp.st.armor = 40; sp.sx = { cd: 0 }; }
+      break;
+    case 'void': if (S.cd <= 0) {
+      const v = styleFoes(B, e => !e.boss && e.x > u.x + 30).sort((a, b) => backRow(b) - backRow(a) || b.x - a.x)[0];
+      if (v) { S.cd = SL([8, 6, 5, 4], lv); const tx = u.x + 24, ty = u.y;
+        const land = e => { if (lv >= 2) { e.stun = Math.max(e.stun, 1); e.shred = Math.min(60, e.shred + 20); } FX.ring(e.x, e.y - 6, 12, '#7a5aff'); };
+        pullFoe(B, u, v, tx, ty, '#7a5aff', land);
+        if (lv >= 3) styleFoes(B, e => e !== v && !e.boss && dist(e, v) < 50).sort((a, b) => dist(a, v) - dist(b, v)).slice(0, 2).forEach((e, i) => pullFoe(B, u, e, tx + 6, ty + (i ? 7 : -7), '#7a5aff', land));
+        FX.text(u.x, u.y - 26, 'GET OVER HERE', '#7a5aff'); FX.sound('whoosh');
+      } else S.cd = 0.5; } break;
+    case 'treat': if (S.cd <= 0 && foesUp) {
+      const hit = B.heroes.filter(h => h.alive && !h.temp && !h.rafter && h !== u).sort((a, b) => b.st.atk * Math.max(1, b.st.ap) - a.st.atk * Math.max(1, a.st.ap))[0] || u;
+      const sp = { x: clamp(hit.x + 18, CASTLE_X + 20, W - 10), y: hit.y };
+      const pulled = styleFoes(B, e => !e.boss && dist(e, sp) < SL([45, 55, 65, 75], lv));
+      if (pulled.length) { S.cd = SL([8, 6, 5, 4], lv); const s = Object.assign(sp, { t: 0, life: 2 + 0.3 * lv, src: u, boom: lv >= 3 }); B.snacks.push(s);
+        for (const e of pulled) { e.lure = s; e.lureT = s.life; e.target = null; }
+        FX.text(sp.x, sp.y - 16, 'SNACK!', '#ffb02e'); FX.sound('jingle'); } else S.cd = 0.5; } break;
+    case 'fire': { const m = Math.hypot(u.x - (S.lx ?? u.x), u.y - (S.ly ?? u.y)); S.lx = u.x; S.ly = u.y; S.walk = (S.walk || 0) + m;
+      if (S.walk >= 6 && foesUp) { S.walk = 0; B.fire.push({ x: u.x, y: u.y, t: 0, tick: 0, life: lv >= 3 ? 6 : 3, r: lv >= 3 ? 8 : 6, src: u, dps: u.st.atk * SL([0.12, 0.2, 0.25, 0.3], lv) }); if (B.fire.length > 140) B.fire.shift(); }
+      break; }
+  }
+  return false;
+}
+
+// target picking. Returns true when the style decided (a null target then means hold position)
+function styleTarget(B, u) {
+  const e0 = u.sty; if (!e0 || u.rafter) return false;
+  const lv = styLv(u, e0), reach = u.st.range + 6;
+  switch (e0) {
+    case 'dark': if (u.sx.deep > 0) { u.target = u.target && u.target.alive ? u.target : nearest(B.enemies, u, 40, e => !e.flying || u.st.range > 40); return true; } return false;
+    case 'light': if (u.def.cls === 'cleric') return false; u.target = nearest(B.enemies, u, reach, e => !e.onRafter && !e.climb); return !!u.target || !wallUnderAttack(B);
+    case 'nature': u.target = nearest(B.enemies, u, reach + 4, e => !e.onRafter && !e.climb && (u.st.range > 40 || !e.flying)); return true;
+    case 'ice': { const R = SL([26, 34, 46, 54], lv); u.target = styleFoes(B, e => dist(e, u.h0) < R + reach && (u.st.range > 40 || !e.flying)).sort((a, b) => b.spd * (1 - b.slowAmt) - a.spd * (1 - a.slowAmt))[0] || null; return !!u.target || !wallUnderAttack(B); }
+    case 'salty': if (u.grudge && u.grudge.alive && dist(u.grudge, u.h0) < 120 && !u.grudge.onRafter) { u.target = u.grudge; return true; } return false;
+    case 'sweet': { const b = u.buddy; if (b && b.alive && b.target && b.target.alive && b.target.side === 'enemy') { u.target = b.target; return true; } return false; }
+    case 'meat': if (u.guard && u.guard.alive) { u.target = nearest(B.enemies, u, 40, e => !e.flying || u.st.range > 40); return true; } return false;
+    case 'fire': { const home = u.h0, c = densest(styleFoes(B, e => !e.flying || u.st.range > 40), 26, home, 170); if (c) { u.target = c; return true; } return false; }
+    case 'treat': { const v = styleFoes(B, e => (e.def.elite || e.captain || e.hat || e.turncoat) && dist(e, u) < u.st.range + 70)[0]; if (v) { u.target = v; return true; } return false; }
+    case 'lightning': if (u.sx.hopT > B.t && u.target && u.target.alive) return true; return false;
+  }
+  return false;
+}
+
+// after a basic attack: Lightning hops to its next foe
+function styleAttacked(B, u, t) {
+  if (u.sty !== 'lightning' || u.rafter || u.healing) return;
+  const lv = styLv(u, 'lightning'), R = SL([50, 62, 76, 90], lv), melee = u.st.range <= 40;
+  const nx = styleFoes(B, e => e !== t && dist(e, u) < R && (melee ? !e.flying && dist(e, u.h0) < 120 + 20 * lv : true) && (lv >= 2 || heroLaneOk(B, u, e))).sort((a, b) => dist(a, u) - dist(b, u))[0];
+  if (!nx) return;
+  { const mid = { x: (u.x + nx.x) / 2, y: (u.y + nx.y) / 2 }, z = nearest(B.enemies, mid, 26, e => e !== nx && e !== t); if (z) { dealDamage(B, u, z, u.st.atk * 0.6, { noProc: true, kind: 'magic', from: 'element' }); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: z.x, y: z.y - 8 }], '#9ff6ff'); } }
+  if (melee) { FX.afterimage(u); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: nx.x, y: nx.y - 8 }], '#9ff6ff'); u.x = nx.x + (nx.x > u.x ? -9 : 9); u.y = nx.y; }
+  u.target = nx; u.sx.hopT = B.t + 1 / heroAS(u) + 0.1; u.retarget = 1 / heroAS(u) + 0.1; u.cd = Math.min(u.cd, 0.18 / Math.max(0.2, heroAS(u)) + u.cd * 0.7);
+  u.sx.hop = (u.sx.hop || 0) + 1;
+  if (lv >= 2 && u.sx.hop % 3 === 0) { for (const e of inRadius(B.enemies, nx, 22)) dealDamage(B, u, e, u.st.atk * 1.1, { noProc: true, kind: 'magic', from: 'element' }); FX.bolt([{ x: nx.x + 2, y: nx.y - 90 }, { x: nx.x - 3, y: nx.y - 40 }, { x: nx.x, y: nx.y - 6 }], '#ffffff'); FX.ring(nx.x, nx.y, 22, '#9ff6ff'); FX.sound('zap'); }
+}
+
+// damage multiplier on any hit: blinks, grudges, the buddy's sugar and Meat's shared hurt
+function styleDmgMul(B, src, tgt, o, amount) {
+  let m = 1;
+  if (src && src.side === 'hero' && src.sx) {
+    if (src.sx.bonus && !o.sig && src.sty === 'dark') { m *= 1 + SL([0.4, 0.6, 0.7, 0.8], styLv(src, 'dark')); src.sx.bonus = false; }
+    if (src.sty === 'salty' && tgt === src.grudge && src.grudgeN) m *= 1 + SL([0.05, 0.08, 0.1, 0.12], styLv(src, 'salty')) * src.grudgeN;
+  }
+  if (src && src.sweetDmg) m *= 1 + src.sweetDmg;
+  if (tgt.side === 'hero' && src && src.side === 'enemy' && !o.shared && (B.styLv.meat || 0) >= 2 && tgt.sty !== 'meat') {
+    const g = B.heroes.find(h => h.alive && h.sty === 'meat' && styLv(h, 'meat') >= 2 && dist(h, tgt) < 30);
+    if (g) { dealDamage(B, src, g, amount * 0.3, { shared: true, noProc: true, quiet: true, unavoidable: true }); m *= 0.7; }
+  }
+  return m;
+}
+
+// a hero is hit: Salty picks its grudge, Meat grows and slams
+function styleHurt(B, u, src, o) {
+  if (u.sty === 'salty' && src && src.side === 'enemy' && src.alive && (!u.grudge || !u.grudge.alive)) { u.grudge = src; u.grudgeN = u.rage || 0; u.rage = 0; FX.text(u.x, u.y - 26, 'GRUDGE', '#e8eef8', true); }
+  if (u.sty === 'meat' && styLv(u, 'meat') >= 3 && !u.slammed && u.hp < u.maxHp * 0.5 && u.hp > 0) { u.slammed = true;
+    for (const e of inRadius(B.enemies, u, 38)) { dealDamage(B, u, e, u.maxHp * 0.25, { noProc: true, from: 'element' }); e.stun = Math.max(e.stun, e.boss ? 0.4 : 1); }
+    FX.shockwave(u.x, u.y, 40, '#ff6a6a'); FX.shake(5); FX.sound('thud'); FX.text(u.x, u.y - 30, 'BELLY SLAM', '#ff6a6a', true); }
+}
+
+// a hero's hit lands (not on signatures' extra procs): each element's on-hit part
+function styleHit(B, src, tgt, dmg, o) {
+  if (tgt.side !== 'enemy') return;
+  const st = src.st.sty;
+  for (const e in st) { const lv = st[e];
+    switch (e) {
+      case 'dark': if (!tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * (lv >= 2 ? 0.12 : 0.08)) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#8a5ad8', true); tgt.hp = 0; } break;
+      case 'light': tgt.blindT = 2;
+        if (src.ward && src.ward.alive && src.sty === 'light') { healUnit(B, src, src.ward, dmg * SL([0.2, 0.3, 0.4, 0.5], lv), false, 'element'); if (Math.random() < 0.3) FX.particles(src.ward.x, src.ward.y - 10, 2, '#fff3b0', { spread: 4, up: true }); }
+        if (lv >= 2 && !o.sig && src.hits % 4 === 3) { for (const f of inRadius(B.enemies, src, 44)) f.blindT = 3; FX.ring(src.x, src.y - 6, 40, '#fff3b0'); FX.flash && FX.flash('#fff3b0', 0.08); }
+        break;
+      case 'fire': tgt.poison.push({ dps: src.st.atk * 0.2 * (1 + 0.3 * lv), t: 3, src, fire: true, from: 'element' }); break;
+      case 'water': if (!tgt.boss && !o.sig && tgt.alive) {
+          const kb = SL([6, 9, 11, 13], lv); tgt.x = Math.min(W - 8, tgt.x + kb);
+          if (lv >= 1) for (const f of inRadius(B.enemies, tgt, 9)) if (f !== tgt) { dealDamage(B, src, f, dmg * 0.35, { noProc: true, quiet: true, from: 'element' }); dealDamage(B, src, tgt, dmg * 0.2, { noProc: true, quiet: true, from: 'element' }); FX.text(f.x, f.y - 18, 'bonk', '#4ab8ff'); break; }
+          if (lv >= 3) tgt.soakT = 3;
+        }
+        if (lv >= 2 && !o.sig && src.sty === 'water' && src.hits % 5 === 4) { B.waves.push({ type: 'tide', x: src.x, y: src.y, vx: 150, life: 1.1, t: 0, src, dmg: src.st.atk * 0.8, hit: new Set(), kb: 18, h: laneH() / 2 }); FX.sound('whoosh'); }
+        break;
+      case 'ice': tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.2); break;
+      case 'void': tgt.shred = Math.min(20 + 10 * lv, tgt.shred + 3); break;
+      case 'salty': if (src.sty === 'salty' && tgt === src.grudge) { src.grudgeN = Math.min(15, (src.grudgeN || 0) + 1); if (lv >= 2) { tgt.taunt = src; tgt.tauntT = Math.max(tgt.tauntT, 1.2); } } break;
+      case 'sweet': tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.15);
+        if (lv >= 2) { tgt.sticky = (tgt.sticky || 0) + 1; if (tgt.sticky >= 3) { tgt.sticky = 0; tgt.stun = Math.max(tgt.stun, tgt.boss ? 0.3 : 1); FX.text(tgt.x, tgt.y - 20, 'glued', '#ff8ad8'); } } break;
+    }
+  }
+}
+
+// a foe dies. Returns the gold multiplier; also fire bursts, ice shatters, dark refunds and grudges passed on
+function styleKill(B, src, v) {
+  let g = 1;
+  if (src && src.sty) {
+    const lv = styLv(src, src.sty);
+    if (src.sty === 'dark' && lv >= 1 && src.sx) src.sx.cd = Math.min(src.sx.cd, lv >= 2 ? 0.4 : 1.5);
+    if (src.sty === 'salty' && v === src.grudge) { if (lv >= 3) { const a = B.heroes.filter(h => h.alive && h !== src && h.sty === 'salty').sort((a, b) => dist(a, src) - dist(b, src))[0]; if (a) { a.rage = src.grudgeN; FX.text(a.x, a.y - 26, 'RAGE', '#e8eef8'); } } src.grudge = null; src.grudgeN = 0; }
+  }
+  if (src && src.st && src.st.sty && src.st.sty.treat != null) { const lv = src.st.sty.treat; g *= SL([1.15, 1.25, 1.4, 1.5], lv);
+    if (lv >= 2) { const low = B.heroes.filter(h => h.alive && !h.temp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (low) healUnit(B, src, low, low.maxHp * 0.05, false, 'element'); } }
+  if ((B.styLv.fire || 0) >= 2 && v.poison && v.poison.some(p => p.fire)) {
+    const f = v.poison.find(p => p.fire && p.src && p.src.side === 'hero'), s = f && f.src; if (s && s.st) {
+      for (const e of inRadius(B.enemies, v, 22)) { if (e === v) continue; dealDamage(B, s, e, Math.min(v.maxHp * 0.15, s.st.atk * 2), { noProc: true, kind: 'magic', from: 'element', quiet: true }); e.poison.push({ dps: s.st.atk * 0.2, t: 3, src: s, fire: true, from: 'element' }); }
+      FX.explode(v.x, v.y - 6, 18, ['#ff6a3d', '#ffd23a']); } }
+  if ((B.styLv.ice || 0) >= 3 && v.frozen > 0) { const s = B.heroes.find(h => h.alive && h.sty === 'ice');
+    if (s) { for (const e of inRadius(B.enemies, v, 24)) if (e !== v) dealDamage(B, s, e, Math.min(v.maxHp * 0.2, s.st.atk * 2.5), { noProc: true, kind: 'magic', from: 'element', quiet: true }); FX.particles(v.x, v.y - 8, 14, ['#bfeeff', '#ffffff', '#5fa8ff'], { spread: 20 }); FX.sound('shatter'); } }
+  return g;
+}
+
+// the first ally to fall each siege gets back up (Light at 6)
+function styleSave(B, u) {
+  if (u.temp || (B.styLv && B.styLv.light || 0) < 3 || B.dawnUsed) return false;
+  B.dawnUsed = true; u.hp = u.maxHp * 0.3; FX.text(u.x, u.y - 24, 'DAWN', '#fff3b0', true); FX.ring(u.x, u.y - 6, 30, '#fff3b0'); FX.sound('revive'); return true;
+}
+
+// a lured foe walks to its snack instead of fighting
+function styleLured(B, e, dt) {
+  const s = e.lure; e.lureT -= dt; if (!s || s.done || e.boss) { e.lure = null; e.lureT = 0; return false; }
+  const d = dist(e, s); if (d > 7) moveToward(e, s.x + (e.x > s.x ? 5 : -5), s.y, e.spd * hzSpd(B, e), dt); else e.moving = false;
+  return true;
+}
+
+// ----- drawing (called from render.js) -----
+function drawStyleGround(g, B, t) {
+  if (!B || !B.styInit) return;
+  for (const u of B.heroes) if (u.alive && u.sty === 'ice' && !u.rafter) { const R = SL([26, 34, 46, 54], styLv(u, 'ice'));
+    g.globalAlpha = 0.14; g.fillStyle = '#bfeeff'; g.beginPath(); g.ellipse(Math.round(u.x), Math.round(u.y), R, R * 0.55, 0, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 0.45 + 0.15 * Math.sin(t * 3); g.strokeStyle = '#bfeeff'; g.lineWidth = 1; g.stroke(); g.globalAlpha = 1;
+    for (let i = 0; i < 6; i++) { const a = t * 0.6 + i * 1.047; g.fillStyle = '#ffffff'; g.fillRect(Math.round(u.x + Math.cos(a) * R), Math.round(u.y + Math.sin(a) * R * 0.55), 1, 1); } }
+  for (const f of B.fire) { const k = 1 - f.t / f.life, n = f.r >= 8 ? 3 : 2;
+    for (let i = 0; i < n; i++) { const s = (f.x * 7 + f.y * 3 + i * 11 + Math.floor(t * 10)) % 5; g.globalAlpha = 0.5 + 0.5 * k; g.fillStyle = s < 2 ? '#ffd23a' : '#ff6a3d'; g.fillRect(Math.round(f.x - f.r / 2 + i * 3), Math.round(f.y - 1 - s * k), 2, 1 + Math.round(2 * k)); }
+    g.globalAlpha = 1; }
+  for (const s of B.snacks) { g.globalAlpha = 0.18; g.strokeStyle = '#ffb02e'; g.beginPath(); g.ellipse(Math.round(s.x), Math.round(s.y), 14, 8, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+    const x = Math.round(s.x), y = Math.round(s.y) - 2 - (Math.floor(t * 6) % 2); g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 3, 7, 6); g.fillStyle = '#ffb02e'; g.fillRect(x - 2, y - 2, 5, 4); g.fillStyle = '#ff8ad8'; g.fillRect(x - 2, y - 2, 5, 1); g.fillStyle = '#8a4a1a'; g.fillRect(x, y, 1, 1); }
+  for (const w of B.waves) if (w.type === 'tide') { const x = Math.round(w.x); for (let y = Math.round(w.y - w.h); y < w.y + w.h; y += 2) { const o = Math.round(Math.sin(y * 0.3 + t * 12) * 2); g.globalAlpha = 0.7 * (1 - w.t / w.life); g.fillStyle = '#4ab8ff'; g.fillRect(x - 6 + o, y, 6, 2); g.fillStyle = '#bff4ff'; g.fillRect(x + o, y, 2, 2); } g.globalAlpha = 1; }
+}
+function drawStyleOver(g, B, t) {
+  if (!B || !B.styInit) return;
+  for (const p of B.pulls) if (p.e.alive && p.src && p.src.alive) { g.strokeStyle = p.col; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(p.src.x) + 0.5, Math.round(p.src.y - 8) + 0.5);
+    const mx = (p.src.x + p.e.x) / 2, my = (p.src.y + p.e.y) / 2 - 6 + Math.sin(t * 20) * 2; g.quadraticCurveTo(mx, my, Math.round(p.e.x) + 0.5, Math.round(p.e.y - 8) + 0.5); g.stroke(); }
+  for (const [a, b] of B.wires) { g.strokeStyle = Math.floor(t * 14) % 2 ? '#9ff6ff' : '#ffffff'; g.lineWidth = 1; g.beginPath(); const n = 6; g.moveTo(a.x, a.y - 10);
+    for (let i = 1; i < n; i++) { const k = i / n; g.lineTo(a.x + (b.x - a.x) * k + Math.sin(t * 40 + i) * 2, a.y - 10 + (b.y - a.y) * k + Math.cos(t * 37 + i * 2) * 2); } g.lineTo(b.x, b.y - 10); g.stroke(); }
+  for (const u of B.heroes) {
+    if (u.alive && u.sapling) { const x = Math.round(u.x), y = Math.round(u.y), sw = Math.round(Math.sin(t * 2) * 1); g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 9, 3, 10); g.fillRect(x - 6 + sw, y - 16, 13, 8);
+      g.fillStyle = '#8a5a2a'; g.fillRect(x, y - 8, 1, 8); g.fillStyle = '#2f8a3a'; g.fillRect(x - 5 + sw, y - 15, 11, 6); g.fillStyle = '#6fdc5a'; g.fillRect(x - 4 + sw, y - 15, 6, 2); }
+    if (u.alive && u.sty === 'sweet' && u.buddy && u.buddy.alive && Math.floor(t * 3) % 3 === 0) { g.fillStyle = '#ff8ad8'; const x = Math.round(u.buddy.x) - 1, y = Math.round(u.buddy.y - 30 * (u.buddy.vscale || 1)); g.fillRect(x, y, 1, 1); g.fillRect(x + 2, y, 1, 1); g.fillRect(x - 1, y + 1, 5, 1); g.fillRect(x, y + 2, 3, 1); g.fillRect(x + 1, y + 3, 1, 1); }
+    if (u.alive && u.sty === 'salty' && u.grudge && u.grudge.alive) { const e = u.grudge, x = Math.round(e.x), y = Math.round(e.y - 24 * (e.scale || 1) - (e.z || 0)); g.fillStyle = '#e8eef8'; for (let i = 0; i < Math.min(8, u.grudgeN || 0); i++) g.fillRect(x - 8 + i * 2, y, 1, 2); g.fillStyle = '#ff4a4a'; g.fillRect(x - 1, y - 4, 3, 3); }
+    if (u.alive && u.shade) { g.globalAlpha = 0.5; g.fillStyle = '#2a1a4a'; g.fillRect(Math.round(u.x) - 6, Math.round(u.y) - 1, 12, 2); g.globalAlpha = 1; }
+  }
+}
 
 // ===== Ultimate kit (Cam 2026-10-15): every legend's signature is a big, animated ultimate that grows with rarity =====
 // Building blocks push B.zones entries of type 'ult'; ultfx2.js draws them by `vis` and `shape`.
@@ -5180,9 +5516,9 @@ function castleGrowth(run) { return Math.pow(1.3, castleTier(run)); }
 function castleTier(run) { return run.stats && run.stats.bosses ? run.stats.bosses.length : 0; }
 
 function newRun(meta) {
-  const run = { v: 2, runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), startedAt: Date.now(), siege: 1, gold: 0, roster: [], stash: [], tech: {}, discovered: {}, castleEl: null,
+  const run = { v: 2, runId: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), startedAt: Date.now(), siege: 1, gold: START_GOLD, roster: [], stash: [], tech: {}, discovered: {}, castleEl: null,
     vet: meta.ranks.veterans || 0, mods: {}, castle: { hp: 0, max: 0 }, stats: { kills: 0, gold: 0, bosses: [], dmgByHero: {}, deaths: 0, drafts: [], loot: [], encounters: [], techs: [] }, history: [], diamondsFound: 0,
-    phase: 'draft', draftRerolls: 0, lootRerolls: 0, maxhpMul: 1 };
+    phase: 'draft', draftRerolls: 0, lootRerolls: 0, maxhpMul: 1, heraldDue: true };
   run.castle.max = castleMaxFor(run, meta); run.castle.hp = run.castle.max;
   return run;
 }
@@ -5199,6 +5535,13 @@ function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: r
 // each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable
 const SEASON = { n: 4, share: 0.7 };
 function runSeason(run) { if (!run) return null; if (!run.season) run.season = EL_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, SEASON.n); return run.season; }
+// a new horde brings a new season (Cam 2026-10-23): the two in-season elements you field most stay, two new ones arrive
+function rotateSeason(run) {
+  const old = runSeason(run).slice(), n = fieldElements(run);
+  const keep = old.sort((a, b) => (n[b] || 0) - (n[a] || 0) || Math.random() - 0.5).slice(0, SEASON.n - 2);
+  const fresh = EL_KEYS.filter(e => !old.includes(e)).sort(() => Math.random() - 0.5).slice(0, SEASON.n - keep.length);
+  run.season = [...keep, ...fresh]; run.seasonNew = fresh; run.heraldDue = true;
+}
 function rollElement(run) { const s = runSeason(run); return s && Math.random() < SEASON.share ? pick(s) : pick(EL_KEYS); }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
@@ -5533,7 +5876,8 @@ function finishSiege(run, meta, B) {
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
-  run.siege++; run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
+  run.siege++; if (factionIndex(run.siege) !== factionIndex(run.siege - 1) && run.siege < FINAL_SIEGE) rotateSeason(run);
+  run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
   if (!run.shopLock) rollShop(run, meta);
   return rep;
 }
@@ -7020,6 +7364,14 @@ function drawStars(g, u, t) {
   px(STAR_COL[n - 1], 0, 0);
   if (n === 3 && Math.floor(t * 3) % 3 === 0) { g.fillStyle = '#ffffff'; g.fillRect(x0 + 2, y0 + 1, 1, 1); }
 }
+// a frame filled with one colour, for star borders (cached per frame and colour)
+const TINTS = new WeakMap();
+function tintFrame(img, col) {
+  let m = TINTS.get(img); if (!m) TINTS.set(img, m = {}); if (m[col]) return m[col];
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+  return (m[col] = c);
+}
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
 function initRender(canvas) {
@@ -7180,6 +7532,15 @@ function drawUnit(g, u, t, opts = {}) {
   // a champion standing still plays its own little idle (src/idles.js)
   const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
+  // star level (Cam 2026-10-23): 2★ and 3★ champions get a silver or gold border around the body instead of stars overhead
+  const star = u.inst && !u.temp && u.alive !== false && u.side === 'hero' ? heroStar(u.inst) : 1;
+  if (star > 1) { const col = STAR_COL[star - 1], o = Math.max(1, Math.round(fs / 20)), sil = tintFrame(img, col), I2 = idle && Object.assign({}, idle, { def: Object.assign({}, idle.def, { back: null, front: null }) });
+    const a0 = g.globalAlpha;
+    for (const [dx, dy, aa] of [[-2 * o, 0, 0.45], [2 * o, 0, 0.45], [0, -2 * o, 0.45], [0, 2 * o, 0.45], [-o, -o, 1], [o, -o, 1], [-o, o, 1], [o, o, 1], [-o, 0, 1], [o, 0, 1], [0, -o, 1], [0, o, 1]]) { g.globalAlpha = a0 * aa * (star === 3 ? 0.8 + 0.2 * Math.sin(t * 4 + (u.phase || 0)) : 0.95);
+      if (I2) drawIdleUnit(g, sil, fx + dx, y + dy, fs, flip, I2);
+      else if (flip) { g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, -fs / 2, y + dy - fs + 1, fs, fs); g.restore(); }
+      else g.drawImage(sil, fx + dx - fs / 2, y + dy - fs + 1, fs, fs); }
+    g.globalAlpha = a0; }
   if (idle) drawIdleUnit(g, img, fx, y, fs, flip, idle);
   else if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
   else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
@@ -7196,9 +7557,21 @@ function drawUnit(g, u, t, opts = {}) {
 
 // pulsing red chevrons on the right edge show where the horde walks in
 // prep only: faint dashed lines between the three lanes, so placement reads at a glance
-function drawLaneLines(g, t) {
-  g.fillStyle = 'rgba(255,255,255,0.16)';
-  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * laneH() + 6); for (let x = CASTLE_X + 8; x < W - 8; x += 8) g.fillRect(x, y, 4, 1); }
+function drawLaneLines(g, t, V) {
+  // Cam 2026-10-23: lanes have to read clearly while placing. Bands alternate, dividers are solid, the lane under the cursor lights up
+  const lh = laneH(), hl = V.hover && V.hover.type === 'grid' ? laneOf(cellPos(V.hover.c, V.hover.r).y) : -1;
+  for (let l = 0; l < LANES; l++) { const y0 = Math.round(GRID.y + l * lh + 6), y1 = Math.round(GRID.y + (l + 1) * lh + 6);
+    g.fillStyle = l === hl ? 'rgba(255,216,74,0.16)' : l % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(10,14,40,0.07)'; g.fillRect(CASTLE_X + 6, y0, W - CASTLE_X - 6, y1 - y0); }
+  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * lh + 6); g.fillStyle = 'rgba(15,20,48,0.35)'; g.fillRect(CASTLE_X + 6, y + 1, W - CASTLE_X - 6, 1); g.fillStyle = 'rgba(255,255,255,0.45)'; for (let x = CASTLE_X + 6; x < W - 4; x += 8) g.fillRect(x, y, 6, 1); }
+}
+// prep only, at hi-res: each lane's name and how much of the horde the scouts expect in it
+function drawLaneLabels(ctx, k, run) {
+  const L = run.lanes; ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE;
+  for (let l = 0; l < LANES; l++) { const y = (GRID.y + (l + 0.5) * laneH() + 6) * k, x = (W - 34) * k;
+    ctx.font = `700 ${5.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8;
+    const name = LANE_NAMES[l].toUpperCase() + ' LANE'; ctx.strokeText(name, x, y - 4 * k); ctx.fillText(name, x, y - 4 * k);
+    if (L && L.w) { ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = l === L.heavy ? '#ff9a9a' : '#c9cff5'; const sub = `${Math.round(L.w[l] * 100)}% of the horde${L.elite === l ? ' · elites' : ''}`; ctx.strokeText(sub, x, y + 3 * k); ctx.fillText(sub, x, y + 3 * k); } }
+  ctx.restore();
 }
 function drawSpawnArrows(g, t, live, lanes) {
   const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
@@ -7344,7 +7717,7 @@ function renderFrame(V, dt) {
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
-  drawSpellDecals(g); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
+  drawSpellDecals(g); drawStyleGround(g, B, t); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
@@ -7359,10 +7732,9 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
-  for (const u of units) if (u.alive !== false && u.inst && (u.side === 'hero' || !B)) drawStars(g, u, t);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
-  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t);
+  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t, V);
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();
@@ -7379,6 +7751,7 @@ function renderFrame(V, dt) {
     else if (w.type === 'cheese') { const x0 = Math.round(w.x), y0 = Math.round(w.y), sp = Math.floor(t * 12) % 2; g.fillStyle = OUTLINE; g.fillRect(x0 - 7, y0 - 13, 14, 14); g.fillStyle = '#ffd84a'; g.fillRect(x0 - 6, y0 - 12, 12, 12); g.fillStyle = '#ffb02e'; g.fillRect(x0 - 6, y0 - 7 + sp, 12, 2); g.fillStyle = '#e8a020'; g.fillRect(x0 - 3 + sp * 3, y0 - 10, 2, 2); g.fillRect(x0 + 2 - sp * 3, y0 - 4, 2, 2); }
     else if (w.type === 'quake') { g.fillStyle = '#8a6a2a'; g.fillRect(Math.round(w.x) - 2, Math.round(w.y) - 4, 4, 4); g.fillStyle = '#c9a35a'; g.fillRect(Math.round(w.x) - 1, Math.round(w.y) - 7, 2, 3); }
   }
+  drawStyleOver(g, B, t);
   // projectiles
   if (B) for (const p of B.projs) drawProj(g, p);
   // sky hammer
@@ -7407,6 +7780,7 @@ function renderFrame(V, dt) {
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawSpellFX(ctx, k, ox, oy, B);
+  if (!B && typeof G !== 'undefined' && G.run && G.run.lanes && G.run.finale !== 'ready' && G.phase === 'prep') drawLaneLabels(ctx, k, G.run);
   if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
@@ -8865,10 +9239,9 @@ function abilityTipHTML(ab) {
 }
 function elTipHTML(e) {
   const E = ELEMENTS[e]; if (!E) return '';
-  const base = { ad: '+20% attack', ap: '+25% Ability power', def: '+20% HP and +15 armor' }[E.style];
-  return `<b style="color:${E.col}">${esc(E.name)}</b><p>${esc(E.desc)}</p><div class="trec">Best stat: ${statLine(E.style)}</div>
-    <p>Element power starts at 104%. Two or more ${esc(E.name)} heroes on the field multiply it by 1.4.</p>
-    <p>Every ${esc(E.name)} hero gets ${base} × element power. ${esc(EL_SCALE[e] || '')}</p>`;
+  const I = STYLE_INFO[e], base = { ad: '+10% attack', ap: '+12% Ability power', def: '+10% HP and +8 armor' }[E.style];
+  return `<b style="color:${E.col}">${esc(E.name)}: ${esc(I.style)}</b><p><i>${esc(I.role)}.</i> ${esc(I.how)}</p>${I.tiers.map((t, i) => `<div class="ttier"><b>${EL_STACK.at[i]}</b><span>${esc(t)}${i === 2 ? ` The ${esc(E.name)} castle wakes.` : ''}</span></div>`).join('')}
+    <p class="note">Every ${esc(E.name)} champion also gets ${base}. Best stat: ${statLine(E.style)}</p>`;
 }
 function rarityTipHTML(r) {
   const Rr = RARITY[r]; if (!Rr) return '';
@@ -9277,8 +9650,9 @@ const UI = {
     }
     if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (stackElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
       const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
-      return `<b>${E.name} stack <small>${n} on the field</small></b><p>Champions who share an element power each other up.</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${elTier(n) === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${E.name} power ×${EL_STACK.mul[i]} and +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}${i === 2 ? `, and the ${E.name} castle wakes` : ''}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
-    if (kind === 'help' && a === 'els') return `<b>Element stacks</b><p>Two, four or six champions with the same element (crests count) multiply that element's power and boost their matching stat. Six on the field wake that element's castle.</p>`;
+      const I = STYLE_INFO[a];
+      return `<b>${E.name}: ${I.style} <small>${I.role} · ${n} on the field</small></b><p>${esc(I.how)}</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${elTier(n) === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(I.tiers[i])}${i === 2 ? ` The ${E.name} castle wakes.` : ''}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
+    if (kind === 'help' && a === 'els') return `<b>Element styles</b><p>Every element is a way of fighting. Two, four or six champions with the same element (crests count) make that style stronger and add a twist. Six on the field wake that element's castle.</p>`;
     if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
       return `<b>${T.icon} ${T.name} <small>${T.side === 'good' ? 'good-guy energy' : 'bad-guy energy'}</small></b><p><span style="color:var(--mint)">▲ ${esc(T.up)}</span><br><span style="color:var(--rose)">▼ ${esc(T.down)}</span></p><div class="ttier ${n >= 2 ? 'on' : ''}"><b>2</b><span><i>${esc(T.pair)}:</i> ${esc(T.pdesc)}</span></div><p class="note">${n >= 2 ? 'Pair active: ' + who.join(' + ') : n === 1 ? `Place a second ${T.name} champion to unlock the pair bonus. Now: ${who[0]}.` : `Two ${T.name} champions on the field unlock the pair bonus.`}</p>`; }
     if (kind === 'cls') return clsTipHTML(a);
@@ -9329,15 +9703,16 @@ const UI = {
     // TFT shop (Cam 2026-10-23): five legends for sale, priced by rarity. Copies of a legend you own add up to stars.
     const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold);
     if (!run.shop) rollShop(run, G.meta);
-    const season = runSeason(run) || [];
-    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="note">In season: ${season.map(e => `<b style="color:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)}</b>`).join(' · ')}. Most legends arrive with one of these. Six of one element on the field wake its castle.</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
+    const season = runSeason(run) || [], fe0 = stackElements(run);
+    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="seasonpills"><small>In season</small>${season.map(e => { const n = fe0[e] || 0, nx = EL_STACK.at.find(v => v > n); return `<button class="sypill ${n >= 2 ? 'on' : ''}" data-act="herald" data-tip="els:${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} <small>${esc(STYLE_INFO[e].role)} · ${nx ? `${n}/${nx}` : n}</small></button>`; }).join('')}</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="scard sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], R = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), left = poolLeft(run, c.id);
       const tag = own ? (copiesToNext(own) === 1 ? `<span class="stag up">★ ${heroStar(own) + 1} next!</span>` : `<span class="stag">Owned ★${heroStar(own)}</span>`) : full ? '<span class="stag dim">Keep full</span>' : '';
-      h += `<button class="scard r${d.rar} ${own ? 'own' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} title="${esc(d.name)} · ${esc(d.aName)}">
+      const up = !own && c.el && EL_STACK.at.includes((fe0[c.el] || 0) + 1);
+      h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${c.el ? ELEMENTS[c.el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} title="${esc(d.name)} · ${esc(d.aName)}">
         <span class="sprice">${COST(cost)}</span>${tag}<img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(d.name.split(' ')[0])}</b>
-        <span class="chips">${raceChip(d.race)}${clsChip(d.cls)}</span><span class="chips">${own ? elChip(own.el) : elChip(c.el)}</span><small>${left} left in the pool</small></button>`;
+        <span class="chips">${raceChip(d.race)}${clsChip(d.cls)}</span><span class="chips">${own ? elChip(own.el) : elChip(c.el)}</span><small>${up ? `${ELEMENTS[c.el].name} ${(fe0[c.el] || 0) + 1}: ${esc(STYLE_INFO[c.el].style)} up` : `${left} left in the pool`}</small></button>`;
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
@@ -9474,10 +9849,10 @@ const UI = {
     for (const k in RACES) sort(k, RACES[k], race[k], true); for (const k in CLASSES) sort(k, CLASSES[k], cls[k], false);
     tp += `<section class="tsec"><h4>Team bonuses <b>${live.length}</b></h4>${live.length ? `<div class="tgrid">${live.join('')}</div>` : '<p class="note">Place two heroes of the same race or class to switch on a bonus.</p>'}${near.length ? `<div class="nears"><small>One more hero away</small>${near.join('')}</div>` : ''}</section>`;
     { const st = EL_KEYS.filter(e => (fe[e] || 0) >= 1).map(e => { const n = fe[e], E = ELEMENTS[e], i = elTier(n), stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
-        return n >= 2 ? `<div class="trait on" data-tip="els:${e}" style="--rc:${E.col}"><span class="syb elst on" style="--rc:${E.col};--ec:${E.col};--ec2:${E.col2}"><span class="orb"></span><b class="cnt">${n}</b></span><div><b>${E.name} ×${n}</b><small>${i < 2 ? `${n} / ${EL_STACK.at[i + 1]}${i === 1 ? ' wakes the castle' : ' for more'}` : 'max'}</small><p>${E.name} power ×${EL_STACK.mul[i]}, +${Math.round(EL_STACK.stat[i] * 100)}% ${stat}.</p></div></div>`
+        return n >= 2 ? `<div class="trait on" data-tip="els:${e}" style="--rc:${E.col}"><span class="syb elst on" style="--rc:${E.col};--ec:${E.col};--ec2:${E.col2}"><span class="orb"></span><b class="cnt">${n}</b></span><div><b>${E.name} ×${n}</b><small>${i < 2 ? `${n} / ${EL_STACK.at[i + 1]}${i === 1 ? ' wakes the castle' : ' for more'}` : 'max'}</small><p>${esc(STYLE_INFO[e].style)}: ${esc(STYLE_INFO[e].tiers[i])}</p></div></div>`
           : `<span class="near" data-tip="els:${e}" style="--rc:${E.col}"><span class="syb elst" style="--rc:${E.col};--ec:${E.col};--ec2:${E.col2}"><span class="orb"></span></span><b>${E.name}</b><small>1/2</small></span>`; });
       const on = st.filter(r => r.startsWith('<div')), off = st.filter(r => !r.startsWith('<div'));
-      if (st.length) tp += `<section class="tsec"><h4>Element stacks <b>${on.length}</b></h4>${on.length ? `<div class="tgrid">${on.join('')}</div>` : ''}${off.length ? `<div class="nears"><small>One more of the same element</small>${off.join('')}</div>` : ''}</section>`; }
+      if (st.length) tp += `<section class="tsec"><h4>Element styles <b>${on.length}</b></h4>${on.length ? `<div class="tgrid">${on.join('')}</div>` : ''}${off.length ? `<div class="nears"><small>One more of the same element</small>${off.join('')}</div>` : ''}</section>`; }
     { const rows = Object.keys(tc).sort((x, y) => tc[y] - tc[x]).map(k => { const T = TEMPERS[k], on = tc[k] >= 2;
         return on ? `<div class="trait on tmpr ${T.side}" data-tip="tmp:${k}"><span class="syb tmp on ${T.side}"><span class="glyph">${T.icon}</span><b class="cnt">${tc[k]}</b></span><div><b>${esc(T.pair)}</b><small>${T.name} pair</small><p>${esc(T.pdesc)}</p></div></div>`
           : `<span class="near tmpn ${T.side}" data-tip="tmp:${k}"><span class="syb tmp ${T.side}"><span class="glyph">${T.icon}</span></span><b>${T.name}</b><small>1/2</small></span>`; });
@@ -9539,7 +9914,7 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; UI.liven($('sheet')); if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Pick the first of your two starting legends. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= rosterCap(G.run) ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Pick the legend who starts the run. Then you get 5 gold and the shop opens before the first siege. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= rosterCap(G.run) ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2${kind === 'summon' ? ' class="sp"' : ''}>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
@@ -9675,6 +10050,96 @@ const UI = {
     G.meta.seen = G.meta.seen || {}; G.meta.seen[on.key] = 1; save();
     const n = UI.coachQ.shift(); if (n) setTimeout(() => UI.coach(n.key, n.el, n.text), 200);
   },
+};
+
+// ===== The herald (Cam 2026-10-23): before the first shop and whenever a new horde arrives, a card names the four
+// elements in season and shows each one's fighting style in a little looping battle.
+const HERALD_ORD = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+function heraldHTML(run) {
+  const season = runSeason(run), fe = stackElements(run), fi = factionIndex(run.siege), F = FACTIONS[fi], fresh = run.seasonNew || [];
+  let h = `<span class="eyebrow">Sieges ${fi * 5 + 1} to ${fi * 5 + 5} · ${esc(F.name)}</span><h2 class="sp">The ${HERALD_ORD[fi] || 'Next'} Horde approaches</h2>
+    <p class="lede">${run.siege === 1 ? 'Four elements are in season. Most legends in the shop carry one of them. Every element is a way of fighting.' : 'The season turns. Two elements stay, two new ones arrive in the shop.'} Two champions of an element make its style stronger, four upgrade it, six wake its castle.</p><div class="hrld">`;
+  season.forEach((e, i) => { const E = ELEMENTS[e], I = STYLE_INFO[e], n = fe[e] || 0, t = elTier(n);
+    h += `<div class="hlcard" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.08}s"><div class="hhd"><b>${E.name}</b><span>${esc(I.role)}${fresh.includes(e) ? ' <i class="newb">new</i>' : ''}</span></div>
+      <canvas class="hdemo" data-el="${e}" width="160" height="72"></canvas><p><b>${esc(I.style)}.</b> ${esc(I.how)}</p>
+      <div class="htiers">${I.tiers.map((s, k) => `<div class="${t === k ? 'on' : n >= EL_STACK.at[k] ? 'past' : ''}"><b>${EL_STACK.at[k]}</b><span>${esc(s)}${k === 2 ? ' Castle wakes.' : ''}</span></div>`).join('')}</div>
+      <small>${n ? `You field ${n}` : 'None on your field yet'}</small></div>`; });
+  return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="heraldGo">${run.siege === 1 ? 'Open the shop' : 'To the keep'}</button></div>`;
+}
+
+// ----- the looping demos: castle on the left, three lanes, the horde from the right -----
+const HD = { W: 160, H: 72, LY: [16, 36, 56], CX: 12 };
+function heraldDemos(root) {
+  const views = [...root.querySelectorAll('canvas.hdemo')].map(c => [c.getContext('2d'), c.dataset.el, c]);
+  if (!views.length) return;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now();
+  const frame = ms => { if (!views[0][2].isConnected) return; const t = still ? 1.3 : (ms - t0) / 1000 + 1;
+    for (const [g, e] of views) { hdField(g); (HDEMO[e] || (() => {}))(g, t, ELEMENTS[e].col); }
+    if (!still) requestAnimationFrame(frame); };
+  frame(t0);
+}
+const hrnd = s => { const x = Math.sin(s * 99.13) * 43758.5; return x - Math.floor(x); };
+function hpx(g, x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
+function hhero(g, x, y, c, s) { s = s || 6; hpx(g, x, y, s, OUTLINE); hpx(g, x, y, s - 2, c); hpx(g, x + 1, y - 1, 1, OUTLINE); }
+function hfoe(g, x, y, c, s) { s = s || 5; hpx(g, x, y, s, '#2a0a10'); hpx(g, x, y, s - 2, c || '#e0404a'); }
+function hdField(g) { const { W, H, LY, CX } = HD; g.fillStyle = '#0d0b14'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a2440'; for (const y of LY) g.fillRect(CX, y - 8, W, 16);
+  g.fillStyle = '#4a4560'; g.fillRect(0, 4, CX, H - 8); g.fillStyle = '#6a6488'; for (let y = 4; y < H - 4; y += 6) g.fillRect(CX - 3, y, 3, 3); }
+function hline(g, a, b, c) { g.strokeStyle = c; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0] + .5, a[1] + .5); g.lineTo(b[0] + .5, b[1] + .5); g.stroke(); }
+function hring(g, x, y, r, c, a) { g.globalAlpha = a == null ? 1 : Math.max(0, a); g.strokeStyle = c; g.beginPath(); g.arc(x, y, Math.max(0.5, r), 0, 7); g.stroke(); g.globalAlpha = 1; }
+const hl = (a, b, k) => a + (b - a) * k, hc = (v, a, b) => Math.max(a, Math.min(b, v)), he = k => k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+function hmarch(lane, n, front, seed) { const out = []; for (let i = 0; i < n; i++) out.push([front + i * 9, HD.LY[lane] + (hrnd(seed + i) * 6 - 3)]); return out; }
+const HDEMO = {
+  dark(g, t, c) { const P = 3.2, k = (t % P) / P, home = [46, 36], back = [[128, 18], [132, 54]];
+    hmarch(1, 3, 60, 1).forEach(p => hfoe(g, p[0], p[1])); back.forEach((p, i) => hfoe(g, p[0], p[1], i ? '#ff9a3a' : '#c050ff'));
+    const tg = back[Math.floor(t / P) % 2]; let x = home[0], y = home[1];
+    if (k >= .15 && k < .7) { x = tg[0] + 6; y = tg[1]; if (k < .2) { g.globalAlpha = .4; hhero(g, home[0], home[1], c); g.globalAlpha = 1; } else if (k % .1 < .05) hpx(g, tg[0], tg[1] - 5, 3, '#fff'); }
+    hhero(g, x, y, c); if (k > .15 && k < .22) hring(g, x, y, 7, c); },
+  light(g, t, c) { const al = [52, 36], k = (t * 1.2) % 1, hp = .35 + .6 * ((t / 4) % 1); hhero(g, al[0], al[1], '#d0d0d0');
+    g.fillStyle = '#300'; g.fillRect(al[0] - 5, al[1] - 8, 10, 2); g.fillStyle = '#5f5'; g.fillRect(al[0] - 5, al[1] - 8, 10 * hp, 2);
+    hhero(g, al[0] - 10, al[1] + 4, c); hmarch(1, 3, 64, 3).forEach(p => hfoe(g, p[0], p[1]));
+    if (k < .3) { hline(g, [al[0] - 10, al[1] + 4], [64, 36], c); hpx(g, al[0], al[1] - 2, 2, '#9f9'); }
+    if (Math.floor(t * 1.2) % 4 === 3) hring(g, al[0] - 10, al[1] + 4, 4 + k * 22, c, 1 - k); },
+  lightning(g, t, c) { const f = [[70, 18], [96, 38], [80, 56], [118, 22], [128, 52], [104, 60]]; f.forEach(p => hfoe(g, p[0], p[1]));
+    const P = .45, i = Math.floor(t / P), k = (t % P) / P, a = f[i % 6], b = f[(i + 2) % 6];
+    if (k < .25) { const x = hl(a[0], b[0], k * 4), y = hl(a[1], b[1], k * 4); hline(g, a, [x, y], c); hhero(g, x, y, c); }
+    else { hhero(g, b[0] - 6, b[1], c); if (k < .45) { hpx(g, b[0], b[1] - 5, 3, '#fff'); hline(g, b, f[(i + 1) % 6], c); } } },
+  fire(g, t, c) { const k = (t % 4) / 4, x = hl(30, 120, he(hc(k * 1.4, 0, 1))), y = 36;
+    for (let i = 0; i < 6; i++) { const fx = 100 + (i % 3) * 8, fy = 30 + Math.floor(i / 3) * 10; hfoe(g, fx, fy, x > fx - 10 && k > .2 ? '#ff9a3a' : '#e0404a'); }
+    for (let tx = 30; tx < x; tx += 4) { const fl = hrnd(tx + Math.floor(t * 8)); hpx(g, tx, y + 3 + fl * 2, 2, fl > .5 ? '#ffd23a' : c); }
+    hhero(g, x, y, c); if (k > .6) for (let i = 0; i < 5; i++) hpx(g, 104 + hrnd(i + Math.floor(t * 6)) * 20, 26 + hrnd(i * 3 + Math.floor(t * 6)) * 20, 2, '#ffd23a'); },
+  water(g, t, c) { const P = 1.6, k = (t % P) / P; hhero(g, 50, 36, c);
+    const push = k < .1 ? 0 : 18 * Math.sin(Math.min(1, (k - .1) * 3) * Math.PI / 2) * (1 - hc((k - .5) * 2, 0, 1));
+    hfoe(g, 70 + push, 36); hfoe(g, 84 + Math.max(0, push - 10), 37); hfoe(g, 100, 34);
+    if (k < .12) for (let i = 0; i < 4; i++) hpx(g, 72 + i * 3, 30 + i * 3, 2, c);
+    if (k > .2 && k < .35) hpx(g, 84, 31, 3, '#fff');
+    if (Math.floor(t / P) % 3 === 2) { g.globalAlpha = .5 * (1 - k); g.fillStyle = c; g.fillRect(54 + k * 90, 28, 4, 16); g.globalAlpha = 1; } },
+  ice(g, t, c) { const hx = 60, hy = 36; g.globalAlpha = .18; g.fillStyle = c; g.beginPath(); g.arc(hx, hy, 22, 0, 7); g.fill(); g.globalAlpha = 1; hring(g, hx, hy, 22, c, .7);
+    for (let i = 0; i < 3; i++) { const s = 40 + i * 25, x = HD.W + 4 - (t * s * .6 + i * 70) % 170, inR = Math.abs(x - hx) < 22, y = HD.LY[[1, 0, 1][i]] + (i === 1 ? 14 : 0);
+      hfoe(g, inR ? hx + 22 - ((t * 8 + i * 13) % 40) : x, y, inR ? '#9fd8ff' : i === 2 ? '#ffe04a' : '#e0404a'); }
+    hhero(g, hx, hy, c); },
+  nature(g, t, c) { const hx = 48, hy = 36, P = 2.4, k = (t % P) / P; hhero(g, hx, hy, c); for (let i = 0; i < 3; i++) hpx(g, hx - 4 + i * 4, hy + 5, 2, '#2f8a3a');
+    const tx = 120, ty = [18, 54][Math.floor(t / P) % 2]; let fx = tx, fy = ty;
+    if (k > .2) { const kk = hc((k - .35) / .5, 0, 1); fx = hl(tx, hx + 8, he(kk)); fy = hl(ty, hy, he(kk)); hline(g, [hx, hy], [fx, fy], '#2f8a3a'); }
+    else if (k > .05) { const kk = (k - .05) / .15; hline(g, [hx, hy], [hl(hx, tx, kk), hl(hy, ty, kk)], '#6fdc5a'); }
+    hfoe(g, fx, fy); hfoe(g, 130, 36); },
+  void(g, t, c) { const k = (t % 3) / 3; hmarch(1, 3, 70, 7).forEach(p => hfoe(g, p[0], p[1])); hhero(g, 52, 30, c); hhero(g, 56, 44, '#d0d0d0'); hhero(g, 44, 40, '#d0d0d0');
+    let x = 134, y = 16;
+    if (k > .25 && k < .5) { const kk = (k - .25) / .25; x = hl(134, 62, he(kk)); y = hl(16, 38, he(kk)); for (let i = 0; i < 4; i++) hpx(g, hl(52, x, i / 4), hl(30, y, i / 4), 2, c); }
+    else if (k >= .5) { x = 62; y = 38; if (k < .7) hring(g, x, y, 5 + (k - .5) * 30, c); }
+    if (k > .1 && k < .25) hring(g, 134, 16, 6, c); hfoe(g, x, y, '#c050ff'); },
+  salty(g, t, c) { const k = (t % 5) / 5, boss = [100, 36]; hfoe(g, boss[0], boss[1], '#e0404a', 11); const gob = [72, 56]; hfoe(g, gob[0], gob[1], '#7fbf3a'); hmarch(0, 2, 80, 9).forEach(p => hfoe(g, p[0], p[1]));
+    if (k < .08) hline(g, gob, [60, 30], '#fff'); const hx = hl(60, boss[0] - 9, hc(k * 4, 0, 1)); hhero(g, hx, 30 + (k > .25 ? 6 : 0), c);
+    for (let i = 0; i < Math.min(8, Math.floor(k * 10)); i++) hpx(g, boss[0] - 8 + i * 2, boss[1] - 10, 1, '#ff4a4a');
+    if (k > .25 && (t * 3) % 1 < .3) hpx(g, boss[0] - 4, boss[1] - 3, 3, '#fff'); },
+  sweet(g, t, c) { const bx = hl(50, 92, (Math.sin(t * .8) + 1) / 2), by = 36 + Math.sin(t * 1.3) * 10; hhero(g, bx, by, '#ffd84a', 8); hhero(g, bx - 10, by + 6, c);
+    for (let i = 0; i < 3; i++) { const a = t * 4 + i * 2.1; hpx(g, bx + Math.cos(a) * 8, by + Math.sin(a) * 8, 1, c); }
+    const ft = [bx + 18, by]; hfoe(g, ft[0], ft[1], (t % 2) < 1 ? '#e0404a' : '#ff9ad8'); hfoe(g, 130, 20); hfoe(g, 128, 56); if ((t * 2) % 1 < .3) hline(g, [bx - 10, by + 6], ft, c); },
+  meat(g, t, c) { const k = (t % 4) / 4, al = [44, 22]; hhero(g, al[0], al[1], '#d0d0d0'); const f = [[66, 18], [72, 26], [64, 30]]; f.forEach(p => hfoe(g, p[0], p[1]));
+    const sz = 7 + Math.round(4 * k), m = he(hc(k * 4, 0, 1)), x = hl(46, 58, m), y = hl(54, 24, m); hhero(g, x, y, c, sz);
+    if (k > .25 && k < .45) hring(g, x, y, 6 + (k - .25) * 80, c, 1 - (k - .25) * 5); if (k > .3) for (const p of f) if ((t * 3 + p[0]) % 1 < .25) hline(g, p, [x + 2, y], '#e0404a'); },
+  treat(g, t, c) { const k = (t % 4) / 4; hhero(g, 44, 50, c); hhero(g, 58, 22, '#d0d0d0'); hhero(g, 52, 28, '#ff6a3d'); const sn = [96, 30];
+    if (k > .05) { const kk = hc((k - .05) * 6, 0, 1); hpx(g, hl(44, sn[0], kk), hl(50, sn[1], kk) - Math.sin(kk * Math.PI) * 14, 3, '#ffb02e'); }
+    for (let i = 0; i < 4; i++) { const kk = hc((k - .3) * 2.5, 0, 1); hfoe(g, hl(118 + i * 6, sn[0] + 4 + (i % 2) * 5, kk), hl(14 + i * 14, sn[1] + (i - 1.5) * 4, kk), i === 0 ? '#ffd84a' : '#e0404a'); } },
 };
 
 // ===== Playtest tracking: runs, notes (typed or spoken), auto-captured errors =====
@@ -12265,19 +12730,26 @@ function toPrep() {
   for (const k in FXS) if (Array.isArray(FXS[k])) FXS[k].length = 0;
   changed();
   const run = G.run;
+  if (run.heraldDue && !run.finale) { save(); return showHerald(() => toPrep()); }
   // Cam 2026-10-21: the horde's boss talks to your voice before every siege (talk.js); banners and coaching wait for it
   if (talkDue(run)) { save(); return showTalk(run, () => { save(); changed(); prepCues(); }); }
   talkSkipped(run); save(); changed();
   prepCues();
 }
+// the herald names this horde's four in-season elements and shows how each one fights (herald.js)
+function showHerald(done) {
+  const run = G.run; SFX.play('sig');
+  UI.modal(heraldHTML(run), s => { heraldDemos(s); s.querySelector('#heraldGo').onclick = () => { const first = run.heraldDue && run.siege === 1; run.heraldDue = false; run.seasonNew = null; save(); UI.closeModal(); if (done) done(); else if (first) UI.openPage('guild'); }; }, 'wide');
+}
 function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
-  if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
+  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends for your three lanes, then close the shop and press Begin siege.'); }, 300); }
+  else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
+  if (run.siege === 2 && !run.shopIntro) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
@@ -12300,6 +12772,7 @@ G.act = function (act, arg) {
     case 'sa-pick': { UI.saSel = UI.saSel || []; if (UI.saSel.includes(arg)) UI.saSel = UI.saSel.filter(u => u !== arg); else { UI.saSel.push(arg); if (UI.saSel.length > 2) UI.saSel.shift(); } SFX.play('click'); UI.renderPage(); return; }
     case 'sa-forge': { const [a, b] = (UI.saSel || []).map(u => run.stash.find(x => x.uid === u)); const ins = [a, b].map(x => x && itemIconURL(x)); r = forgeSuper(run, a, b); if (r.err) return UI.toast(r.err, true); UI.saSel = [];
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
+    case 'herald': { if (G.phase !== 'prep') return; SFX.play('click'); showHerald(() => { UI.openPage('guild'); }); return; }
     case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
       if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);

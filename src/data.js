@@ -107,7 +107,8 @@ const RARITY_ODDS = [
 ];
 function rarityOdds(bosses) { return RARITY_ODDS[Math.max(0, Math.min(RARITY_ODDS.length - 1, bosses || 0))]; }
 function rollRarity(bosses) { const o = rarityOdds(bosses); let x = Math.random() * 100; for (let i = 0; i < o.length; i++) { x -= o[i]; if (x < 0) return i; } return 0; }
-const START_LEGENDS = 2;
+const START_GOLD = 5;
+const START_LEGENDS = 1; // Cam 2026-10-23: one free legend, then 5 gold and the shop before the first siege
 
 // Sprite palettes
 const SK = { pale: '#ffd9b8', tan: '#e8a874', brown: '#a86a45', orc: '#6fcf4a', orc2: '#a7d94a', bone: '#f1ecdc', toad: '#56c46a', toad2: '#ff8f3a', fur: '#c98a4a', fur2: '#e8e1d0', gob: '#8fd14f', blue: '#7fb4ff' };

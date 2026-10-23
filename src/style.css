@@ -1329,3 +1329,27 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .rdiv b { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; } .rdiv small { font-size: 11px; color: var(--muted); }
 .rdiv.field b { color: var(--mint); } .rdiv.bench b { color: var(--gold); }
 .hcard.bslot { border-style: dashed; background: transparent; box-shadow: none; opacity: .5; align-items: center; justify-content: center; min-height: 80px; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
+
+/* ----- the herald: this horde's four in-season elements and how each one fights (herald.js) ----- */
+.hrld { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr)); gap: 10px; margin-top: 8px; }
+.hlcard { background: var(--panel-2); border-radius: 6px; border-top: 3px solid var(--ec); padding: 10px; display: grid; gap: 7px; align-content: start; min-width: 0; animation: hcardIn .35s ease-out both; }
+@keyframes hcardIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.hlcard .hhd { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.hlcard .hhd b { font-family: var(--f-logo); font-size: 18px; color: var(--ec); }
+.hlcard .hhd span { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.hlcard canvas.hdemo { width: 100%; height: auto; image-rendering: pixelated; border-radius: 3px; border: 1px solid var(--ink); }
+.hlcard p { margin: 0; font-size: 13px; line-height: 1.4; }
+.hlcard p b { color: var(--ec); }
+.hlcard .htiers { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.hlcard .htiers div { display: grid; grid-template-columns: 16px 1fr; gap: 6px; }
+.hlcard .htiers b { color: var(--ec); font-family: var(--f-logo); }
+.hlcard .htiers .on { color: var(--text); }
+.hlcard .htiers .past { opacity: .7; }
+.hlcard small { color: var(--muted); font-size: 11px; }
+.seasonpills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seasonpills > small { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.sypill { font: 700 13px var(--f-body); color: var(--ec); background: var(--panel-2); border: 1px solid var(--ec); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.sypill small { color: var(--muted); font-weight: 400; }
+.sypill.on { box-shadow: 0 0 0 1px var(--ec) inset, 0 0 8px -2px var(--ec); }
+.scard.tierup { box-shadow: 0 0 0 2px var(--ec), 0 0 14px -2px var(--ec); }
+.scard.tierup small { color: var(--ec); }

@@ -18,6 +18,14 @@ function drawStars(g, u, t) {
   px(STAR_COL[n - 1], 0, 0);
   if (n === 3 && Math.floor(t * 3) % 3 === 0) { g.fillStyle = '#ffffff'; g.fillRect(x0 + 2, y0 + 1, 1, 1); }
 }
+// a frame filled with one colour, for star borders (cached per frame and colour)
+const TINTS = new WeakMap();
+function tintFrame(img, col) {
+  let m = TINTS.get(img); if (!m) TINTS.set(img, m = {}); if (m[col]) return m[col];
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+  return (m[col] = c);
+}
 function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 
 function initRender(canvas) {
@@ -178,6 +186,15 @@ function drawUnit(g, u, t, opts = {}) {
   // a champion standing still plays its own little idle (src/idles.js)
   const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
+  // star level (Cam 2026-10-23): 2★ and 3★ champions get a silver or gold border around the body instead of stars overhead
+  const star = u.inst && !u.temp && u.alive !== false && u.side === 'hero' ? heroStar(u.inst) : 1;
+  if (star > 1) { const col = STAR_COL[star - 1], o = Math.max(1, Math.round(fs / 20)), sil = tintFrame(img, col), I2 = idle && Object.assign({}, idle, { def: Object.assign({}, idle.def, { back: null, front: null }) });
+    const a0 = g.globalAlpha;
+    for (const [dx, dy, aa] of [[-2 * o, 0, 0.45], [2 * o, 0, 0.45], [0, -2 * o, 0.45], [0, 2 * o, 0.45], [-o, -o, 1], [o, -o, 1], [-o, o, 1], [o, o, 1], [-o, 0, 1], [o, 0, 1], [0, -o, 1], [0, o, 1]]) { g.globalAlpha = a0 * aa * (star === 3 ? 0.8 + 0.2 * Math.sin(t * 4 + (u.phase || 0)) : 0.95);
+      if (I2) drawIdleUnit(g, sil, fx + dx, y + dy, fs, flip, I2);
+      else if (flip) { g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, -fs / 2, y + dy - fs + 1, fs, fs); g.restore(); }
+      else g.drawImage(sil, fx + dx - fs / 2, y + dy - fs + 1, fs, fs); }
+    g.globalAlpha = a0; }
   if (idle) drawIdleUnit(g, img, fx, y, fs, flip, idle);
   else if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
   else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
@@ -194,9 +211,21 @@ function drawUnit(g, u, t, opts = {}) {
 
 // pulsing red chevrons on the right edge show where the horde walks in
 // prep only: faint dashed lines between the three lanes, so placement reads at a glance
-function drawLaneLines(g, t) {
-  g.fillStyle = 'rgba(255,255,255,0.16)';
-  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * laneH() + 6); for (let x = CASTLE_X + 8; x < W - 8; x += 8) g.fillRect(x, y, 4, 1); }
+function drawLaneLines(g, t, V) {
+  // Cam 2026-10-23: lanes have to read clearly while placing. Bands alternate, dividers are solid, the lane under the cursor lights up
+  const lh = laneH(), hl = V.hover && V.hover.type === 'grid' ? laneOf(cellPos(V.hover.c, V.hover.r).y) : -1;
+  for (let l = 0; l < LANES; l++) { const y0 = Math.round(GRID.y + l * lh + 6), y1 = Math.round(GRID.y + (l + 1) * lh + 6);
+    g.fillStyle = l === hl ? 'rgba(255,216,74,0.16)' : l % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(10,14,40,0.07)'; g.fillRect(CASTLE_X + 6, y0, W - CASTLE_X - 6, y1 - y0); }
+  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * lh + 6); g.fillStyle = 'rgba(15,20,48,0.35)'; g.fillRect(CASTLE_X + 6, y + 1, W - CASTLE_X - 6, 1); g.fillStyle = 'rgba(255,255,255,0.45)'; for (let x = CASTLE_X + 6; x < W - 4; x += 8) g.fillRect(x, y, 6, 1); }
+}
+// prep only, at hi-res: each lane's name and how much of the horde the scouts expect in it
+function drawLaneLabels(ctx, k, run) {
+  const L = run.lanes; ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE;
+  for (let l = 0; l < LANES; l++) { const y = (GRID.y + (l + 0.5) * laneH() + 6) * k, x = (W - 34) * k;
+    ctx.font = `700 ${5.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8;
+    const name = LANE_NAMES[l].toUpperCase() + ' LANE'; ctx.strokeText(name, x, y - 4 * k); ctx.fillText(name, x, y - 4 * k);
+    if (L && L.w) { ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = l === L.heavy ? '#ff9a9a' : '#c9cff5'; const sub = `${Math.round(L.w[l] * 100)}% of the horde${L.elite === l ? ' · elites' : ''}`; ctx.strokeText(sub, x, y + 3 * k); ctx.fillText(sub, x, y + 3 * k); } }
+  ctx.restore();
 }
 function drawSpawnArrows(g, t, live, lanes) {
   const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
@@ -342,7 +371,7 @@ function renderFrame(V, dt) {
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
-  drawSpellDecals(g); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
+  drawSpellDecals(g); drawStyleGround(g, B, t); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
@@ -357,10 +386,9 @@ function renderFrame(V, dt) {
   }
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
-  for (const u of units) if (u.alive !== false && u.inst && (u.side === 'hero' || !B)) drawStars(g, u, t);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
-  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t);
+  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t, V);
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();
@@ -377,6 +405,7 @@ function renderFrame(V, dt) {
     else if (w.type === 'cheese') { const x0 = Math.round(w.x), y0 = Math.round(w.y), sp = Math.floor(t * 12) % 2; g.fillStyle = OUTLINE; g.fillRect(x0 - 7, y0 - 13, 14, 14); g.fillStyle = '#ffd84a'; g.fillRect(x0 - 6, y0 - 12, 12, 12); g.fillStyle = '#ffb02e'; g.fillRect(x0 - 6, y0 - 7 + sp, 12, 2); g.fillStyle = '#e8a020'; g.fillRect(x0 - 3 + sp * 3, y0 - 10, 2, 2); g.fillRect(x0 + 2 - sp * 3, y0 - 4, 2, 2); }
     else if (w.type === 'quake') { g.fillStyle = '#8a6a2a'; g.fillRect(Math.round(w.x) - 2, Math.round(w.y) - 4, 4, 4); g.fillStyle = '#c9a35a'; g.fillRect(Math.round(w.x) - 1, Math.round(w.y) - 7, 2, 3); }
   }
+  drawStyleOver(g, B, t);
   // projectiles
   if (B) for (const p of B.projs) drawProj(g, p);
   // sky hammer
@@ -405,6 +434,7 @@ function renderFrame(V, dt) {
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawSpellFX(ctx, k, ox, oy, B);
+  if (!B && typeof G !== 'undefined' && G.run && G.run.lanes && G.run.finale !== 'ready' && G.phase === 'prep') drawLaneLabels(ctx, k, G.run);
   if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
