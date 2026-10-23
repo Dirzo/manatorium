@@ -3,7 +3,7 @@
 // Rarity (z.rar 0..5): bigger pieces, more of them, Mythic+ aftershocks, God turns everything gold.
 // Sim-only file: runs headless too, so it only calls FX.* (a no-op proxy in node) and never touches FXS.
 const URAR = u => (u.st && u.st.rarity) || 0;
-const uY = y => clamp(y, GRID.y + 6, GRID.y + GRID.rows * GRID.cell - 4);
+const uY = y => clamp(y, GRID.y + 6, GRID.y + GRID.rows * GRID.ch - 4);
 const uX = x => clamp(x, CASTLE_X + 24, W - 22);
 function uZone(B, z) { z.type = 'ult'; z.t = 0; B.zones.push(z); return z; }
 function uCrowd(B, u, r = 34, range = 999) { return densest(B.enemies, r, u, range) || nearest(B.enemies, u, range); }
@@ -63,7 +63,7 @@ function uBounce(B, u, o) {
 // a blade the size of the sky sweeps the field from top to bottom
 function uSweep(B, u, o) {
   const hit = new Set();
-  return uZone(B, Object.assign({ vis: 'sweep', rar: URAR(u), src: u, dur: 1, y0: GRID.y - 30, y1: GRID.y + GRID.rows * GRID.cell + 20, pw: sigPower(u) }, o, {
+  return uZone(B, Object.assign({ vis: 'sweep', rar: URAR(u), src: u, dur: 1, y0: GRID.y - 30, y1: GRID.y + GRID.rows * GRID.ch + 20, pw: sigPower(u) }, o, {
     step(B, z, dt) { const p = Math.min(1, z.t / 0.7), y = z.y0 + (z.y1 - z.y0) * p; z.cy = y;
       for (const e of B.enemies) if (e.alive && !hit.has(e) && e.y <= y && e.x > CASTLE_X) { hit.add(e); if (z.onHit) z.onHit(B, z, e); } } }));
 }
@@ -156,7 +156,7 @@ const ULT_KIT = {
       onLand() { for (const d of dead.slice(0, 1 + (rar >= 5 ? 1 : 0))) { d.alive = true; d.hp = d.maxHp * 0.6; d.stun = 0; d.poison = []; FX.text(d.x, d.y - 24, 'BLOOM', '#ff9fd0', true); }
         for (const h of B.heroes) if (h.alive) healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.16 * RK(u))); FX.petals(); FX.sound('heal'); } }); },
   stampede(B, u) { const rar = URAR(u), n = 4 + RK(u) + Math.floor(rar / 2), D = AB(u);
-    for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180 + 10 * rar, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 + rar, big: 1 + 0.12 * rar, gold: rar >= 5 });
+    for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.ch - 20) / (n - 1), vx: 180 + 10 * rar, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 + rar, big: 1 + 0.12 * rar, gold: rar >= 5 });
     uSky(B, 'storm', 2.2, rar); FX.shake(5); FX.sound('stampede'); },
 
   // ===== the 24 new legends =====

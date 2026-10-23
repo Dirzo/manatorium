@@ -77,10 +77,10 @@ function drawBossFX(ctx, k, ox, oy, B) {
       for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff5a5a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 6 * k, i * Math.PI / 2, (i + 1) * Math.PI / 2); ctx.fill(); } ctx.restore();
       if (Math.random() < 0.8) FXS.parts.push({ x, y, vx: rand(-20, 20), vy: rand(-20, 20), life: 0.4, t: 0, color: pick(['#ff5a5a', '#ffd84a', '#5fd3ff', '#7cf09a']), size: 1, grav: 40 });
     } else if (f.kind === 'spores') { // rolling spore clouds sweep toward the castle
-      for (let i = 0; i < 7; i++) { const q = Math.max(0, a * 1.3 - i * 0.05), x = f.sx - q * (f.sx - CASTLE_X) , y = GRID.y + 12 + i * (GRID.rows * GRID.cell - 16) / 6, r = (10 + 14 * q) * k;
+      for (let i = 0; i < 7; i++) { const q = Math.max(0, a * 1.3 - i * 0.05), x = f.sx - q * (f.sx - CASTLE_X) , y = GRID.y + 12 + i * (GRID.rows * GRID.ch - 16) / 6, r = (10 + 14 * q) * k;
         if (q <= 0) continue; ctx.globalAlpha = 0.65 * fade; ctx.fillStyle = i % 2 ? '#a86ad8' : '#9ad84a'; ctx.beginPath(); ctx.arc(X(x), Y(y), r, 0, Math.PI * 2); ctx.arc(X(x + 8), Y(y - 4), r * 0.7, 0, Math.PI * 2); ctx.arc(X(x - 8), Y(y + 3), r * 0.6, 0, Math.PI * 2); ctx.fill(); }
     } else if (f.kind === 'avalanche') { // a wall of snow rolls across the field
-      const fx = f.sx - a * (f.sx - CASTLE_X + 10), top = GRID.y - 10, bot = GRID.y + GRID.rows * GRID.cell + 6;
+      const fx = f.sx - a * (f.sx - CASTLE_X + 10), top = GRID.y - 10, bot = GRID.y + GRID.rows * GRID.ch + 6;
       ctx.globalAlpha = 0.85 * fade; ctx.fillStyle = '#e8f4ff'; ctx.beginPath(); ctx.moveTo(X(fx + 60), Y(top)); for (let y = top; y <= bot; y += 6) ctx.lineTo(X(fx + Math.sin(y * 0.4 + clock * 10) * 4), Y(y)); ctx.lineTo(X(fx + 60), Y(bot)); ctx.fill();
       ctx.fillStyle = '#9ad8ff'; for (let y = top; y <= bot; y += 6) ctx.fillRect(X(fx + Math.sin(y * 0.4 + clock * 10) * 4) - k, Y(y), 2 * k, 3 * k);
       if (Math.random() < 0.9) for (let i = 0; i < 3; i++) FXS.parts.push({ x: fx, y: rand(top, bot), vx: rand(-60, -20), vy: rand(-30, 0), life: 0.5, t: 0, color: pick(['#ffffff', '#c8e8ff']), size: 2, grav: 60 });
@@ -91,11 +91,11 @@ function drawBossFX(ctx, k, ox, oy, B) {
       if (a > 0.2 && Math.random() < 0.7) FXS.parts.push({ x: x, y: y - 20, vx: rand(-50, 30), vy: rand(-80, -40), life: 0.7, t: 0, color: pick(['#c8a070', '#8a8a9a', '#ffde3a', '#c84a8a', '#7ad87a']), size: 2, grav: 160 });
       if (drop === 1 && f.t - 0.2 * f.life < 0.03) FX.shake(6);
     } else if (f.kind === 'reset') { // a scanline wipes the field and glitches every hero
-      const sx = f.sx - a * (f.sx - CASTLE_X); ctx.globalAlpha = 0.7 * fade; ctx.fillStyle = '#5fd3ff'; ctx.fillRect(X(sx), Y(GRID.y - 20), 2 * k, (GRID.rows * GRID.cell + 30) * k);
-      ctx.globalAlpha = 0.18 * fade; ctx.fillRect(X(sx), Y(GRID.y - 20), (f.sx - sx) * k, (GRID.rows * GRID.cell + 30) * k);
+      const sx = f.sx - a * (f.sx - CASTLE_X); ctx.globalAlpha = 0.7 * fade; ctx.fillStyle = '#5fd3ff'; ctx.fillRect(X(sx), Y(GRID.y - 20), 2 * k, (GRID.rows * GRID.ch + 30) * k);
+      ctx.globalAlpha = 0.18 * fade; ctx.fillRect(X(sx), Y(GRID.y - 20), (f.sx - sx) * k, (GRID.rows * GRID.ch + 30) * k);
       if (B) for (const h of B.heroes) if (h.alive && h.x > sx) { ctx.globalAlpha = 0.8 * fade; for (let i = 0; i < 3; i++) px(h.x + rand(-7, 5), h.y - rand(4, 18), randi(2, 6), 1, pick(['#5fd3ff', '#ff3a5a', '#ffffff'])); }
     } else if (f.kind === 'ship') { // a pirate ship slides in at the edge and fires every gun
-      const slide = Math.min(1, a / 0.2), x = W + 40 - 70 * slide, y = GRID.y + GRID.rows * GRID.cell / 2;
+      const slide = Math.min(1, a / 0.2), x = W + 40 - 70 * slide, y = GRID.y + GRID.rows * GRID.ch / 2;
       px(x - 26, y - 6, 56, 16, '#1a1230'); px(x - 25, y - 5, 54, 14, '#6a4a2a'); px(x - 25, y + 2, 54, 2, '#8a6a3a'); px(x - 2, y - 46, 2, 41, '#1a1230'); px(x + 1, y - 44, 22, 18, '#f4ecd8'); px(x + 8, y - 38, 6, 5, '#1a1230');
       for (let i = 0; i < 4; i++) { px(x - 24, y - 3 + i * 3, 4, 2, '#1a1230'); if (slide === 1 && Math.sin(clock * 20 + i * 1.7) > 0.7) { px(x - 32, y - 4 + i * 3, 8, 4, '#ffd84a'); px(x - 36, y - 3 + i * 3, 4, 2, '#ffffff'); } }
     } else if (f.kind === 'shardStreak') { // a shard leaves the crown and streaks to its target

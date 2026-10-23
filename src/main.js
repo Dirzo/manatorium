@@ -387,7 +387,7 @@ G.select = function (uid) { G.selected = uid; UI.renderRoster(); if (UI.page ===
 function toLogical(e) { const r = $('arena').getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, inside: e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom }; }
 function slotAt(p) {
   for (let i = 0; i < rafterSlots(G.run); i++) if (Math.abs(p.x - rafterPosition(G.run, i).x) <= 9 && p.y > rafterPosition(G.run, i).y - 22 && p.y < rafterPosition(G.run, i).y + 6) return { type: 'rafter', i };
-  const c = Math.floor((p.x - GRID.x) / GRID.cell), r = Math.floor((p.y - GRID.y) / GRID.cell);
+  const c = Math.floor((p.x - GRID.x) / GRID.cell), r = Math.floor((p.y - GRID.y) / GRID.ch);
   if (c >= 0 && c < GRID.cols && r >= 0 && r < GRID.rows) return { type: 'grid', c, r };
   return null;
 }

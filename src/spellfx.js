@@ -17,7 +17,7 @@ Object.assign(FX, {
     FX.shake(4 + 3 * pw); FX.flash('#ff8a3a', Math.min(0.35, 0.1 + 0.08 * pw));
   },
   // the final wave: a dust storm rolls in from the right edge and war drums thump
-  surge(n) { for (let i = 0; i < 40 + Math.min(80, n); i++) FXS.parts.push({ x: W + rand(-6, 10), y: rand(GRID.y - 10, GRID.y + GRID.rows * GRID.cell + 10), vx: -rand(40, 110), vy: rand(-8, 4), life: rand(0.8, 1.6), t: 0, color: pick(['#c9b48a', '#a8916a', '#8a7a5a']), size: 2, grav: 0 });
+  surge(n) { for (let i = 0; i < 40 + Math.min(80, n); i++) FXS.parts.push({ x: W + rand(-6, 10), y: rand(GRID.y - 10, GRID.y + GRID.rows * GRID.ch + 10), vx: -rand(40, 110), vy: rand(-8, 4), life: rand(0.8, 1.6), t: 0, color: pick(['#c9b48a', '#a8916a', '#8a7a5a']), size: 2, grav: 0 });
     FX.flash('#ff3d6e', 0.15); },
   // one tick of arrow rain: real arrows dive in from the sky at an angle and stick in the ground
   arrowStorm(x, y, r, pw = 1) {
@@ -232,7 +232,7 @@ function stepCastleVFX(dt) {
     if (s.fn && !s.fired && s.t >= 0) { s.fired = true; s.fn(); }
     if (s.kind === 'cpPinata' && !s.burst && s.t > 0.55) { s.burst = true; const cs = ['#ff8ad8', '#5fd3ff', '#ffd84a', '#7cf09a', '#ff6a3d', '#ffffff'];
       FX.blast(s.x, s.y, 30, cs, 2, { shards: 20 }); for (let i = 0; i < 5; i++) FX.particles(s.x + rand(-30, 30), s.y + rand(-10, 10), 16, cs, { spread: 30, up: true, grav: 60 });
-      for (let i = 0; i < 18; i++) FX.fly(s.x, s.y, rand(GRID.x + 20, W - 20), rand(GRID.y + 10, GRID.y + GRID.rows * GRID.cell), 'disc', '#ffcf3a', '#fff3a0', 0.6, rand(0.35, 0.6), 0); FX.shake(8); }
+      for (let i = 0; i < 18; i++) FX.fly(s.x, s.y, rand(GRID.x + 20, W - 20), rand(GRID.y + 10, GRID.y + GRID.rows * GRID.ch), 'disc', '#ffcf3a', '#fff3a0', 0.6, rand(0.35, 0.6), 0); FX.shake(8); }
     if (s.kind === 'cpIce' && s.t + dt >= s.life && !s.done && s.u.alive) { s.done = true; FX.particles(s.u.x, s.u.y - 8, 10, ['#e8f8ff', '#9ad8ff', '#ffffff'], { spread: 10, up: true, grav: 120 }); }
   }
 }
@@ -265,7 +265,7 @@ function drawCastleVFX(ctx, k, ox, oy, B) {
         ctx.strokeStyle = s.col; ctx.lineWidth = 2 * k; ctx.globalAlpha = fade;
         for (let i = 0; i < 5; i++) { let px = X(CP_SRC.x + rand(-20, 20)), py = Y(CP_SRC.y - 20); ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 4; j++) { px += rand(-8, 8) * k; py -= rand(4, 10) * k; ctx.lineTo(px, py); } ctx.stroke(); }
         ctx.globalAlpha = 0.5 * fade; ctx.fillStyle = '#e8f8ff'; ctx.beginPath(); ctx.arc(X(CP_SRC.x), Y(CP_SRC.y - 20), 22 * k * (1 + 0.2 * Math.sin(now * 50)), 0, Math.PI * 2); ctx.fill(); break; }
-      case 'cpFlame': case 'cpCrest': { const w = s.w; if (!w || w.t >= w.life) break; const x = X(w.x), flood = s.kind === 'cpCrest', top = Y(GRID.y - 12), bot = Y(GRID.y + GRID.rows * GRID.cell + 10);
+      case 'cpFlame': case 'cpCrest': { const w = s.w; if (!w || w.t >= w.life) break; const x = X(w.x), flood = s.kind === 'cpCrest', top = Y(GRID.y - 12), bot = Y(GRID.y + GRID.rows * GRID.ch + 10);
         for (let yy = top; yy < bot; yy += 7 * k) { const n = Math.sin(yy * 0.05 + now * 14), hgt = (flood ? 26 : 30) * k * (0.7 + 0.3 * n);
           if (flood) { // a curling wall of water with foam on the lip
             ctx.globalAlpha = 0.85; ctx.fillStyle = '#2a7ad8'; ctx.beginPath(); ctx.moveTo(x - 30 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 6 * k, yy - hgt, x + 8 * k, yy - hgt * 0.7); ctx.quadraticCurveTo(x + 2 * k, yy - hgt * 0.3, x + 4 * k, yy + 4 * k); ctx.fill();
@@ -274,9 +274,9 @@ function drawCastleVFX(ctx, k, ox, oy, B) {
           else { // tall flame tongues riding the wave front
             const gr = ctx.createLinearGradient(0, yy - hgt, 0, yy + 4 * k); gr.addColorStop(0, 'rgba(255,61,45,0)'); gr.addColorStop(0.3, '#ff3d2d'); gr.addColorStop(0.6, '#ff8a2a'); gr.addColorStop(1, '#fff3a0');
             ctx.globalAlpha = 0.9; ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x - 14 * k, yy + 4 * k); ctx.quadraticCurveTo(x - 4 * k + n * 4 * k, yy - hgt, x + 2 * k, yy - hgt * 1.1); ctx.quadraticCurveTo(x + 6 * k, yy - hgt * 0.4, x + 8 * k, yy + 4 * k); ctx.fill(); } }
-        if (Math.random() < 0.8) FX.particles(w.x + rand(-6, 6), rand(GRID.y, GRID.y + GRID.rows * GRID.cell), 3, flood ? ['#ffffff', '#bff4ff'] : ['#ffd23a', '#ff8a2a'], { spread: 6, up: true });
+        if (Math.random() < 0.8) FX.particles(w.x + rand(-6, 6), rand(GRID.y, GRID.y + GRID.rows * GRID.ch), 3, flood ? ['#ffffff', '#bff4ff'] : ['#ffd23a', '#ff8a2a'], { spread: 6, up: true });
         break; }
-      case 'cpFrost': { const a = 0.35 * (kk < 0.1 ? kk / 0.1 : fade); ctx.globalAlpha = a; ctx.fillStyle = '#bfeeff'; ctx.fillRect(X(CASTLE_X), Y(GRID.y - 20), (W - CASTLE_X) * k, (GRID.rows * GRID.cell + 40) * k);
+      case 'cpFrost': { const a = 0.35 * (kk < 0.1 ? kk / 0.1 : fade); ctx.globalAlpha = a; ctx.fillStyle = '#bfeeff'; ctx.fillRect(X(CASTLE_X), Y(GRID.y - 20), (W - CASTLE_X) * k, (GRID.rows * GRID.ch + 40) * k);
         ctx.globalAlpha = a * 1.6; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k; for (let i = 0; i < 8; i++) { const cx = X(CASTLE_X + 20 + i * 45), cy = Y(GRID.y + 8 + (i % 3) * 50); for (let j = 0; j < 3; j++) { const ang = j * Math.PI / 3; ctx.beginPath(); ctx.moveTo(cx - Math.cos(ang) * 6 * k, cy - Math.sin(ang) * 6 * k); ctx.lineTo(cx + Math.cos(ang) * 6 * k, cy + Math.sin(ang) * 6 * k); ctx.stroke(); } } break; }
       case 'cpIce': { const u = s.u; if (!u.alive) break; const sz = (u.boss ? 30 : 16) * (u.scale || 1) * k, x = X(u.x), y = Y(u.y) + 2 * k, grow = Math.min(1, s.t / 0.12);
         ctx.globalAlpha = 0.55 * (kk > 0.85 ? (1 - kk) / 0.15 : 1); ctx.fillStyle = '#9ad8ff'; ctx.fillRect(x - sz / 2 * grow, y - sz * grow, sz * grow, sz * grow);

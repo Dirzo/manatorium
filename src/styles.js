@@ -114,7 +114,7 @@ const styleFoes = (B, f) => B.enemies.filter(e => e.alive && e.x < W - 6 && !e.o
 const backRow = e => (e.range > 40 ? 2 : 0) + (e.def && e.def.kind === 'healer' ? 2 : 0) + (e.def && e.def.elite ? 1 : 0);
 function pullFoe(B, src, e, tx, ty, col, land) {
   if (B.pulls.some(p => p.e === e)) return;
-  B.pulls.push({ e, src, sx: e.x, sy: e.y, tx: clamp(tx, CASTLE_X + 20, W - 10), ty: clamp(ty, GRID.y + 4, GRID.y + GRID.rows * GRID.cell - 4), t: 0, dur: 0.45, col, land });
+  B.pulls.push({ e, src, sx: e.x, sy: e.y, tx: clamp(tx, CASTLE_X + 20, W - 10), ty: clamp(ty, GRID.y + 4, GRID.y + GRID.rows * GRID.ch - 4), t: 0, dur: 0.45, col, land });
   e.stun = Math.max(e.stun, 0.5); e.target = null;
 }
 
