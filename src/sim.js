@@ -39,9 +39,13 @@ const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarc
 // ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
 // The scouts report the plan before each siege (run.lanes): how the horde splits, and which lane its elites take.
 const LANES = 3, LANE_NAMES = ['Top', 'Middle', 'Bottom'];
+// lanes follow the placement grid's rows (Cam 2026-10-23: a champion dropped in a lane must belong to it): 2, 3 and 2 rows
+const LANE_ROWS = [2, 3, 2], LANE_EDGE = [0, 2, 5, 7];
 function laneH() { return GRID.rows * GRID.cell / LANES; }
-function laneOf(y) { return clamp(Math.floor((y - GRID.y) / laneH()), 0, LANES - 1); }
-function laneBand(l) { return { y0: GRID.y + l * laneH() + 5, y1: GRID.y + (l + 1) * laneH() + 1 }; }
+function laneSpan(l) { return { y0: GRID.y + LANE_EDGE[l] * GRID.cell, y1: GRID.y + LANE_EDGE[l + 1] * GRID.cell }; }
+// unit feet stand 6px below the centre of their cell (cellPos), so the same offset decides the lane
+function laneOf(y) { const r = Math.floor((y - 6 - GRID.y) / GRID.cell); return r < LANE_EDGE[1] ? 0 : r < LANE_EDGE[2] ? 1 : 2; }
+function laneBand(l) { const S = laneSpan(l); return { y0: S.y0 + 6 + 5, y1: S.y1 + 6 - 5 }; }
 function rollLanes(s, tac) {
   const heavy = randi(0, LANES - 1), w = [0, 0, 0], big = tac === 'blitz' ? 0.7 : s < 3 ? 0.34 : rand(0.42, 0.58);
   for (let l = 0; l < LANES; l++) w[l] = l === heavy ? big : (1 - big) / (LANES - 1);
