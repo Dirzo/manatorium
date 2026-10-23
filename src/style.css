@@ -1176,9 +1176,8 @@ h2.hoard { color: var(--gold); }
 /* actors */
 .tk-a { position: absolute; transform-origin: 50% 91%; transition: filter .3s, opacity .6s, transform .6s; }
 .tk-a canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
-.tk-a.talking canvas { animation: tkTalk .32s ease-in-out infinite alternate; transform-origin: 50% 91%; }
+.tk-a.talking canvas { animation: none; } /* only the mouth moves while talking (jawFrames) */
 .tk-a:not(.talking) canvas { animation: tkBreathe 1.6s ease-in-out infinite alternate; transform-origin: 50% 91%; }
-@keyframes tkTalk { to { transform: scale(1.02, .975); } }
 @keyframes tkBreathe { to { transform: scale(1, .985); } }
 .tk-shadow { position: absolute; left: 20%; right: 20%; top: 86%; height: 7%; border-radius: 50%; background: rgba(40,30,20,.32); } /* feet line is at 20/22 of the actor box */
 .tk-a.stomp { animation: tkStomp .45s cubic-bezier(.3,1.6,.5,1); }
