@@ -1323,6 +1323,9 @@ h2.hoard { color: var(--gold); }
 .recruit .copies b { font-size: 18px; color: #ffd84a; }
 .recruit .copies small { font-size: 10px; color: var(--muted); text-align: center; }
 html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.mods.lanes p.lane { margin: 1px 0; font-size: 12px; }
+.mods.lanes p.lane.heavy b { color: #ff7a9a; }
+.mods.lanes .warn { color: #ff7a9a; font-weight: 700; }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -7145,11 +7148,18 @@ function drawUnit(g, u, t, opts = {}) {
 }
 
 // pulsing red chevrons on the right edge show where the horde walks in
-function drawSpawnArrows(g, t, live) {
+// prep only: faint dashed lines between the three lanes, so placement reads at a glance
+function drawLaneLines(g, t) {
+  g.fillStyle = 'rgba(255,255,255,0.16)';
+  for (let l = 1; l < LANES; l++) { const y = Math.round(GRID.y + l * laneH() + 6); for (let x = CASTLE_X + 8; x < W - 8; x += 8) g.fillRect(x, y, 4, 1); }
+}
+function drawSpawnArrows(g, t, live, lanes) {
   const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
   for (let i = 0; i < 3; i++) {
-    const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3);
-    for (let j = 0; j < 3; j++) {
+    const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3), n = lanes ? (i === lanes.heavy && lanes.w[i] > 0.4 ? 3 : lanes.w[i] > 0.3 ? 2 : 1) : 3;
+    // the lane the scouts expect the elites in gets a gold crown marker
+    if (lanes && lanes.elite === i && !live) { const x = W - 40, y = cy - 3; g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 1, 9, 6); g.fillStyle = '#ffd84a'; g.fillRect(x, y + 1, 7, 3); g.fillRect(x, y - 1, 1, 2); g.fillRect(x + 3, y - 1, 1, 2); g.fillRect(x + 6, y - 1, 1, 2); }
+    for (let j = 0; j < n; j++) {
       const ph = (t * 1.6 + j / 3) % 1, x = Math.round(W - 6 - ph * 22), a = Math.sin(ph * Math.PI);
       g.globalAlpha = a * (live ? 0.9 : 0.75);
       g.fillStyle = OUTLINE; for (let d = -5; d <= 5; d++) g.fillRect(x + Math.abs(d) - 1, cy + d, 4, 1);
@@ -7303,7 +7313,8 @@ function renderFrame(V, dt) {
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
-  if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B);
+  if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
+  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t);
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();
@@ -8666,6 +8677,13 @@ function botBossTalk(run, style) {
   if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
+// bots read the scouts: melee champions are re-placed each siege to match the lanes (chaos keeps wherever they landed)
+function botPlace(run, style) {
+  if (style === 'chaos') return;
+  const melee = run.roster.filter(h => h.place && h.place.type === 'grid' && !isRangedHero(h.id));
+  for (const h of melee) h.place = null;
+  for (const h of melee.sort((a, b) => (HERO_BY_ID[b.id].cls === 'guardian') - (HERO_BY_ID[a.id].cls === 'guardian'))) autoPlace(run, h);
+}
 // press the attack when the last siege went cleanly and the walls are healthy
 function botPress(run, style, log) {
   const last = log[log.length - 1];
@@ -8680,7 +8698,7 @@ function botPlayRun(style, meta, opts = {}) {
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyShop(run, meta, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botGiveItems(run, style);
-    checkCastleUnlock(run);
+    checkCastleUnlock(run); botPlace(run, style);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     botPress(run, style, log);
@@ -9111,10 +9129,13 @@ const UI = {
     else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); title = `Scouts report: siege ${s}`; }
     const act = activeSynergies(run); const synKeys = [...Object.keys(RACES), ...Object.keys(CLASSES)].filter(k => act[k] >= 0);
     const combos = activeCombos(run), fe = fieldElements(run);
-    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic]); if (key === UI.intelKey) return; UI.intelKey = key;
+    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic, run.lanes, placedHeroes(run).map(x => x.place)]); if (key === UI.intelKey) return; UI.intelKey = key;
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
+    if (!B && run.finale !== 'ready') { const L = run.lanes || (run.lanes = rollLanes(s, run.tactic)), held = [0, 0, 0];
+      for (const x of placedHeroes(run)) if (x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
+      h += `<div class="mods lanes"><p><b>Lanes.</b> Champions on the ground hold their own lane; ranged ones cover the next lane too.</p>${L.w.map((w, l) => `<p class="lane ${l === L.heavy && w > 0.4 ? 'heavy' : ''}"><b>${LANE_NAMES[l]}</b> ${Math.round(w * 100)}% of the horde${l === L.elite && within >= 2 ? ' · elites' : ''} · ${held[l]} melee holding${!held[l] && w > 0.2 ? ' <span class="warn">open</span>' : ''}</p>`).join('')}</div>`; }
     const tc = run.tactic && TACTICS[run.tactic]; if (tc) h += `<div class="mods tac"><p><b>${tc.icon} Horde tactic: ${esc(tc.name)}.</b> ${esc(tc.desc)}</p></div>`;
     const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
     Object.assign(modNote, TALK_REPLY_NOTE); const shaken = run.mods.shaken && run.roster.find(x => x.uid === run.mods.shaken);
@@ -9950,10 +9971,10 @@ function showTowerPanel() {
   $('towerPanel').innerHTML = `<div class="sheet" style="animation:sheetIn .4s">
     <h2>${G.run && G.run.won ? 'Victory! The Eternal Goose is defeated' : `${T.N} ${T.N === 1 ? 'floor' : 'floors'} tall`}</h2>
     <p class="lede">${T.N > T.prevBest && T.N > 0 ? `Your highest keep yet, beating ${T.prevBest}.` : `Your record is ${G.meta.best} floors.`}</p>
-    <div class="tiles"><div class="tile"><small>Diamonds</small><span style="color:var(--sky)" id="diaCount">+0</span></div><div class="tile"><small>Bosses slain</small><span>${T.bosses.length}</span></div><div class="tile"><small>Foes slain</small><span>${fmt(T.stats.kills)}</span></div><div class="tile"><small>Gold earned</small><span style="color:var(--gold)">${fmt(T.stats.gold)}</span></div></div>
-    ${T.ach.length ? `<div class="achlist"><span class="eyebrow">New achievements</span>${T.ach.map(a => `<div class="ach got"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span><em>+${DIA(a.dia)}</em></div>`).join('')}</div>` : `<p class="note">No new achievements this run. There are ${ACHIEVEMENTS.filter(a => !G.meta.ach[a.id]).length} left to find in the Keep Ledger.</p>`}
+    <div class="tiles"><div class="tile"><small>Bosses slain</small><span>${T.bosses.length}</span></div><div class="tile"><small>Foes slain</small><span>${fmt(T.stats.kills)}</span></div><div class="tile"><small>Gold earned</small><span style="color:var(--gold)">${fmt(T.stats.gold)}</span></div></div>
+    ${T.ach.length ? `<div class="achlist"><span class="eyebrow">New achievements</span>${T.ach.map(a => `<div class="ach got"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`).join('')}</div>` : `<p class="note">No new achievements this run. There are ${ACHIEVEMENTS.filter(a => !G.meta.ach[a.id]).length} left to find in the Keep Ledger.</p>`}
     ${mvp ? `<p class="note">Hero of the run: <b style="color:var(--gold)">${esc(mvp.name)}</b> with ${fmt(T.stats.mvpDmg)} damage.</p>` : ''}
-    <div class="row" style="justify-content:flex-end"><button class="btn" id="twLedger">Spend diamonds</button><button class="btn primary" id="twAgain">Climb again</button></div></div>`;
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="twLedger">Keep Ledger</button><button class="btn primary" id="twAgain">Climb again</button></div></div>`;
   let n = 0; const tick = () => { n = Math.min(T.earned, n + Math.max(1, Math.ceil(T.earned / 20))); const el = $('diaCount'); if (el) el.textContent = '+' + n; if (n < T.earned) setTimeout(tick, 50); }; tick();
   $('twLedger').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.run = newRun(G.meta); G.hasRun = false; G.phase = 'title'; G.B = null; rebuildPrepUnits(); save(); showTitle(); };
   $('twAgain').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.paused = false; startRun(true); };
@@ -12343,7 +12364,7 @@ function showTitle() {
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
         <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
         <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
-      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Diamonds <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
     </div>
     <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
     <div class="wrap">
@@ -12351,7 +12372,7 @@ function showTitle() {
     <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small><button class="btn small" id="tIntro">▶ Replay intro</button></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
-      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
+      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
@@ -12371,13 +12392,13 @@ function showTitle() {
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
 }
 // ----- Keep Ledger: meta progression in tabs -----
-const META_TABS = [['keep', 'Castle'], ['champs', 'Champions'], ['specs', 'Class specs'], ['ach', 'Achievements']];
+const META_TABS = [['ach', 'Achievements']]; // the diamond upgrades and class specs are gone (Cam 2026-10-23); every run starts equal
 const META_GROUP = { masonry: 'keep', hammer: 'keep', chest: 'keep', drills: 'champs', codex: 'champs', banners: 'champs', muster: 'champs', veterans: 'champs' };
-let LEDGER_TAB = 'keep';
+let LEDGER_TAB = 'ach';
 function metaLedgerHTML() {
   const M0 = G.meta; M0.spec = M0.spec || {}; M0.ach = M0.ach || {};
   const spent = metaSpent(M0), achN = ACHIEVEMENTS.filter(a => M0.ach[a.id]).length;
-  let h = `<header><div><span class="eyebrow">Paid in diamonds · kept forever · ${spent} spent so far</span><h2>The Keep Ledger</h2></div><div class="coinbox num" style="font-size:22px;color:var(--sky)">${DIA(M0.diamonds)}</div></header>
+  let h = `<header><div><span class="eyebrow">Trophies from every run · ${achN} of ${ACHIEVEMENTS.length}</span><h2>The Keep Ledger</h2></div></header>
     <nav class="ltabs">${META_TABS.map(([k, n]) => `<button class="ltab ${LEDGER_TAB === k ? 'on' : ''}" data-ltab="${k}">${n}${k === 'ach' ? ` <small>${achN}/${ACHIEVEMENTS.length}</small>` : ''}</button>`).join('')}</nav>`;
   if (LEDGER_TAB === 'keep' || LEDGER_TAB === 'champs') {
     h += `<div class="metagrid">`;
@@ -12399,9 +12420,9 @@ function metaLedgerHTML() {
   } else {
     const groups = [...new Set(ACHIEVEMENTS.map(a => a.group))];
     for (const g of groups) { h += `<div class="group-title">${esc(g)}</div><div class="achgrid">`;
-      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span><em>${DIA(a.dia)}</em></div>`; }
+      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
       h += `</div>`; }
-    h += `<p class="note">Achievements are the only way to earn diamonds. Each pays once, when the run ends. All of them together pay exactly enough to buy every upgrade in the ledger.</p>`;
+    h += `<p class="note">Every run starts equal: no upgrades carry over. Achievements are trophies, checked when a run ends.</p>`;
   }
   return h;
 }
@@ -12537,6 +12558,10 @@ function boot(hotData) {
   loadAudioPrefs();
   const d = (hotData && hotData.meta && hotData.v === 2) ? hotData : load();
   G.meta = Object.assign(newMeta(), (d && d.meta) || {});
+  // no meta progression (Cam 2026-10-23): every run starts equal. Old diamond upgrades are set aside, not deleted
+  if (Object.keys(G.meta.ranks || {}).length || Object.keys(G.meta.spec || {}).length) { G.meta.oldRanks = G.meta.ranks; G.meta.oldSpec = G.meta.spec; }
+  G.meta.ranks = {}; G.meta.spec = {};
+  if (G.run && G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, G.run.roster.length - BARRACKS.start);
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
   if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000); }
   else { G.run = newRun(G.meta); G.hasRun = false; }

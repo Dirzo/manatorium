@@ -144,6 +144,13 @@ function botBossTalk(run, style) {
   if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
+// bots read the scouts: melee champions are re-placed each siege to match the lanes (chaos keeps wherever they landed)
+function botPlace(run, style) {
+  if (style === 'chaos') return;
+  const melee = run.roster.filter(h => h.place && h.place.type === 'grid' && !isRangedHero(h.id));
+  for (const h of melee) h.place = null;
+  for (const h of melee.sort((a, b) => (HERO_BY_ID[b.id].cls === 'guardian') - (HERO_BY_ID[a.id].cls === 'guardian'))) autoPlace(run, h);
+}
 // press the attack when the last siege went cleanly and the walls are healthy
 function botPress(run, style, log) {
   const last = log[log.length - 1];
@@ -158,7 +165,7 @@ function botPlayRun(style, meta, opts = {}) {
   let cause = 'cap';
   while (run.siege <= maxSiege) {
     botBuyShop(run, meta, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botGiveItems(run, style);
-    checkCastleUnlock(run);
+    checkCastleUnlock(run); botPlace(run, style);
     if (vaultDue(run)) gooseSnatch(run);
     for (const h of run.roster) if (!h.place) autoPlace(run, h);
     botPress(run, style, log);

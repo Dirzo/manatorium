@@ -54,7 +54,7 @@ const DEMO = {
         <li><b>The goose.</b> From siege 46 it carries off a champion before every siege.</li>
         <li><b>The Shard War.</b> The final battle, fought inside your own great hall.</li>
       </ul>
-      <p class="note">One purchase unlocks everything, forever, with no ads. Your keep, diamonds and achievements carry over.</p>
+      <p class="note">One purchase unlocks everything, forever, with no ads. Your records and achievements carry over.</p>
       <div class="raact">
         <button class="btn primary go" id="demoBuy">Unlock the full game · ${esc(DEMO.price || DEMO.PRICE)}</button>
         <button class="btn small ghost" id="demoRestore">Restore purchase</button>

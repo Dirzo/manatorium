@@ -474,7 +474,7 @@ function showTitle() {
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
         <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
         <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
-      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Diamonds <b style="color:var(--sky)">${G.meta.diamonds}</b></span><span>Build <b>${VERSION}</b></span></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
     </div>
     <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
     <div class="wrap">
@@ -482,7 +482,7 @@ function showTitle() {
     <div class="fsrec"><span>Best played in fullscreen.</span><button class="btn small primary" id="tFs">⛶ Go fullscreen</button><small class="note">F toggles it anytime</small><button class="btn small" id="tIntro">▶ Replay intro</button></div>
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
-      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Diamonds and class specs carry over between runs, so each attempt gets further.</div>
+      <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
@@ -502,13 +502,13 @@ function showTitle() {
   $('tNew').onclick = () => { SFX.init(); if (has && !armed) { armed = true; $('tNew').textContent = 'Click again to abandon this run'; $('tNew').classList.add('danger'); return; } if (has) TEL.runEnd(G.run, 'abandoned'); startRun(); };
 }
 // ----- Keep Ledger: meta progression in tabs -----
-const META_TABS = [['keep', 'Castle'], ['champs', 'Champions'], ['specs', 'Class specs'], ['ach', 'Achievements']];
+const META_TABS = [['ach', 'Achievements']]; // the diamond upgrades and class specs are gone (Cam 2026-10-23); every run starts equal
 const META_GROUP = { masonry: 'keep', hammer: 'keep', chest: 'keep', drills: 'champs', codex: 'champs', banners: 'champs', muster: 'champs', veterans: 'champs' };
-let LEDGER_TAB = 'keep';
+let LEDGER_TAB = 'ach';
 function metaLedgerHTML() {
   const M0 = G.meta; M0.spec = M0.spec || {}; M0.ach = M0.ach || {};
   const spent = metaSpent(M0), achN = ACHIEVEMENTS.filter(a => M0.ach[a.id]).length;
-  let h = `<header><div><span class="eyebrow">Paid in diamonds · kept forever · ${spent} spent so far</span><h2>The Keep Ledger</h2></div><div class="coinbox num" style="font-size:22px;color:var(--sky)">${DIA(M0.diamonds)}</div></header>
+  let h = `<header><div><span class="eyebrow">Trophies from every run · ${achN} of ${ACHIEVEMENTS.length}</span><h2>The Keep Ledger</h2></div></header>
     <nav class="ltabs">${META_TABS.map(([k, n]) => `<button class="ltab ${LEDGER_TAB === k ? 'on' : ''}" data-ltab="${k}">${n}${k === 'ach' ? ` <small>${achN}/${ACHIEVEMENTS.length}</small>` : ''}</button>`).join('')}</nav>`;
   if (LEDGER_TAB === 'keep' || LEDGER_TAB === 'champs') {
     h += `<div class="metagrid">`;
@@ -530,9 +530,9 @@ function metaLedgerHTML() {
   } else {
     const groups = [...new Set(ACHIEVEMENTS.map(a => a.group))];
     for (const g of groups) { h += `<div class="group-title">${esc(g)}</div><div class="achgrid">`;
-      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span><em>${DIA(a.dia)}</em></div>`; }
+      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
       h += `</div>`; }
-    h += `<p class="note">Achievements are the only way to earn diamonds. Each pays once, when the run ends. All of them together pay exactly enough to buy every upgrade in the ledger.</p>`;
+    h += `<p class="note">Every run starts equal: no upgrades carry over. Achievements are trophies, checked when a run ends.</p>`;
   }
   return h;
 }
@@ -668,6 +668,10 @@ function boot(hotData) {
   loadAudioPrefs();
   const d = (hotData && hotData.meta && hotData.v === 2) ? hotData : load();
   G.meta = Object.assign(newMeta(), (d && d.meta) || {});
+  // no meta progression (Cam 2026-10-23): every run starts equal. Old diamond upgrades are set aside, not deleted
+  if (Object.keys(G.meta.ranks || {}).length || Object.keys(G.meta.spec || {}).length) { G.meta.oldRanks = G.meta.ranks; G.meta.oldSpec = G.meta.spec; }
+  G.meta.ranks = {}; G.meta.spec = {};
+  if (G.run && G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, G.run.roster.length - BARRACKS.start);
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
   if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000); }
   else { G.run = newRun(G.meta); G.hasRun = false; }

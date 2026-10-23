@@ -299,10 +299,13 @@ const UI = {
     else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); title = `Scouts report: siege ${s}`; }
     const act = activeSynergies(run); const synKeys = [...Object.keys(RACES), ...Object.keys(CLASSES)].filter(k => act[k] >= 0);
     const combos = activeCombos(run), fe = fieldElements(run);
-    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic]); if (key === UI.intelKey) return; UI.intelKey = key;
+    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic, run.lanes, placedHeroes(run).map(x => x.place)]); if (key === UI.intelKey) return; UI.intelKey = key;
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
+    if (!B && run.finale !== 'ready') { const L = run.lanes || (run.lanes = rollLanes(s, run.tactic)), held = [0, 0, 0];
+      for (const x of placedHeroes(run)) if (x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
+      h += `<div class="mods lanes"><p><b>Lanes.</b> Champions on the ground hold their own lane; ranged ones cover the next lane too.</p>${L.w.map((w, l) => `<p class="lane ${l === L.heavy && w > 0.4 ? 'heavy' : ''}"><b>${LANE_NAMES[l]}</b> ${Math.round(w * 100)}% of the horde${l === L.elite && within >= 2 ? ' · elites' : ''} · ${held[l]} melee holding${!held[l] && w > 0.2 ? ' <span class="warn">open</span>' : ''}</p>`).join('')}</div>`; }
     const tc = run.tactic && TACTICS[run.tactic]; if (tc) h += `<div class="mods tac"><p><b>${tc.icon} Horde tactic: ${esc(tc.name)}.</b> ${esc(tc.desc)}</p></div>`;
     const hzN = run.mods.hz && HAZARDS[run.mods.hz]; if (hzN) h += `<div class="mods hz"><p><b>${esc(hzN.name)}.</b> ${esc(hzN.desc)}</p></div>`;
     Object.assign(modNote, TALK_REPLY_NOTE); const shaken = run.mods.shaken && run.roster.find(x => x.uid === run.mods.shaken);

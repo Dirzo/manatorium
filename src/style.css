@@ -1313,3 +1313,6 @@ h2.hoard { color: var(--gold); }
 .recruit .copies b { font-size: 18px; color: #ffd84a; }
 .recruit .copies small { font-size: 10px; color: var(--muted); text-align: center; }
 html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.mods.lanes p.lane { margin: 1px 0; font-size: 12px; }
+.mods.lanes p.lane.heavy b { color: #ff7a9a; }
+.mods.lanes .warn { color: #ff7a9a; font-weight: 700; }
