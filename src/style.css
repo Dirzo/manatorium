@@ -1047,6 +1047,7 @@ b.sv { color: var(--gold); }
 .sybw .syl b { font: 600 12px var(--f-display); color: var(--muted); white-space: nowrap; }
 .sybw .syl small { font: 600 11px var(--f-display); color: #8a92c0; }
 .sybw.on .syl b { color: #fff; } .sybw.on .syl small { color: var(--rc); }
+.trait .sybw .syl, .near .sybw .syl { display: none; }
 .sybw:hover .syb { transform: translateY(-2px); }
 .fits .fit small { white-space: normal; }
 /* touch: first tap on a draft card selects it so its text can be read; a second tap drafts */
