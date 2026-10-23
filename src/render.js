@@ -58,7 +58,7 @@ function buildBackground(fi, el) {
   g.fillStyle = ground; g.fillRect(0, 92, W, H - 92);
   g.fillStyle = scene ? scene.edge : '#86de66'; g.fillRect(0, 92, W, 3);
   for (let y = 95; y < H; y += 2) for (let x = 0; x < W; x += 2) { const r = hash(x, y); if (r < 0.06) { g.fillStyle = scene ? scene.grass : '#5cbf45'; g.fillRect(x, y, 1, 2); g.fillRect(x + 1, y - 1, 1, 2); } else if (r < 0.085) { g.fillStyle = scene ? scene.fleck : '#a2ec7e'; g.fillRect(x, y, 1, 1); } }
-  const cx0 = GRID.x - 8, cx1 = GRID.x + GRID.courtCols * GRID.cell, cy0 = GRID.y - 8, cy1 = GRID.y + GRID.rows * GRID.cell + 8;
+  const cx0 = GRID.x - 8, cx1 = GRID.x + GRID.courtCols * GRID.cell, cy0 = GRID.y - 8, cy1 = GRID.y + GRID.rows * GRID.ch + 8;
   if (!scene) {
   // road
   for (let x = CASTLE_X; x < W; x++) { const y0 = 168 + Math.round(Math.sin(x * 0.03) * 3); g.fillStyle = scene ? scene.road : '#e8c07a'; g.fillRect(x, y0, 1, 22); g.fillStyle = '#d4a65e'; if (hash(x, 7) < 0.3) g.fillRect(x, y0 + Math.floor(hash(x, 9) * 20), 1, 1); g.fillStyle = '#c99a50'; g.fillRect(x, y0 + 22, 1, 1); g.fillStyle = '#f4d69a'; g.fillRect(x, y0, 1, 1); }
@@ -89,7 +89,7 @@ function buildBackground(fi, el) {
   for (let i = 0; i < 14; i++) { const x = 350 + Math.floor(hash(i, fi + 11) * 125), y = 100 + Math.floor(hash(i, fi + 23) * 160); if (!ELEMENT_SCENES[el]) drawProp(g, fi, x, y, i); }
   // front line stakes
   const fx = GRID.x + GRID.cols * GRID.cell + 4;
-  for (let y = GRID.y - 6; y < GRID.y + GRID.rows * GRID.cell + 6; y += 9) { g.fillStyle = '#8a5a2a'; g.fillRect(fx, y, 2, 5); g.fillStyle = '#c98a4a'; g.fillRect(fx, y, 2, 1); }
+  for (let y = GRID.y - 6; y < GRID.y + GRID.rows * GRID.ch + 6; y += 9) { g.fillStyle = '#8a5a2a'; g.fillRect(fx, y, 2, 5); g.fillStyle = '#c98a4a'; g.fillRect(fx, y, 2, 1); }
   return c;
 }
 
@@ -239,7 +239,7 @@ function drawLaneLabels(ctx, k, run) {
   ctx.restore();
 }
 function drawSpawnArrows(g, t, live, lanes) {
-  const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
+  const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.ch;
   for (let i = 0; i < 3; i++) {
     const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3), n = lanes ? (i === lanes.heavy && lanes.w[i] > 0.4 ? 3 : lanes.w[i] > 0.3 ? 2 : 1) : 3;
     // the lane the scouts expect the elites in gets a gold crown marker
@@ -373,10 +373,10 @@ function renderFrame(V, dt) {
   // grid in prep
   if (!B) {
     for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < GRID.rows; r++) {
-      const x = GRID.x + c * GRID.cell, y = GRID.y + r * GRID.cell, hov = V.hover && V.hover.type === 'grid' && V.hover.c === c && V.hover.r === r;
+      const x = GRID.x + c * GRID.cell, y = GRID.y + r * GRID.ch, hov = V.hover && V.hover.type === 'grid' && V.hover.c === c && V.hover.r === r;
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.45)' : 'rgba(255,93,143,0.45)') : c < GRID.courtCols ? 'rgba(120,90,40,0.10)' : 'rgba(30,80,30,0.10)';
-      g.fillRect(x + 1, y + 1, GRID.cell - 2, GRID.cell - 2);
-      g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(x + 1, y + 1, 2, 1); g.fillRect(x + 1, y + 1, 1, 2); g.fillRect(x + GRID.cell - 3, y + GRID.cell - 2, 2, 1); g.fillRect(x + GRID.cell - 2, y + GRID.cell - 3, 1, 2);
+      g.fillRect(x + 1, y + 1, GRID.cell - 2, GRID.ch - 2);
+      g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(x + 1, y + 1, 2, 1); g.fillRect(x + 1, y + 1, 1, 2); g.fillRect(x + GRID.cell - 3, y + GRID.ch - 2, 2, 1); g.fillRect(x + GRID.cell - 2, y + GRID.ch - 3, 1, 2);
     }
     for (let i = 0; i < rafterSlots(run); i++) { const slot = rafterPosition(run, i), x = slot.x, hov = V.hover && V.hover.type === 'rafter' && V.hover.i === i;
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
@@ -525,7 +525,7 @@ function buildHall() {
   p(0, 98, W, 8, '#3a3458'); p(0, 98, W, 2, '#6a628e');
   for (let y = 106; y < H; y += 12) for (let x = 0; x < W; x += 16) { const odd = ((x / 16) + Math.floor((y - 106) / 12)) % 2; p(x, y, 16, 12, odd ? '#6e6488' : '#7c7298'); p(x, y, 16, 1, odd ? '#7e749a' : '#8e84aa'); p(x, y, 1, 12, '#5e5678'); }
   // red carpet from the doors to the altar
-  const cy = GRID.y + GRID.rows * GRID.cell / 2 - 10;
+  const cy = GRID.y + GRID.rows * GRID.ch / 2 - 10;
   p(60, cy, W - 60, 22, '#9a2a3a'); p(60, cy, W - 60, 2, '#d8a84a'); p(60, cy + 20, W - 60, 2, '#d8a84a');
   for (let x = 70; x < W; x += 14) p(x, cy + 10, 6, 2, '#b8404e');
   // pillars

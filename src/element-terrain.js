@@ -34,7 +34,7 @@ function drawElementTerrain(g, el) {
       if(h>.6){p(x+8,y+6,1,5,pal.seam);p(x+9,y+10,4,1,pal.seam);}
     }
   }else if(water) {
-    poly([[left,top+8],[left+8,top],[right-8,top],[right,top+8],[right,258],[right-8,266],[left,266]],pal.bed);
+    poly([[left,top+8],[left+8,top],[right-8,top],[right,top+8],[right,260],[right-8,268],[left,268]],pal.bed);
     // Pale limestone terraces surround inset blue mosaic squares.
     for(let row=0;row<7;row++)for(let col=0;col<4;col++) {
       const x=left+4+col*23,y=top+5+row*22;

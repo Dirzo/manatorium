@@ -39,12 +39,12 @@ const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarc
 // ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
 // The scouts report the plan before each siege (run.lanes): how the horde splits, and which lane its elites take.
 const LANES = 3, LANE_NAMES = ['Top', 'Middle', 'Bottom'];
-// lanes follow the placement grid's rows (Cam 2026-10-23: a champion dropped in a lane must belong to it): 2, 3 and 2 rows
-const LANE_ROWS = [2, 3, 2], LANE_EDGE = [0, 2, 5, 7];
-function laneH() { return GRID.rows * GRID.cell / LANES; }
-function laneSpan(l) { return { y0: GRID.y + LANE_EDGE[l] * GRID.cell, y1: GRID.y + LANE_EDGE[l + 1] * GRID.cell }; }
+// lanes follow the placement grid's rows (Cam 2026-10-23: a champion dropped in a lane must belong to it): 2 rows each
+const LANE_EDGE = [0, 2, 4, 6];
+function laneH() { return GRID.rows * GRID.ch / LANES; }
+function laneSpan(l) { return { y0: GRID.y + LANE_EDGE[l] * GRID.ch, y1: GRID.y + LANE_EDGE[l + 1] * GRID.ch }; }
 // unit feet stand 6px below the centre of their cell (cellPos), so the same offset decides the lane
-function laneOf(y) { const r = Math.floor((y - 6 - GRID.y) / GRID.cell); return r < LANE_EDGE[1] ? 0 : r < LANE_EDGE[2] ? 1 : 2; }
+function laneOf(y) { const r = Math.floor((y - 6 - GRID.y) / GRID.ch); return r < LANE_EDGE[1] ? 0 : r < LANE_EDGE[2] ? 1 : 2; }
 function laneBand(l) { const S = laneSpan(l); return { y0: S.y0 + 6 + 5, y1: S.y1 + 6 - 5 }; }
 function rollLanes(s, tac) {
   const heavy = randi(0, LANES - 1), w = [0, 0, 0], big = tac === 'blitz' ? 0.7 : s < 3 ? 0.34 : rand(0.42, 0.58);
@@ -61,7 +61,7 @@ function heroLaneOk(B, u, e) {
 }
 function stepLanes(B, dt) { if (!B.lanes) return; const busy = [0, 0, 0]; for (const e of B.enemies) if (e.alive && e.x < W - 4 && !e.boss) busy[laneOf(e.y)]++; for (let l = 0; l < LANES; l++) B.laneIdle[l] = busy[l] ? 0 : (B.laneIdle[l] || 0) + dt; }
 
-function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
+function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.ch + GRID.ch / 2 + 6 }; }
 
 // ----- synergies -----
 function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault && !h.fled); }
@@ -384,7 +384,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
   const band = opts.lane != null ? laneBand(opts.lane) : null;
-  const y = opts.y != null ? opts.y : band ? rand(band.y0, band.y1) : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
+  const y = opts.y != null ? opts.y : band ? rand(band.y0, band.y1) : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.ch + 2);
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
@@ -397,7 +397,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
-  if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
+  if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.ch / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     if (mods.taunt) for (const sk in u.skillT) u.skillT[sk] = Math.min(u.skillT[sk], 1.5); // boss talk: taunted, it opens with its fury
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name, { kind: 'boss', spr: 'e:' + id }); FX.shake(6); FX.sound('boss'); }
@@ -538,7 +538,7 @@ function killUnit(B, u, src) {
   else if (u.def.elite && Math.random() < 0.06) drops = 1;
   else if (u.id === 'goose') drops = 1;
   for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
-  if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
+  if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.ch) }); }
   if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
 }
 
@@ -650,7 +650,7 @@ const ABILITIES = {
   bloom(B, u) { const dead = B.heroes.filter(h => !h.alive && !h.temp).sort((a, b) => (b.inst ? heroRarity(b.inst) : 0) - (a.inst ? heroRarity(a.inst) : 0))[0];
     if (dead) { dead.alive = true; dead.hp = dead.maxHp * 0.6; dead.stun = 0; dead.poison = []; FX.text(dead.x, dead.y - 24, 'BLOOM', '#ff9fd0', true); FX.particles(dead.x, dead.y - 8, 24, '#ff9fd0', { spread: 30, up: true }); }
     for (const h of B.heroes) if (h.alive) { healUnit(B, u, h, ABH(u, 0, h) * (1 + 0.16 * RK(u))); if (h !== u) FX.fly(u.x, u.y - 14, h.x, h.y - 10, 'seed', '#ff9fd0', '#ffffff', sigPower(u), 0.5, rand(0, 0.15)); } FX.petals(); FX.sound('heal'); },
-  stampede(B, u) { const n = 4 + RK(u), D = AB(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.cell - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
+  stampede(B, u) { const n = 4 + RK(u), D = AB(u); for (let i = 0; i < n; i++) B.waves.push({ type: 'spirit', x: CASTLE_X - i * 18, y: GRID.y + 12 + i * (GRID.rows * GRID.ch - 20) / (n - 1), vx: 180, life: 2.6, t: 0, src: u, dmg: D, hit: new Set(), h: 14 }); FX.shake(5); FX.sound('stampede'); },
   // ----- ultimates (Cam 2026-10-15): big, animated, and grander with every rarity step -----
   cinderColossus(B, u) { const c = densest(B.enemies, 34, u, 999) || nearest(B.enemies, u, 999); if (!c) return false;
     const rar = u.st.rarity || 0, rk = RK(u), size = 1 + 0.08 * rar + 0.03 * rk, D0 = AB(u, 0), D1 = AB(u, 1);
@@ -659,7 +659,7 @@ const ABILITIES = {
         if (!z.landed) { if (z.t >= 0.45) { z.landed = true; for (const e of inRadius(B.enemies, z, z.r * 1.4)) { dealDamage(B, u, e, D0, { sig: true }); e.stun = Math.max(e.stun, e.boss ? 0.4 : 0.9); }
           FX.ultImpact(z.x, z.y, z.r * 1.4, 'colossus', z.rar); FX.sound('quake'); } return; }
         const t = densest(B.enemies, 26, z, 160) || nearest(B.enemies, z, 200);
-        if (t && dist(t, z) > z.r * 0.6) { const d = dist(t, z) || 1, sp = 16 + 3 * z.rar; z.x = clamp(z.x + (t.x - z.x) / d * sp * dt, CASTLE_X + 30, W - 70); z.y = clamp(z.y + (t.y - z.y) / d * sp * dt, GRID.y + 10, GRID.y + GRID.rows * GRID.cell); z.face = t.x >= z.x ? 1 : -1; }
+        if (t && dist(t, z) > z.r * 0.6) { const d = dist(t, z) || 1, sp = 16 + 3 * z.rar; z.x = clamp(z.x + (t.x - z.x) / d * sp * dt, CASTLE_X + 30, W - 70); z.y = clamp(z.y + (t.y - z.y) / d * sp * dt, GRID.y + 10, GRID.y + GRID.rows * GRID.ch); z.face = t.x >= z.x ? 1 : -1; }
         z.tick -= dt; if (z.tick <= 0) { z.tick = z.rar >= 5 ? 0.65 : 0.9; z.stompT = z.t;
           for (const e of inRadius(B.enemies, z, z.r)) { dealDamage(B, u, e, D1, { sig: true }); if (!e.boss) e.x += 6 * Math.sign(e.x - z.x || 1); }
           if (z.rar >= 5 && t) { for (const e of B.enemies) if (e.alive && Math.abs(e.y - z.y) < 22 && (e.x - z.x) * z.face > 0 && Math.abs(e.x - z.x) < 90) dealDamage(B, u, e, D1 * 0.6, { sig: true }); FX.ultBreath(z.x + 10 * z.face * z.size, z.y - 26 * z.size, z.face); }
@@ -742,7 +742,7 @@ function lerpY(x0, y0, x1, y1, x) { return x1 === x0 ? y0 : y0 + (y1 - y0) * (x 
 function summonThrall(B, u, mul, key, opts = {}) {
   const lv = u.inst ? u.inst.level : 1, ap = u.st ? Math.max(0.5, u.st.ap) : 1, dead = u.st && (u.st.ability || u.def.ability) === 'raiseDead';
   const st = { hp: (dead ? AB(u, 0) : 200 * heroLevelMul(lv) * ap) * mul, atk: (dead ? AB(u, 1) : 18 * heroLevelMul(lv) * ap) * mul, as: 1, range: 14, spd: 30, armor: 15, mana: 999, crit: 0.05, critMul: BAL.critMul, dodge: 0, lifesteal: 0, reflect: 0, manaGain: 0, ap: 1, sp: {}, el: {}, sigOn: false, regen: 0 };
-  const p = { x: (u.x || GRID.x) + 14 + rand(0, 10), y: clamp((u.y || GRID.y + 60) + rand(-16, 16), GRID.y, GRID.y + GRID.rows * GRID.cell) };
+  const p = { x: (u.x || GRID.x) + 14 + rand(0, 10), y: clamp((u.y || GRID.y + 60) + rand(-16, 16), GRID.y, GRID.y + GRID.rows * GRID.ch) };
   B.heroes.push(makeUnit('hero', { def: { cls: 'berserker', race: 'skeleton', name: opts.name || 'Thrall' }, key, temp: true, owner: u.inst ? u : null, x: p.x, y: p.y, hx: p.x, hy: p.y, maxHp: st.hp, hp: st.hp, st, maxMana: 999, name: opts.name || 'Thrall' }));
   FX.particles(p.x, p.y - 4, 14, opts.col || '#9dff6a', { spread: 16, up: true });
 }
@@ -812,9 +812,9 @@ const BOSS_MOVES = {
     B.zones.push({ type: 'telegraph', x: t.x, y: t.y, r: 40, t: 0, dur: 1, meteor: true, onEnd: z => { u.x = Math.max(u.x - 60, z.x + 30); for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 2.4); FX.explode(z.x, z.y - 4, 36, ['#ff5a5a', '#ffd84a', '#ffffff']); FX.shake(12); FX.sound('boom'); } }); return 12; },
   sporebaron(B, u, hs) { bossCall(B, u, 'SPORE CLOUD', 'smell that? POTENTIAL.', ['#c8ff6a', '#a86ad8'], 6); FX.boss('spores', { sx: u.x, life: 1.8 }); for (const h of hs) { h.poison.push({ dps: u.atk * 0.25, t: 6, src: u }); FX.particles(h.x, h.y - 10, 8, ['#c8ff6a', '#a86ad8'], { spread: 12, up: true }); } return 12; },
   matriarch(B, u, hs) { bossCall(B, u, 'AVALANCHE', 'THIS IS A BYLAW VIOLATION', ['#e8f0ff', '#9ad8ff'], 12); FX.boss('avalanche', { sx: W + 20, life: 1.2 }); for (const h of hs) { if (!h.rafter) h.x = Math.max(CASTLE_X + 8, h.x - 50); dealDamage(B, u, h, u.atk * 1.2); h.slowT = 3; h.slowAmt = 0.4; } for (let i = 0; i < 10; i++) FX.particles(rand(120, 460), rand(90, 230), 6, ['#ffffff', '#c8e8ff'], { spread: 18 }); FX.sound('gust'); return 13; },
-  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); FX.boss('dumpster', { sx: u.x, sy: u.y, life: 1.6 }); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.sound('summon'); return 14; },
+  trashpaw(B, u, hs) { bossCall(B, u, 'DUMPSTER DIVE', 'MAMA NEEDS A SNACK', ['#5a7a5a', '#c84a8a']); FX.boss('dumpster', { sx: u.x, sy: u.y, life: 1.6 }); u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.08); for (let i = 0; i < 3; i++) spawnEnemy(B, i ? 'bandit' : 'possum', { x: u.x + rand(-10, 20), y: clamp(u.y + rand(-34, 34), GRID.y, GRID.y + GRID.rows * GRID.ch) }); FX.sound('summon'); return 14; },
   colossus(B, u, hs) { bossCall(B, u, 'FACTORY RESET', 'PLEASE HOLD.', ['#e8b84a', '#5fd3ff'], 9); FX.boss('reset', { sx: u.x, life: 1 }); for (const h of hs) { h.mana = 0; h.buffAs = 0; h.buffAtk = 0; } u.shield = (u.shield || 0) + u.maxHp * 0.06; FX.ring(u.x, u.y - 20, 60, '#5fd3ff'); FX.sound('beam'); return 14; },
-  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); FX.boss('ship', { life: 2 }); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.cell - 20) / 3);
+  pinchbeard(B, u, hs) { bossCall(B, u, 'BROADSIDE', 'THE TOLL IS DUE', ['#2a2a3a', '#ffd84a'], 10); FX.boss('ship', { life: 2 }); const ys = [0, 1, 2, 3].map(i => GRID.y + 14 + i * (GRID.rows * GRID.ch - 20) / 3);
     for (const y of ys) for (let x = CASTLE_X + 20; x < u.x - 10; x += 46) B.zones.push({ type: 'telegraph', x: x + rand(-8, 8), y, r: 16, t: 0, dur: 0.8 + Math.random() * 0.8, meteor: true, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 14, ['#ffd84a', '#ff8a3a', '#2a2a3a']); } }); FX.sound('boom'); return 13; },
   // the finale: it wears the twelve shards and throws them around; each sixth of its HP knocks two loose
   shardgoose(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3, left = EL_KEYS.filter((e, i) => i < (u.shards || 0));
@@ -824,11 +824,11 @@ const BOSS_MOVES = {
         B.zones.push({ type: 'telegraph', x: zx, y: zy, r: 20, t: 0, dur: 0.8 + i * 0.12, meteor: true, col: ELEMENTS[e].col, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) dealDamage(B, u, h, u.atk * 1.1); FX.explode(z.x, z.y - 4, 22, [ELEMENTS[e].col, ELEMENTS[e].col2, '#ffffff']); } }); }
       return 10; }
     if (m === 2) { bossCall(B, u, 'THE HONK', 'GIVE. THEM. BACK.', ['#ffffff', '#c98aff'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.2); dealDamage(B, u, h, u.atk * 0.8); } return 12; }
-    bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 3 }); return 11; },
+    bossCall(B, u, 'GOSLING GUARD', 'protect the crown', ['#f4e48a', '#c98aff'], 8); for (let i = 0; i < 4; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.ch - 16) / 3 }); return 11; },
   goosegod(B, u, hs) { const m = (u.mv = (u.mv || 0) + 1) % 3;
     if (m === 1) { bossCall(B, u, 'THE HONK', 'HONK', ['#ffffff', '#ff8a1a'], 16); FX.boss('honk', { sx: u.x - 20, sy: u.y - 40, life: 1.2 }); for (const h of hs) { h.stun = Math.max(h.stun, 1.4); dealDamage(B, u, h, u.atk * 0.9); } B.castle.hp = Math.max(1, B.castle.hp - B.castle.max * 0.05); for (let i = 1; i <= 4; i++) FX.ring(u.x, u.y - 20, 50 * i, '#ffffff'); FX.sound('honk'); return 9; }
     if (m === 2) { bossCall(B, u, 'STOLEN HAMMER', 'mine now. honk.', ['#ffd84a', '#ffffff'], 6); FX.boss('hammerSteal', { sx: CASTLE_X - 30, sy: 70, tx: u.x, ty: u.y - 40, life: 1 }); B.hammer.cd = hammerCooldown(B.run, B.meta); B.hammer.pending = null; FX.sound('gust'); return 10; }
-    bossCall(B, u, 'GOOSE STAMPEDE', 'release the goslings', ['#f4e48a', '#ff8a1a'], 10); for (let i = 0; i < 5; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.cell - 16) / 4 }); return 11; },
+    bossCall(B, u, 'GOOSE STAMPEDE', 'release the goslings', ['#f4e48a', '#ff8a1a'], 10); for (let i = 0; i < 5; i++) spawnEnemy(B, 'gosling', { x: u.x + rand(0, 30), y: GRID.y + 10 + i * (GRID.rows * GRID.ch - 16) / 4 }); return 11; },
 };
 // ----- boss skills -----
 function bossSkill(B, u, sk) {
@@ -836,7 +836,7 @@ function bossSkill(B, u, sk) {
   const targets = B.heroes.filter(h => h.alive);
   switch (name) {
     case 'slam': B.zones.push({ type: 'telegraph', x: u.x - 10, y: u.y, r: 44, t: 0, dur: 0.9, onEnd: z => { for (const h of inRadius(B.heroes, z, z.r)) { dealDamage(B, u, h, u.atk * 1.6); h.stun = Math.max(h.stun, 1); } FX.ring(z.x, z.y, z.r, '#ff5d8f'); FX.explode(z.x, z.y - 4, 30, ['#c9a35a', '#8a6a2a', '#ffffff']); FX.shake(8); FX.sound('quake'); } }); return 6.5;
-    case 'summon': { const mini = ENEMIES[u.id] && ENEMIES[u.id].boss === 'mini'; for (let i = 0; i < 2; i++) spawnEnemy(B, arg, { x: u.x + rand(-6, 14), y: clamp(u.y + rand(-30, 30), GRID.y, GRID.y + GRID.rows * GRID.cell) }); FX.text(u.x, u.y - 50, 'Minions!', '#ffcf3a', true); FX.sound('summon'); return mini ? 15 : 12; }
+    case 'summon': { const mini = ENEMIES[u.id] && ENEMIES[u.id].boss === 'mini'; for (let i = 0; i < 2; i++) spawnEnemy(B, arg, { x: u.x + rand(-6, 14), y: clamp(u.y + rand(-30, 30), GRID.y, GRID.y + GRID.rows * GRID.ch) }); FX.text(u.x, u.y - 50, 'Minions!', '#ffcf3a', true); FX.sound('summon'); return mini ? 15 : 12; }
     case 'breath': { B.zones.push({ type: 'breath', x: u.x - 30, y: u.y, t: 0, dur: 1.4, src: u, tick: 0 }); FX.sound('breath'); return 7; }
     case 'gust': for (const h of targets) { if (!h.rafter) { h.x = Math.max(CASTLE_X + 8, h.x - 30); } dealDamage(B, u, h, u.atk * 0.4, { quiet: false }); } FX.gust(); FX.shake(5); FX.sound('gust'); return 9;
     case 'fireRain': { const ts = targets.slice().sort(() => Math.random() - 0.5).slice(0, 5); for (const h of ts) B.zones.push({ type: 'telegraph', x: h.x, y: h.y, r: 18, t: 0, dur: 1.1, meteor: true, onEnd: z => { for (const hh of inRadius(B.heroes, z, z.r)) dealDamage(B, u, hh, u.atk * 1.3); FX.explode(z.x, z.y - 4, 18, ['#ffde3a', '#ff8a3a', '#ff3d3d']); FX.shake(3); FX.sound('boom'); } }); return 8; }
@@ -856,7 +856,7 @@ function hzSpd(B, u) {
   if (k === 'flood' && inFlood(u)) return 0.6;
   return 1;
 }
-function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.y + 8, GRID.y + GRID.rows * GRID.cell - 4) }; }
+function hzFieldPoint() { return { x: rand(CASTLE_X + 30, W - 24), y: rand(GRID.y + 8, GRID.y + GRID.rows * GRID.ch - 4) }; }
 function stepHazard(B, dt) {
   const k = B.hzK; if (!k) return;
   const live = B.enemies.filter(e => e.alive && !e.flying), heroes = B.heroes.filter(h => h.alive && !h.rafter);
@@ -922,7 +922,7 @@ function stepBattle(B, dt) {
   if (anyFoe) for (const c of B.combos) { c.t += dt; if (c.t >= c.every) { c.t = 0; comboPulse(B, c); } }
   // secrets
   if (run.tech.bard && anyFoe) { B.bardT -= dt; if (B.bardT <= 0) { B.bardT = 18; for (const h of B.heroes) if (h.alive) { h.buffAs = Math.max(h.buffAs, 0.4); h.buffAsT = 5; } FX.combo(70, 40, '♪ The bard plays the big number ♪', ['#ff9fd0', '#ffd84a']); FX.sound('jingle'); } }
-  if (run.tech.cheese && anyFoe) { B.cheeseT -= dt; if (B.cheeseT <= 0) { B.cheeseT = 7; B.waves.push({ type: 'cheese', x: CASTLE_X, y: GRID.y + randi(0, GRID.rows - 1) * GRID.cell + 14, vx: 150, life: 2.6, t: 0, src: null, dmg: teamAtk(B) * 1.4, hit: new Set(), kb: 30, h: 12 }); FX.sound('whoosh'); } }
+  if (run.tech.cheese && anyFoe) { B.cheeseT -= dt; if (B.cheeseT <= 0) { B.cheeseT = 7; B.waves.push({ type: 'cheese', x: CASTLE_X, y: GRID.y + randi(0, GRID.rows - 1) * GRID.ch + 16, vx: 150, life: 2.6, t: 0, src: null, dmg: teamAtk(B) * 1.4, hit: new Set(), kb: 30, h: 12 }); FX.sound('whoosh'); } }
   if (run.tech.goose) { B.gooseT -= dt; if (B.gooseT <= 0) { B.gooseT = 1; for (const e of B.enemies) if (e.alive && !e.flying && e.x < CASTLE_X + 14) { dealDamage(B, null, e, e.maxHp * (e.boss ? 0.005 : 0.05), { kind: 'combo' }); if (Math.random() < 0.3) { FX.text(e.x, e.y - 22, 'HONK', '#ffffff', true); FX.sound('honk'); } } } }
   if (B.pinataT > 0) B.pinataT -= dt;
   if (B.cpow.cd > 0) B.cpow.cd -= dt;
@@ -995,7 +995,7 @@ function separate(list) {
     const d = Math.hypot(dx, dy) || 0.01, min = 7 * Math.max(a.scale || 1, b.scale || 1);
     if (d < min) { const push = (min - d) / 2, nx = dx / d, ny = dy / d; const wa = a.boss ? 0 : 1, wb = b.boss ? 0 : 1;
       a.x -= nx * push * wa; a.y -= ny * push * wa; b.x += nx * push * wb; b.y += ny * push * wb;
-      const top = a.flying ? 50 : GRID.y - 4, bot = GRID.y + GRID.rows * GRID.cell + 6; a.y = clamp(a.y, top, bot); b.y = clamp(b.y, top, bot);
+      const top = a.flying ? 50 : GRID.y - 4, bot = GRID.y + GRID.rows * GRID.ch + 6; a.y = clamp(a.y, top, bot); b.y = clamp(b.y, top, bot);
       if (!a.flying) { a.x = Math.max(CASTLE_X - 2, a.x); b.x = Math.max(CASTLE_X - 2, b.x); } }
   }
 }
@@ -1016,7 +1016,7 @@ function heroAtk(u) { return u.st.atk * (1 + u.buffAtk) * BAL.auto; } // basic a
 // a rafter hero leaps down to fight on the field for the rest of the siege
 function rafterJump(B, u) {
   if (!u || !u.alive || !u.rafter || u.leap) return false;
-  const tx = CASTLE_X + 40 + rand(0, 20), ty = GRID.y + GRID.rows * GRID.cell / 2 + rand(-16, 16);
+  const tx = CASTLE_X + 40 + rand(0, 20), ty = GRID.y + GRID.rows * GRID.ch / 2 + rand(-16, 16);
   u.rafter = false; u.st.range = u.st.groundRange || u.st.range; u.target = null;
   u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; u.lane = laneOf(ty); FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
@@ -1157,7 +1157,7 @@ function stepEnemy(B, u, dt) {
       else { dealDamage(B, u, t, u.atk); FX.slash(t.x, t.y - 8, -1, '#ff7a9a'); FX.sound('ehit'); } } }
   } else {
     const stopX = CASTLE_X + (u.range > 40 ? u.range * 0.8 : 6) + (u.scale - 1) * 10;
-    if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.cell), spd, dt); u.facing = -1; }
+    if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.ch), spd, dt); u.facing = -1; }
     else { u.facing = -1; u.cd -= dt; if (u.cd <= 0) { u.cd = 1 / u.as; u.atkT = 0.2;
       if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk, u); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
       else if (!u.ram) { damageCastle(B, u.atk, u); FX.particles(CASTLE_X, u.y - 10, 3, '#c9c4e6', { spread: 8 }); FX.sound('thud'); } } }
@@ -1168,7 +1168,7 @@ function stepEnemy(B, u, dt) {
 function overtimeCharge(B, u, dt) {
   if (!u.rampage) { u.rampage = true; u.ram = null; u.onRafter = false; u.climb = null; u.taunt = null; u.target = null; u.healing = false; if (u.y < GRID.y) u.y = GRID.y + 8; FX.text(u.x, u.y - 24, 'CHARGE!', '#ff9a5c', true); }
   const stopX = CASTLE_X + 6 + (u.scale - 1) * 10; u.facing = -1; u.moving = true;
-  if (u.x > stopX) { u.x = Math.max(stopX, u.x - Math.max(u.spd * 1.8, 45) * dt); u.y += (clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.cell) - u.y) * Math.min(1, dt * 3); return; }
+  if (u.x > stopX) { u.x = Math.max(stopX, u.x - Math.max(u.spd * 1.8, 45) * dt); u.y += (clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.ch) - u.y) * Math.min(1, dt * 3); return; }
   damageCastle(B, u.atk * BAL.otSlam, u); FX.shake(4); FX.text(u.x, u.y - 24, 'BREAKS THROUGH', '#ff9a5c', true); FX.particles(CASTLE_X, u.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud');
   u.alive = false; u.hp = 0; u.fled = true; B.fled = (B.fled || 0) + 1;
 }
@@ -1189,7 +1189,7 @@ function bossPatience(B, u, dt) {
     if (Math.random() < dt * 30) FX.particles(u.x + 8 * u.scale, u.y, 2, ['#c9b48a', '#8a6a4a'], { spread: 6 });
     for (const h of B.heroes) if (h.alive && !h.rafter && !R.hit.has(h) && Math.abs(h.x - u.x) < 10 + 6 * u.scale && Math.abs(h.y - u.y) < 14 + 6 * u.scale) {
       R.hit.add(h); dealDamage(B, u, h, h.maxHp * BAL.patTrample, { unavoidable: true, from: 'boss' }); h.stun = Math.max(h.stun || 0, 0.9);
-      h.y = clamp(h.y + (h.y >= u.y ? 1 : -1) * rand(16, 26), GRID.y, GRID.y + GRID.rows * GRID.cell); h.x -= rand(4, 10);
+      h.y = clamp(h.y + (h.y >= u.y ? 1 : -1) * rand(16, 26), GRID.y, GRID.y + GRID.rows * GRID.ch); h.x -= rand(4, 10);
       FX.text(h.x, h.y - 22, 'TRAMPLED', '#ff9a5c', true); FX.particles(h.x, h.y - 8, 8, '#ffffff', { spread: 14 }); FX.shake(3); FX.sound('thud'); }
     if (u.x <= stopX) { R.ph = 'smash'; R.t = 0;
       const dmg = B.castle.max * (u.def.boss === 'big' ? BAL.patSmashBig : BAL.patSmashMini);

@@ -1,7 +1,8 @@
 // ===== Manatorium game data =====
 const W = 480, H = 270;
 const CASTLE_X = 92;              // front face of the castle wall
-const GRID = { x: 104, y: 112, cell: 22, cols: 10, rows: 7, courtCols: 4 };
+// rows are ch tall (not square) so 6 rows split into 3 equal lanes of 2 (Cam 2026-10-23)
+const GRID = { x: 104, y: 112, cell: 22, ch: 26, cols: 10, rows: 6, courtCols: 4 };
 const RAFTER_Y = 66;
 const RAFTER_XS = [16, 34, 52, 70, 86];
 // Element sprites retain their own proportions and existing architectural decks.

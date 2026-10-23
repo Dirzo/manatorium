@@ -181,6 +181,8 @@ function fieldCount(run, except) { return run.roster.filter(h => h !== except &&
 function fieldFull(run, except) { return !run.finale && fieldCount(run, except) >= fieldCap(run); }
 // more champions on the field than the barracks allow (old saves, champions back from the goose's nest): the weakest go to the bench
 function enforceField(run) {
+  // saves from the 7-row field: a champion on the old bottom row finds a new cell
+  for (const h of run.roster) if (h.place && h.place.type === 'grid' && h.place.r >= GRID.rows) { h.place = null; autoPlace(run, h); }
   if (run.finale) return; const on = run.roster.filter(h => h.place && !h.vault && !h.fled), cap = fieldCap(run); if (on.length <= cap) return;
   on.sort((a, b) => heroRarity(b) * 3 + heroStar(b) * 4 + b.level / 10 - (heroRarity(a) * 3 + heroStar(a) * 4 + a.level / 10)).slice(cap).forEach(h => { h.place = null; });
 }
@@ -190,7 +192,7 @@ function autoPlace(run, h) {
   if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
   // lanes: melee champions go where the scouts expect the most foes per defender; ranged ones stand mid-field and cover two lanes
-  const L = run.lanes || { w: [1 / 3, 1 / 3, 1 / 3] }, LANE_ROWS = [[1, 0], [3, 2], [4, 5, 6]];
+  const L = run.lanes || { w: [1 / 3, 1 / 3, 1 / 3] }, LANE_ROWS = [[1, 0], [3, 2], [4, 5]];
   const held = [0, 0, 0]; for (const x of run.roster) if (x !== h && x.place && x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
   const order = ranged ? [1, 0, 2] : [0, 1, 2].sort((a, b) => L.w[b] / (1 + held[b]) - L.w[a] / (1 + held[a]));
   for (const l of order) for (const c of cols) for (const r of LANE_ROWS[l]) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
