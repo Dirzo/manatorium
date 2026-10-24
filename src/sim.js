@@ -8,12 +8,12 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.6, foeHp: 2.4, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.8, foeHp: 3.0, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges)
-// retuned 2026-10-23 for the TFT shop with no meta progression: bots win about 1 run in 6
+// retuned 2026-10-23 for the TFT shop with no meta progression; 2026-10-24 foeHp 2.4->3.0, foeAtk 1.6->1.8 for breaches, race/class thresholds and guild ranks (bots win ~1 run in 6)
 const HORDE_DIFF = [1.29, 1.256, 1.12, 1.21, 0.77, 0.7, 0.78, 0.098, 0.22, 0.015];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
@@ -448,6 +448,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'hero' && tgt.stoneT > B.t) return 0;
   if (tgt.side === 'hero' && o.ranged && tgt.st.sp.arrowWard) amount *= 0.6;
   if (B.sty) amount *= styleDmgMul(B, src, tgt, o, amount);
+  if (src && src.side === 'hero') amount *= traitDmgMul(B, src, tgt);
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
@@ -458,6 +459,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.2; if (tgt.curseT > 0) dmg *= 1.2; }
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
+  if (tgt.side === 'hero') dmg = traitTaken(B, src, tgt, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
   if (tgt.side === 'hero' && tgt.undyingT > B.t && tgt.hp < 1) tgt.hp = 1;
   if (tgt.side === 'hero' && tgt.st.sp.statue && !tgt.stoneUsed && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.3) { tgt.stoneUsed = true; tgt.stoneT = B.t + 2; tgt.stun = Math.max(tgt.stun || 0, 2); FX.text(tgt.x, tgt.y - 22, 'STONE', '#c8c2b4', true); FX.particles(tgt.x, tgt.y - 8, 12, ['#9a9488', '#d8d2c4'], { spread: 14 }); }
@@ -480,6 +482,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
       if (src.st.sp.splash) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.4, { from: 'item', noProc: true, quiet: true });
       if (src.st.sp.manaHit && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
     }
+    traitHit(B, src, tgt, dmg, o, crit);
   }
   if (tgt.side === 'hero' && src && src.side === 'enemy' && !o.ranged && tgt.st.reflect) dealDamage(B, tgt, src, dmg * tgt.st.reflect, { from: tgt.st.el.nature ? 'element' : 'item', noProc: true, quiet: true, noCrit: true });
   if (tgt.hp <= 0) killUnit(B, tgt, src);
@@ -489,6 +492,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
 function healUnit(B, src, tgt, amt, quiet, from) {
   if (!tgt.alive) return;
   const before = tgt.hp; tgt.hp = Math.min(tgt.maxHp, tgt.hp + amt); const got = tgt.hp - before;
+  if (B.syn) traitOverheal(B, tgt, amt - got);
   if (src) { src.heal += got; if (src.hsrc) addTo(src.hsrc, from || DTAG || 'auto', got); }
   if (!quiet && got >= 1) FX.dmg(tgt, got, 'heal');
 }
@@ -508,14 +512,17 @@ function killUnit(B, u, src) {
       if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
     if (B.sty && styleSave(B, u)) return;
+    if (u.alive && traitSave(B, u)) return;
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
+    traitFell(B, u);
     if (B.heroes.every(h => !h.alive || h.temp)) FX.text(W / 2, 60, 'The heroes have fallen!', '#ff7a9a', true);
     return;
   }
   u.alive = false; u.hp = 0;
   if (u.turncoat) { poolGive(B.run, u.turncoat, 1); FX.text(u.x, u.y - 26, 'back to the pool', '#c58cff', false, true); }
+  traitKill(B, src && src.owner ? src.owner : src, u);
   B.kills++; if (src) src.kills++; if (B.ach) { if (B.hammering) B.ach.hammer++; if (u.id === 'chicken') B.ach.chickens++; }
   giveXP(B, src && src.owner ? src.owner : src, u.xpv || 0);
   const run = B.run;
@@ -597,6 +604,7 @@ function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.cre
   if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
   if (B.run.mods.firm) dmg *= 0.85; // boss talk: stand firm
+  dmg *= traitCastleMul(B);
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
   if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
@@ -912,7 +920,7 @@ function stepBattle(B, dt) {
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
   }
   // fighting styles (styles.js), ember mantle, kettle
-  styleTick(B, dt);
+  styleTick(B, dt); traitTick(B, dt);
   B.kettleT += dt; const tick = B.kettleT >= 1; if (tick) B.kettleT = 0;
   for (const h of B.heroes) if (h.alive && h.st && h.st.sp) {
     if (tick && h.st.sp.emberAura) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
@@ -1110,6 +1118,7 @@ function stepHero(B, u, dt) {
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
         // Gale Cutlass: every third attack strikes twice
         if (u.sty) styleAttacked(B, u, t);
+        traitAttacked(B, u, t, ranged);
         if (u.st.sp.twinStrike && !u.healing && u.hits % 3 === 0 && t.alive) { if (ranged) fireProj(B, u, t, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u), { speed: 300, rafter: u.rafter, from: 'item' }); else dealDamage(B, u, t, heroAtk(u), { from: 'item' }); }
       }
     }

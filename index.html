@@ -1700,7 +1700,7 @@ const RARITY = [
   { key: 'legendary', name: 'Legendary', col: '#ffb030', col2: '#a8601a' },
   { key: 'god',       name: 'God',       col: '#fff3a0', col2: '#ff7ad8' },
 ];
-const RARITY_STEP = 0.25;
+const RARITY_STEP = 0.3;
 function rarityMul(r) { return 1 + RARITY_STEP * (r || 0); }
 function raritySize(r) { return 1 + 0.06 * (r || 0); }
 // what each rarity adds to a legend's signature, on top of +25% power per step
@@ -2514,6 +2514,8 @@ const ROSTER_CAP = 8;
 // the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
 // the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
+// guild rank (Cam 2026-10-24): pay to see rarer legends in the shop sooner. Each rank is one step of RARITY_ODDS, on top of the bosses beaten
+const GUILD = { cost: [5, 8, 12, 16, 20, 25, 30, 36, 42] };
 const BENCH_SLOTS = 5;
 function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
@@ -3717,12 +3719,12 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.6, foeHp: 2.4, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.8, foeHp: 3.0, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges)
-// retuned 2026-10-23 for the TFT shop with no meta progression: bots win about 1 run in 6
+// retuned 2026-10-23 for the TFT shop with no meta progression; 2026-10-24 foeHp 2.4->3.0, foeAtk 1.6->1.8 for breaches, race/class thresholds and guild ranks (bots win ~1 run in 6)
 const HORDE_DIFF = [1.29, 1.256, 1.12, 1.21, 0.77, 0.7, 0.78, 0.098, 0.22, 0.015];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
@@ -4157,6 +4159,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'hero' && tgt.stoneT > B.t) return 0;
   if (tgt.side === 'hero' && o.ranged && tgt.st.sp.arrowWard) amount *= 0.6;
   if (B.sty) amount *= styleDmgMul(B, src, tgt, o, amount);
+  if (src && src.side === 'hero') amount *= traitDmgMul(B, src, tgt);
   if (src && src.side === 'hero' && src.st && src.st.bossDmg && tgt.boss) amount *= 1 + src.st.bossDmg;
   if (tgt.side === 'hero' && tgt.st && tgt.st.dmgTaken && tgt.st.dmgTaken !== 1) amount *= tgt.st.dmgTaken;
   if (tgt.side === 'hero' && tgt.lotusT > B.t) amount *= 0.75;
@@ -4167,6 +4170,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
   if (tgt.side === 'enemy') { if (tgt.soakT > 0) dmg *= 1.2; if (tgt.curseT > 0) dmg *= 1.2; }
   if (tgt.shield > 0) { const ab = Math.min(tgt.shield, dmg); tgt.shield -= ab; dmg -= ab; if (ab > 0 && tgt.side === 'hero') addTo(tgt.tsrc, 'shield', ab); if (ab > 0 && dmg <= 0) FX.text(tgt.x, tgt.y - 18, Math.round(ab), '#9ff6ff'); }
   dmg = Math.max(0, dmg);
+  if (tgt.side === 'hero') dmg = traitTaken(B, src, tgt, dmg);
   tgt.hp -= dmg; tgt.hitT = 0.12; tgt.taken += dmg;
   if (tgt.side === 'hero' && tgt.undyingT > B.t && tgt.hp < 1) tgt.hp = 1;
   if (tgt.side === 'hero' && tgt.st.sp.statue && !tgt.stoneUsed && tgt.hp > 0 && tgt.hp < tgt.maxHp * 0.3) { tgt.stoneUsed = true; tgt.stoneT = B.t + 2; tgt.stun = Math.max(tgt.stun || 0, 2); FX.text(tgt.x, tgt.y - 22, 'STONE', '#c8c2b4', true); FX.particles(tgt.x, tgt.y - 8, 12, ['#9a9488', '#d8d2c4'], { spread: 14 }); }
@@ -4189,6 +4193,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
       if (src.st.sp.splash) for (const e of inRadius(B.enemies, tgt, 18)) if (e !== tgt) dealDamage(B, src, e, amount * 0.4, { from: 'item', noProc: true, quiet: true });
       if (src.st.sp.manaHit && src.st.sigOn) src.mana = Math.min(src.maxMana, src.mana + 5);
     }
+    traitHit(B, src, tgt, dmg, o, crit);
   }
   if (tgt.side === 'hero' && src && src.side === 'enemy' && !o.ranged && tgt.st.reflect) dealDamage(B, tgt, src, dmg * tgt.st.reflect, { from: tgt.st.el.nature ? 'element' : 'item', noProc: true, quiet: true, noCrit: true });
   if (tgt.hp <= 0) killUnit(B, tgt, src);
@@ -4198,6 +4203,7 @@ function dealDamage(B, src, tgt, amount, o = {}) {
 function healUnit(B, src, tgt, amt, quiet, from) {
   if (!tgt.alive) return;
   const before = tgt.hp; tgt.hp = Math.min(tgt.maxHp, tgt.hp + amt); const got = tgt.hp - before;
+  if (B.syn) traitOverheal(B, tgt, amt - got);
   if (src) { src.heal += got; if (src.hsrc) addTo(src.hsrc, from || DTAG || 'auto', got); }
   if (!quiet && got >= 1) FX.dmg(tgt, got, 'heal');
 }
@@ -4217,14 +4223,17 @@ function killUnit(B, u, src) {
       if (!bone) B.undyingOther = true; else B.undyingUsed = true; u.risen = true; u.hp = u.maxHp * (sk >= 2 ? 1 : 0.5); FX.text(u.x, u.y - 22, 'UNDYING', '#e9e4ff', true); FX.particles(u.x, u.y - 8, 14, '#e9e4ff', { spread: 30 }); FX.sound('revive'); return;
     }
     if (B.sty && styleSave(B, u)) return;
+    if (u.alive && traitSave(B, u)) return;
     if (u.st && u.st.revive && !u.phoenixUsed) { u.phoenixUsed = true; u.hp = u.maxHp * u.st.revive; FX.text(u.x, u.y - 22, 'REBORN', '#ff8a3a', true); FX.particles(u.x, u.y - 8, 20, '#ff8a3a', { spread: 40, up: true }); FX.sound('revive'); return; }
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
+    traitFell(B, u);
     if (B.heroes.every(h => !h.alive || h.temp)) FX.text(W / 2, 60, 'The heroes have fallen!', '#ff7a9a', true);
     return;
   }
   u.alive = false; u.hp = 0;
   if (u.turncoat) { poolGive(B.run, u.turncoat, 1); FX.text(u.x, u.y - 26, 'back to the pool', '#c58cff', false, true); }
+  traitKill(B, src && src.owner ? src.owner : src, u);
   B.kills++; if (src) src.kills++; if (B.ach) { if (B.hammering) B.ach.hammer++; if (u.id === 'chicken') B.ach.chickens++; }
   giveXP(B, src && src.owner ? src.owner : src, u.xpv || 0);
   const run = B.run;
@@ -4306,6 +4315,7 @@ function stepRam(B, dt) { const R = B.ram; if (!R) return; for (const e of R.cre
   if (R.t >= 2.4) { R.t = 0; for (const e of R.crew) e.siegeT = B.t; const dmg = R.crew.reduce((a, e) => a + e.atk, 0) * 2.2; damageCastle(B, dmg, null); FX.shake(5); FX.text(CASTLE_X + 6, R.y - 30, 'BOOM', '#ff9a3a', true); FX.particles(CASTLE_X, R.y - 10, 10, ['#c9c4e6', '#8a6a4a'], { spread: 14 }); FX.sound('thud'); } }
 function damageCastle(B, dmg, src) {
   if (B.run.mods.firm) dmg *= 0.85; // boss talk: stand firm
+  dmg *= traitCastleMul(B);
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
   if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
@@ -4621,7 +4631,7 @@ function stepBattle(B, dt) {
     if (h.st.sp && h.st.sp.wellspring && h.st.sigOn) h.mana = Math.min(h.maxMana, h.mana + 4 * dt);
   }
   // fighting styles (styles.js), ember mantle, kettle
-  styleTick(B, dt);
+  styleTick(B, dt); traitTick(B, dt);
   B.kettleT += dt; const tick = B.kettleT >= 1; if (tick) B.kettleT = 0;
   for (const h of B.heroes) if (h.alive && h.st && h.st.sp) {
     if (tick && h.st.sp.emberAura) for (const e of inRadius(B.enemies, h, 26)) dealDamage(B, h, e, h.maxHp * 0.03, { noProc: true, kind: 'magic', from: 'item' });
@@ -4819,6 +4829,7 @@ function stepHero(B, u, dt) {
         } else { dealDamage(B, u, t, heroAtk(u)); FX.slash(t.x, t.y - 8 - t.z, u.facing, u.els && u.els[0] ? ELEMENTS[u.els[0]].col : '#ffffff'); FX.sound('hit'); }
         // Gale Cutlass: every third attack strikes twice
         if (u.sty) styleAttacked(B, u, t);
+        traitAttacked(B, u, t, ranged);
         if (u.st.sp.twinStrike && !u.healing && u.hits % 3 === 0 && t.alive) { if (ranged) fireProj(B, u, t, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u), { speed: 300, rafter: u.rafter, from: 'item' }); else dealDamage(B, u, t, heroAtk(u), { from: 'item' }); }
       }
     }
@@ -5246,6 +5257,106 @@ function drawStyleOver(g, B, t) {
   }
 }
 
+// ===== Race and class thresholds (Cam 2026-10-24) =====
+// Bots showed that which legends you buy barely mattered: chasing a race or class did no better than random picks.
+// Now every race and class keeps its stat bonus at 2, and at 4 and 6 it changes how those champions fight.
+// B.syn[key] is the tier index: -1 off, 0 at 2, 1 at 4, 2 at 6. Hooks are called from sim.js.
+const TRAIT_PLAY = {
+  human:     ['', 'When any champion falls, Humans gain +20% attack for the rest of the siege.', 'Last stand: once per siege, a Human who would fall holds on at 1 HP for 2s.'],
+  elf:       ['', 'Every 3rd Elf attack also strikes another foe in reach.', 'That extra strike hits three more foes.'],
+  dwarf:     ['', 'Dwarves hit back for 30% of the melee damage they take.', 'Every 6th hit a Dwarf takes sets off a quake that stuns foes around them for 1s.'],
+  orc:       ['', 'Kills heal the Orc for 12% of their HP.', 'Below half HP, Orcs hit 40% harder.'],
+  skeleton:  ['', '', ''],
+  beast:     ['', 'Beastfolk crits make the foe bleed for half the damage again over 3s.', 'A kill lets a Beastfolk attack again at once.'],
+  toad:      ['', 'Poisoned foes move 25% slower.', 'Poisoned foes that die burst and poison every foe around them.'],
+  guardian:  ['', 'Every 6s each Guardian taunts the foes around them.', 'While a Guardian stands, the walls take 30% less damage.'],
+  berserker: ['', 'At full frenzy, hits also cleave the foes next to the target for 40%.', 'At full frenzy, Berserkers heal for 20% of the damage they deal.'],
+  ranger:    ['', '', ''],
+  mage:      ['', 'Mage signature hits stun for 0.8s.', 'Mages start every siege with a full signature, and the stun lasts 1.5s.'],
+  cleric:    ['', 'The first champion to fall each siege gets back up at 40% HP.', 'Healing past full HP becomes a shield (up to 30% of max HP).'],
+  rogue:     ['', 'Every kill readies a Rogue\'s ambush strike again.', 'A kill makes the Rogue vanish for 1.5s: nothing can hit them.'],
+};
+// the tier text the tooltips and synergy lists show: the stat part, plus every fighting change unlocked so far
+for (const T of [RACES, CLASSES]) for (const k in T) { const base = T[k].desc, play = TRAIT_PLAY[k] || [];
+  T[k].desc = n => [base(n)].concat(play.slice(1, n + 1).filter(Boolean)).join(' '); }
+
+const isTrait = (u, k) => !!(u && u.side === 'hero' && u.def && (u.def.race === k || u.def.cls === k));
+const trOn = (B, k, t) => B.syn && B.syn[k] >= t;
+
+function traitInit(B) {
+  B.trInit = true;
+  if (trOn(B, 'mage', 2)) for (const u of B.heroes) if (isTrait(u, 'mage') && u.st.sigOn) u.mana = u.maxMana;
+  for (const u of B.heroes) if (isTrait(u, 'guardian')) u.trTaunt = 1 + Math.random();
+}
+function traitTick(B, dt) {
+  if (!B.trInit) traitInit(B);
+  if (trOn(B, 'guardian', 1)) for (const u of B.heroes) if (u.alive && isTrait(u, 'guardian')) { u.trTaunt = (u.trTaunt || 6) - dt; if (u.trTaunt <= 0) { u.trTaunt = 6; guardTaunt(B, u, 2); } }
+}
+// after each attack a hero makes
+function traitAttacked(B, u, t, ranged) {
+  if (!t || !t.alive) return;
+  if (trOn(B, 'elf', 1) && isTrait(u, 'elf') && u.hits % 3 === 0) {
+    const n = trOn(B, 'elf', 2) ? 3 : 1, more = B.enemies.filter(e => e.alive && e !== t && dist(e, u) < u.st.range + 10).sort((a, b) => dist(a, u) - dist(b, u)).slice(0, n);
+    for (const e of more) { if (ranged) fireProj(B, u, e, u.def.proj && u.def.proj !== 'heal' ? u.def.proj : 'arrow', heroAtk(u) * 0.8, { speed: 300, rafter: u.rafter, from: 'bonus' }); else dealDamage(B, u, e, heroAtk(u) * 0.8, { from: 'bonus', noProc: true }); }
+  }
+}
+// outgoing damage multiplier
+function traitDmgMul(B, src, tgt) {
+  let m = 1;
+  if (src && trOn(B, 'orc', 2) && isTrait(src, 'orc') && src.hp < src.maxHp * 0.5) m *= 1.4;
+  if (src && src.trRally && isTrait(src, 'human')) m *= 1 + src.trRally;
+  return m;
+}
+// damage a hero is about to take (after armour and shields)
+function traitTaken(B, src, tgt, dmg) {
+  if (tgt.side !== 'hero') return dmg;
+  if (tgt.vanishT > B.t) return 0;
+  if (trOn(B, 'human', 2) && isTrait(tgt, 'human') && !tgt.lastStand && tgt.hp - dmg < 1) { tgt.lastStand = true; tgt.undyingT = B.t + 2; FX.text(tgt.x, tgt.y - 22, 'LAST STAND', '#ffd166', true); }
+  if (isTrait(tgt, 'dwarf') && src && src.alive && src.side === 'enemy') {
+    if (trOn(B, 'dwarf', 1) && !(src.range > 40)) dealDamage(B, tgt, src, dmg * 0.3, { from: 'bonus', noProc: true, quiet: true, noCrit: true });
+    if (trOn(B, 'dwarf', 2) && (tgt.trHits = (tgt.trHits || 0) + 1) % 6 === 0) { for (const e of inRadius(B.enemies, tgt, 30)) if (!e.boss) e.stun = Math.max(e.stun || 0, 1); FX.shockwave && FX.shockwave(tgt.x, tgt.y, 30, '#ffa25e'); FX.shake && FX.shake(3); }
+  }
+  return dmg;
+}
+// after a hero's hit lands
+function traitHit(B, src, tgt, dmg, o, crit) {
+  if (!tgt) return;
+  if (o.sig && trOn(B, 'mage', 1) && isTrait(src, 'mage') && tgt.alive && !tgt.boss) tgt.stun = Math.max(tgt.stun || 0, trOn(B, 'mage', 2) ? 1.5 : 0.8);
+  if (o.noProc) return;
+  if (crit && trOn(B, 'beast', 1) && isTrait(src, 'beast') && tgt.alive) tgt.poison.push({ dps: dmg / 6, t: 3, src, from: 'bonus' });
+  if (trOn(B, 'toad', 1) && tgt.poison && tgt.poison.length && tgt.alive) { tgt.slowT = Math.max(tgt.slowT, 1); tgt.slowAmt = Math.max(tgt.slowAmt, 0.25); }
+  if (isTrait(src, 'berserker') && src.st.frenzy && src.frenzyStacks >= src.st.frenzy) {
+    if (trOn(B, 'berserker', 1)) for (const e of inRadius(B.enemies, tgt, 16)) if (e !== tgt) dealDamage(B, src, e, dmg * 0.4, { from: 'bonus', noProc: true, quiet: true });
+    if (trOn(B, 'berserker', 2)) healUnit(B, src, src, dmg * 0.2, true, 'bonus');
+  }
+}
+// a foe died; src is whoever killed it
+function traitKill(B, src, v) {
+  if (trOn(B, 'toad', 2) && v.poison && v.poison.length) for (const e of inRadius(B.enemies, v, 24)) if (e.alive) e.poison.push({ dps: [3, 8, 20][B.syn.toad] * (1 + 0.04 * B.siege) * 2, t: 3, src: null, from: 'bonus' });
+  if (!src || src.side !== 'hero' || !src.alive) return;
+  if (trOn(B, 'orc', 1) && isTrait(src, 'orc')) healUnit(B, src, src, src.maxHp * 0.12, true, 'bonus');
+  if (trOn(B, 'beast', 2) && isTrait(src, 'beast')) src.cd = 0;
+  if (trOn(B, 'rogue', 1) && isTrait(src, 'rogue')) src.struck = false;
+  if (trOn(B, 'rogue', 2) && isTrait(src, 'rogue')) { src.vanishT = B.t + 1.5; FX.text(src.x, src.y - 20, 'vanish', '#c8a0ff', false, true); }
+}
+// a hero is about to fall: true keeps them up
+function traitSave(B, u) {
+  if (u.temp || !trOn(B, 'cleric', 1) || B.trRevived) return false;
+  B.trRevived = true; u.hp = u.maxHp * 0.4; FX.text(u.x, u.y - 22, 'SANCTUARY', '#bfffe0', true); FX.particles(u.x, u.y - 8, 16, '#bfffe0', { spread: 30, up: true }); FX.sound('revive');
+  return true;
+}
+// a hero has fallen
+function traitFell(B, u) {
+  if (u.temp || !trOn(B, 'human', 1)) return;
+  for (const h of B.heroes) if (h.alive && isTrait(h, 'human')) { h.trRally = (h.trRally || 0) + 0.2; FX.text(h.x, h.y - 20, 'VALOR', '#ffd166', false, true); }
+}
+// healing past full HP (cleric six)
+function traitOverheal(B, tgt, over) {
+  if (over <= 0 || tgt.side !== 'hero' || !trOn(B, 'cleric', 2)) return;
+  tgt.shield = Math.min(tgt.maxHp * 0.3, (tgt.shield || 0) + over);
+}
+function traitCastleMul(B) { return trOn(B, 'guardian', 2) && B.heroes.some(u => u.alive && isTrait(u, 'guardian')) ? 0.7 : 1; }
+
 // ===== Ultimate kit (Cam 2026-10-15): every legend's signature is a big, animated ultimate that grows with rarity =====
 // Building blocks push B.zones entries of type 'ult'; ultfx2.js draws them by `vis` and `shape`.
 // Rarity (z.rar 0..5): bigger pieces, more of them, Mythic+ aftershocks, God turns everything gold.
@@ -5546,7 +5657,11 @@ function newRun(meta) {
 // Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
-function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
+// shop odds: one step per boss beaten plus every guild rank you bought (Cam 2026-10-24), plus one while pressing pays off
+function shopRank(run) { return Math.min(RARITY_ODDS.length - 1, castleTier(run) + (run.guild || 0)); }
+function draftBosses(run) { return shopRank(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
+function guildCost(run) { return shopRank(run) >= RARITY_ODDS.length - 1 ? null : GUILD.cost[Math.min(GUILD.cost.length - 1, run.guild || 0)]; }
+function buyGuild(run, meta) { const c = guildCost(run); if (c == null) return { err: 'The guild already sends its finest.' }; if (run.gold < c) return { err: `A guild rank costs ${c} gold.` }; run.gold -= c; run.guild = (run.guild || 0) + 1; return { ok: true }; }
 // TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
@@ -5570,7 +5685,7 @@ function draftOptions(run, meta, focus) {
     if (!pool.length) break;
     out.push(draftCard(pick(pool).id, run));
   }
-  if (draftBosses(run) > castleTier(run)) for (const o of out) o.boost = true;
+  if (draftBosses(run) > shopRank(run)) for (const o of out) o.boost = true;
   // a focused search guarantees one card of the class or race you asked for
   if (focus && out.length) { const rar = out[0].rarity, fits = HEROES.filter(h => !own.has(h.id) && h.rar <= Math.max(rar, 1) && poolLeft(run, h.id) > 0 && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run); }
@@ -5608,7 +5723,7 @@ function swapHero(run, old, opt) {
 // ----- the Guild Hall shop -----
 // Each legend has a limited pool of copies (fewer for rarer ones). Three copies make a 2-star legend, nine a 3-star.
 // The horde recruits too: a card left in the shop when a siege starts can defect and fight for the horde (spawnEnemy turncoat).
-const SHOP = { size: 5, reroll: 2, pool: [18, 15, 13, 10, 9, 9], stars: [1, 3, 9], starMul: [1, 1.7, 2.9], base: 5, interestPer: 10, interestMax: 5, defect: 0.25 };
+const SHOP = { size: 5, reroll: 2, pool: [13, 12, 11, 10, 9, 9], stars: [1, 3, 9], starMul: [1, 1.6, 2.5], base: 5, interestPer: 10, interestMax: 5, defect: 0.25 };
 function poolLeft(run, id) { const P = run.pool = run.pool || {}; return id in P ? P[id] : SHOP.pool[HERO_BY_ID[id].rar]; }
 function poolTake(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.max(0, poolLeft(run, id) - n); }
 function poolGive(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.min(SHOP.pool[HERO_BY_ID[id].rar], poolLeft(run, id) + n); }
@@ -5629,7 +5744,7 @@ function rollShopCard(run) {
   return c;
 }
 function rollShop(run, meta) {
-  const boosted = draftBosses(run) > castleTier(run), out = [];
+  const boosted = draftBosses(run) > shopRank(run), out = [];
   run.shop = out; for (let i = 0; i < shopSize(run, meta); i++) out.push(rollShopCard(run));
   if (boosted && run.pressDraft > 0) run.pressDraft--;
   return out;
@@ -8999,7 +9114,14 @@ function botScoreOpt(style, o, run) {
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
   // chase the element the keep already has the most of, toward its castle
   const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
-  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  return elB + botTraitScore(run, d) + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+}
+// race and class thresholds: a card that reaches 2, 4 or 6 of a trait is worth a lot, one that builds toward it a little
+function botTraitScore(run, d) {
+  if (!run) return 0; const ids = new Set(run.roster.filter(h => !h.vault).map(h => h.id)); let b = 0;
+  if (ids.has(d.id)) return 0;
+  for (const key of ['race', 'cls']) { const n = [...ids].filter(id => HERO_BY_ID[id][key] === d[key]).length; b += [2, 4, 6].includes(n + 1) ? 10 + 6 * n : 5 * n; }
+  return b;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -9060,6 +9182,8 @@ function botBuyShop(run, meta, style, reroll) {
   if (!run.shop) rollShop(run, meta);
   const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
   while (barracksCost(run) != null && fieldCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  // guild ranks: a rank ahead of the bosses from siege 4, two from siege 14
+  while (!chaos && guildCost(run) != null && (run.guild || 0) < (run.siege >= 14 ? 2 : run.siege >= 4 ? 1 : 0) && run.gold >= guildCost(run) + 2) buyGuild(run, meta);
   // new legends while the field has room plus a couple on the bench; copies always (they star up)
   const room = () => Math.min(rosterCap(run), fieldCap(run) + (chaos ? BENCH_SLOTS : 2));
   for (let g = 0; g < 40; g++) {
@@ -9736,10 +9860,10 @@ const UI = {
   },
   guildHTML(run) {
     // TFT shop (Cam 2026-10-23): five legends for sale, priced by rarity. Copies of a legend you own add up to stars.
-    const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold);
+    const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold), gc = guildCost(run);
     if (!run.shop) rollShop(run, G.meta);
     const season = runSeason(run) || [], fe0 = stackElements(run);
-    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="seasonpills"><small>In season</small>${season.map(e => { const n = fe0[e] || 0, nx = EL_STACK.at.find(v => v > n); return `<button class="sypill ${n >= 2 ? 'on' : ''}" data-act="herald" data-tip="els:${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} <small>${esc(STYLE_INFO[e].role)} · ${nx ? `${n}/${nx}` : n}</small></button>`; }).join('')}</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${draftBosses(run) > castleTier(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
+    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="seasonpills"><small>In season</small>${season.map(e => { const n = fe0[e] || 0, nx = EL_STACK.at.find(v => v > n); return `<button class="sypill ${n >= 2 ? 'on' : ''}" data-act="herald" data-tip="els:${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} <small>${esc(STYLE_INFO[e].role)} · ${nx ? `${n}/${nx}` : n}</small></button>`; }).join('')}</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${run.guild ? ` <i class="newb">guild rank ${run.guild}</i>` : ''}${draftBosses(run) > shopRank(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="scard sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], R = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), left = poolLeft(run, c.id);
@@ -9752,8 +9876,9 @@ const UI = {
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
       <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion on the field">${bc == null ? `Field full size (${ROSTER_CAP})` : `Field slot ${fieldCap(run) + 1} ${COST(bc)}`}</button>
+      <button class="btn small" data-act="guildrank" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="Each rank shows rarer legends in the shop, on top of what beating bosses unlocks.">${gc == null ? 'Guild rank max' : `Guild rank ${(run.guild || 0) + 1} ${COST(gc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
-    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+70% and +190% power). Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
+    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta), star = heroStar(hr), nx = copiesToNext(hr);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : `Signature rank ${st.rank}`;
@@ -12922,6 +13047,7 @@ G.act = function (act, arg) {
       break; }
     case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
     case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
+    case 'guildrank': { if (G.phase !== 'prep') return; r = buyGuild(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('stamp'); UI.toast(`Guild rank ${run.guild}. Rarer legends turn up in the shop.`); TEL.event('guildrank', { rank: run.guild, s: run.siege }); break; }
     case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
     case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
     case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);

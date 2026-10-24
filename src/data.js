@@ -79,7 +79,7 @@ const RARITY = [
   { key: 'legendary', name: 'Legendary', col: '#ffb030', col2: '#a8601a' },
   { key: 'god',       name: 'God',       col: '#fff3a0', col2: '#ff7ad8' },
 ];
-const RARITY_STEP = 0.25;
+const RARITY_STEP = 0.3;
 function rarityMul(r) { return 1 + RARITY_STEP * (r || 0); }
 function raritySize(r) { return 1 + 0.06 * (r || 0); }
 // what each rarity adds to a legend's signature, on top of +25% power per step
@@ -893,6 +893,8 @@ const ROSTER_CAP = 8;
 // the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
 // the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
+// guild rank (Cam 2026-10-24): pay to see rarer legends in the shop sooner. Each rank is one step of RARITY_ODDS, on top of the bosses beaten
+const GUILD = { cost: [5, 8, 12, 16, 20, 25, 30, 36, 42] };
 const BENCH_SLOTS = 5;
 function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }

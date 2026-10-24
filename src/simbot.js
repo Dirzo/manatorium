@@ -13,7 +13,14 @@ function botScoreOpt(style, o, run) {
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
   // chase the element the keep already has the most of, toward its castle
   const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
-  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  return elB + botTraitScore(run, d) + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+}
+// race and class thresholds: a card that reaches 2, 4 or 6 of a trait is worth a lot, one that builds toward it a little
+function botTraitScore(run, d) {
+  if (!run) return 0; const ids = new Set(run.roster.filter(h => !h.vault).map(h => h.id)); let b = 0;
+  if (ids.has(d.id)) return 0;
+  for (const key of ['race', 'cls']) { const n = [...ids].filter(id => HERO_BY_ID[id][key] === d[key]).length; b += [2, 4, 6].includes(n + 1) ? 10 + 6 * n : 5 * n; }
+  return b;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -74,6 +81,8 @@ function botBuyShop(run, meta, style, reroll) {
   if (!run.shop) rollShop(run, meta);
   const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
   while (barracksCost(run) != null && fieldCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  // guild ranks: a rank ahead of the bosses from siege 4, two from siege 14
+  while (!chaos && guildCost(run) != null && (run.guild || 0) < (run.siege >= 14 ? 2 : run.siege >= 4 ? 1 : 0) && run.gold >= guildCost(run) + 2) buyGuild(run, meta);
   // new legends while the field has room plus a couple on the bench; copies always (they star up)
   const room = () => Math.min(rosterCap(run), fieldCap(run) + (chaos ? BENCH_SLOTS : 2));
   for (let g = 0; g < 40; g++) {

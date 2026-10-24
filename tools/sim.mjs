@@ -1,7 +1,7 @@
 // Headless bot agents. Usage: node tools/sim.mjs [runsPerStyle=8] [metaRank=0] [styles=brawler,arcanist,bulwark,balanced,chaos] [--json out.json]
 import fs from 'fs'; import vm from 'vm';
 const dir = new URL('../src/', import.meta.url).pathname;
-const code = ['data.js', 'sim.js', 'styles.js', 'ultkit.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,summarizeBots,newMeta,BAL,BOT_STYLES,VERSION};';
+const code = ['data.js', 'sim.js', 'styles.js', 'traits.js', 'ultkit.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,summarizeBots,newMeta,BAL,BOT_STYLES,VERSION};';
 const FX = new Proxy({}, { get: () => () => {} });
 const ctx = { FX, Math, console, Object, Array, Set, JSON, Date }; vm.createContext(ctx); vm.runInContext(code, ctx);
 const A = ctx.__api;

@@ -372,6 +372,7 @@ G.act = function (act, arg) {
       break; }
     case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
     case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
+    case 'guildrank': { if (G.phase !== 'prep') return; r = buyGuild(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('stamp'); UI.toast(`Guild rank ${run.guild}. Rarer legends turn up in the shop.`); TEL.event('guildrank', { rank: run.guild, s: run.siege }); break; }
     case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
     case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
     case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);

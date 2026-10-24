@@ -22,7 +22,11 @@ function newRun(meta) {
 // Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
-function draftBosses(run) { return castleTier(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
+// shop odds: one step per boss beaten plus every guild rank you bought (Cam 2026-10-24), plus one while pressing pays off
+function shopRank(run) { return Math.min(RARITY_ODDS.length - 1, castleTier(run) + (run.guild || 0)); }
+function draftBosses(run) { return shopRank(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
+function guildCost(run) { return shopRank(run) >= RARITY_ODDS.length - 1 ? null : GUILD.cost[Math.min(GUILD.cost.length - 1, run.guild || 0)]; }
+function buyGuild(run, meta) { const c = guildCost(run); if (c == null) return { err: 'The guild already sends its finest.' }; if (run.gold < c) return { err: `A guild rank costs ${c} gold.` }; run.gold -= c; run.guild = (run.guild || 0) + 1; return { ok: true }; }
 // TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
@@ -46,7 +50,7 @@ function draftOptions(run, meta, focus) {
     if (!pool.length) break;
     out.push(draftCard(pick(pool).id, run));
   }
-  if (draftBosses(run) > castleTier(run)) for (const o of out) o.boost = true;
+  if (draftBosses(run) > shopRank(run)) for (const o of out) o.boost = true;
   // a focused search guarantees one card of the class or race you asked for
   if (focus && out.length) { const rar = out[0].rarity, fits = HEROES.filter(h => !own.has(h.id) && h.rar <= Math.max(rar, 1) && poolLeft(run, h.id) > 0 && (focus.kind === 'cls' ? h.cls : h.race) === focus.key && !out.some(o => o.id === h.id));
     if (fits.length && !out.some(o => (focus.kind === 'cls' ? HERO_BY_ID[o.id].cls : HERO_BY_ID[o.id].race) === focus.key)) out[0] = draftCard(pick(fits).id, run); }
@@ -84,7 +88,7 @@ function swapHero(run, old, opt) {
 // ----- the Guild Hall shop -----
 // Each legend has a limited pool of copies (fewer for rarer ones). Three copies make a 2-star legend, nine a 3-star.
 // The horde recruits too: a card left in the shop when a siege starts can defect and fight for the horde (spawnEnemy turncoat).
-const SHOP = { size: 5, reroll: 2, pool: [18, 15, 13, 10, 9, 9], stars: [1, 3, 9], starMul: [1, 1.7, 2.9], base: 5, interestPer: 10, interestMax: 5, defect: 0.25 };
+const SHOP = { size: 5, reroll: 2, pool: [13, 12, 11, 10, 9, 9], stars: [1, 3, 9], starMul: [1, 1.6, 2.5], base: 5, interestPer: 10, interestMax: 5, defect: 0.25 };
 function poolLeft(run, id) { const P = run.pool = run.pool || {}; return id in P ? P[id] : SHOP.pool[HERO_BY_ID[id].rar]; }
 function poolTake(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.max(0, poolLeft(run, id) - n); }
 function poolGive(run, id, n) { const P = run.pool = run.pool || {}; P[id] = Math.min(SHOP.pool[HERO_BY_ID[id].rar], poolLeft(run, id) + n); }
@@ -105,7 +109,7 @@ function rollShopCard(run) {
   return c;
 }
 function rollShop(run, meta) {
-  const boosted = draftBosses(run) > castleTier(run), out = [];
+  const boosted = draftBosses(run) > shopRank(run), out = [];
   run.shop = out; for (let i = 0; i < shopSize(run, meta); i++) out.push(rollShopCard(run));
   if (boosted && run.pressDraft > 0) run.pressDraft--;
   return out;
