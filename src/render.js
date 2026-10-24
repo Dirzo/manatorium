@@ -192,12 +192,12 @@ function drawUnit(g, u, t, opts = {}) {
     const a0 = g.globalAlpha;
     for (const [dx, dy, aa] of [[-2 * o, 0, 0.45], [2 * o, 0, 0.45], [0, -2 * o, 0.45], [0, 2 * o, 0.45], [-o, -o, 1], [o, -o, 1], [-o, o, 1], [o, o, 1], [-o, 0, 1], [o, 0, 1], [0, -o, 1], [0, o, 1]]) { g.globalAlpha = a0 * aa * (star === 3 ? 0.8 + 0.2 * Math.sin(t * 4 + (u.phase || 0)) : 0.95);
       if (I2) drawIdleUnit(g, sil, fx + dx, y + dy, fs, flip, I2);
-      else if (flip) { g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, -fs / 2, y + dy - fs + 1, fs, fs); g.restore(); }
-      else g.drawImage(sil, fx + dx - fs / 2, y + dy - fs + 1, fs, fs); }
+      else if (flip) { const b = frameBox(sil, 0, y + dy, fs); g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, b.x, b.y, b.w, b.h); g.restore(); }
+      else { const b = frameBox(sil, fx + dx, y + dy, fs); g.drawImage(sil, b.x, b.y, b.w, b.h); } }
     g.globalAlpha = a0; }
   if (idle) drawIdleUnit(g, img, fx, y, fs, flip, idle);
-  else if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
-  else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
+  else if (flip) { const b = frameBox(img, 0, y, fs); g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, b.x, b.y, b.w, b.h); }
+  else { const b = frameBox(img, fx, y, fs); g.drawImage(img, b.x, b.y, b.w, b.h); }
   g.restore();
   if (u.frozen > 0 && u.alive !== false) { g.globalAlpha = 0.45; g.fillStyle = '#bfeeff'; g.fillRect(x - size / 2 + 3, y - size + 4, size - 6, size - 4); g.globalAlpha = 1; }
   if (u.hat) { const hx = x + (u.facing === 1 ? 1 : -1), hy = y - Math.round(size * 0.86); g.fillStyle = OUTLINE; g.fillRect(hx - 3, hy, 7, 1); g.fillStyle = Math.floor(hx) % 2 ? '#ff5d8f' : '#5fd3ff'; g.fillRect(hx - 2, hy - 2, 5, 2); g.fillRect(hx - 1, hy - 4, 3, 2); g.fillStyle = '#ffd84a'; g.fillRect(hx, hy - 6, 1, 2); g.fillRect(hx - 1, hy - 1, 1, 1); }
@@ -397,7 +397,7 @@ function renderFrame(V, dt) {
     drawUnit(g, u, t, { selected: V.selected && u.inst && u.inst.uid === V.selected });
     if (u.shards) drawShardCrown(g, u, t);
   }
-  for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
+  for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); const b = frameBox(S.white.atk, Math.round(gh.x), Math.round(gh.y), 20); g.drawImage(S.white.atk, b.x, b.y, b.w, b.h); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);

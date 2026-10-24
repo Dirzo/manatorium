@@ -97,7 +97,8 @@ function activeSynergies(run) {
 // ----- hero stats -----
 function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
-function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id; }
+// 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
+function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
@@ -168,6 +169,7 @@ function sellHero(run, h) {
 }
 function trinityActive(run) { const st = new Set(Object.keys(fieldElements(run)).map(e => ELEMENTS[e].style)); return st.size >= 3; }
 
+const STARFORGED = { mul: 1.35, mana: 0.25 };
 function heroStats(h, run, meta, syn) {
   const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], rar = heroRarity(h), tm = rarityMul(rar) * starMul(h), lm = heroLevelMul(h.level), bp = 1 + 0.05 * heroBonusPts(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
@@ -179,6 +181,8 @@ function heroStats(h, run, meta, syn) {
     ap: (1 + 0.15 * (meta.ranks.codex || 0)) * bp, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
     sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: raritySize(rar) * (1 + 0.08 * (heroStar(h) - 1)), rarity: rar, star: heroStar(h), echo: [0, 0, 0, 0.5, 0.75, 1][rar], dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
   if (run.tech.focus) s.sigMul *= 1.25;
+  // 3★ (Cam 2026-10-24): a starforged signature. Unlocked even before its level, one rank higher, 35% stronger, a quicker first cast
+  if (s.star >= 3) { if (!s.sigOn) { s.sigOn = true; s.sigMul = 1; s.rank = 1; } s.starRank = 1; s.rank += 1; s.sigMul *= STARFORGED.mul; s.startMana += STARFORGED.mana; }
   if (s.rank > 0) s.rank += rar; // rarer legends cast a higher-ranked signature
   if (rar >= 2) s.startMana += rar >= 5 ? 1 : 0.35;
   s.ability = d.ability; s.aName = d.aName; s.aDesc = d.aDesc;
@@ -1051,6 +1055,8 @@ function castSignature(B, u) {
   const myEl = u.els || [], cb = (B.combos || []).find(c => myEl.includes(c.a) || myEl.includes(c.b));
   FX.cutin(u, u.st.aName || u.def.aName, ecol, { ab: u.st.ability || u.def.ability, els: myEl, col2: myEl[0] ? ELEMENTS[myEl[0]].col2 : '#ffffff', combo: cb ? { name: cb.name, ca: ELEMENTS[cb.a].col, cb: ELEMENTS[cb.b].col } : null, pw: sigPower(u) });
   FX.castSpark(u, ecol);
+  // a starforged (3★) signature goes off with a burst of gold stars
+  if (u.st.starRank && !u.echoing) { FX.particles(u.x, u.y - 12, 16, ['#ffd94a', '#ffffff', '#fff3a0'], { spread: 18, up: true }); FX.shockwave(u.x, u.y - 8, 22, '#ffd94a'); FX.text(u.x, u.y - 34, '★★★', '#ffd94a', true); }
   if (u.st.sp.runeStrike) u.spellblade = 3;
   if (u.st.sp.curse) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
   if (E.light) for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.1 * E.light, true, 'element');

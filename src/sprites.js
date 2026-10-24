@@ -6,19 +6,21 @@ function rgbToHex(r, g, b) { return '#' + [r, g, b].map(v => Math.max(0, Math.mi
 function shade(h, f) { const [r, g, b] = hexToRgb(h); return f < 0 ? rgbToHex(r * (1 + f), g * (1 + f), b * (1 + f)) : rgbToHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f); }
 
 class PixGrid {
-  constructor(w, h) { this.w = w; this.h = h; this.p = new Array(w * h).fill(null); this.flat = new Set(); }
-  set(x, y, c, flat) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return; this.p[y * this.w + x] = c; if (flat) this.flat.add(y * this.w + x); else this.flat.delete(y * this.w + x); }
-  get(x, y) { if (x < 0 || y < 0 || x >= this.w || y >= this.h) return null; return this.p[y * this.w + x]; }
+  // ox/oy: where the 20x20 body sits inside a bigger grid (starred legends get room for their grown weapon)
+  constructor(w, h, ox = 0, oy = 0) { this.w = w; this.h = h; this.ox = ox; this.oy = oy; this.p = new Array(w * h).fill(null); this.flat = new Set(); }
+  set(x, y, c, flat) { x = Math.round(x) + this.ox; y = Math.round(y) + this.oy; if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return; this.p[y * this.w + x] = c; if (flat) this.flat.add(y * this.w + x); else this.flat.delete(y * this.w + x); }
+  get(x, y) { return this.raw(x + this.ox, y + this.oy); }
+  raw(x, y) { if (x < 0 || y < 0 || x >= this.w || y >= this.h) return null; return this.p[y * this.w + x]; }
   rect(x0, y0, x1, y1, c, flat) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.set(x, y, c, flat); }
-  clear(x, y) { if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = null; }
+  clear(x, y) { x += this.ox; y += this.oy; if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = null; }
   finish() {
     // soft volume: back (left) edge darker, top edge lighter
     const out = this.p.slice();
     for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
       const i = y * this.w + x, c = this.p[i]; if (!c || this.flat.has(i)) continue;
-      if (!this.get(x - 1, y)) out[i] = shade(c, -0.22);
-      else if (!this.get(x, y - 1)) out[i] = shade(c, 0.18);
-      else if (!this.get(x, y + 1)) out[i] = shade(c, -0.12);
+      if (!this.raw(x - 1, y)) out[i] = shade(c, -0.22);
+      else if (!this.raw(x, y - 1)) out[i] = shade(c, 0.18);
+      else if (!this.raw(x, y + 1)) out[i] = shade(c, -0.12);
     }
     // outline
     const o = out.slice();
@@ -177,8 +179,47 @@ function drawWpnMap(g, map, pal, ax, ay) {
   map.r.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const p = pal[row[rx]]; if (p) g.set(ax + rx - ox, ay + ry - oy, p[0], !!p[1]); } });
 }
 
+// Star levels (Cam 2026-10-24): a 2★ legend is polished silver, a 3★ legend gilded gold, and each step grows the weapon.
+// Starred sprites are built on a 32x34 grid with the 20x20 body at (6,10), so a grown weapon has room past the body.
+const STAR_PAD = { w: 32, h: 34, l: 6, t: 10 };
+const STAR_LOOK = [null,
+  { ws: 1.3, metal: '#eef6ff', trim: '#c8d6f8', trimMix: 0.8, tint: '#e8f0ff', tintMix: 0.18, gem: 0.35 },
+  { ws: 1.6, metal: '#ffd94a', trim: '#f0b030', trimMix: 0.9, tint: '#ffe08a', tintMix: 0.22, gem: '#fff3a0', cape: '#ffcf3a' }];
+function starSpec(spec, star, ws) {
+  const L = STAR_LOOK[star - 1]; if (!L) return spec;
+  const lerp = (a, b, k) => { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k, A[2] + (B[2] - A[2]) * k); };
+  const o = Object.assign({}, spec, { star, ws: ws || L.ws, metal: L.metal });
+  o.armor = lerp(spec.armor, L.tint, L.tintMix); o.armor2 = lerp(spec.armor2 || shade(spec.armor, -0.3), L.trim, L.trimMix);
+  if (spec.gem) o.gem = typeof L.gem === 'string' ? L.gem : shade(spec.gem, L.gem);
+  if (spec.cape && L.cape) o.cape = lerp(spec.cape, L.cape, 0.45);
+  if (spec.plume && L.cape) o.plume = L.cape;
+  return o;
+}
+// draws a weapon scaled up around the hand (nearest-neighbour, so it stays pixel art); ws 1 draws it as is
+function growWeapon(g, ws, ax, ay, draw) {
+  if (!ws || ws <= 1) return draw(g, ax, ay);
+  const N = 64, C = 32, T = new PixGrid(N, N); draw(T, C, C);
+  let x0 = N, x1 = -1, y0 = N, y1 = -1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (T.p[y * N + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return;
+  for (let Y = Math.floor(ay + (y0 - C - 0.5) * ws); Y <= Math.ceil(ay + (y1 - C + 0.5) * ws); Y++)
+    for (let X = Math.floor(ax + (x0 - C - 0.5) * ws); X <= Math.ceil(ax + (x1 - C + 0.5) * ws); X++) {
+      let sx = C + Math.round((X - ax) / ws), sy = C + Math.round((Y - ay) / ws);
+      // the hand stays one pixel: stretched copies of it take the haft next to it instead
+      if (sx === C && sy === C && (X !== ax || Y !== ay)) { const dx = Math.sign(X - ax), dy = Math.sign(Y - ay);
+        const n = [[0, dy], [dx, 0], [0, -dy || 1], [0, 1], [0, -1]].find(([a, b]) => (a || b) && T.raw(C + a, C + b)); if (!n) continue; sx += n[0]; sy += n[1]; }
+      const i = sy * N + sx, c = sx >= 0 && sy >= 0 && sx < N && sy < N ? T.p[i] : null; if (c) g.set(X, Y, c, T.flat.has(i));
+    }
+}
+// where a sprite frame lands when its 20x20 body is drawn fs pixels tall with its feet at (cx, by), as in drawUnit
+function frameBox(img, cx, by, fs) {
+  if (img.width !== STAR_PAD.w || img.height !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
+  const k = fs / 20, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  return { x: cx - w / 2, y: by + 1 - fs - Math.round(STAR_PAD.t * k), w, h };
+}
+
 function genHumanoid(s, frame) {
-  const g = new PixGrid(20, 20);
+  const g = s.star ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;
@@ -281,10 +322,10 @@ function genHumanoid(s, frame) {
     const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
     if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
     else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
-    g.set(ax, ay, skin); drawWpnMap(g, map, pal, ax, ay);
-    if (wp.b) drawWpnMap(g, wp.b, pal, 5, 15 + by);
-  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
-  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); drawWeapon(g, s, s.weapon, 12, 14 + by, false); }
+    g.set(ax, ay, skin); growWeapon(g, ws, ax, ay, (G, x, y) => drawWpnMap(G, map, pal, x, y));
+    if (wp.b) growWeapon(g, ws, 5, 15 + by, (G, x, y) => drawWpnMap(G, wp.b, pal, x, y));
+  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); growWeapon(g, ws, 15, 12 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, true)); }
+  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); growWeapon(g, ws, 13, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   return g.finish();
 }
@@ -410,12 +451,15 @@ function buildAllSprites() {
 // elemental variations are built on demand: key 'h:<id>:<element>'
 function ensureSprite(key) {
   if (SPR[key]) return SPR[key];
-  const m = /^h:([a-z]+):([a-z]+)$/.exec(key); if (!m) return null;
-  const d = HERO_BY_ID[m[1]], E = ELEMENTS[m[2]]; if (!d || !E) return null;
-  const dark = c => shade(c, -0.35);
-  const spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
-  if (d.spr.cape) spec.cape = E.col2;
-  if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2;
+  // 'h:<id>', 'h:<id>:<element>', either with '~<star>' (2 or 3) and optionally '@<weapon scale>' for the star-up show
+  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?$/.exec(key); if (!m) return null;
+  const d = HERO_BY_ID[m[1]], E = m[2] && ELEMENTS[m[2]]; if (!d || (m[2] && !E)) return null;
+  let spec = d.spr;
+  if (E) { const dark = c => shade(c, -0.35);
+    spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
+    if (d.spr.cape) spec.cape = E.col2;
+    if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
+  if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
   return buildSprite(key, spec, false);
 }
 
@@ -495,6 +539,8 @@ function itemIconURL(it, px = 3) {
 }
 function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
-  const s = SPR[key].frames[frame]; const c = document.createElement('canvas'); c.width = s.width * px; c.height = s.height * px;
-  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(s, 0, 0, c.width, c.height); return c.toDataURL();
+  const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
+  // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
+  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
+  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
 }

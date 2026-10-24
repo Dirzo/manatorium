@@ -1364,3 +1364,19 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .cracks.big { gap: 8px; margin: 6px 0; } .cracks.big i { width: 14px; height: 14px; }
 .breach { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; margin: 8px 0; border-radius: 10px; background: rgba(255,90,120,.12); border: 1px solid rgba(255,90,120,.4); }
 .breach b { color: var(--rose); }
+
+/* star-up show (Cam 2026-10-24): copies fuse, a flash, the legend returns recoloured with a bigger weapon */
+.starup { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: radial-gradient(ellipse at 50% 42%, rgba(46,34,100,0.95), rgba(8,8,24,0.97)); animation: suIn 0.25s ease-out; cursor: pointer; user-select: none; }
+.starup.out { animation: suOut 0.28s forwards; }
+.starup canvas { width: min(92vw, 520px, 90vh * 4 / 3); image-rendering: pixelated; }
+.starup .su-txt { text-align: center; margin-top: -2vh; opacity: 0; transform: translateY(10px) scale(0.9); transition: opacity 0.3s 0.25s, transform 0.4s 0.25s cubic-bezier(.3,1.6,.5,1); padding: 0 16px; }
+.starup.lit .su-txt { opacity: 1; transform: none; }
+.starup h2 { font-size: clamp(24px, 5vw, 44px); color: var(--sc); text-shadow: 3px 3px 0 var(--ink); letter-spacing: 0.06em; }
+.starup .su-txt p { margin: 4px 0 0; font-size: clamp(15px, 2.6vw, 20px); color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+.starup .su-stars { color: var(--sc); font-size: 1.3em; letter-spacing: 0.1em; }
+.starup .su-sig { margin-top: 8px !important; display: inline-block; padding: 6px 14px; border: 2px solid #ffd94a; border-radius: 4px; background: rgba(90,60,10,0.6); box-shadow: 0 0 18px rgba(255,217,74,0.45); font-size: clamp(13px, 2.2vw, 16px) !important; }
+.starup .su-sig b { color: #ffd94a; }
+.starup .su-skip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); color: rgba(255,255,255,0.5); font-size: 12px; }
+@keyframes suIn { from { opacity: 0; } }
+@keyframes suOut { to { opacity: 0; transform: scale(1.04); } }
+.note.starforged { color: #ffd94a; }
