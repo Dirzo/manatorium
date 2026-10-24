@@ -5,7 +5,7 @@ const bossAt = s => run => run.stats.bosses.some(b => b.siege === s);
 const A_ = run => run.stats.ach || {};
 const ACHIEVEMENTS = [
   // the campaign
-  { id: 'first', group: 'Campaign', name: 'Doors Held', desc: 'Survive your first siege.', dia: 5, test: run => run.siege > 1 },
+  { id: 'first', group: 'Campaign', name: 'Doors Held', desc: 'Survive your first siege.', dia: 5, test: run => (run.history || []).some(h => !h.lost) },
   { id: 'b5', group: 'Campaign', name: 'Long Live the King', desc: 'Defeat Grubnose the Goblin King.', dia: 20, test: bossAt(5) },
   { id: 'b10', group: 'Campaign', name: 'Custody Battle', desc: 'Defeat Mother Gloop.', dia: 30, test: bossAt(10) },
   { id: 'b15', group: 'Campaign', name: 'Bad Review', desc: 'Defeat Vexmora, the Ashen Wyrm.', dia: 40, test: bossAt(15) },
@@ -37,7 +37,7 @@ const ACHIEVEMENTS = [
   { id: 'rude', group: 'Stories', name: 'Poking the Bear', desc: 'Beat 3 enraged bosses in one run.', dia: 29, test: run => (A_(run).mad || 0) >= 3 },
   { id: 'chickens', group: 'Stories', name: 'Poultry in Motion', desc: 'Defeat 40 chickens in one run.', dia: 18, test: run => (A_(run).chickens || 0) >= 40 },
   { id: 'secrets', group: 'Stories', name: 'Secret Keeper', desc: 'Discover 3 secret techs in one run.', dia: 18, test: run => Object.keys(run.discovered || {}).length >= 3 },
-  { id: 'humble', group: 'Stories', name: 'Humble Beginnings', desc: 'Lose on the very first siege. It happens.', dia: 4, test: run => run.siege === 1 && !run.won },
+  { id: 'humble', group: 'Stories', name: 'Humble Beginnings', desc: 'Lose on the very first siege. It happens.', dia: 4, test: run => !!(run.history && run.history[0] && run.history[0].lost) && !run.won },
 ];
 // grants every newly earned achievement, returns them
 function grantAchievements(run, meta) {

@@ -898,4 +898,8 @@ function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barra
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
 function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
 function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
+// a siege the horde wins cracks the keep instead of ending the run (Cam 2026-10-24): one crack, two when the boss is
+// still standing at the end of its own siege. The keep falls at BREACH.max cracks, so two or three lost sieges end a run.
+// After a breach the masons patch the walls back up to BREACH.rebuild of their max.
+const BREACH = { max: 3, boss: 2, rebuild: 0.5 };
 const RECRUIT_GAP = 6; // goblin encounters add at most one champion per this many sieges

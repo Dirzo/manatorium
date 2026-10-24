@@ -1363,6 +1363,17 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .sypill.on { box-shadow: 0 0 0 1px var(--ec) inset, 0 0 8px -2px var(--ec); }
 .scard.tierup { box-shadow: 0 0 0 2px var(--ec), 0 0 14px -2px var(--ec); }
 .scard.tierup small { color: var(--ec); }
+/* the boss gloats after winning a siege (talk.js gloatScene): it bounces with glee, the field sits under a red dusk */
+.talk.gloat .tk-boss canvas { animation: tkGloat .38s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes tkGloat { to { transform: translateY(-5%) scale(1.03, .97); } }
+.talk.gloat .tk-cam::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(120,20,40,.42), rgba(120,20,40,.12)); pointer-events: none; }
+/* keep cracks (BREACH): three pips by the castle bar, filled as sieges are lost */
+.cracks { display: inline-flex; gap: 3px; margin: 0 6px; vertical-align: middle; }
+.cracks i { width: 8px; height: 8px; border-radius: 2px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.25); transform: rotate(45deg); }
+.cracks i.on { background: var(--rose); border-color: #ffd0da; box-shadow: 0 0 6px rgba(255,90,120,.6); }
+.cracks.big { gap: 8px; margin: 6px 0; } .cracks.big i { width: 14px; height: 14px; }
+.breach { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; margin: 8px 0; border-radius: 10px; background: rgba(255,90,120,.12); border: 1px solid rgba(255,90,120,.4); }
+.breach b { color: var(--rose); }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -1547,7 +1558,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
       <button id="nav-hall" data-page="hall" title="Artificers' Hall"><img class="px" alt="">Artificers' Hall</button>
       <div class="hint" id="railHint">Facilities open between sieges.</div>
     </nav>
-    <div class="castlebar"><small><span id="castleLabel">Castle</span><span id="castleTxt" class="num">1000 / 1000</span></small><div class="bar"><i id="castleFill" style="width:100%"></i></div></div>
+    <div class="castlebar"><small><span id="castleLabel">Castle</span><span id="castleCracks" class="cracks"></span><span id="castleTxt" class="num">1000 / 1000</span></small><div class="bar"><i id="castleFill" style="width:100%"></i></div></div>
     <button class="repairBtn" id="repairBtn" hidden><b>&#128296; Repair</b><span id="repairSub">+20%</span></button>
     <div class="purse">
       <div class="coinbox" id="goldBox" title="Gold"><img class="px" id="goldIcon" alt=""><span id="gold" class="num">0</span></div>
@@ -2508,6 +2519,10 @@ function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barra
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
 function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
 function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
+// a siege the horde wins cracks the keep instead of ending the run (Cam 2026-10-24): one crack, two when the boss is
+// still standing at the end of its own siege. The keep falls at BREACH.max cracks, so two or three lost sieges end a run.
+// After a breach the masons patch the walls back up to BREACH.rebuild of their max.
+const BREACH = { max: 3, boss: 2, rebuild: 0.5 };
 const RECRUIT_GAP = 6; // goblin encounters add at most one champion per this many sieges
 
 // ===== Procedural pixel sprites (original art, built from layered shapes) =====
@@ -4715,7 +4730,7 @@ function rafterJump(B, u) {
   u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; u.lane = laneOf(ty); FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
-// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. Safe from permadeath, out for the rest of the siege
+// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. They keep the XP they earned (a fallen legend earns none), out for the rest of the siege
 function recallsMax(run) { return 1 + (run.tech.sally ? 1 : 0); }
 function recallsLeft(B) { return recallsMax(B.run) - (B.recalled || 0); }
 function recallHero(B, u) {
@@ -5856,12 +5871,12 @@ function finishSiege(run, meta, B) {
     rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: safe, recalled: !!u.recalled,
       xp: gained, lost: safe ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
   }
-  // permadeath (Cam 2026-10-15): a legend who falls in a siege is gone for good; their items go back to the stash
-  rep.fallen = [];
-  for (const u of B.heroes.filter(h => !h.temp && !h.alive && !h.recalled)) { const h = u.inst; if (!run.roster.includes(h)) continue;
-    for (const it of run.stash) if (it.holder === h.uid) it.holder = null; h.items = [];
-    run.roster = run.roster.filter(x => x !== h); rep.fallen.push({ uid: h.uid, id: h.id, rarity: heroRarity(h), level: h.level, name: heroDisplayName(h) });
-    (run.stats.fallen = run.stats.fallen || []).push({ s, id: h.id, rarity: heroRarity(h), lv: h.level }); }
+  // no permadeath (Cam 2026-10-24): a legend who falls is back for the next siege, but earns nothing from this one
+  rep.fallen = B.heroes.filter(u => !u.temp && !u.alive && !u.recalled).map(u => ({ uid: u.inst.uid, id: u.inst.id, name: heroDisplayName(u.inst) }));
+  // the horde got in: the keep takes a crack (two if the boss is still standing), and the walls are patched back up
+  if (B.done !== 'victory') { const n = B.bossUnit && B.bossUnit.alive && B.bossUnit.boss ? BREACH.boss : 1; run.breaches = (run.breaches || 0) + n;
+    rep.breach = { n, total: run.breaches, max: BREACH.max, over: run.breaches >= BREACH.max, boss: !!(B.bossUnit && B.bossUnit.alive), foe: run.finale === 'ready' ? 'shardgoose' : bossFor(s), f: factionIndex(s) }; run.lastBreach = s;
+    run.castle.hp = Math.max(run.castle.hp, Math.round(run.castle.max * BREACH.rebuild)); }
   run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
   for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
   for (const key of B.drops) run.stash.push(makeItem([key]));
@@ -5874,9 +5889,9 @@ function finishSiege(run, meta, B) {
     const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); const grow = run.castle.max - old, fix = Math.round(run.castle.max * 0.25);
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
-  run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
+  run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
-  if (pressOn(run)) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
+  if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
@@ -6114,7 +6129,7 @@ const bossAt = s => run => run.stats.bosses.some(b => b.siege === s);
 const A_ = run => run.stats.ach || {};
 const ACHIEVEMENTS = [
   // the campaign
-  { id: 'first', group: 'Campaign', name: 'Doors Held', desc: 'Survive your first siege.', dia: 5, test: run => run.siege > 1 },
+  { id: 'first', group: 'Campaign', name: 'Doors Held', desc: 'Survive your first siege.', dia: 5, test: run => (run.history || []).some(h => !h.lost) },
   { id: 'b5', group: 'Campaign', name: 'Long Live the King', desc: 'Defeat Grubnose the Goblin King.', dia: 20, test: bossAt(5) },
   { id: 'b10', group: 'Campaign', name: 'Custody Battle', desc: 'Defeat Mother Gloop.', dia: 30, test: bossAt(10) },
   { id: 'b15', group: 'Campaign', name: 'Bad Review', desc: 'Defeat Vexmora, the Ashen Wyrm.', dia: 40, test: bossAt(15) },
@@ -6146,7 +6161,7 @@ const ACHIEVEMENTS = [
   { id: 'rude', group: 'Stories', name: 'Poking the Bear', desc: 'Beat 3 enraged bosses in one run.', dia: 29, test: run => (A_(run).mad || 0) >= 3 },
   { id: 'chickens', group: 'Stories', name: 'Poultry in Motion', desc: 'Defeat 40 chickens in one run.', dia: 18, test: run => (A_(run).chickens || 0) >= 40 },
   { id: 'secrets', group: 'Stories', name: 'Secret Keeper', desc: 'Discover 3 secret techs in one run.', dia: 18, test: run => Object.keys(run.discovered || {}).length >= 3 },
-  { id: 'humble', group: 'Stories', name: 'Humble Beginnings', desc: 'Lose on the very first siege. It happens.', dia: 4, test: run => run.siege === 1 && !run.won },
+  { id: 'humble', group: 'Stories', name: 'Humble Beginnings', desc: 'Lose on the very first siege. It happens.', dia: 4, test: run => !!(run.history && run.history[0] && run.history[0].lost) && !run.won },
 ];
 // grants every newly earned achievement, returns them
 function grantAchievements(run, meta) {
@@ -9150,7 +9165,7 @@ function botPlayRun(style, meta, opts = {}) {
   const run = newRun(meta); const log = [];
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
   for (let i = 0; i < START_LEGENDS; i++) draft();
-  let cause = 'cap';
+  let cause = 'cap'; const breaches = [];
   while (run.siege <= maxSiege) {
     botBuyShop(run, meta, style); botField(run, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botField(run, style); botGiveItems(run, style);
     botPlace(run, style); checkCastleUnlock(run);
@@ -9160,15 +9175,18 @@ function botPlayRun(style, meta, opts = {}) {
     botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
-    if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
+    const lostTo = B.done === 'victory' ? null : B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde';
     const rep = finishSiege(run, meta, B);
+    // a lost siege cracks the keep; the run only ends when the keep falls (BREACH)
+    if (rep.breach) { breaches.push({ s: rep.siege, n: rep.breach.n, by: lostTo }); if (rep.breach.over) { cause = lostTo; break; }
+      if (run.finale === 'ready') { startFinale(run); continue; } }
     if (opts.onSiege) opts.onSiege(run, rep);
     if (rep.siege >= FINAL_SIEGE && !run.finale) { startFinale(run); continue; }
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
-    if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (LOOT_AFTER(rep.siege) && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-    if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
+    if (taunted && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     // Legend Summons: take the best card; a full keep sends home its weakest legend
@@ -9178,7 +9196,7 @@ function botPlayRun(style, meta, opts = {}) {
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
-  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+  return { style, reached: run.siege, cause, breaches, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {
@@ -9545,6 +9563,7 @@ const UI = {
     if (G.B && G.B.overtime && !G.B.done) { const B = G.B, left = Math.ceil(BAL.otCharge - B.otT); sub.textContent = `OVERTIME · heroes +${Math.round(BAL.otRamp * B.otT * 100)}%${B.bossUnit && B.bossUnit.alive ? '' : left > 0 ? ` · charge in ${left}s` : ' · foes charging'}`; sub.className = 'boss'; }
     const hp = Math.max(0, Math.round(run.castle.hp)); $('castleTxt').textContent = `${fmt(hp)} / ${fmt(run.castle.max)}`;
     const f = $('castleFill'); f.style.width = (100 * hp / run.castle.max) + '%'; f.classList.toggle('low', hp / run.castle.max < 0.35);
+    const ck = $('castleCracks'); if (ck) { const n = run.breaches || 0; ck.innerHTML = Array.from({ length: BREACH.max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join(''); ck.dataset.tip = n ? `The keep has ${n} of ${BREACH.max} cracks. A lost siege adds one (two if the boss is still standing). At ${BREACH.max} the keep falls.` : `No cracks yet. A lost siege cracks the keep (two cracks if the boss is still standing). At ${BREACH.max} it falls.`; }
     $('castleLabel').textContent = run.finale === 'ready' ? 'Shard altar' : run.castleEl ? `${ELEMENTS[run.castleEl].name} Castle` : 'Castle';
     const B = G.B, hb = $('hammerBtn');
     if (B && !B.done) { const cd = B.hammer.cd, max = hammerCooldown(run, G.meta); hb.disabled = cd > 0 || !!B.hammer.pending; $('hammerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; }
@@ -9559,7 +9578,7 @@ const UI = {
     if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · 2× loot</small>' : '⚑ Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
-    else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : 'The keep fell'; }
+    else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : (run.breaches || 0) >= BREACH.max ? 'The keep fell' : 'Walls breached'; }
     else if (B && !B.done) { bb.disabled = true; const left = B.queue.length + B.enemies.filter(e => e.alive).length; bb.textContent = `${left} foes remain`; }
     else bb.disabled = true;
     $('sp1').setAttribute('aria-pressed', String(G.speed === 1)); $('sp2').setAttribute('aria-pressed', String(G.speed === 2)); $('sp4').setAttribute('aria-pressed', String(G.speed === 4));
@@ -9884,7 +9903,7 @@ const UI = {
       if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
       const where = hr.vault ? '<span class="where vault">taken</span>' : !hr.place ? '<span class="where off">bench</span>' : hr.place.type === 'rafter' ? '<span class="where">rafter</span>' : `<span class="where">${hr.place.c < GRID.courtCols ? 'court' : 'front'}</span>`;
-      const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · lost for good</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
+      const pend = u && u.recalled ? `<span class="dmg" style="color:#9fd8ff">called back · safe in the keep</span>` : u && !u.alive ? `<span class="dmg" style="color:var(--rose)">fallen · back next siege, no XP</span>` : u ? `<span class="dmg">${fmt(u.dmg)} dmg · +${Math.round(u.xp)} xp</span>` : `<span class="dmg">${CLASSES[d.cls].icon} ${CLASSES[d.cls].name}</span>`;
       h += `<div class="hcard rar-c r${hr.rarity || 0} ${G.selected === hr.uid ? 'sel' : ''} ${hr.place ? '' : 'benched'}" data-uid="${hr.uid}" tabindex="0" role="button" aria-label="${esc(heroDisplayName(hr))}, ${RARITY[hr.rarity || 0].name}, level ${hr.level}" style="--rc:${RARITY[hr.rarity || 0].col};${hr.el ? `--ec:${ELEMENTS[hr.el].col}` : ''}">
         <div class="port ${hr.el ? 'elemental' : ''}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt="" draggable="false"><span class="lv">Lv ${hr.level} ${starBadge(hr)}</span>${where}<span class="pstars">${starBadge(hr)}</span>${voiceFlag(run, hr)}${hr.rarity ? `<span class="rtag" data-tip="rar:${hr.rarity}">${RARITY[hr.rarity].name}</span>` : ''}</div>
         <b>${esc(heroDisplayName(hr))}</b>${xpBar(hr)}
@@ -9930,7 +9949,7 @@ const UI = {
   modal(html, onBind, cls) { $('sheet').innerHTML = html; $('sheet').className = 'sheet ' + (cls || ''); $('modal').hidden = false; UI.liven($('sheet')); if (onBind) onBind($('sheet')); const f = $('sheet').querySelector('button:not(.x)'); if (f) f.focus({ preventScroll: true }); },
   closeModal() { $('modal').hidden = true; },
   draftHTML(opts, kind, rerollCost) {
-    const head = { starter: ['Choose your champion', 'Pick the legend who starts the run. Then you get 5 gold and the shop opens before the first siege. Every legend starts at level 1. If they fall in battle, they are gone for good.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= rosterCap(G.run) ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
+    const head = { starter: ['Choose your champion', 'Pick the legend who starts the run. Then you get 5 gold and the shop opens before the first siege. Every legend starts at level 1. A legend who falls in battle is back for the next siege.'], partner: ['Choose your second legend', 'Two legends hold the gate from the first siege. Pick one that fits your first.'], guild: ['Draft a champion', 'The Guild took your gold. Pick one to join your keep.'], recruit: ['Pick your new champion', 'The goblins brought company. Three champions want in. Choose one to join your keep.'], summon: [`${RARITY[(G.run.pendingSummon || {}).tier || 4].name} summons`, `The boss is down and the bells ring for a ${RARITY[(G.run.pendingSummon || {}).tier || 4].name} legend. Pick one. They join at your team's level (${teamLevel(G.run)})${G.run.roster.length >= rosterCap(G.run) ? ', and your keep is full, so someone will head home to make room' : ''}.`], reinforce: ['A champion answers the call', G.run.siege <= 5 ? 'A boss is coming. The Guild sent help. Pick one to join.' : 'The boss is down and the Guild found new blood. Pick one to join.'] }[kind];
     const run = G.run, fits = opts.map(o => draftFit(run, o)), best = run.roster.length ? fits.reduce((b, f, i) => f.score > fits[b].score ? i : b, 0) : -1;
     let h = `<span class="eyebrow">Hero draft</span><h2${kind === 'summon' ? ' class="sp"' : ''}>${head[0]}</h2><p class="lede">${head[1]}</p>${keepStripHTML(run)}<div class="draft">`;
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
@@ -10002,17 +10021,18 @@ const UI = {
   reportHTML(rep) {
     const max = Math.max(1, ...rep.heroes.map(h => Math.max(h.dmg, h.heal)));
     const mvp = rep.heroes.slice().sort((a, b) => (b.dmg + b.heal) - (a.dmg + a.heal))[0];
-    let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} held</h2>`;
-    if (rep.fallen && rep.fallen.length) h += `<div class="fallen"><b>${rep.fallen.length > 1 ? 'Legends lost' : 'A legend is lost'}</b>${rep.fallen.map(f => `<span><img class="px" src="${portrait('h:' + f.id)}" alt="">${esc(f.name)} <small style="color:${RARITY[f.rarity || 0].col}">${RARITY[f.rarity || 0].name} · Lv ${f.level}</small></span>`).join('')}${!G.run.roster.length ? '<small>Every legend fell. The Guild sends one recruit for free.</small>' : ''}</div>`;
+    const br = rep.breach;
+    let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} ${br ? 'lost' : 'held'}</h2>`;
+    if (br) h += `<div class="breach"><b>The keep cracks${br.n > 1 ? ' twice' : ''}</b><span class="cracks big">${Array.from({ length: br.max }, (_, i) => `<i class="${i < br.total ? 'on' : ''}"></i>`).join('')}</span><small>${br.max - br.total} more and the keep falls. The masons patched the walls back to half, and every legend is back for the next siege.${br.boss ? ' The boss was still standing, so it cost two cracks.' : ''}</small></div>`;
     h += `<div class="tiles"><div class="tile"><small>Gold</small><span style="color:var(--gold)">+${fmt(rep.gold)}</span></div><div class="tile"><small>Foes slain</small><span>${rep.kills}</span></div><div class="tile"><small>Castle damage</small><span style="color:${rep.castleLost > 0 ? 'var(--rose)' : 'var(--mint)'}">${fmt(Math.max(0, rep.castleLost))}</span></div>${rep.drops.length ? `<div class="tile"><small>Item drops</small><span>${rep.drops.map(k => `<img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt="${esc(COMPONENTS[k].name)}" style="width:20px;height:20px">`).join('')}</span></div>` : ''}${rep.castleGrow ? `<div class="tile grow"><small>Keep grows</small><span style="color:var(--gold)">${fmt(rep.castleGrow.from)} → ${fmt(rep.castleGrow.to)}</span></div>` : ''}${rep.bossFled ? `<div class="tile"><small>Boss got away</small><span style="color:var(--rose)">${esc(rep.bossFled)}</span></div>` : ''}${rep.fled ? `<div class="tile"><small>Broke through</small><span style="color:var(--rose)">${rep.fled}</span></div>` : ''}${rep.repaired ? `<div class="tile"><small>Fountain</small><span style="color:var(--mint)">+${fmt(rep.repaired)}</span></div>` : ''}</div>`;
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
       h += `<div class="xrow ${hr.alive ? '' : 'dead'}"><img class="px" src="${portrait(inst ? heroSpriteKey(inst) : 'h:' + hr.id)}" alt=""><div><b>${esc(inst ? heroDisplayName(inst) : HERO_BY_ID[hr.id].name)}</b>
-        ${hr.recalled ? `<span class="xpgain">+${hr.xp} XP · called back in time</span>` : hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. Gone for good, and their items are back in the Armory.</span>`}
+        ${hr.recalled ? `<span class="xpgain">+${hr.xp} XP · called back in time</span>` : hr.alive ? `<span class="xpgain">+${hr.xp} XP</span>` : `<span class="xplost">Fell in battle. No XP this siege, but back for the next one.</span>`}
         <div class="xpbar big" data-from="${hr.levels ? 0 : Math.min(100, 100 * hr.fromXp / xpNeed(hr.fromLv))}" data-to="${Math.min(100, 100 * hr.toXp / xpNeed(hr.toLv))}"><i></i></div></div>
         <div class="lvl">${hr.levels ? `<span class="lvup">LEVEL UP</span><b>Lv ${hr.fromLv} → ${hr.toLv}</b>` : `<b>Lv ${hr.toLv}</b>`}</div></div>`; }
     h += `</div><div class="eyebrow" style="margin-top:8px">Battle stats${mvp ? ` · MVP ${esc(HERO_BY_ID[mvp.id].name)}` : ''}</div>${UI.statsChartHTML(rep.heroes, 'Hover a bar', true)}`;
-    h += `</div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="repNext">Claim the spoils →</button></div>`;
+    h += `</div><div class="row" style="justify-content:flex-end"><button class="btn primary" id="repNext">${br ? 'Back to the walls' : 'Claim the spoils'} →</button></div>`;
     return h;
   },
   animateXP(sheet) { sheet.querySelectorAll('.xpbar.big').forEach(b => { const i = b.querySelector('i'); i.style.transition = 'none'; i.style.width = b.dataset.from + '%'; requestAnimationFrame(() => requestAnimationFrame(() => { i.style.transition = 'width 1.1s cubic-bezier(.3,.9,.3,1)'; i.style.width = b.dataset.to + '%'; })); }); },
@@ -11116,7 +11136,8 @@ const MISHAP_TAG = { flee: 'Ran away', pee: 'Wet themselves', faint: 'Out cold' 
 function talkVoiceFirst(name) { return name.replace(/^(Sir|Lady|Dame|Queen|Brother|Granny|Old Mother|Mother|The Great|Captain|Shellback) /, '').split(' ')[0]; }
 function voiceRecord(h) { return { uid: h.uid, id: h.id, name: heroDisplayName(h) }; }
 function setVoice(run, h) { run.voice = h ? voiceRecord(h) : null; }
-// who answers this time, and whether the old voice has fallen (permadeath) or left (sold) since the last talk
+// who answers this time, and whether the old voice has left (sold) since the last talk. Legends no longer die for good
+// (Cam 2026-10-24), so the succession scene only plays for saves from before that
 function talkSpeaker(run) {
   const free = run.roster.filter(h => !h.vault);
   if (!run.voice && run.roster.length) setVoice(run, run.roster[0]);
@@ -11208,6 +11229,89 @@ const TALK_CHOICES_FINALE = [
 const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, a second loot pick.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
   rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.' };
 
+// ----- the boss gloats (Cam 2026-10-24) -----
+// when the horde wins a siege the keep cracks (BREACH in data.js) and the boss who sent them rubs it in.
+// s: after an ordinary siege of their horde, b: after winning their own boss siege, end: the keep falls for good,
+// c: the closer when the run goes on. The voice answers with VOICE_BREACH in their own temper.
+const GLOAT = {
+  grubnose: { s: ['HAH! We\'re IN! Cousins, check every window. Find me the best one. No, the BEST one.', 'Look at all this DRY FLOOR. I\'m going to lie on it. Royally. Face down.'],
+    b: 'One rafter! I got ONE RAFTER! I\'m taking it home to the ditch. It will be very happy there. It will be the happiest rafter in the ditch.',
+    end: 'King of the ditch AND king of the castle! I\'m going to need a bigger bucket. Without a hole. A ROYAL bucket.',
+    c: 'Same time next siege? Bring snacks. Onion ones.' },
+  gloop: { s: ['Ooh, it\'s lovely and damp in here now, dears. Mother approves.', 'Did my babies get slime on your nice carpets? Good. That\'s a mother\'s touch.'],
+    b: 'There, there. Mother always wins in the end. Now eat your vegetables. They\'re in the bog. Go on. Chew.',
+    end: 'Shh, shh. It\'s all over now. The castle is a pudding. Everything is pudding, eventually.',
+    c: 'Run along and patch your walls, sweeties. Mother will be back to wobble on them.' },
+  wyrm: { s: ['"And lo, the walls gave way, and the heroes looked very silly." Chapter four writes itself.', 'Hold that face! The shame, the dust in the hair. Perfect. I\'m putting it on the cover.'],
+    b: 'The wyrm triumphs! The crowd weeps! My editor weeps! Mostly about the deadline, but still.',
+    end: 'The end. No sequel. I checked with the publisher. They said "who?" and that is your legacy.',
+    c: 'Do patch the walls. A cliffhanger needs a cliff.' },
+  ringmaster: { s: ['TA-DAAA! For my next trick, I make your dignity DISAPPEAR. Oh look, it already has!', 'A round of applause for the heroes, everyone! They did their best! Their best was HILARIOUS.'],
+    b: 'And THAT, ladies, gentlemen and miscellaneous, is why you never volunteer for the knife-throwing act!',
+    end: 'For my final trick: one castle, folded into a very small box. No refunds! The show is OVER!',
+    c: 'Same show tomorrow! Bring friends! Bring LESS walls!' },
+  sporebaron: { s: ['Ahh. Such a lovely little breach. A crack is just a door that hasn\'t found itself yet.', 'Do you smell that? That\'s your wall, softening. Like a good cheese. Like a good corpse.'],
+    b: 'The court finds you guilty of being in my way. The sentence is mould. Lots of it. Behind the fridge.',
+    end: 'Rest now, darlings. Rot gently. In spring you\'ll be the loveliest mushrooms in the realm.',
+    c: 'Patch it if you must. I\'ll grow straight through the patch.' },
+  matriarch: { s: ['Your wall has been found in breach of bylaw 7c: "Walls Must Stay Up." A fine has been issued.', 'I\'ve taken the liberty of leaving a sternly worded note. It\'s in the wall. Where the wall used to be.'],
+    b: 'Inspection complete. Result: condemned. I\'ve also confiscated your doormat. It said "Welcome." It lied.',
+    end: 'This property is hereby repossessed by the Frostfang Homeowners Association. The new tenant is snow.',
+    c: 'You have until next siege to bring the property up to code. I\'ll bring the avalanche either way.' },
+  trashpaw: { s: ['Ooh, sugar, you left the back door open! Babies, grab the good bins!', 'Thanks for dinner, honey. The stew was cold. I ate it out the pot anyway.'],
+    b: 'Mama won, babies! Everybody grab one thing! No, not the baby. Put your sister DOWN.',
+    end: 'Ain\'t she pretty? Mama\'s new trash palace. I\'m keepin\' the turrets. They make great bins.',
+    c: 'Sweep up, honey. Mama\'s comin\' back for seconds.' },
+  colossus: { s: ['WALL INTEGRITY: COMPROMISED. HERO MORALE: ALSO COMPROMISED. HAVE A NICE DAY.', 'BREACH SUCCESSFUL. INITIATING VICTORY DANCE. DANCE.EXE IS VERY SLOW. PLEASE WAIT.'],
+    b: 'DEMOLITION SCORE: EXCELLENT. PLEASE RATE YOUR DEMOLITION FROM ONE TO FIVE STARS.',
+    end: 'CASTLE STATUS: FLAT. MISSION COMPLETE. I WILL NOW STAND HERE FOREVER. THAT IS ALL I KNOW HOW TO DO.',
+    c: 'REPAIRS DETECTED IN ADVANCE. THEY WILL BE DEMOLISHED. THANK YOU.' },
+  pinchbeard: { s: ['Har! Boarded and plundered! That be a lovely bit of wall I\'m takin\' home in me claw.', 'Yer castle\'s takin\' on water, matey! And crabs! Mostly crabs!'],
+    b: 'The Crab Corsairs claim this keep! Hoist the colours! The colours are red! Because we be crabs!',
+    end: 'Strike the flag, lads, she\'s ours! A castle on a hill! Furthest from the sea we\'ve ever been. I feel sick.',
+    c: 'Patch yer hull, landlubbers. The tide always comes back.' },
+  goosegod: { s: ['HONK. (Translation: That was too easy. I am not even out of breath. I do not breathe. I honk.)', 'HONK HONK. (Translation: I have taken a brick. I will put it in the nest with your dignity.)'],
+    b: 'HOOOOONK. (Translation: Kneel. Not to me. Just kneel. Your legs look tired.)',
+    end: 'HONK. (Translation: The realm is mine. You may stay as a scarecrow. It will not work.)',
+    c: 'HONK! (Translation: Go and fix your wall. I want something to knock down next time.)' },
+  shardgoose: { s: ['HOOOONK. (Translation: The shards stay with me. They match my eyes.)'],
+    b: 'HOOOOOONK. (Translation: Twelve shards, one goose, zero heroes left standing. I like those numbers.)',
+    end: 'HOOOOOOOONK. (Translation: It is over. Every shard is mine. Every castle is mine. Every bread crumb is MINE.)',
+    c: 'HONK. (Translation: Again? Fine. I will wait here. Looking magnificent.)' },
+};
+// the voice answers a lost siege in their own temper; {boss} = the gloating boss, {cracks} = how many the keep can still take
+const VOICE_BREACH = {
+  heroic: 'We were knocked down, {boss}. That is not the same as staying down.',
+  cheerful: 'Okay, that one stung! But hey, now we know where the weak bit of wall was!',
+  honorable: 'You won this siege fairly. The next one, I will win the same way.',
+  wholesome: 'Is everyone alright? Good. Hugs first, then we fix the wall, then we fix them.',
+  zealous: 'This is a test of faith. I will pass it. Loudly. With a sword.',
+  wise: 'A lesson, painfully learned. The wise only need to learn it once.',
+  loyal: 'Nobody here is leaving. We patch it together and we hold together.',
+  optimistic: 'A crack lets the light in! Also the goblins. Mostly the light, though!',
+  angry: 'I am going to remember your face, {boss}. Every. Single. Wart.',
+  deranged: 'Ha! Hahaha! You think a HOLE scares me? I LIVE in a hole! Well, I will now.',
+  greedy: 'Fine. FINE. But you\'re paying for the masons. I\'m sending you the bill.',
+  cowardly: 'Can we... can we just build the new wall a bit further back? Like, in the next country?',
+  vain: 'You got dust on me. On ME. This means war. More war. Worse war.',
+  cruel: 'Enjoy it, {boss}. I\'ll be thinking about what I do to you next. In detail.',
+  paranoid: 'I KNEW it. I knew that wall was in on it. I never trusted that wall.',
+  lazy: 'Wake me up when the wall is fixed. Actually, wake me up when you\'re the ones winning.',
+};
+function gloatScene(run, rep) {
+  const br = rep.breach, bossId = br.foe, f = br.f, h = voiceHero(run) || run.roster.find(x => !x.vault) || run.roster[0]; if (!h) return null;
+  const G2 = GLOAT[bossId] || GLOAT.grubnose, caps = TALK[f] && TALK[f].caps, left = br.max - br.total;
+  const fill = s => s.replace(/\{boss\}/g, BOSS_SHORT[bossId] || ENEMIES[bossId].name).replace(/\{me\}/g, talkVoiceFirst(heroDisplayName(h))), shout = s => caps ? fill(s).toUpperCase() : fill(s);
+  const line = br.over ? G2.end : br.boss && G2.b ? G2.b : pick(G2.s);
+  const beats = [
+    { who: 'narrate', text: br.over ? 'The last wall comes down. The horde pours into the keep.' : `The horde breaks through. The keep cracks${br.n > 1 ? ' twice' : ''}: ${br.total} of ${br.max}.` },
+    { who: 'boss', text: shout(line) },
+  ];
+  if (!br.over) { beats.push({ who: 'hero', text: fill(VOICE_BREACH[heroTemper(h)] || VOICE_BREACH.heroic) }); beats.push({ who: 'boss', text: shout(G2.c) });
+    beats.push({ who: 'narrate', text: `Your legends drag themselves back to the keep. Nobody is lost, but the walls can only take ${left} more crack${left === 1 ? '' : 's'}.` }); }
+  return { h, bossId, f, boss: false, finale: bossId === 'shardgoose', beats, gloat: true, seenKey: 'gloat:' + bossId, eyebrow: br.over ? 'The keep falls' : `Siege ${rep.siege} lost` };
+}
+
 // ----- portraits with a flapping jaw -----
 // jaw: the row the mouth opens on and the columns it spans, in the 20x20 sprite. Heroes share one face layout.
 const JAW = { hero: [9, 8, 12], grubnose: [9, 8, 12], gloop: [14, 5, 10], wyrm: [12, 1, 6], ringmaster: [9, 7, 12], sporebaron: [10, 7, 11],
@@ -11260,19 +11364,19 @@ function talkSkipped(run) {
 // resolves the choice and returns the lines to narrate. x.fallback() shows the old card if there is no scene to stage.
 function showTalk(run, done, x = {}) {
   // run.talked is only set once the scene ends, so a reload mid-scene plays it again (resumeRun)
-  const sc = talkScene(run);
-  if (!sc) { run.talked = talkKey(run); return x.enc ? x.fallback() : done(); }
+  const sc = 'scene' in x ? x.scene : talkScene(run);
+  if (!sc) { if (!('scene' in x)) run.talked = talkKey(run); return x.enc ? x.fallback() : done(); }
   const fast = !!(G.meta.talkSeen && G.meta.talkSeen[sc.seenKey]); // a scene seen in an earlier run types twice as fast
   const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
   // past the right edge of the field lies the boss's own lair (lairs.js); the camera pans across to it
-  const lair = !hall && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
+  const lair = !hall && !sc.gloat && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
   const SPOT = { hero: TK_SPOT.hero, fallen: TK_SPOT.fallen, visitor: TK_SPOT.visitor, boss: lair ? [W + lair.bx, 186] : TK_SPOT.boss };
   const enc = x.enc, encKey = enc && (enc.portrait && enc.portrait !== 'e:' ? enc.portrait : 'npc:' + enc.id), encWho = enc && (encKey === 'e:' + bossId ? 'boss' : 'visitor');
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
   const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
   const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTag(h)} personality picks the words.`;
-  el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '');
+  el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '') + (sc.gloat ? ' gloat' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
       ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}${encWho === 'visitor' ? actor('visitor') : ''}
@@ -11280,7 +11384,7 @@ function showTalk(run, done, x = {}) {
     </div>
     <div class="tk-temper" id="tkTemper"></div>
     ${enc ? `<div class="tk-card" id="tkCard" hidden><span>${enc.story ? `The story so far · ${esc(FACTIONS[enc.f].name)}` : 'Between the sieges'}</span><h2>${esc(enc.title)}</h2></div>` : ''}
-    <div class="tk-bar top"><span class="tk-eyebrow">${sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
+    <div class="tk-bar top"><span class="tk-eyebrow">${sc.eyebrow ? esc(sc.eyebrow) : sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
     <div class="tk-bar bot"><p class="tk-narr" id="tkNarr"></p><div class="tk-opts" id="tkOpts"></div></div>`;
   el.hidden = false; TALKUI.on = true;
   const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen'), visitor: el.querySelector('#tk-visitor') };
@@ -11427,6 +11531,7 @@ function showTalk(run, done, x = {}) {
   };
   const end = () => {
     if (ended || encLeft) return; ended = true; TALKUI.on = false; removeEventListener('resize', layout);
+    if (sc.gloat) { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; done(); }, 260); return; }
     run.talked = talkKey(run);
     // a voice who lost their nerve starts the boss siege stunned (mods.shaken, see startBattle)
     if (sc.mishap) run.mods.shaken = sc.mishap.h.uid;
@@ -11728,7 +11833,7 @@ function talkSituation(run, h) {
   const s = {}, last = run.siege - 1;
   const lost = (run.stats && run.stats.fallen || []).filter(f => f.s === last && (!run.voice || f.id !== run.voice.id) && f.id !== h.id).pop();
   if (lost && HERO_BY_ID[lost.id]) s.loss = talkVoiceFirst(HERO_BY_ID[lost.id].name);
-  if (run.castle && run.castle.max && run.castle.hp / run.castle.max < 0.4) s.hurt = true;
+  if ((run.castle && run.castle.max && run.castle.hp / run.castle.max < 0.4) || run.lastBreach === last) s.hurt = true;
   if (run.gold < 3) s.broke = true;
   if ((run.mood || 0) >= 1) s.kind = true; else if ((run.mood || 0) <= -1) s.grudge = true;
   return s;
@@ -12618,11 +12723,29 @@ function endSiege() {
     setTimeout(() => showReport(rep), 900);
     UI.hud();
   } else {
-    G.phase = 'over'; G.armed = null; MUSIC.fanfare('lose');
-    TEL.runEnd(G.run, B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde');
-    UI.banner('The keep has fallen', `You held ${G.run.siege - 1} sieges`);
-    setTimeout(() => startTower(), 2600);
+    // the horde won this one: the keep takes a crack, the boss gloats, and the run goes on until the keep falls (BREACH)
+    G.phase = 'report'; G.armed = null; MUSIC.fanfare('lose');
+    const run = G.run, finale = run.finale === 'ready', rep = finishSiege(run, G.meta, B), br = rep.breach;
+    TEL.siege(run, rep); TEL.event('breach', { s: rep.siege, n: br.n, total: br.total, boss: br.boss });
+    if (br.over) {
+      G.phase = 'over'; TEL.runEnd(run, br.boss ? 'boss' : 'horde');
+      UI.banner('The keep has fallen', `${br.total} cracks. The walls could take no more.`); save();
+      setTimeout(() => showGloat(rep, () => startTower()), 1800); UI.hud(); return;
+    }
+    const left = br.max - br.total;
+    UI.banner('The walls are breached!', `The keep cracks${br.n > 1 ? ' twice' : ''}. ${left} more and it falls.`);
+    // a lost finale is fought again; otherwise the run moves on to the next siege
+    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = ['encounter'];
+    run.lastRep = rep; save();
+    setTimeout(() => showGloat(rep, () => showReport(rep)), 1800);
+    UI.hud();
   }
+}
+// the boss who won the siege rubs it in (talk.js gloatScene), then the run goes on
+function showGloat(rep, done) {
+  const run = G.run;
+  if (TALK_PREF.mode === 'off' || (TALK_PREF.mode === 'boss' && !rep.breach.boss && !rep.breach.over)) return done();
+  showTalk(run, done, { scene: gloatScene(run, rep) });
 }
 function showReport(rep) {
   UI.modal(UI.reportHTML(rep), s => { UI.animateXP(s); s.querySelector('#repNext').onclick = () => { G.run.lastRep = null; nextPost(); };
@@ -12951,7 +13074,7 @@ function showTitle() {
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
-      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
+      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;

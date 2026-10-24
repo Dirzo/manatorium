@@ -1021,7 +1021,7 @@ function rafterJump(B, u) {
   u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; u.lane = laneOf(ty); FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
-// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. Safe from permadeath, out for the rest of the siege
+// Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. They keep the XP they earned (a fallen legend earns none), out for the rest of the siege
 function recallsMax(run) { return 1 + (run.tech.sally ? 1 : 0); }
 function recallsLeft(B) { return recallsMax(B.run) - (B.recalled || 0); }
 function recallHero(B, u) {

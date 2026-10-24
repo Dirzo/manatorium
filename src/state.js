@@ -347,12 +347,12 @@ function finishSiege(run, meta, B) {
     rep.heroes.push({ uid: h.uid, id: h.id, dmg: Math.round(bs.dmg), heal: Math.round(bs.heal), taken: Math.round(bs.taken), cc: bs.cc, ccT: bs.ccT, dsrc: bs.dsrc, hsrc: bs.hsrc, tsrc: bs.tsrc, kills: u.kills, alive: safe, recalled: !!u.recalled,
       xp: gained, lost: safe ? 0 : Math.round(u.xp * xpMul), fromLv, fromXp, toLv: h.level, toXp: h.xp, levels: lv });
   }
-  // permadeath (Cam 2026-10-15): a legend who falls in a siege is gone for good; their items go back to the stash
-  rep.fallen = [];
-  for (const u of B.heroes.filter(h => !h.temp && !h.alive && !h.recalled)) { const h = u.inst; if (!run.roster.includes(h)) continue;
-    for (const it of run.stash) if (it.holder === h.uid) it.holder = null; h.items = [];
-    run.roster = run.roster.filter(x => x !== h); rep.fallen.push({ uid: h.uid, id: h.id, rarity: heroRarity(h), level: h.level, name: heroDisplayName(h) });
-    (run.stats.fallen = run.stats.fallen || []).push({ s, id: h.id, rarity: heroRarity(h), lv: h.level }); }
+  // no permadeath (Cam 2026-10-24): a legend who falls is back for the next siege, but earns nothing from this one
+  rep.fallen = B.heroes.filter(u => !u.temp && !u.alive && !u.recalled).map(u => ({ uid: u.inst.uid, id: u.inst.id, name: heroDisplayName(u.inst) }));
+  // the horde got in: the keep takes a crack (two if the boss is still standing), and the walls are patched back up
+  if (B.done !== 'victory') { const n = B.bossUnit && B.bossUnit.alive && B.bossUnit.boss ? BREACH.boss : 1; run.breaches = (run.breaches || 0) + n;
+    rep.breach = { n, total: run.breaches, max: BREACH.max, over: run.breaches >= BREACH.max, boss: !!(B.bossUnit && B.bossUnit.alive), foe: run.finale === 'ready' ? 'shardgoose' : bossFor(s), f: factionIndex(s) }; run.lastBreach = s;
+    run.castle.hp = Math.max(run.castle.hp, Math.round(run.castle.max * BREACH.rebuild)); }
   run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
   for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
   for (const key of B.drops) run.stash.push(makeItem([key]));
@@ -365,9 +365,9 @@ function finishSiege(run, meta, B) {
     const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); const grow = run.castle.max - old, fix = Math.round(run.castle.max * 0.25);
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
-  run.history.push({ s, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
+  run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
-  if (pressOn(run)) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
+  if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }

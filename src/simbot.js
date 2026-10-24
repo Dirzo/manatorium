@@ -179,7 +179,7 @@ function botPlayRun(style, meta, opts = {}) {
   const run = newRun(meta); const log = [];
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
   for (let i = 0; i < START_LEGENDS; i++) draft();
-  let cause = 'cap';
+  let cause = 'cap'; const breaches = [];
   while (run.siege <= maxSiege) {
     botBuyShop(run, meta, style); botField(run, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botField(run, style); botGiveItems(run, style);
     botPlace(run, style); checkCastleUnlock(run);
@@ -189,15 +189,18 @@ function botPlayRun(style, meta, opts = {}) {
     botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
-    if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
+    const lostTo = B.done === 'victory' ? null : B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde';
     const rep = finishSiege(run, meta, B);
+    // a lost siege cracks the keep; the run only ends when the keep falls (BREACH)
+    if (rep.breach) { breaches.push({ s: rep.siege, n: rep.breach.n, by: lostTo }); if (rep.breach.over) { cause = lostTo; break; }
+      if (run.finale === 'ready') { startFinale(run); continue; } }
     if (opts.onSiege) opts.onSiege(run, rep);
     if (rep.siege >= FINAL_SIEGE && !run.finale) { startFinale(run); continue; }
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
-    if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (LOOT_AFTER(rep.siege) && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-    if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
+    if (taunted && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     // Legend Summons: take the best card; a full keep sends home its weakest legend
@@ -207,7 +210,7 @@ function botPlayRun(style, meta, opts = {}) {
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
-  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+  return { style, reached: run.siege, cause, breaches, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {

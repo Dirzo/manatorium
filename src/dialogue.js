@@ -275,7 +275,7 @@ function talkSituation(run, h) {
   const s = {}, last = run.siege - 1;
   const lost = (run.stats && run.stats.fallen || []).filter(f => f.s === last && (!run.voice || f.id !== run.voice.id) && f.id !== h.id).pop();
   if (lost && HERO_BY_ID[lost.id]) s.loss = talkVoiceFirst(HERO_BY_ID[lost.id].name);
-  if (run.castle && run.castle.max && run.castle.hp / run.castle.max < 0.4) s.hurt = true;
+  if ((run.castle && run.castle.max && run.castle.hp / run.castle.max < 0.4) || run.lastBreach === last) s.hurt = true;
   if (run.gold < 3) s.broke = true;
   if ((run.mood || 0) >= 1) s.kind = true; else if ((run.mood || 0) <= -1) s.grudge = true;
   return s;

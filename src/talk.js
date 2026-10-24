@@ -333,7 +333,8 @@ const MISHAP_TAG = { flee: 'Ran away', pee: 'Wet themselves', faint: 'Out cold' 
 function talkVoiceFirst(name) { return name.replace(/^(Sir|Lady|Dame|Queen|Brother|Granny|Old Mother|Mother|The Great|Captain|Shellback) /, '').split(' ')[0]; }
 function voiceRecord(h) { return { uid: h.uid, id: h.id, name: heroDisplayName(h) }; }
 function setVoice(run, h) { run.voice = h ? voiceRecord(h) : null; }
-// who answers this time, and whether the old voice has fallen (permadeath) or left (sold) since the last talk
+// who answers this time, and whether the old voice has left (sold) since the last talk. Legends no longer die for good
+// (Cam 2026-10-24), so the succession scene only plays for saves from before that
 function talkSpeaker(run) {
   const free = run.roster.filter(h => !h.vault);
   if (!run.voice && run.roster.length) setVoice(run, run.roster[0]);
@@ -425,6 +426,89 @@ const TALK_CHOICES_FINALE = [
 const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, a second loot pick.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
   rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.' };
 
+// ----- the boss gloats (Cam 2026-10-24) -----
+// when the horde wins a siege the keep cracks (BREACH in data.js) and the boss who sent them rubs it in.
+// s: after an ordinary siege of their horde, b: after winning their own boss siege, end: the keep falls for good,
+// c: the closer when the run goes on. The voice answers with VOICE_BREACH in their own temper.
+const GLOAT = {
+  grubnose: { s: ['HAH! We\'re IN! Cousins, check every window. Find me the best one. No, the BEST one.', 'Look at all this DRY FLOOR. I\'m going to lie on it. Royally. Face down.'],
+    b: 'One rafter! I got ONE RAFTER! I\'m taking it home to the ditch. It will be very happy there. It will be the happiest rafter in the ditch.',
+    end: 'King of the ditch AND king of the castle! I\'m going to need a bigger bucket. Without a hole. A ROYAL bucket.',
+    c: 'Same time next siege? Bring snacks. Onion ones.' },
+  gloop: { s: ['Ooh, it\'s lovely and damp in here now, dears. Mother approves.', 'Did my babies get slime on your nice carpets? Good. That\'s a mother\'s touch.'],
+    b: 'There, there. Mother always wins in the end. Now eat your vegetables. They\'re in the bog. Go on. Chew.',
+    end: 'Shh, shh. It\'s all over now. The castle is a pudding. Everything is pudding, eventually.',
+    c: 'Run along and patch your walls, sweeties. Mother will be back to wobble on them.' },
+  wyrm: { s: ['"And lo, the walls gave way, and the heroes looked very silly." Chapter four writes itself.', 'Hold that face! The shame, the dust in the hair. Perfect. I\'m putting it on the cover.'],
+    b: 'The wyrm triumphs! The crowd weeps! My editor weeps! Mostly about the deadline, but still.',
+    end: 'The end. No sequel. I checked with the publisher. They said "who?" and that is your legacy.',
+    c: 'Do patch the walls. A cliffhanger needs a cliff.' },
+  ringmaster: { s: ['TA-DAAA! For my next trick, I make your dignity DISAPPEAR. Oh look, it already has!', 'A round of applause for the heroes, everyone! They did their best! Their best was HILARIOUS.'],
+    b: 'And THAT, ladies, gentlemen and miscellaneous, is why you never volunteer for the knife-throwing act!',
+    end: 'For my final trick: one castle, folded into a very small box. No refunds! The show is OVER!',
+    c: 'Same show tomorrow! Bring friends! Bring LESS walls!' },
+  sporebaron: { s: ['Ahh. Such a lovely little breach. A crack is just a door that hasn\'t found itself yet.', 'Do you smell that? That\'s your wall, softening. Like a good cheese. Like a good corpse.'],
+    b: 'The court finds you guilty of being in my way. The sentence is mould. Lots of it. Behind the fridge.',
+    end: 'Rest now, darlings. Rot gently. In spring you\'ll be the loveliest mushrooms in the realm.',
+    c: 'Patch it if you must. I\'ll grow straight through the patch.' },
+  matriarch: { s: ['Your wall has been found in breach of bylaw 7c: "Walls Must Stay Up." A fine has been issued.', 'I\'ve taken the liberty of leaving a sternly worded note. It\'s in the wall. Where the wall used to be.'],
+    b: 'Inspection complete. Result: condemned. I\'ve also confiscated your doormat. It said "Welcome." It lied.',
+    end: 'This property is hereby repossessed by the Frostfang Homeowners Association. The new tenant is snow.',
+    c: 'You have until next siege to bring the property up to code. I\'ll bring the avalanche either way.' },
+  trashpaw: { s: ['Ooh, sugar, you left the back door open! Babies, grab the good bins!', 'Thanks for dinner, honey. The stew was cold. I ate it out the pot anyway.'],
+    b: 'Mama won, babies! Everybody grab one thing! No, not the baby. Put your sister DOWN.',
+    end: 'Ain\'t she pretty? Mama\'s new trash palace. I\'m keepin\' the turrets. They make great bins.',
+    c: 'Sweep up, honey. Mama\'s comin\' back for seconds.' },
+  colossus: { s: ['WALL INTEGRITY: COMPROMISED. HERO MORALE: ALSO COMPROMISED. HAVE A NICE DAY.', 'BREACH SUCCESSFUL. INITIATING VICTORY DANCE. DANCE.EXE IS VERY SLOW. PLEASE WAIT.'],
+    b: 'DEMOLITION SCORE: EXCELLENT. PLEASE RATE YOUR DEMOLITION FROM ONE TO FIVE STARS.',
+    end: 'CASTLE STATUS: FLAT. MISSION COMPLETE. I WILL NOW STAND HERE FOREVER. THAT IS ALL I KNOW HOW TO DO.',
+    c: 'REPAIRS DETECTED IN ADVANCE. THEY WILL BE DEMOLISHED. THANK YOU.' },
+  pinchbeard: { s: ['Har! Boarded and plundered! That be a lovely bit of wall I\'m takin\' home in me claw.', 'Yer castle\'s takin\' on water, matey! And crabs! Mostly crabs!'],
+    b: 'The Crab Corsairs claim this keep! Hoist the colours! The colours are red! Because we be crabs!',
+    end: 'Strike the flag, lads, she\'s ours! A castle on a hill! Furthest from the sea we\'ve ever been. I feel sick.',
+    c: 'Patch yer hull, landlubbers. The tide always comes back.' },
+  goosegod: { s: ['HONK. (Translation: That was too easy. I am not even out of breath. I do not breathe. I honk.)', 'HONK HONK. (Translation: I have taken a brick. I will put it in the nest with your dignity.)'],
+    b: 'HOOOOONK. (Translation: Kneel. Not to me. Just kneel. Your legs look tired.)',
+    end: 'HONK. (Translation: The realm is mine. You may stay as a scarecrow. It will not work.)',
+    c: 'HONK! (Translation: Go and fix your wall. I want something to knock down next time.)' },
+  shardgoose: { s: ['HOOOONK. (Translation: The shards stay with me. They match my eyes.)'],
+    b: 'HOOOOOONK. (Translation: Twelve shards, one goose, zero heroes left standing. I like those numbers.)',
+    end: 'HOOOOOOOONK. (Translation: It is over. Every shard is mine. Every castle is mine. Every bread crumb is MINE.)',
+    c: 'HONK. (Translation: Again? Fine. I will wait here. Looking magnificent.)' },
+};
+// the voice answers a lost siege in their own temper; {boss} = the gloating boss, {cracks} = how many the keep can still take
+const VOICE_BREACH = {
+  heroic: 'We were knocked down, {boss}. That is not the same as staying down.',
+  cheerful: 'Okay, that one stung! But hey, now we know where the weak bit of wall was!',
+  honorable: 'You won this siege fairly. The next one, I will win the same way.',
+  wholesome: 'Is everyone alright? Good. Hugs first, then we fix the wall, then we fix them.',
+  zealous: 'This is a test of faith. I will pass it. Loudly. With a sword.',
+  wise: 'A lesson, painfully learned. The wise only need to learn it once.',
+  loyal: 'Nobody here is leaving. We patch it together and we hold together.',
+  optimistic: 'A crack lets the light in! Also the goblins. Mostly the light, though!',
+  angry: 'I am going to remember your face, {boss}. Every. Single. Wart.',
+  deranged: 'Ha! Hahaha! You think a HOLE scares me? I LIVE in a hole! Well, I will now.',
+  greedy: 'Fine. FINE. But you\'re paying for the masons. I\'m sending you the bill.',
+  cowardly: 'Can we... can we just build the new wall a bit further back? Like, in the next country?',
+  vain: 'You got dust on me. On ME. This means war. More war. Worse war.',
+  cruel: 'Enjoy it, {boss}. I\'ll be thinking about what I do to you next. In detail.',
+  paranoid: 'I KNEW it. I knew that wall was in on it. I never trusted that wall.',
+  lazy: 'Wake me up when the wall is fixed. Actually, wake me up when you\'re the ones winning.',
+};
+function gloatScene(run, rep) {
+  const br = rep.breach, bossId = br.foe, f = br.f, h = voiceHero(run) || run.roster.find(x => !x.vault) || run.roster[0]; if (!h) return null;
+  const G2 = GLOAT[bossId] || GLOAT.grubnose, caps = TALK[f] && TALK[f].caps, left = br.max - br.total;
+  const fill = s => s.replace(/\{boss\}/g, BOSS_SHORT[bossId] || ENEMIES[bossId].name).replace(/\{me\}/g, talkVoiceFirst(heroDisplayName(h))), shout = s => caps ? fill(s).toUpperCase() : fill(s);
+  const line = br.over ? G2.end : br.boss && G2.b ? G2.b : pick(G2.s);
+  const beats = [
+    { who: 'narrate', text: br.over ? 'The last wall comes down. The horde pours into the keep.' : `The horde breaks through. The keep cracks${br.n > 1 ? ' twice' : ''}: ${br.total} of ${br.max}.` },
+    { who: 'boss', text: shout(line) },
+  ];
+  if (!br.over) { beats.push({ who: 'hero', text: fill(VOICE_BREACH[heroTemper(h)] || VOICE_BREACH.heroic) }); beats.push({ who: 'boss', text: shout(G2.c) });
+    beats.push({ who: 'narrate', text: `Your legends drag themselves back to the keep. Nobody is lost, but the walls can only take ${left} more crack${left === 1 ? '' : 's'}.` }); }
+  return { h, bossId, f, boss: false, finale: bossId === 'shardgoose', beats, gloat: true, seenKey: 'gloat:' + bossId, eyebrow: br.over ? 'The keep falls' : `Siege ${rep.siege} lost` };
+}
+
 // ----- portraits with a flapping jaw -----
 // jaw: the row the mouth opens on and the columns it spans, in the 20x20 sprite. Heroes share one face layout.
 const JAW = { hero: [9, 8, 12], grubnose: [9, 8, 12], gloop: [14, 5, 10], wyrm: [12, 1, 6], ringmaster: [9, 7, 12], sporebaron: [10, 7, 11],
@@ -477,19 +561,19 @@ function talkSkipped(run) {
 // resolves the choice and returns the lines to narrate. x.fallback() shows the old card if there is no scene to stage.
 function showTalk(run, done, x = {}) {
   // run.talked is only set once the scene ends, so a reload mid-scene plays it again (resumeRun)
-  const sc = talkScene(run);
-  if (!sc) { run.talked = talkKey(run); return x.enc ? x.fallback() : done(); }
+  const sc = 'scene' in x ? x.scene : talkScene(run);
+  if (!sc) { if (!('scene' in x)) run.talked = talkKey(run); return x.enc ? x.fallback() : done(); }
   const fast = !!(G.meta.talkSeen && G.meta.talkSeen[sc.seenKey]); // a scene seen in an earlier run types twice as fast
   const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
   // past the right edge of the field lies the boss's own lair (lairs.js); the camera pans across to it
-  const lair = !hall && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
+  const lair = !hall && !sc.gloat && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
   const SPOT = { hero: TK_SPOT.hero, fallen: TK_SPOT.fallen, visitor: TK_SPOT.visitor, boss: lair ? [W + lair.bx, 186] : TK_SPOT.boss };
   const enc = x.enc, encKey = enc && (enc.portrait && enc.portrait !== 'e:' ? enc.portrait : 'npc:' + enc.id), encWho = enc && (encKey === 'e:' + bossId ? 'boss' : 'visitor');
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
   const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
   const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTag(h)} personality picks the words.`;
-  el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '');
+  el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '') + (sc.gloat ? ' gloat' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
       ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}${encWho === 'visitor' ? actor('visitor') : ''}
@@ -497,7 +581,7 @@ function showTalk(run, done, x = {}) {
     </div>
     <div class="tk-temper" id="tkTemper"></div>
     ${enc ? `<div class="tk-card" id="tkCard" hidden><span>${enc.story ? `The story so far · ${esc(FACTIONS[enc.f].name)}` : 'Between the sieges'}</span><h2>${esc(enc.title)}</h2></div>` : ''}
-    <div class="tk-bar top"><span class="tk-eyebrow">${sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
+    <div class="tk-bar top"><span class="tk-eyebrow">${sc.eyebrow ? esc(sc.eyebrow) : sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
     <div class="tk-bar bot"><p class="tk-narr" id="tkNarr"></p><div class="tk-opts" id="tkOpts"></div></div>`;
   el.hidden = false; TALKUI.on = true;
   const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen'), visitor: el.querySelector('#tk-visitor') };
@@ -644,6 +728,7 @@ function showTalk(run, done, x = {}) {
   };
   const end = () => {
     if (ended || encLeft) return; ended = true; TALKUI.on = false; removeEventListener('resize', layout);
+    if (sc.gloat) { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; done(); }, 260); return; }
     run.talked = talkKey(run);
     // a voice who lost their nerve starts the boss siege stunned (mods.shaken, see startBattle)
     if (sc.mishap) run.mods.shaken = sc.mishap.h.uid;
