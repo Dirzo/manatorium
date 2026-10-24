@@ -97,6 +97,8 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 .intel .foe { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
 .intel .foe img { width: 36px; height: 36px; background: #3a2f5a; border: 2px solid var(--ink); border-radius: 3px; }
 .intel .foe b { font-family: var(--f-display); font-weight: 500; font-size: 13px; display: block; }
+.intel .foe.warband img { border-color: #c58cff; background: #3a2350; }
+.intel .mods.warband b { color: #c58cff; }
 .intel .foe span { color: var(--muted); }
 .intel .foe.boss img { background: #5a1a36; }
 .intel .syn p { margin: 0 0 4px; font-size: 12px; }
@@ -1302,6 +1304,22 @@ h2.hoard { color: var(--gold); }
 .scard small { font-size: 10px; color: var(--muted); }
 .scard .chips { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
 .scard .chip { font-size: 9px; padding: 0 4px; }
+/* simplified shop card (Cam 2026-10-24): rarity header band, portrait, name, four labelled icons */
+.scard { padding: 0 0 6px; overflow: hidden; }
+.scard .shead { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 3px 6px; background: var(--rc); color: #15121f; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.scard .shead .sprice { position: static; color: #15121f; font-size: 12px; }
+.scard.r5 .shead { background: linear-gradient(90deg, var(--rc), var(--rc2)); }
+.scard .sicons { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; width: 100%; padding: 0 5px; }
+.scard .sic { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 1px 5px; border-radius: 4px; background: rgba(0, 0, 0, .28); }
+.scard .sic i { font-style: normal; font-size: 13px; line-height: 1.1; flex: none; }
+.scard .sic em { font-style: normal; font-size: 9px; line-height: 1; color: var(--ink2, #e8e6f5); text-align: left; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scard .sic.el { box-shadow: inset 0 0 0 1px var(--ec); }
+.scard .sic.el.up { background: color-mix(in srgb, var(--ec) 35%, transparent); }
+.scard .sic.el.up em { color: #fff; font-weight: 700; }
+.scard .sic.el.up em::after { content: " ▲"; color: var(--ec); }
+.scard .sic.tmp.good em { color: #8fe0a0; } .scard .sic.tmp.bad em { color: #ff9a8a; }
+.scard .spool { font-size: 9px; }
+.scard .stag { top: 24px; }
 .sprice { position: absolute; top: 4px; left: 4px; font-weight: 700; }
 .sprice .cost img { width: 12px; height: 12px; }
 .stag { position: absolute; top: 4px; right: 4px; font-size: 9px; background: #2a3160; padding: 0 4px; border-radius: 5px; }

@@ -353,6 +353,9 @@ const ELEMENTS = {
   treat:     { name: 'Treat',     col: '#ffb02e', col2: '#8a4a1a', style: 'ad',  title: 'the Treat-Laden', desc: 'Kills drop +40% gold and snacks that heal allies. Hits can distract foes.' },
 };
 const EL_KEYS = Object.keys(ELEMENTS);
+// one glyph per element, race and class for the shop's icon row (Cam 2026-10-24: obvious icons)
+const EL_ICON = { fire: '🔥', water: '💧', nature: '🌿', ice: '❄️', lightning: '⚡', dark: '🌑', light: '☀️', void: '🌀', salty: '🧂', sweet: '🍬', meat: '🍖', treat: '🧁' };
+const RACE_ICON = { human: '👤', elf: '🧝', dwarf: '⛏️', orc: '👹', skeleton: '💀', beast: '🐾', toad: '🐸' };
 const STYLE_NAME = { ad: 'Attack damage', ap: 'Ability power', def: 'Defense' };
 
 // combo kinds: nova | rain | wave | heal | shield | haste | rage | freeze | gold | shred | vortex | critter
@@ -888,18 +891,24 @@ function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEY
 
 
 
-const LOOT_AFTER = s => s % 3 === 0 || s % 5 === 0;   // a component every third siege, and after bosses
-const ROSTER_CAP = 8;
-// the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
+// items are rare (Cam 2026-10-24: two finished items on a legend should make them the carry). A loot pick after each boss
+// (a finished item after a big boss, components after a mini-boss), components for every fourth press and for taunting a big boss,
+// and the odd drop from ITEM_DROP.
+const LOOT_AFTER = s => s % 5 === 0;
+const ITEM_DROP = { elite: 0.01, captain: 0.08, miniBoss: 0, bigBoss: 1, shard: 0.02 };
+// Guild level (Cam 2026-10-24, TFT style): one level sets both how many legends fight and which rarities the shop deals.
+// A run starts at level 3 (three on the field) and buys its way up to level 12; there is no other field cap.
+// Shop odds are RARITY_ODDS[level - 3], so level 12 deals the best row. The horde's difficulty curve is tuned against
+// the level a run that levels on schedule has at each siege (GUILD_LV.pace).
+const GUILD_LV = { start: 3, max: 12, cost: [4, 6, 10, 16, 24, 32, 44, 56, 70], pace: [1, 4, 8, 12, 17, 23, 29, 36, 43] };
+const ROSTER_CAP = GUILD_LV.max;
 // the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
-const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
-// guild rank (Cam 2026-10-24): pay to see rarer legends in the shop sooner. Each rank is one step of RARITY_ODDS, on top of the bosses beaten
-const GUILD = { cost: [5, 8, 12, 16, 20, 25, 30, 36, 42] };
 const BENCH_SLOTS = 5;
-function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
+function guildLevel(run) { return Math.min(GUILD_LV.max, run.glv || GUILD_LV.start); }
+function fieldCap(run) { return guildLevel(run); }
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
-function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
-function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
+function guildCost(run) { const l = guildLevel(run); return l >= GUILD_LV.max ? null : GUILD_LV.cost[l - GUILD_LV.start]; }
+function buyGuild(run) { const c = guildCost(run); if (c == null) return { err: 'The guild is as big as it gets.' }; if (run.gold < c) return { err: `Guild level ${guildLevel(run) + 1} costs ${c} gold.` }; run.gold -= c; run.glv = guildLevel(run) + 1; return { ok: true }; }
 // a siege the horde wins cracks the keep instead of ending the run (Cam 2026-10-24): one crack, two when the boss is
 // still standing at the end of its own siege. The keep falls at BREACH.max cracks, so two or three lost sieges end a run.
 // After a breach the masons patch the walls back up to BREACH.rebuild of their max.

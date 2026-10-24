@@ -14,7 +14,8 @@ const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.8, foeHp: 3.0, hpBase: 1
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
 // HORDE_DIFF scales each horde (five sieges)
 // retuned 2026-10-23 for the TFT shop with no meta progression; 2026-10-24 foeHp 2.4->3.0, foeAtk 1.6->1.8 for breaches, race/class thresholds and guild ranks (bots win ~1 run in 6)
-const HORDE_DIFF = [1.29, 1.256, 1.12, 1.21, 0.77, 0.7, 0.78, 0.098, 0.22, 0.015];
+// 2026-10-24 (later): retuned per horde for guild levels 3-12, rare items and boss warbands (GUILD_LV.pace, WARBAND); bots ~1 run in 7
+const HORDE_DIFF = [1.431, 0.909, 0.681, 0.644, 0.365, 0.405, 0.24, 0.085, 0.201, 0.024];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -322,7 +323,9 @@ function startBattle(run, meta) {
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
   // the horde recruits from your shop: leftover cards may defect and join this siege as elites
   const F0 = FACTIONS[factionIndex(run.siege)];
-  if (!run.finale && run.siege > 1) for (const c of shopDefectors(run)) B.queue.push({ t: rand(4, 14), id: F0.elite, turncoat: c.id, lane: run.lanes ? run.lanes.elite : undefined });
+  // the boss's warband: legends it recruited from the pool, plus any cards you left in the shop that defect to it now
+  if (!run.finale && run.siege > 1) for (const c of shopDefectors(run)) warbandAdd(run, c.id, true);
+  for (const w of warbandFighters(run)) B.queue.push({ t: rand(4, 16), id: F0.elite, turncoat: w.id, wstar: warbandStar(w), defected: w.defected === run.siege, lane: run.lanes ? run.lanes.elite : undefined });
   B.queue.sort((a, b) => a.t - b.t); B.defectors = B.queue.filter(q => q.turncoat).map(q => q.turncoat);
   B.lanes = run.finale === 'ready' ? null : run.lanes; B.laneIdle = [0, 0, 0];
   B.totalSpawn = B.queue.length; B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
@@ -371,7 +374,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (d.elite && !d.boss) hm = Math.min(hm, BAL.eliteCap * BAL.miniBoss * 75 * BAL.bossHp * hpMul(s) / d.hp);
   const tac = !d.boss && B.run.tactic, cap = !!opts.captain, tc = opts.turncoat && HERO_BY_ID[opts.turncoat];
   if (cap) { hm *= 2; am *= 1.4; }
-  if (tc) { hm *= 1 + 0.3 * tc.rar; am *= 1 + 0.15 * tc.rar; }
+  const ws = opts.wstar || 1; if (tc) { hm *= (1 + 0.3 * tc.rar) * WARBAND.hp[ws - 1]; am *= (1 + 0.15 * tc.rar) * WARBAND.atk[ws - 1]; }
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
   if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
@@ -393,7 +396,10 @@ function spawnEnemy(B, id, opts = {}) {
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   // a legend you left in the shop, fighting for the horde (beat them and their copy goes back to the pool)
-  if (tc) { u.turncoat = tc.id; u.key = 'h:' + tc.id; u.nativeFace = 1; u.name = 'Turncoat ' + tc.name.split(' ')[0]; u.scale = 1.1; FX.text(u.x - 20, u.y - 22, 'TURNCOAT', '#c58cff', true, true); }
+  if (tc) { u.turncoat = tc.id; u.wstar = ws; u.key = 'h:' + tc.id; u.nativeFace = 1; u.scale = 1.1;
+    u.name = (opts.defected ? 'Turncoat ' : bossShort(bossFor(s)) + '\'s ') + tc.name.split(' ')[0] + (ws > 1 ? ' ' + '★'.repeat(ws) : '');
+    if (CLASS_BASE[tc.cls].range > 40) { u.range = Math.min(110, CLASS_BASE[tc.cls].range); u.proj = tc.cls === 'mage' || tc.cls === 'cleric' ? 'spark' : 'arrow'; }
+    FX.text(u.x - 20, u.y - 22, opts.defected ? 'TURNCOAT' : 'WARBAND', '#c58cff', true, true); }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
@@ -521,7 +527,7 @@ function killUnit(B, u, src) {
     return;
   }
   u.alive = false; u.hp = 0;
-  if (u.turncoat) { poolGive(B.run, u.turncoat, 1); FX.text(u.x, u.y - 26, 'back to the pool', '#c58cff', false, true); }
+
   traitKill(B, src && src.owner ? src.owner : src, u);
   B.kills++; if (src) src.kills++; if (B.ach) { if (B.hammering) B.ach.hammer++; if (u.id === 'chicken') B.ach.chickens++; }
   giveXP(B, src && src.owner ? src.owner : src, u.xpv || 0);
@@ -540,11 +546,11 @@ function killUnit(B, u, src) {
   if (u.id === 'chicken') FX.text(u.x, u.y - 18, 'BAWK', '#ffffff', false, true);
   // loot drops: elites sometimes, bosses always
   let drops = 0;
-  if (u.boss) drops = (u.def.boss === 'big' ? 2 : 1) + (run.tech.trophy ? 1 : 0);
-  else if (u.captain) drops = 1;
-  else if (u.def.elite && Math.random() < 0.06) drops = 1;
+  if (u.boss) drops = (u.def.boss === 'big' ? ITEM_DROP.bigBoss : ITEM_DROP.miniBoss) + (run.tech.trophy ? 1 : 0);
+  else if (u.captain) drops = Math.random() < ITEM_DROP.captain ? 1 : 0;
+  else if (u.def.elite && Math.random() < ITEM_DROP.elite) drops = 1;
   else if (u.id === 'goose') drops = 1;
-  for (let i = 0; i < drops; i++) { const key = Math.random() < 0.02 ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
+  for (let i = 0; i < drops; i++) { const key = Math.random() < ITEM_DROP.shard ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
   if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
 }
@@ -904,7 +910,7 @@ function stepBattle(B, dt) {
   if (B.bossUnit && B.bossUnit.shards) stepShards(B);
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
-    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, lane: q.lane }); B.lastSpawn = B.t; }
+    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, wstar: q.wstar, defected: q.defected, lane: q.lane }); B.lastSpawn = B.t; }
   // overtime: once the last foe has arrived and the fight drags on, heroes hit harder every second.
   // Normal foes still standing after a while stop fighting and charge the wall instead, so a siege always ends.
   if (!B.overtime && !B.queue.length && !(B.bossUnit && B.bossUnit.alive) && B.t - Math.max(B.lastSpawn || 0, B.bossGoneT || 0) > BAL.otStart) {
@@ -1162,7 +1168,7 @@ function stepEnemy(B, u, dt) {
     if (d > reach) moveToward(u, t.x + (u.range > 40 ? 0 : 8 * (u.x > t.x ? 1 : -1)), t.y, spd, dt);
     else { u.facing = t.x >= u.x ? 1 : -1; u.cd -= dt; if (u.cd <= 0) { u.cd = 1 / u.as; u.atkT = 0.2;
       if (u.healing) { healUnit(B, null, t, u.atk * 2.5); FX.particles(t.x, t.y - 10, 5, '#ff5dd8', { spread: 10, up: true }); }
-      else if (u.range > 40) fireProj(B, u, t, u.def.proj || 'rock', u.atk, { speed: 170, splash: u.def.splash, slow: u.def.slow, poison: u.def.poison });
+      else if (u.range > 40) fireProj(B, u, t, u.proj || u.def.proj || 'rock', u.atk, { speed: 170, splash: u.def.splash, slow: u.def.slow, poison: u.def.poison });
       else { dealDamage(B, u, t, u.atk); FX.slash(t.x, t.y - 8, -1, '#ff7a9a'); FX.sound('ehit'); } } }
   } else {
     const stopX = CASTLE_X + (u.range > 40 ? u.range * 0.8 : 6) + (u.scale - 1) * 10;

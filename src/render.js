@@ -187,7 +187,7 @@ function drawUnit(g, u, t, opts = {}) {
   const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;
   g.save(); if (opts.alpha != null) g.globalAlpha = opts.alpha;
   // star level (Cam 2026-10-23): 2★ and 3★ champions get a silver or gold border around the body instead of stars overhead
-  const star = u.inst && !u.temp && u.alive !== false && u.side === 'hero' ? heroStar(u.inst) : 1;
+  const star = u.inst && !u.temp && u.alive !== false && u.side === 'hero' ? heroStar(u.inst) : u.alive !== false && u.wstar || 1;
   if (star > 1) { const col = STAR_COL[star - 1], o = Math.max(1, Math.round(fs / 20)), sil = tintFrame(img, col), I2 = idle && Object.assign({}, idle, { def: Object.assign({}, idle.def, { back: null, front: null }) });
     const a0 = g.globalAlpha;
     for (const [dx, dy, aa] of [[-2 * o, 0, 0.45], [2 * o, 0, 0.45], [0, -2 * o, 0.45], [0, 2 * o, 0.45], [-o, -o, 1], [o, -o, 1], [-o, o, 1], [o, o, 1], [-o, 0, 1], [o, 0, 1], [0, -o, 1], [0, o, 1]]) { g.globalAlpha = a0 * aa * (star === 3 ? 0.8 + 0.2 * Math.sin(t * 4 + (u.phase || 0)) : 0.95);

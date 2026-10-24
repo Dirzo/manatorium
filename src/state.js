@@ -22,11 +22,9 @@ function newRun(meta) {
 // Cam 2026-10-15: no rolled stats. Each card rolls a rarity from the odds for how many bosses have fallen.
 function draftKind(run) { return !run.roster.length ? 'starter' : run.roster.length < START_LEGENDS && run.siege === 1 ? 'partner' : 'reinforce'; }
 function draftSize(run, meta) { return 3 + (meta.ranks.muster ? 1 : 0) + (run.tech.pigeon ? 1 : 0); }
-// shop odds: one step per boss beaten plus every guild rank you bought (Cam 2026-10-24), plus one while pressing pays off
-function shopRank(run) { return Math.min(RARITY_ODDS.length - 1, castleTier(run) + (run.guild || 0)); }
+// shop odds: one row per guild level (Cam 2026-10-24), plus one while pressing pays off
+function shopRank(run) { return Math.min(RARITY_ODDS.length - 1, guildLevel(run) - GUILD_LV.start); }
 function draftBosses(run) { return shopRank(run) + (run.pressDraft > 0 && run.roster.length >= START_LEGENDS ? 1 : 0); }
-function guildCost(run) { return shopRank(run) >= RARITY_ODDS.length - 1 ? null : GUILD.cost[Math.min(GUILD.cost.length - 1, run.guild || 0)]; }
-function buyGuild(run, meta) { const c = guildCost(run); if (c == null) return { err: 'The guild already sends its finest.' }; if (run.gold < c) return { err: `A guild rank costs ${c} gold.` }; run.gold -= c; run.guild = (run.guild || 0) + 1; return { ok: true }; }
 // TFT shop (Cam 2026-10-23): every legend has one rarity (hero.rar). A card rolls a rarity from the odds, then a legend of that
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
@@ -132,6 +130,38 @@ function shopDefectors(run) {
   run.shop.forEach((c, i) => { if (c && Math.random() < SHOP.defect && poolLeft(run, c.id) > 0) { poolTake(run, c.id, 1); out.push(c); run.shop[i] = null; } });
   return out;
 }
+// ----- the boss's warband (Cam 2026-10-24) -----
+// Each horde's boss recruits legends out of the same pool you buy from, so copies you want can be gone. Copies of one
+// legend star up for them too (3 = 2★, 9 = 3★). Cards you leave in the shop can defect into the warband. The strongest
+// WARBAND.field(s) of them fight in every siege; when the next horde arrives the warband scatters and its copies go back
+// to the pool. buys and field are the difficulty curve; the rarities follow the guild level a run on pace has (GUILD_LV.pace).
+const WARBAND = { from: 3, buys: s => s < 3 ? 0 : 1 + Math.floor(s / 12), field: s => Math.min(7, Math.max(0, Math.floor((s + 1) / 6))), hp: [1, 1.6, 2.5], atk: [1, 1.3, 1.7], keep: 0.5 };
+function bossShort(id) { return ENEMIES[id].name.split(/,| the /)[0]; }
+function paceLevel(s) { return GUILD_LV.start + GUILD_LV.pace.filter(p => s >= p).length; }
+function warbandStar(w) { return w.copies >= SHOP.stars[2] ? 3 : w.copies >= SHOP.stars[1] ? 2 : 1; }
+function warbandAdd(run, id, defected) { const W = run.warband = run.warband || []; let w = W.find(x => x.id === id); if (!w) W.push(w = { id, copies: 0 }); w.copies++; if (defected) w.defected = run.siege; return w; }
+// at the start of each siege's prep: a new horde disbands the old warband, then the boss buys this siege's recruits
+function warbandRecruit(run) {
+  if (run.finale) return null; const fi = factionIndex(run.siege), out = [];
+  if (run.warbandFi !== fi) { for (const w of run.warband || []) poolGive(run, w.id, w.copies); run.warband = []; run.warbandFi = fi; }
+  for (let i = 0; i < WARBAND.buys(run.siege); i++) {
+    // half the time the boss chases a star on a legend it already has, if the pool still holds a copy
+    const own = (run.warband || []).filter(w => poolLeft(run, w.id) > 0 && w.copies < SHOP.stars[2]);
+    let id = own.length && Math.random() < WARBAND.keep ? pick(own).id : null;
+    if (!id) { let rar = rollRarity(paceLevel(run.siege) - GUILD_LV.start), pool = [];
+      for (; rar >= 0 && !pool.length; rar--) pool = HEROES.filter(h => h.rar === rar && poolLeft(run, h.id) > 0);
+      if (!pool.length) break; let x = Math.random() * pool.reduce((a, h) => a + poolLeft(run, h.id), 0); id = (pool.find(h => (x -= poolLeft(run, h.id)) < 0) || pool[0]).id; }
+    poolTake(run, id, 1); warbandAdd(run, id); out.push(id);
+  }
+  run.warbandNews = out; return out;
+}
+// who fights this siege: defectors from this siege's shop always, then the strongest up to WARBAND.field
+function warbandFighters(run) {
+  if (run.finale) return [];
+  const W = (run.warband || []).slice(), val = w => warbandStar(w) * 10 + HERO_BY_ID[w.id].rar;
+  const fresh = W.filter(w => w.defected === run.siege), rest = W.filter(w => !fresh.includes(w)).sort((a, b) => val(b) - val(a));
+  return fresh.concat(rest.slice(0, Math.max(0, WARBAND.field(run.siege) - fresh.length)));
+}
 function interestFor(gold) { return Math.min(SHOP.interestMax, Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
 
 function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
@@ -203,8 +233,9 @@ function autoPlace(run, h) {
 // ----- items -----
 function makeItem(parts, el) { return { uid: nuid(), parts: parts.slice(), el: el || null, holder: null }; }
 function randomFinished() { const a = pick(COMP_KEYS), b = pick(COMP_KEYS); return makeItem(itemKey(a, b).split('+')); }
-function lootOptions(run, meta) {
-  const n = 3 + (run.tech.scav ? 1 : 0), boss = isBossSiege(run.siege - 1), out = [];
+// kind 'comp' always deals components (the extra pick for taunting a boss)
+function lootOptions(run, meta, kind) {
+  const n = 3 + (run.tech.scav ? 1 : 0), boss = kind !== 'comp' && isBossSiege(run.siege - 1) && (ENEMIES[bossFor(run.siege - 1)].boss === 'big' || run.siege - 1 === 5), out = []; // the first boss also gives a finished item, so the first carry shows up early
   for (let i = 0; i < n; i++) {
     if (boss) { let key, tries = 0; do { key = itemKey(pick(COMP_KEYS), pick(COMP_KEYS)); } while (out.some(o => o.parts.join('+') === key) && ++tries < 50); out.push({ parts: key.split('+') }); }
     else { const k = Math.random() < 0.05 && !out.some(o => o.parts[0] === 'shard') ? 'shard' : pick(COMP_KEYS.filter(c => !out.some(o => o.parts[0] === c))); out.push({ parts: [k] }); }
@@ -370,12 +401,13 @@ function finishSiege(run, meta, B) {
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
   if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
-  // pressing the attack pays out: more gold now, a second loot pick and a better roll on the next draft
-  if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; rep.press = { gold: g }; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; }
+  // pressing the attack pays out: more gold now, a better roll on the next shop, and every fourth press a loot pick
+  if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; rep.press = { gold: g, loot: A2.pressed % 4 === 0 }; }
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
   run.siege++; if (factionIndex(run.siege) !== factionIndex(run.siege - 1) && run.siege < FINAL_SIEGE) rotateSeason(run);
+  rep.warband = warbandRecruit(run);
   run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
   if (!run.shopLock) rollShop(run, meta);
   return rep;
