@@ -335,7 +335,7 @@ function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
-  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends for your three lanes, then close the shop and press Begin siege.'); }, 300); }
+  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends, drag them onto the hexes where the scouts' arrows come in, then close the shop and press Begin siege.'); }, 300); }
   else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
@@ -406,8 +406,8 @@ G.select = function (uid) { G.selected = uid; UI.renderRoster(); if (UI.page ===
 function toLogical(e) { const r = $('arena').getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, inside: e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom }; }
 function slotAt(p) {
   for (let i = 0; i < rafterSlots(G.run); i++) if (Math.abs(p.x - rafterPosition(G.run, i).x) <= 9 && p.y > rafterPosition(G.run, i).y - 22 && p.y < rafterPosition(G.run, i).y + 6) return { type: 'rafter', i };
-  const c = Math.floor((p.x - GRID.x) / GRID.cell), r = Math.floor((p.y - GRID.y) / GRID.cell);
-  if (c >= 0 && c < GRID.cols && r >= 0 && r < GRID.rows) return { type: 'grid', c, r };
+  // champions snap to the nearest hex (Cam 2026-10-24)
+  const hx = hexAt(p.x, p.y); if (hx) return { type: 'grid', c: hx.c, r: hx.r };
   return null;
 }
 function slotOk(h, s) { if (!s) return false; if (s.type === 'rafter') return isRangedHero(h.id); return true; }

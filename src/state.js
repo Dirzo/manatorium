@@ -215,19 +215,36 @@ function fieldCount(run, except) { return run.roster.filter(h => h !== except &&
 function fieldFull(run, except) { return !run.finale && fieldCount(run, except) >= fieldCap(run); }
 // more champions on the field than the barracks allow (old saves, champions back from the goose's nest): the weakest go to the bench
 function enforceField(run) {
+  // saves from the square grid: a champion on a hex that no longer exists (the bottom of an odd column) steps up one
+  for (const h of run.roster) if (h.place && h.place.type === 'grid' && !hexOk(h.place.c, h.place.r)) { const c = clamp(h.place.c, 0, GRID.cols - 1), r = Math.min(h.place.r, hexRows(c) - 1); h.place = cellFree(run, c, r, h) ? { type: 'grid', c, r } : null; if (!h.place) autoPlace(run, h); }
   if (run.finale) return; const on = run.roster.filter(h => h.place && !h.vault && !h.fled), cap = fieldCap(run); if (on.length <= cap) return;
   on.sort((a, b) => heroRarity(b) * 3 + heroStar(b) * 4 + b.level / 10 - (heroRarity(a) * 3 + heroStar(a) * 4 + a.level / 10)).slice(cap).forEach(h => { h.place = null; });
+}
+// does a champion on this hex reach the route with its two-hex circle?
+function hexCovers(c, r, route, extra = 0) {
+  const p = cellPos(c, r), R = guardRadius() + 12 + extra;
+  for (let x = CASTLE_X + 20; x < W - 30; x += 8) if (Math.hypot(x - p.x, routeY(route, x) - p.y) <= R) return true;
+  return false;
+}
+// which of the scouts' routes each placed champion guards (rafters guard none; they shoot whatever comes close)
+function routeGuards(run, except) {
+  const plan = planOf(run), n = plan ? plan.routes.map(() => 0) : [];
+  if (plan) for (const x of run.roster) if (x !== except && x.place && x.place.type === 'grid' && !x.vault && !x.fled) plan.routes.forEach((rt, i) => { if (hexCovers(x.place.c, x.place.r, rt, isRangedHero(x.id) ? 40 : 0)) n[i]++; });
+  return n;
 }
 function autoPlace(run, h) {
   if (h.vault || fieldFull(run, h)) return;
   const d = HERO_BY_ID[h.id], ranged = isRangedHero(h.id);
   if (ranged && !run.finale) for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { h.place = { type: 'rafter', i }; return; }
   const cols = ranged ? [1, 2, 0, 3, 4, 5] : d.cls === 'guardian' ? [5, 6, 4, 7, 3] : [4, 5, 3, 6, 2, 7];
-  // lanes: melee champions go where the scouts expect the most foes per defender; ranged ones stand mid-field and cover two lanes
-  const L = run.lanes || { w: [1 / 3, 1 / 3, 1 / 3] }, LANE_ROWS = [[1, 0], [3, 2], [4, 5, 6]];
-  const held = [0, 0, 0]; for (const x of run.roster) if (x !== h && x.place && x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
-  const order = ranged ? [1, 0, 2] : [0, 1, 2].sort((a, b) => L.w[b] / (1 + held[b]) - L.w[a] / (1 + held[a]));
-  for (const l of order) for (const c of cols) for (const r of LANE_ROWS[l]) if (cellFree(run, c, r)) { h.place = { type: 'grid', c, r }; return; }
+  // champions go where their circle covers the most of the horde's columns that nobody guards yet; ranged ones stand further back
+  const plan = planOf(run), held = routeGuards(run, h);
+  let best = null, bs = -1;
+  cols.forEach((c, ci) => { for (let r = 0; r < hexRows(c); r++) { if (!cellFree(run, c, r)) continue;
+    let sc = 1 - ci * 0.04 - Math.abs(r - (hexRows(c) - 1) / 2) * 0.01;
+    if (plan) plan.routes.forEach((rt, i) => { if (hexCovers(c, r, rt, ranged ? 40 : 0)) sc += 4 * rt.w / (1 + held[i]); });
+    if (sc > bs) { bs = sc; best = { type: 'grid', c, r }; } } });
+  if (best) h.place = best;
 }
 
 // ----- items -----
@@ -408,7 +425,7 @@ function finishSiege(run, meta, B) {
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
   run.siege++; if (factionIndex(run.siege) !== factionIndex(run.siege - 1) && run.siege < FINAL_SIEGE) rotateSeason(run);
   rep.warband = warbandRecruit(run);
-  run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.lanes = rollLanes(run.siege, run.tactic);
+  run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.plan = null; planOf(run);
   if (!run.shopLock) rollShop(run, meta);
   return rep;
 }

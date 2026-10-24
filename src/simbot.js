@@ -161,7 +161,7 @@ function botBossTalk(run, style) {
   if (mishapDue(run, v) && run.roster.some(h => h !== v && h.place && !h.vault)) run.mods.shaken = v.uid;
   setTalkReply(run, run.finale === 'ready' ? (style === 'bulwark' ? 'firm' : 'goad') : BOT_REPLY[style] || pick(['taunt', 'firm', 'rallycry']));
 }
-// bots read the scouts: melee champions are re-placed each siege to match the lanes (chaos keeps wherever they landed)
+// bots read the scouts: melee champions are re-placed each siege to guard the attack routes (chaos keeps wherever they landed)
 // fill the field with the strongest champions; the rest sit on the bench
 function botField(run, style) {
   const ok = run.roster.filter(h => !h.vault && !h.fled), cap = fieldCap(run);
