@@ -163,8 +163,8 @@ function endSiege() {
     if (rep.siege >= FINAL_SIEGE && run.finale !== 'ready') { startFinale(run); G.phase = 'finale'; save(); TEL.event('finale', {}); setTimeout(() => showFinale(), 1400); UI.hud(); return; }
     if (rep.siege >= FINAL_SIEGE) { run.won = true; G.phase = 'over'; TEL.runEnd(run, 'won'); UI.banner('The Eternal Goose falls', 'The realm is saved. Mostly.'); setTimeout(() => startTower(), 2600); return; }
     run.post = LOOT_AFTER(rep.siege) ? ['loot'] : [];
-    if (taunted) run.post.push('loot');
-    if (rep.press) run.post.push('loot');
+    if (taunted && ENEMIES[bossFor(rep.siege)].boss === 'big') run.post.push('lootc'); // taunting the boss: an extra pick of components
+    if (rep.press && rep.press.loot) run.post.push('lootc');
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
@@ -213,6 +213,7 @@ function nextPost() {
   const step = run.post[0] === 'encounter' ? 'encounter' : run.post.shift(); save();
   if (!step) return toPrep();
   if (step === 'loot') return showLoot();
+  if (step === 'lootc') return showLoot('comp');
   if (step === 'draft') return showDraft();
   if (step === 'castle') return showCastle();
   if (step === 'encounter') return showEncounter();
@@ -220,15 +221,15 @@ function nextPost() {
   nextPost();
 }
 
-function showLoot() {
-  const run = G.run; G.phase = 'loot'; if (!run.pendingLoot) run.pendingLoot = lootOptions(run, G.meta); save();
+function showLoot(kind) {
+  const run = G.run; G.phase = 'loot'; if (kind !== undefined) run.pendingLootKind = kind || null; if (!run.pendingLoot) run.pendingLoot = lootOptions(run, G.meta, run.pendingLootKind); save();
   UI.modal(UI.lootHTML(run.pendingLoot, lootRerollCost(run)), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-      const it = takeLoot(run, run.pendingLoot[+b.dataset.pick]); run.pendingLoot = null; SFX.play('drop');
+      const it = takeLoot(run, run.pendingLoot[+b.dataset.pick]); run.pendingLoot = null; run.pendingLootKind = null; SFX.play('drop');
       UI.toast(`${itemName(it)} added to the Armory.`); TEL.event('loot', { parts: it.parts });
       changed(); nextPost();
     });
-    s.querySelector('#lootReroll').onclick = () => { const c = lootRerollCost(run); if (run.gold < c) return; run.gold -= c; run.lootRerolls++; run.pendingLoot = lootOptions(run, G.meta); SFX.play('click'); showLoot(); };
+    s.querySelector('#lootReroll').onclick = () => { const c = lootRerollCost(run); if (run.gold < c) return; run.gold -= c; run.lootRerolls++; run.pendingLoot = lootOptions(run, G.meta, run.pendingLootKind); SFX.play('click'); showLoot(); };
   }, 'wide');
 }
 
@@ -338,7 +339,7 @@ function prepCues() {
   else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
   if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2 && !run.shopIntro) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest.'), 600);
+  if (run.siege === 2 && !run.shopIntro) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest. Raise the guild level to field more legends (up to 12) and see rarer ones.'), 600);
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
@@ -372,8 +373,7 @@ G.act = function (act, arg) {
       break; }
     case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
     case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
-    case 'guildrank': { if (G.phase !== 'prep') return; r = buyGuild(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('stamp'); UI.toast(`Guild rank ${run.guild}. Rarer legends turn up in the shop.`); TEL.event('guildrank', { rank: run.guild, s: run.siege }); break; }
-    case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
+    case 'guildlevel': { if (G.phase !== 'prep') return; r = buyGuild(run); if (r.err) return UI.toast(r.err, true); SFX.play('stamp'); UI.toast(`Guild level ${guildLevel(run)}: ${fieldCap(run)} legends on the field, and rarer ones in the shop.`); TEL.event('guildlevel', { lv: guildLevel(run), s: run.siege }); break; }
     case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
     case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
       run.gold -= c; run.paidDrafts = (run.paidDrafts || 0) + 1; run.recruitFrom = 'guild'; run.pendingDraft = draftOptions(run, meta); SFX.play('buy'); TEL.event('buydraft', { cost: c, n: run.paidDrafts }); UI.hud(); return showDraft(); }
@@ -395,7 +395,7 @@ G.act = function (act, arg) {
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
       setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
-    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or add a bunk in the Guild Hall.` : 'No free spot on the field.', true); break;
+    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or raise the guild level in the Guild Hall.` : 'No free spot on the field.', true); break;
     case 'swapin': { if (G.phase !== 'prep') return; const [a, b] = String(arg).split(':'), x = run.roster.find(h => h.uid === a), y = run.roster.find(h => h.uid === b); if (x && y) { swapBench(x, y); G.selected = x.uid; } break; }
   }
   changed();
@@ -416,7 +416,7 @@ function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
-  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or add a bunk in the Guild Hall.`, true); return; }
+  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or raise the guild level in the Guild Hall.`, true); return; }
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
@@ -524,7 +524,7 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
-      <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
+      <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
@@ -627,7 +627,7 @@ function titleEnter() { MUSIC.start(); const t = $('title'); t.classList.remove(
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
-  if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
+  if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot' && run.post[0] !== 'lootc') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
   if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
   // a reload during the boss talk plays it again (run.talked is set when the scene ends)
@@ -715,7 +715,9 @@ function boot(hotData) {
   if (!G.meta.ranks) G.meta.ranks = {}; if (!G.meta.seen) G.meta.seen = {};
   if (d && d.run && d.run.v === 2) { G.run = d.run; G.hasRun = true; uidN = 1000 + Math.floor(Math.random() * 1000);
     // older runs: barracks from the roster size, and two item slots each (a third item goes back to the Armory)
-    if (G.run.roster && G.run.barracks == null) G.run.barracks = Math.max(0, Math.min(ROSTER_CAP, G.run.roster.filter(h => h.place).length) - BARRACKS.start);
+    if (G.run.roster && G.run.barracks == null && G.run.glv == null) G.run.barracks = Math.max(0, Math.min(8, G.run.roster.filter(h => h.place).length) - 3);
+    // runs from before guild levels (2026-10-24): bunks and guild ranks become one guild level, whichever was further along
+    if (G.run.glv == null) G.run.glv = Math.min(GUILD_LV.max, Math.max(GUILD_LV.start + (G.run.barracks || 0), GUILD_LV.start + castleTier(G.run) + (G.run.guild || 0)));
     for (const h of G.run.roster || []) while (h.items && h.items.length > ITEM_SLOTS) { const it = (G.run.stash || []).find(x => x.uid === h.items[h.items.length - 1]); if (it) unequipItem(G.run, it); else h.items.pop(); } }
   else { G.run = newRun(G.meta); G.hasRun = false; }
   G.phase = 'title';
