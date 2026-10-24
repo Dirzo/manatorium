@@ -13,7 +13,14 @@ function botScoreOpt(style, o, run) {
   const d = HERO_BY_ID[o.id], k = botKindOf(d.cls);
   // chase the element the keep already has the most of, toward its castle
   const fe = run ? fieldElements(run) : {}, top = Math.max(0, ...Object.values(fe)), elB = o.el && run && fe[o.el] && fe[o.el] === top && top >= 2 ? 14 + 5 * top : 0;
-  return elB + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+  return elB + botTraitScore(run, d) + (o.rarity || 0) * 12 + (S.focus && k === S.focus ? 8 : 0) + (S.cls && d.cls === S.cls ? 12 : 0) + Math.random() * 6;
+}
+// race and class thresholds: a card that reaches 2, 4 or 6 of a trait is worth a lot, one that builds toward it a little
+function botTraitScore(run, d) {
+  if (!run) return 0; const ids = new Set(run.roster.filter(h => !h.vault).map(h => h.id)); let b = 0;
+  if (ids.has(d.id)) return 0;
+  for (const key of ['race', 'cls']) { const n = [...ids].filter(id => HERO_BY_ID[id][key] === d[key]).length; b += [2, 4, 6].includes(n + 1) ? 10 + 6 * n : 5 * n; }
+  return b;
 }
 // ----- itemizing: pick one carry, build finished items for it first, then the rest of the cast -----
 const CARRY_COMPS = { ap: ['rod', 'tear', 'glove'], ranger: ['bow', 'sword', 'glove'], ad: ['sword', 'bow', 'glove', 'belt'], tank: ['vest', 'belt', 'cloak'] };
@@ -74,6 +81,8 @@ function botBuyShop(run, meta, style, reroll) {
   if (!run.shop) rollShop(run, meta);
   const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
   while (barracksCost(run) != null && fieldCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
+  // guild ranks: a rank ahead of the bosses from siege 4, two from siege 14
+  while (!chaos && guildCost(run) != null && (run.guild || 0) < (run.siege >= 14 ? 2 : run.siege >= 4 ? 1 : 0) && run.gold >= guildCost(run) + 2) buyGuild(run, meta);
   // new legends while the field has room plus a couple on the bench; copies always (they star up)
   const room = () => Math.min(rosterCap(run), fieldCap(run) + (chaos ? BENCH_SLOTS : 2));
   for (let g = 0; g < 40; g++) {
@@ -179,7 +188,7 @@ function botPlayRun(style, meta, opts = {}) {
   const run = newRun(meta); const log = [];
   const draft = () => { const os = draftOptions(run, meta); const o = os.slice().sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0]; addDraftedHero(run, o); };
   for (let i = 0; i < START_LEGENDS; i++) draft();
-  let cause = 'cap';
+  let cause = 'cap'; const breaches = [];
   while (run.siege <= maxSiege) {
     botBuyShop(run, meta, style); botField(run, style); botGiveItems(run, style); botShop(run, meta, style); botBuyShop(run, meta, style, true); botField(run, style); botGiveItems(run, style);
     botPlace(run, style); checkCastleUnlock(run);
@@ -189,15 +198,18 @@ function botPlayRun(style, meta, opts = {}) {
     botBossTalk(run, style); const taunted = run.mods.taunt;
     const B = startBattle(run, meta);
     const t = botBattle(B, dt, 420);
-    if (B.done !== 'victory') { cause = B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde'; break; }
+    const lostTo = B.done === 'victory' ? null : B.done === 'timeout' ? 'stalled' : B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde';
     const rep = finishSiege(run, meta, B);
+    // a lost siege cracks the keep; the run only ends when the keep falls (BREACH)
+    if (rep.breach) { breaches.push({ s: rep.siege, n: rep.breach.n, by: lostTo }); if (rep.breach.over) { cause = lostTo; break; }
+      if (run.finale === 'ready') { startFinale(run); continue; } }
     if (opts.onSiege) opts.onSiege(run, rep);
     if (rep.siege >= FINAL_SIEGE && !run.finale) { startFinale(run); continue; }
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
-    if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (LOOT_AFTER(rep.siege) && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
     if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-    if (taunted) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
+    if (taunted && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     // Legend Summons: take the best card; a full keep sends home its weakest legend
@@ -207,7 +219,7 @@ function botPlayRun(style, meta, opts = {}) {
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
-  return { style, reached: run.siege, cause, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
+  return { style, reached: run.siege, cause, breaches, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
     techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {

@@ -79,7 +79,7 @@ const RARITY = [
   { key: 'legendary', name: 'Legendary', col: '#ffb030', col2: '#a8601a' },
   { key: 'god',       name: 'God',       col: '#fff3a0', col2: '#ff7ad8' },
 ];
-const RARITY_STEP = 0.25;
+const RARITY_STEP = 0.3;
 function rarityMul(r) { return 1 + RARITY_STEP * (r || 0); }
 function raritySize(r) { return 1 + 0.06 * (r || 0); }
 // what each rarity adds to a legend's signature, on top of +25% power per step
@@ -893,9 +893,15 @@ const ROSTER_CAP = 8;
 // the keep's barracks (Cam 2026-10-23, TFT style): room for 3 champions on the field at first, each bunk bought with gold, up to ROSTER_CAP.
 // the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BARRACKS = { start: 3, cost: [4, 6, 8, 10, 12] };
+// guild rank (Cam 2026-10-24): pay to see rarer legends in the shop sooner. Each rank is one step of RARITY_ODDS, on top of the bosses beaten
+const GUILD = { cost: [5, 8, 12, 16, 20, 25, 30, 36, 42] };
 const BENCH_SLOTS = 5;
 function fieldCap(run) { return Math.min(ROSTER_CAP, BARRACKS.start + (run.barracks || 0)); }
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
 function barracksCost(run) { return fieldCap(run) >= ROSTER_CAP ? null : BARRACKS.cost[run.barracks || 0]; }
 function buyBarracks(run) { const c = barracksCost(run); if (c == null) return { err: 'The barracks are as big as the keep allows.' }; if (run.gold < c) return { err: `A new bunk costs ${c} gold.` }; run.gold -= c; run.barracks = (run.barracks || 0) + 1; return { ok: true }; }
+// a siege the horde wins cracks the keep instead of ending the run (Cam 2026-10-24): one crack, two when the boss is
+// still standing at the end of its own siege. The keep falls at BREACH.max cracks, so two or three lost sieges end a run.
+// After a breach the masons patch the walls back up to BREACH.rebuild of their max.
+const BREACH = { max: 3, boss: 2, rebuild: 0.5 };
 const RECRUIT_GAP = 6; // goblin encounters add at most one champion per this many sieges

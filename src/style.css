@@ -1353,3 +1353,14 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .sypill.on { box-shadow: 0 0 0 1px var(--ec) inset, 0 0 8px -2px var(--ec); }
 .scard.tierup { box-shadow: 0 0 0 2px var(--ec), 0 0 14px -2px var(--ec); }
 .scard.tierup small { color: var(--ec); }
+/* the boss gloats after winning a siege (talk.js gloatScene): it bounces with glee, the field sits under a red dusk */
+.talk.gloat .tk-boss canvas { animation: tkGloat .38s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes tkGloat { to { transform: translateY(-5%) scale(1.03, .97); } }
+.talk.gloat .tk-cam::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(120,20,40,.42), rgba(120,20,40,.12)); pointer-events: none; }
+/* keep cracks (BREACH): three pips by the castle bar, filled as sieges are lost */
+.cracks { display: inline-flex; gap: 3px; margin: 0 6px; vertical-align: middle; }
+.cracks i { width: 8px; height: 8px; border-radius: 2px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.25); transform: rotate(45deg); }
+.cracks i.on { background: var(--rose); border-color: #ffd0da; box-shadow: 0 0 6px rgba(255,90,120,.6); }
+.cracks.big { gap: 8px; margin: 6px 0; } .cracks.big i { width: 14px; height: 14px; }
+.breach { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; margin: 8px 0; border-radius: 10px; background: rgba(255,90,120,.12); border: 1px solid rgba(255,90,120,.4); }
+.breach b { color: var(--rose); }

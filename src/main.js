@@ -173,11 +173,29 @@ function endSiege() {
     setTimeout(() => showReport(rep), 900);
     UI.hud();
   } else {
-    G.phase = 'over'; G.armed = null; MUSIC.fanfare('lose');
-    TEL.runEnd(G.run, B.bossUnit && B.bossUnit.alive ? 'boss' : 'horde');
-    UI.banner('The keep has fallen', `You held ${G.run.siege - 1} sieges`);
-    setTimeout(() => startTower(), 2600);
+    // the horde won this one: the keep takes a crack, the boss gloats, and the run goes on until the keep falls (BREACH)
+    G.phase = 'report'; G.armed = null; MUSIC.fanfare('lose');
+    const run = G.run, finale = run.finale === 'ready', rep = finishSiege(run, G.meta, B), br = rep.breach;
+    TEL.siege(run, rep); TEL.event('breach', { s: rep.siege, n: br.n, total: br.total, boss: br.boss });
+    if (br.over) {
+      G.phase = 'over'; TEL.runEnd(run, br.boss ? 'boss' : 'horde');
+      UI.banner('The keep has fallen', `${br.total} cracks. The walls could take no more.`); save();
+      setTimeout(() => showGloat(rep, () => startTower()), 1800); UI.hud(); return;
+    }
+    const left = br.max - br.total;
+    UI.banner('The walls are breached!', `The keep cracks${br.n > 1 ? ' twice' : ''}. ${left} more and it falls.`);
+    // a lost finale is fought again; otherwise the run moves on to the next siege
+    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = ['encounter'];
+    run.lastRep = rep; save();
+    setTimeout(() => showGloat(rep, () => showReport(rep)), 1800);
+    UI.hud();
   }
+}
+// the boss who won the siege rubs it in (talk.js gloatScene), then the run goes on
+function showGloat(rep, done) {
+  const run = G.run;
+  if (TALK_PREF.mode === 'off' || (TALK_PREF.mode === 'boss' && !rep.breach.boss && !rep.breach.over)) return done();
+  showTalk(run, done, { scene: gloatScene(run, rep) });
 }
 function showReport(rep) {
   UI.modal(UI.reportHTML(rep), s => { UI.animateXP(s); s.querySelector('#repNext').onclick = () => { G.run.lastRep = null; nextPost(); };
@@ -354,6 +372,7 @@ G.act = function (act, arg) {
       break; }
     case 'shopreroll': { if (G.phase !== 'prep') return; r = rerollShop(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('click'); TEL.event('shopreroll', { n: run.shopRerolls }); break; }
     case 'shoplock': run.shopLock = !run.shopLock; SFX.play('click'); break;
+    case 'guildrank': { if (G.phase !== 'prep') return; r = buyGuild(run, meta); if (r.err) return UI.toast(r.err, true); SFX.play('stamp'); UI.toast(`Guild rank ${run.guild}. Rarer legends turn up in the shop.`); TEL.event('guildrank', { rank: run.guild, s: run.siege }); break; }
     case 'barracks': { if (G.phase !== 'prep') return; r = buyBarracks(run); if (r.err) return UI.toast(r.err, true); SFX.play('hammer'); UI.toast(`The barracks hold ${rosterCap(run)} champions now.`); TEL.event('barracks', { cap: rosterCap(run) }); break; }
     case 'castleel': { if (G.phase !== 'prep' || !(run.castleOpen || []).includes(arg)) return; run.castleEl = arg; run.castleCombo = null; R.castleKey = null; R.bg = {}; SFX.play('hammer'); FX.flash(ELEMENTS[arg].col, 0.5); UI.toast(`The keep turns ${ELEMENTS[arg].name}: ${CASTLE_POWERS[arg].name}.`); break; }
     case 'buydraft': { UI.coachDone('draft-ready'); if (G.phase !== 'prep') return; const c = run.roster.length >= rosterCap(run) ? swapCost(run) : draftCost(run); if (run.gold < c) return UI.toast(`Drafting costs ${c} gold. Save up ${c - run.gold} more.`, true);
@@ -506,7 +525,7 @@ function showTitle() {
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 2 legends at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Each boss you beat makes rarer cards turn up.</div>
-      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls in a siege is gone for good, unless you call them back to the keep in time.</div>
+      <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;

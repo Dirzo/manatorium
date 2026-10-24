@@ -1,7 +1,7 @@
 // node mass.mjs <k> <runsPerStyle> [diffJSON] -> per-style fraction beating boss k with META_CURVE[k-1] diamonds
 import fs from 'fs'; import vm from 'vm';
 const dir = new URL('../src/', import.meta.url).pathname;
-const code = ['data.js', 'sim.js', 'styles.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,botMeta,BAL,HORDE_DIFF};';
+const code = ['data.js', 'sim.js', 'styles.js', 'traits.js', 'state.js', 'lore.js', 'achievements.js', 'simbot.js'].map(f => fs.readFileSync(dir + f, 'utf8')).join('\n') + '\n;globalThis.__api={botPlayRun,botMeta,BAL,HORDE_DIFF};';
 const CURVE = [0, 20, 50, 90, 140, 200, 270, 350, 440, 560];
 const [k, n, diff] = [+process.argv[2], +process.argv[3], JSON.parse(process.argv[4] || 'null')];
 const ctx = { FX: new Proxy({}, { get: () => () => {} }), Math, console, Object, Array, Set, JSON, Date }; vm.createContext(ctx); vm.runInContext(code, ctx);
