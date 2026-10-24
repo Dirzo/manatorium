@@ -366,7 +366,7 @@ G.act = function (act, arg) {
       if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);
       UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
-      if (r.starUp) { SFX.play('level'); FX.flash(RARITY[heroRarity(r.h)].col, 0.35); UI.banner(heroDisplayName(r.h), `rises to ${'★'.repeat(heroStar(r.h))}`, heroBanner(r.h)); }
+      if (r.starUp) { FX.flash(STAR_COL[heroStar(r.h) - 1], 0.35); STARUP.show(r.h, heroStar(r.h) - 1, heroStar(r.h)); }
       else if (r.merged) { SFX.play('buy'); UI.toast(`${heroDisplayName(r.h)}: ${r.h.copies} copies. ${copiesToNext(r.h) ? `${copiesToNext(r.h)} more for ★${heroStar(r.h) + 1}.` : 'Max stars.'}`); }
       else { SFX.play('draft'); UI.banner(HERO_BY_ID[r.h.id].name, 'answers the call', heroBanner(r.h)); }
       break; }

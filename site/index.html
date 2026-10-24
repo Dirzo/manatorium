@@ -1375,6 +1375,22 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .breach { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; margin: 8px 0; border-radius: 10px; background: rgba(255,90,120,.12); border: 1px solid rgba(255,90,120,.4); }
 .breach b { color: var(--rose); }
 
+/* star-up show (Cam 2026-10-24): copies fuse, a flash, the legend returns recoloured with a bigger weapon */
+.starup { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: radial-gradient(ellipse at 50% 42%, rgba(46,34,100,0.95), rgba(8,8,24,0.97)); animation: suIn 0.25s ease-out; cursor: pointer; user-select: none; }
+.starup.out { animation: suOut 0.28s forwards; }
+.starup canvas { width: min(92vw, 520px, 90vh * 4 / 3); image-rendering: pixelated; }
+.starup .su-txt { text-align: center; margin-top: -2vh; opacity: 0; transform: translateY(10px) scale(0.9); transition: opacity 0.3s 0.25s, transform 0.4s 0.25s cubic-bezier(.3,1.6,.5,1); padding: 0 16px; }
+.starup.lit .su-txt { opacity: 1; transform: none; }
+.starup h2 { font-size: clamp(24px, 5vw, 44px); color: var(--sc); text-shadow: 3px 3px 0 var(--ink); letter-spacing: 0.06em; }
+.starup .su-txt p { margin: 4px 0 0; font-size: clamp(15px, 2.6vw, 20px); color: #fff; text-shadow: 2px 2px 0 var(--ink); }
+.starup .su-stars { color: var(--sc); font-size: 1.3em; letter-spacing: 0.1em; }
+.starup .su-sig { margin-top: 8px !important; display: inline-block; padding: 6px 14px; border: 2px solid #ffd94a; border-radius: 4px; background: rgba(90,60,10,0.6); box-shadow: 0 0 18px rgba(255,217,74,0.45); font-size: clamp(13px, 2.2vw, 16px) !important; }
+.starup .su-sig b { color: #ffd94a; }
+.starup .su-skip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); color: rgba(255,255,255,0.5); font-size: 12px; }
+@keyframes suIn { from { opacity: 0; } }
+@keyframes suOut { to { opacity: 0; transform: scale(1.04); } }
+.note.starforged { color: #ffd94a; }
+
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
 #mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
@@ -2535,19 +2551,21 @@ function rgbToHex(r, g, b) { return '#' + [r, g, b].map(v => Math.max(0, Math.mi
 function shade(h, f) { const [r, g, b] = hexToRgb(h); return f < 0 ? rgbToHex(r * (1 + f), g * (1 + f), b * (1 + f)) : rgbToHex(r + (255 - r) * f, g + (255 - g) * f, b + (255 - b) * f); }
 
 class PixGrid {
-  constructor(w, h) { this.w = w; this.h = h; this.p = new Array(w * h).fill(null); this.flat = new Set(); }
-  set(x, y, c, flat) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return; this.p[y * this.w + x] = c; if (flat) this.flat.add(y * this.w + x); else this.flat.delete(y * this.w + x); }
-  get(x, y) { if (x < 0 || y < 0 || x >= this.w || y >= this.h) return null; return this.p[y * this.w + x]; }
+  // ox/oy: where the 20x20 body sits inside a bigger grid (starred legends get room for their grown weapon)
+  constructor(w, h, ox = 0, oy = 0) { this.w = w; this.h = h; this.ox = ox; this.oy = oy; this.p = new Array(w * h).fill(null); this.flat = new Set(); }
+  set(x, y, c, flat) { x = Math.round(x) + this.ox; y = Math.round(y) + this.oy; if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return; this.p[y * this.w + x] = c; if (flat) this.flat.add(y * this.w + x); else this.flat.delete(y * this.w + x); }
+  get(x, y) { return this.raw(x + this.ox, y + this.oy); }
+  raw(x, y) { if (x < 0 || y < 0 || x >= this.w || y >= this.h) return null; return this.p[y * this.w + x]; }
   rect(x0, y0, x1, y1, c, flat) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.set(x, y, c, flat); }
-  clear(x, y) { if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = null; }
+  clear(x, y) { x += this.ox; y += this.oy; if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.p[y * this.w + x] = null; }
   finish() {
     // soft volume: back (left) edge darker, top edge lighter
     const out = this.p.slice();
     for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
       const i = y * this.w + x, c = this.p[i]; if (!c || this.flat.has(i)) continue;
-      if (!this.get(x - 1, y)) out[i] = shade(c, -0.22);
-      else if (!this.get(x, y - 1)) out[i] = shade(c, 0.18);
-      else if (!this.get(x, y + 1)) out[i] = shade(c, -0.12);
+      if (!this.raw(x - 1, y)) out[i] = shade(c, -0.22);
+      else if (!this.raw(x, y - 1)) out[i] = shade(c, 0.18);
+      else if (!this.raw(x, y + 1)) out[i] = shade(c, -0.12);
     }
     // outline
     const o = out.slice();
@@ -2706,8 +2724,47 @@ function drawWpnMap(g, map, pal, ax, ay) {
   map.r.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const p = pal[row[rx]]; if (p) g.set(ax + rx - ox, ay + ry - oy, p[0], !!p[1]); } });
 }
 
+// Star levels (Cam 2026-10-24): a 2★ legend is polished silver, a 3★ legend gilded gold, and each step grows the weapon.
+// Starred sprites are built on a 32x34 grid with the 20x20 body at (6,10), so a grown weapon has room past the body.
+const STAR_PAD = { w: 32, h: 34, l: 6, t: 10 };
+const STAR_LOOK = [null,
+  { ws: 1.3, metal: '#eef6ff', trim: '#c8d6f8', trimMix: 0.8, tint: '#e8f0ff', tintMix: 0.18, gem: 0.35 },
+  { ws: 1.6, metal: '#ffd94a', trim: '#f0b030', trimMix: 0.9, tint: '#ffe08a', tintMix: 0.22, gem: '#fff3a0', cape: '#ffcf3a' }];
+function starSpec(spec, star, ws) {
+  const L = STAR_LOOK[star - 1]; if (!L) return spec;
+  const lerp = (a, b, k) => { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k, A[2] + (B[2] - A[2]) * k); };
+  const o = Object.assign({}, spec, { star, ws: ws || L.ws, metal: L.metal });
+  o.armor = lerp(spec.armor, L.tint, L.tintMix); o.armor2 = lerp(spec.armor2 || shade(spec.armor, -0.3), L.trim, L.trimMix);
+  if (spec.gem) o.gem = typeof L.gem === 'string' ? L.gem : shade(spec.gem, L.gem);
+  if (spec.cape && L.cape) o.cape = lerp(spec.cape, L.cape, 0.45);
+  if (spec.plume && L.cape) o.plume = L.cape;
+  return o;
+}
+// draws a weapon scaled up around the hand (nearest-neighbour, so it stays pixel art); ws 1 draws it as is
+function growWeapon(g, ws, ax, ay, draw) {
+  if (!ws || ws <= 1) return draw(g, ax, ay);
+  const N = 64, C = 32, T = new PixGrid(N, N); draw(T, C, C);
+  let x0 = N, x1 = -1, y0 = N, y1 = -1;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (T.p[y * N + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return;
+  for (let Y = Math.floor(ay + (y0 - C - 0.5) * ws); Y <= Math.ceil(ay + (y1 - C + 0.5) * ws); Y++)
+    for (let X = Math.floor(ax + (x0 - C - 0.5) * ws); X <= Math.ceil(ax + (x1 - C + 0.5) * ws); X++) {
+      let sx = C + Math.round((X - ax) / ws), sy = C + Math.round((Y - ay) / ws);
+      // the hand stays one pixel: stretched copies of it take the haft next to it instead
+      if (sx === C && sy === C && (X !== ax || Y !== ay)) { const dx = Math.sign(X - ax), dy = Math.sign(Y - ay);
+        const n = [[0, dy], [dx, 0], [0, -dy || 1], [0, 1], [0, -1]].find(([a, b]) => (a || b) && T.raw(C + a, C + b)); if (!n) continue; sx += n[0]; sy += n[1]; }
+      const i = sy * N + sx, c = sx >= 0 && sy >= 0 && sx < N && sy < N ? T.p[i] : null; if (c) g.set(X, Y, c, T.flat.has(i));
+    }
+}
+// where a sprite frame lands when its 20x20 body is drawn fs pixels tall with its feet at (cx, by), as in drawUnit
+function frameBox(img, cx, by, fs) {
+  if (img.width !== STAR_PAD.w || img.height !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
+  const k = fs / 20, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  return { x: cx - w / 2, y: by + 1 - fs - Math.round(STAR_PAD.t * k), w, h };
+}
+
 function genHumanoid(s, frame) {
-  const g = new PixGrid(20, 20);
+  const g = s.star ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;
@@ -2810,10 +2867,10 @@ function genHumanoid(s, frame) {
     const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
     if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
     else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
-    g.set(ax, ay, skin); drawWpnMap(g, map, pal, ax, ay);
-    if (wp.b) drawWpnMap(g, wp.b, pal, 5, 15 + by);
-  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); drawWeapon(g, s, s.weapon, 14, 12 + by, true); }
-  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); drawWeapon(g, s, s.weapon, 12, 14 + by, false); }
+    g.set(ax, ay, skin); growWeapon(g, ws, ax, ay, (G, x, y) => drawWpnMap(G, map, pal, x, y));
+    if (wp.b) growWeapon(g, ws, 5, 15 + by, (G, x, y) => drawWpnMap(G, wp.b, pal, x, y));
+  } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); growWeapon(g, ws, 15, 12 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, true)); }
+  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); growWeapon(g, ws, 13, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   return g.finish();
 }
@@ -2939,12 +2996,15 @@ function buildAllSprites() {
 // elemental variations are built on demand: key 'h:<id>:<element>'
 function ensureSprite(key) {
   if (SPR[key]) return SPR[key];
-  const m = /^h:([a-z]+):([a-z]+)$/.exec(key); if (!m) return null;
-  const d = HERO_BY_ID[m[1]], E = ELEMENTS[m[2]]; if (!d || !E) return null;
-  const dark = c => shade(c, -0.35);
-  const spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
-  if (d.spr.cape) spec.cape = E.col2;
-  if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2;
+  // 'h:<id>', 'h:<id>:<element>', either with '~<star>' (2 or 3) and optionally '@<weapon scale>' for the star-up show
+  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?$/.exec(key); if (!m) return null;
+  const d = HERO_BY_ID[m[1]], E = m[2] && ELEMENTS[m[2]]; if (!d || (m[2] && !E)) return null;
+  let spec = d.spr;
+  if (E) { const dark = c => shade(c, -0.35);
+    spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
+    if (d.spr.cape) spec.cape = E.col2;
+    if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
+  if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
   return buildSprite(key, spec, false);
 }
 
@@ -3024,8 +3084,10 @@ function itemIconURL(it, px = 3) {
 }
 function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
-  const s = SPR[key].frames[frame]; const c = document.createElement('canvas'); c.width = s.width * px; c.height = s.height * px;
-  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(s, 0, 0, c.width, c.height); return c.toDataURL();
+  const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
+  // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
+  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
+  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
 }
 
 // Unique 12x12 icons for every finished item. Letters map to ITEM_PAL (falls back to ICON_PAL); '.' is transparent.
@@ -3808,7 +3870,8 @@ function activeSynergies(run) {
 // ----- hero stats -----
 function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
-function heroSpriteKey(h) { return h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id; }
+// 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
+function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
 function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
@@ -3879,6 +3942,7 @@ function sellHero(run, h) {
 }
 function trinityActive(run) { const st = new Set(Object.keys(fieldElements(run)).map(e => ELEMENTS[e].style)); return st.size >= 3; }
 
+const STARFORGED = { mul: 1.35, mana: 0.25 };
 function heroStats(h, run, meta, syn) {
   const d = HERO_BY_ID[h.id], b = CLASS_BASE[d.cls], rar = heroRarity(h), tm = rarityMul(rar) * starMul(h), lm = heroLevelMul(h.level), bp = 1 + 0.05 * heroBonusPts(run, h);
   const gm = 1 + 0.1 * (meta.ranks.drills || 0);
@@ -3890,6 +3954,8 @@ function heroStats(h, run, meta, syn) {
     ap: (1 + 0.15 * (meta.ranks.codex || 0)) * bp, firstStrike: 0, frenzy: 0, sp: {}, el: {}, rank: sigRank(h.level), sigOn: h.level >= SIG_LEVEL,
     sigMul: h.level >= SIG_LEVEL ? 1 + 0.07 * (h.level - SIG_LEVEL) : 0, regen: 0, scale: raritySize(rar) * (1 + 0.08 * (heroStar(h) - 1)), rarity: rar, star: heroStar(h), echo: [0, 0, 0, 0.5, 0.75, 1][rar], dmgTaken: 1, bossDmg: 0, greed: 0, startShield: 0 };
   if (run.tech.focus) s.sigMul *= 1.25;
+  // 3★ (Cam 2026-10-24): a starforged signature. Unlocked even before its level, one rank higher, 35% stronger, a quicker first cast
+  if (s.star >= 3) { if (!s.sigOn) { s.sigOn = true; s.sigMul = 1; s.rank = 1; } s.starRank = 1; s.rank += 1; s.sigMul *= STARFORGED.mul; s.startMana += STARFORGED.mana; }
   if (s.rank > 0) s.rank += rar; // rarer legends cast a higher-ranked signature
   if (rar >= 2) s.startMana += rar >= 5 ? 1 : 0.35;
   s.ability = d.ability; s.aName = d.aName; s.aDesc = d.aDesc;
@@ -4762,6 +4828,8 @@ function castSignature(B, u) {
   const myEl = u.els || [], cb = (B.combos || []).find(c => myEl.includes(c.a) || myEl.includes(c.b));
   FX.cutin(u, u.st.aName || u.def.aName, ecol, { ab: u.st.ability || u.def.ability, els: myEl, col2: myEl[0] ? ELEMENTS[myEl[0]].col2 : '#ffffff', combo: cb ? { name: cb.name, ca: ELEMENTS[cb.a].col, cb: ELEMENTS[cb.b].col } : null, pw: sigPower(u) });
   FX.castSpark(u, ecol);
+  // a starforged (3★) signature goes off with a burst of gold stars
+  if (u.st.starRank && !u.echoing) { FX.particles(u.x, u.y - 12, 16, ['#ffd94a', '#ffffff', '#fff3a0'], { spread: 18, up: true }); FX.shockwave(u.x, u.y - 8, 22, '#ffd94a'); FX.text(u.x, u.y - 34, '★★★', '#ffd94a', true); }
   if (u.st.sp.runeStrike) u.spellblade = 3;
   if (u.st.sp.curse) for (const e of B.enemies) if (e.alive && dist(e, u) < 200) e.curseT = 4;
   if (E.light) for (const h of B.heroes) if (h.alive) healUnit(B, u, h, h.maxHp * 0.1 * E.light, true, 'element');
@@ -7672,12 +7740,12 @@ function drawUnit(g, u, t, opts = {}) {
     const a0 = g.globalAlpha;
     for (const [dx, dy, aa] of [[-2 * o, 0, 0.45], [2 * o, 0, 0.45], [0, -2 * o, 0.45], [0, 2 * o, 0.45], [-o, -o, 1], [o, -o, 1], [-o, o, 1], [o, o, 1], [-o, 0, 1], [o, 0, 1], [0, -o, 1], [0, o, 1]]) { g.globalAlpha = a0 * aa * (star === 3 ? 0.8 + 0.2 * Math.sin(t * 4 + (u.phase || 0)) : 0.95);
       if (I2) drawIdleUnit(g, sil, fx + dx, y + dy, fs, flip, I2);
-      else if (flip) { g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, -fs / 2, y + dy - fs + 1, fs, fs); g.restore(); }
-      else g.drawImage(sil, fx + dx - fs / 2, y + dy - fs + 1, fs, fs); }
+      else if (flip) { const b = frameBox(sil, 0, y + dy, fs); g.save(); g.translate(fx + dx, 0); g.scale(-1, 1); g.drawImage(sil, b.x, b.y, b.w, b.h); g.restore(); }
+      else { const b = frameBox(sil, fx + dx, y + dy, fs); g.drawImage(sil, b.x, b.y, b.w, b.h); } }
     g.globalAlpha = a0; }
   if (idle) drawIdleUnit(g, img, fx, y, fs, flip, idle);
-  else if (flip) { g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, -fs / 2, y - fs + 1, fs, fs); }
-  else g.drawImage(img, fx - fs / 2, y - fs + 1, fs, fs);
+  else if (flip) { const b = frameBox(img, 0, y, fs); g.translate(fx, 0); g.scale(-1, 1); g.drawImage(img, b.x, b.y, b.w, b.h); }
+  else { const b = frameBox(img, fx, y, fs); g.drawImage(img, b.x, b.y, b.w, b.h); }
   g.restore();
   if (u.frozen > 0 && u.alive !== false) { g.globalAlpha = 0.45; g.fillStyle = '#bfeeff'; g.fillRect(x - size / 2 + 3, y - size + 4, size - 6, size - 4); g.globalAlpha = 1; }
   if (u.hat) { const hx = x + (u.facing === 1 ? 1 : -1), hy = y - Math.round(size * 0.86); g.fillStyle = OUTLINE; g.fillRect(hx - 3, hy, 7, 1); g.fillStyle = Math.floor(hx) % 2 ? '#ff5d8f' : '#5fd3ff'; g.fillRect(hx - 2, hy - 2, 5, 2); g.fillRect(hx - 1, hy - 4, 3, 2); g.fillStyle = '#ffd84a'; g.fillRect(hx, hy - 6, 1, 2); g.fillRect(hx - 1, hy - 1, 1, 1); }
@@ -7877,7 +7945,7 @@ function renderFrame(V, dt) {
     drawUnit(g, u, t, { selected: V.selected && u.inst && u.inst.uid === V.selected });
     if (u.shards) drawShardCrown(g, u, t);
   }
-  for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); g.drawImage(S.white.atk, Math.round(gh.x - 10), Math.round(gh.y - 19)); g.globalAlpha = 1; }
+  for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); const b = frameBox(S.white.atk, Math.round(gh.x), Math.round(gh.y), 20); g.drawImage(S.white.atk, b.x, b.y, b.w, b.h); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
   if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
@@ -8237,12 +8305,15 @@ function drawIdleUnit(g, img, x, y, fs, flip, I) {
   if (def.back) { def.back(P, k, t); g.globalAlpha = base; }
   g.globalAlpha = base * (p.a != null ? p.a : 1);
   const w = Math.round(fs * (p.sx || 1)), h = Math.round(fs * (p.sy || 1));
+  // starred legends have a padded frame (sprites.js STAR_PAD): L, T are the pad left of and above the 20x20 body
+  const pad = img.width === STAR_PAD.w && img.height === STAR_PAD.h, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0, IW = img.width, IH = img.height;
+  const pl = Math.round(L * w / 20), pt = Math.round(T * h / 20), fw = Math.round(IW * w / 20), fh = Math.round(IH * h / 20);
   if (hx || hy) { // the head (rows above cut, left of the weapon column hc) moves on its own
     const cut = p.cut || 11, hc = p.hc || 14, ch = Math.round(cut * h / 20), cw = Math.round(hc * w / 20);
-    g.drawImage(img, 0, cut, 20, 20 - cut, -w / 2, -h + ch, w, h - ch);
-    g.drawImage(img, hc, 0, 20 - hc, cut, -w / 2 + cw, -h, w - cw, ch);
-    g.drawImage(img, 0, 0, hc, cut, -w / 2 + Math.round(hx * s), -h + Math.round(hy * s), cw, ch); }
-  else g.drawImage(img, -w / 2, -h, w, h);
+    g.drawImage(img, 0, T + cut, IW, IH - T - cut, -w / 2 - pl, -h + ch, fw, fh - pt - ch);
+    g.drawImage(img, L + hc, 0, IW - L - hc, T + cut, -w / 2 + cw, -h - pt, fw - pl - cw, pt + ch);
+    g.drawImage(img, 0, 0, L + hc, T + cut, -w / 2 - pl + Math.round(hx * s), -h - pt + Math.round(hy * s), pl + cw, pt + ch); }
+  else g.drawImage(img, -w / 2 - pl, -h - pt, fw, fh);
   P.fade = g.globalAlpha;
   if (def.front) { def.front(P, k, t); }
   g.restore();
@@ -10048,8 +10119,9 @@ const UI = {
     if (!h) { el._html = null; el.innerHTML = `<h3>Pick a champion</h3><p class="note">Click a card or a hero on the field to see their rarity, signature and items. Drag cards onto the field to place them.</p>`; return; }
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, G.meta);
     const its = heroItems(run, h);
-    const sig = h.level < SIG_LEVEL ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
-      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p></div>`;
+    const sf = st.starRank ? `<p class="note starforged">★★★ Starforged: +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power and a quicker first cast${h.level < SIG_LEVEL ? ', unlocked early' : ''}.</p>` : `<p class="note">At ★★★ the signature is starforged: +1 rank and +${Math.round((STARFORGED.mul - 1) * 100)}% power.</p>`;
+    const sig = !st.sigOn ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
+      : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) - (st.starRank || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - (st.starRank || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p>${sf}</div>`;
     const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))} ${starBadge(h, true)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
       <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
       <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
@@ -10210,6 +10282,103 @@ const UI = {
     on.el.classList.remove('spot'); $('coach').hidden = true; UI.coachOn = null;
     G.meta.seen = G.meta.seen || {}; G.meta.seen[on.key] = 1; save();
     const n = UI.coachQ.shift(); if (n) setTimeout(() => UI.coach(n.key, n.el, n.text), 200);
+  },
+};
+
+// ===== Star-up show (Cam 2026-10-24) =====
+// When copies merge a legend into 2★ or 3★: the copies fly in and fuse, a flash, the legend comes back recoloured
+// (silver at 2★, gold at 3★), the weapon grows in pixel steps, and the stars stamp in one by one.
+// A 3★ legend also gets its starforged signature called out. Tap to skip.
+const STARUP = {
+  queue: [], cur: null,
+  show(h, s0, s1) { this.queue.push({ h, s0, s1 }); if (!this.cur) this.next(); },
+  next() {
+    const job = this.queue.shift(); if (!job) { this.cur = null; return; }
+    const { h, s0, s1 } = job, d = HERO_BY_ID[h.id], col = STAR_COL[s1 - 1], quiet = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const base = heroSpriteKey(h, true), oldKey = s0 > 1 ? base + '~' + s0 : base, newKey = base + '~' + s1;
+    const ws0 = s0 > 1 ? STAR_LOOK[s0 - 1].ws : 1, ws1 = STAR_LOOK[s1 - 1].ws;
+    const grow = [0, 1, 2, 3, 4].map(i => { const k = newKey + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2); ensureSprite(k); return k; });
+    ensureSprite(oldKey); ensureSprite(newKey);
+    const st = heroStats(h, G.run, G.meta), sig = s1 >= 3 ? `<p class="su-sig">Starforged signature: <b>${esc(st.aName || d.aName)}</b> +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power</p>` : '';
+    const el = document.createElement('div'); el.className = `starup s${s1}`; el.style.setProperty('--sc', col);
+    el.innerHTML = `<canvas width="${STARUP.W}" height="${STARUP.H}"></canvas><div class="su-txt"><h2 class="alive">${aliveText(heroDisplayName(h))}</h2><p>rises to <span class="su-stars">${'★'.repeat(s1)}</span></p>${sig}</div><small class="su-skip">tap to continue</small>`;
+    document.body.appendChild(el);
+    const cv = el.querySelector('canvas'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    const T = { t: quiet ? 1.2 : 0, end: (s1 >= 3 ? 3.7 : 3.0), parts: [], stamped: 0, burst: false, grownTo: -1, last: performance.now(), done: false };
+    this.cur = { el, T };
+    const close = () => { if (T.done) return; T.done = true; el.classList.add('out'); setTimeout(() => { el.remove(); this.next(); }, 280); };
+    el.addEventListener('pointerdown', close);
+    const loop = now => {
+      if (T.done) return; const dt = Math.min(0.05, (now - T.last) / 1000); T.last = now; T.t += dt;
+      STARUP.frame(g, T, { oldKey, newKey, grow, col, s0, s1, quiet });
+      if (T.t >= T.end) close(); else requestAnimationFrame(loop);
+    };
+    SFX.play('whoosh'); requestAnimationFrame(loop);
+    if (quiet) { T.burst = true; el.classList.add('lit'); SFX.play('forged'); }
+  },
+  W: 160, H: 120,
+  // one frame of the show on the little pixel canvas
+  frame(g, T, o) {
+    const { W, H } = STARUP, t = T.t, cx = W / 2, feet = 94, fs = 46, gold = o.s1 >= 3;
+    g.clearRect(0, 0, W, H);
+    const P = (x, y, c, w = 1, h = 1) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+    const sprite = (key, fr, x, y, a = 1, white) => { const S = SPR[key]; if (!S) return; const img = white ? S.white[fr] : S.frames[fr], b = frameBox(img, x, y, fs); g.globalAlpha = a; g.drawImage(img, Math.round(b.x), Math.round(b.y), b.w, b.h); g.globalAlpha = 1; };
+    const spark = (x, y, n, cols, sp = 40, up = 0) => { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, v = sp * (0.4 + Math.random() * 0.8); T.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - up, life: 0.5 + Math.random() * 0.6, t: 0, c: cols[i % cols.length], g: 60 }); } };
+    const cols = gold ? ['#ffd94a', '#fff3a0', '#ffffff', '#ff9a3a'] : ['#e8f0ff', '#ffffff', '#9fd8ff', '#c8b8ff'];
+    const GATHER = 0.55, CHARGE = 0.85;
+    // light rays behind the legend, spinning faster once it bursts
+    const ra = t < GATHER ? 0 : Math.min(1, (t - GATHER) / 0.3);
+    if (ra > 0) { const n = gold ? 12 : 9, spin = t * (T.burst ? 0.9 : 2.2), R = 90;
+      const oy = feet - 22, fade = c => { const G2 = g.createRadialGradient(cx, oy, 4, cx, oy, R * 0.8); G2.addColorStop(0, c); G2.addColorStop(0.55, c); G2.addColorStop(1, 'rgba(0,0,0,0)'); return G2; }, F = [fade(o.col), fade('#ffffff')];
+      for (let i = 0; i < n; i++) { const a0 = spin + i * TAU / n, a1 = a0 + TAU / n * 0.45;
+        g.globalAlpha = ra * (i % 2 ? 0.22 : 0.45); g.fillStyle = F[i % 2]; g.beginPath(); g.moveTo(cx, oy); g.lineTo(cx + Math.cos(a0) * R, oy + Math.sin(a0) * R); g.lineTo(cx + Math.cos(a1) * R, oy + Math.sin(a1) * R); g.closePath(); g.fill(); }
+      g.globalAlpha = ra * 0.3; g.fillStyle = fade(o.col); g.beginPath(); g.arc(cx, oy, 22 + Math.sin(t * 6) * 2, 0, TAU); g.fill(); g.globalAlpha = 1; }
+    // pedestal
+    g.globalAlpha = 0.5; P(cx - 18, feet + 1, '#1a1230', 36, 3); g.globalAlpha = 1; P(cx - 14, feet + 1, o.col, 28, 1); P(cx - 10, feet + 3, o.col, 20, 1);
+    if (!T.burst) {
+      // the copies fly in from the sides and fuse into the legend
+      const k = Math.min(1, t / GATHER), e = k * k * (3 - 2 * k);
+      for (const side of [-1, 1]) { const sx = cx + side * (70 - 70 * e), sy = feet - Math.sin(e * Math.PI) * 26;
+        if (k >= 1) continue; const fr = Math.floor(t * 10) % 2 ? 'walk0' : 'walk1';
+        for (let tr = 1; tr <= 2; tr++) { const kk = Math.max(0, e - tr * 0.05); sprite(o.oldKey, fr, cx + side * (70 - 70 * kk), feet - Math.sin(kk * Math.PI) * 26, 0.18 / tr, true); }
+        sprite(o.oldKey, fr, sx, sy, 0.95); sprite(o.oldKey, fr, sx, sy, 0.25 + 0.6 * e, true);
+        if (Math.random() < 0.5) T.parts.push({ x: sx + (Math.random() - 0.5) * 10, y: sy - Math.random() * 20, vx: 0, vy: -10, life: 0.4, t: 0, c: o.col, g: 0 }); }
+      // the legend charges: it shakes and strobes white
+      const ch = t > GATHER ? (t - GATHER) / (CHARGE - GATHER) : 0, jit = ch > 0 ? (Math.random() * 2 - 1) * ch * 1.5 : 0;
+      sprite(o.oldKey, Math.floor(t * 2) % 2 ? 'idle1' : 'idle0', cx + jit, feet);
+      if (ch > 0 && Math.floor(t * (10 + ch * 20)) % 2) sprite(o.oldKey, 'idle0', cx + jit, feet, 0.4 + ch * 0.5, true);
+      if (ch > 0) for (let i = 0; i < 2; i++) { const a = Math.random() * TAU, r = 40 - ch * 20; T.parts.push({ x: cx + Math.cos(a) * r, y: feet - 22 + Math.sin(a) * r, vx: -Math.cos(a) * 60, vy: -Math.sin(a) * 60, life: 0.35, t: 0, c: o.col, g: 0 }); }
+      if (t >= CHARGE) { T.burst = true; T.burstT = t; spark(cx, feet - 22, gold ? 46 : 32, cols, 80, 20); SFX.play('stamp'); SFX.play('forged'); const el = STARUP.cur && STARUP.cur.el; if (el) el.classList.add('lit'); }
+    } else {
+      const bt = t - (T.burstT || 0);
+      // shockwave rings
+      for (const [d, c] of [[0, '#ffffff'], [0.08, o.col]]) { const k = (bt - d) / 0.45; if (k > 0 && k < 1) { g.globalAlpha = 1 - k; g.strokeStyle = c; g.lineWidth = 2; g.beginPath(); g.arc(cx, feet - 22, 6 + k * 60, 0, TAU); g.stroke(); g.globalAlpha = 1; } }
+      // the weapon grows in steps, a sparkle for each
+      const step = Math.min(4, Math.floor(Math.max(0, bt - 0.15) / 0.11));
+      if (step !== T.grownTo) { T.grownTo = step; if (step > 0) { SFX.play(step === 4 ? 'anvil' : 'click'); spark(cx + 12, feet - 34 - step * 3, 6, cols, 30); } }
+      const key = step >= 4 ? o.newKey : o.grow[step], fr = bt < 0.75 ? 'atk' : Math.floor(t * 2) % 2 ? 'idle1' : 'idle0';
+      sprite(key, fr, cx, feet);
+      if (bt < 0.35) sprite(key, fr, cx, feet, 1 - bt / 0.35, true); // the white flash fades off the new colours
+      // stars stamp in over the head
+      const n = o.s1, s0 = 0.55;
+      for (let i = 0; i < n; i++) { const st = bt - s0 - i * 0.22; if (st < 0) continue;
+        if (T.stamped <= i) { T.stamped = i + 1; SFX.play(i === n - 1 ? 'level' : 'drop'); spark(cx + (i - (n - 1) / 2) * 13, feet - 60, 10, cols, 40); }
+        const sc = st < 0.12 ? 3 - 2 * (st / 0.12) : st < 0.22 ? 1 - 0.25 * Math.sin((st - 0.12) / 0.1 * Math.PI) : 1, x = cx + (i - (n - 1) / 2) * 13, y = feet - 62 + Math.sin(t * 3 + i) * 1;
+        STARUP.star(g, x, y, sc, o.col, gold && Math.floor(t * 6 + i) % 4 === 0); }
+      // confetti keeps drifting down
+      if (Math.random() < (gold ? 0.7 : 0.45)) T.parts.push({ x: Math.random() * W, y: -2, vx: (Math.random() - 0.5) * 10, vy: 15 + Math.random() * 15, life: 3, t: 0, c: cols[Math.floor(Math.random() * cols.length)], g: 0, conf: true });
+    }
+    // particles
+    for (const p of T.parts) { p.t += 1 / 60; p.vy += p.g / 60; p.x += p.vx / 60; p.y += p.vy / 60; g.globalAlpha = p.conf ? 0.9 : Math.max(0, 1 - p.t / p.life); P(p.x, p.y, p.c, p.conf && Math.floor(p.t * 8) % 2 ? 2 : 1, 1); }
+    g.globalAlpha = 1; T.parts = T.parts.filter(p => p.t < p.life && p.y < H + 2);
+  },
+  // a chunky pixel star, scaled sc times, outlined like the ones over champions
+  star(g, x, y, sc, col, glint) {
+    const rows = ['...#...', '...#...', '..###..', '#######', '.#####.', '..###..', '.##.##.', '.#...#.'], s = Math.max(1, Math.round(sc * 1.4)) / 1.4, k = s * 1.4;
+    const x0 = Math.round(x - 3.5 * k), y0 = Math.round(y - 4 * k), q = Math.max(1, Math.round(k));
+    for (const [ox, oy, c] of [[-1, 0, OUTLINE], [1, 0, OUTLINE], [0, -1, OUTLINE], [0, 1, OUTLINE], [0, 0, col]]) { g.fillStyle = c;
+      rows.forEach((r, ry) => { for (let rx = 0; rx < 7; rx++) if (r[rx] === '#') g.fillRect(x0 + Math.round(rx * k) + ox, y0 + Math.round(ry * k) + oy, q, q); }); }
+    g.fillStyle = '#ffffff'; g.fillRect(x0 + Math.round(3 * k), y0 + Math.round(3 * k), q, q); if (glint) { g.fillRect(x0 + Math.round(2 * k), y0 + Math.round(4 * k), q, q); }
   },
 };
 
@@ -11516,7 +11685,7 @@ function showTalk(run, done, x = {}) {
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h); A.hero.className = 'tk-a tk-hero';
+  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h, true); A.hero.className = 'tk-a tk-hero';
     const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
     tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
     tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
@@ -13041,7 +13210,7 @@ G.act = function (act, arg) {
       if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);
       UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
-      if (r.starUp) { SFX.play('level'); FX.flash(RARITY[heroRarity(r.h)].col, 0.35); UI.banner(heroDisplayName(r.h), `rises to ${'★'.repeat(heroStar(r.h))}`, heroBanner(r.h)); }
+      if (r.starUp) { FX.flash(STAR_COL[heroStar(r.h) - 1], 0.35); STARUP.show(r.h, heroStar(r.h) - 1, heroStar(r.h)); }
       else if (r.merged) { SFX.play('buy'); UI.toast(`${heroDisplayName(r.h)}: ${r.h.copies} copies. ${copiesToNext(r.h) ? `${copiesToNext(r.h)} more for ★${heroStar(r.h) + 1}.` : 'Max stars.'}`); }
       else { SFX.play('draft'); UI.banner(HERO_BY_ID[r.h.id].name, 'answers the call', heroBanner(r.h)); }
       break; }
