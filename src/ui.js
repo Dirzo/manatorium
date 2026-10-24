@@ -273,7 +273,7 @@ const UI = {
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
     const pr = $('pressBtn'); pr.hidden = G.phase !== 'prep' || !canPress(run);
-    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · 2× loot</small>' : '⚑ Hold <small>tap to press</small>'; }
+    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · gold · loot every 4th</small>' : '⚑ Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
     else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : (run.breaches || 0) >= BREACH.max ? 'The keep fell' : 'Walls breached'; }
@@ -298,13 +298,19 @@ const UI = {
     const run = G.run, B = G.B, s = run.siege, fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5;
     const tag = d => d.boss ? (d.boss === 'big' ? 'Boss' : 'Mini-boss') : d.elite ? 'Elite · may drop an item' : d.kind === 'flyer' ? 'Flies over the line' : d.kind === 'ranged' ? 'Ranged' : d.kind === 'healer' ? 'Heals the horde' : d.split ? 'Splits when slain' : d.spd > 35 ? 'Fast' : 'Melee';
     let ids, counts = null, title;
-    if (B && G.phase === 'siege') { counts = {}; for (const q of B.queue) counts[q.id] = (counts[q.id] || 0) + 1; for (const e of B.enemies) if (e.alive) counts[e.id] = (counts[e.id] || 0) + 1; ids = Object.keys(counts); title = 'Still coming'; }
+    if (B && G.phase === 'siege') { counts = {}; for (const q of B.queue) if (!q.turncoat) counts[q.id] = (counts[q.id] || 0) + 1; for (const e of B.enemies) if (e.alive && !e.turncoat) counts[e.id] = (counts[e.id] || 0) + 1; ids = Object.keys(counts); title = 'Still coming'; }
     else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); title = `Scouts report: siege ${s}`; }
     const act = activeSynergies(run); const synKeys = [...Object.keys(RACES), ...Object.keys(CLASSES)].filter(k => act[k] >= 0);
     const combos = activeCombos(run), fe = fieldElements(run);
-    const key = JSON.stringify([s, G.phase, counts, synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic, run.lanes, placedHeroes(run).map(x => x.place)]); if (key === UI.intelKey) return; UI.intelKey = key;
+    const wb = B && G.phase === 'siege' ? null : warbandFighters(run), wbLive = B && G.phase === 'siege' ? B.enemies.filter(e => e.turncoat && e.alive).length + B.queue.filter(q => q.turncoat).length : 0;
+    const key = JSON.stringify([s, G.phase, counts, wbLive, (run.warband || []).map(w => w.id + w.copies), synKeys, act, combos.map(c => c.key), fe, run.mods, run.tactic, run.lanes, placedHeroes(run).map(x => x.place)]); if (key === UI.intelKey) return; UI.intelKey = key;
     let h = `<div><span class="eyebrow">${esc(F.name)}${cycleOf(s) ? ' · ascended' : ''}</span><h3>${title}</h3></div>`;
     for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<div class="foe ${d.boss ? 'boss' : ''}"><img class="px" src="${portrait('e:' + id)}" alt=""><div><b>${esc(d.name)}</b><span>${esc(tag(d))}</span></div><span class="num" style="color:var(--gold)">${counts ? '×' + counts[id] : ''}</span></div>`; }
+    // the boss's warband: legends it recruited from your pool (state.js WARBAND)
+    if (wb && wb.length) { const news = new Set(run.warbandNews || []);
+      h += `<div class="mods warband"><p><b>${esc(bossShort(bossFor(s)))}'s warband.</b> Legends the boss recruited from the guild's pool. ${wb.length} fight this siege; their copies return to the pool when the next horde arrives.</p></div>`;
+      for (const w of wb) { const d = HERO_BY_ID[w.id], st = warbandStar(w); h += `<div class="foe warband"><img class="px" src="${portrait('h:' + w.id, 'idle0')}" alt=""><div><b>${esc(d.name)} ${'★'.repeat(st)}</b><span>${esc(RARITY[d.rar].name)} · ${w.copies} ${w.copies === 1 ? 'copy' : 'copies'}${news.has(w.id) ? ' · just recruited' : ''}${w.defected === s ? ' · defected from your shop' : ''}</span></div></div>`; } }
+    else if (wbLive) h += `<div class="mods warband"><p><b>Warband.</b> ${wbLive} recruited legends still in the fight.</p></div>`;
     const modNote = { chickens: 'Chickens incoming.', partyhats: 'The horde is wearing party hats (+25% gold).', giant: 'Your heroes are enormous this siege.', tiny: 'The horde is tiny and zoomy.', fewer: 'A smaller horde this time.', curse: 'The horde is angry about taxes (+30% HP).', inspire: 'Heroes +25% attack.', tonic: 'Heroes start at full mana.', honked: 'The goose is back.', bossmad: 'The boss is enraged: +25% HP, double gold.', bosssoft: 'The boss is holding back: −20% HP.' };
     if (!B && run.finale !== 'ready') { const L = run.lanes || (run.lanes = rollLanes(s, run.tactic)), held = [0, 0, 0];
       for (const x of placedHeroes(run)) if (x.place.type === 'grid' && !isRangedHero(x.id)) held[laneOf(cellPos(x.place.c, x.place.r).y)]++;
@@ -434,23 +440,27 @@ const UI = {
   },
   guildHTML(run) {
     // TFT shop (Cam 2026-10-23): five legends for sale, priced by rarity. Copies of a legend you own add up to stars.
-    const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), bc = barracksCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold), gc = guildCost(run);
+    const prep = G.phase === 'prep', odds = shopOdds(run), full = run.roster.length >= rosterCap(run), rc = shopRerollCost(run), intr = interestFor(run.gold), gc = guildCost(run);
     if (!run.shop) rollShop(run, G.meta);
     const season = runSeason(run) || [], fe0 = stackElements(run);
-    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="seasonpills"><small>In season</small>${season.map(e => { const n = fe0[e] || 0, nx = EL_STACK.at.find(v => v > n); return `<button class="sypill ${n >= 2 ? 'on' : ''}" data-act="herald" data-tip="els:${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} <small>${esc(STYLE_INFO[e].role)} · ${nx ? `${n}/${nx}` : n}</small></button>`; }).join('')}</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}${run.guild ? ` <i class="newb">guild rank ${run.guild}</i>` : ''}${draftBosses(run) > shopRank(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
+    let h = `<div class="shopbar"><span class="eyebrow">The shop</span><span class="seasonpills"><small>In season</small>${season.map(e => { const n = fe0[e] || 0, nx = EL_STACK.at.find(v => v > n); return `<button class="sypill ${n >= 2 ? 'on' : ''}" data-act="herald" data-tip="els:${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} <small>${esc(STYLE_INFO[e].role)} · ${nx ? `${n}/${nx}` : n}</small></button>`; }).join('')}</span><span class="note">Odds: ${odds.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ')}<i class="newb">guild level ${guildLevel(run)}</i>${draftBosses(run) > shopRank(run) ? ' <i class="newb">pressed</i>' : ''}</span></div><div class="shop">`;
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="scard sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], R = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), left = poolLeft(run, c.id);
-      const tag = own ? (copiesToNext(own) === 1 ? `<span class="stag up">★ ${heroStar(own) + 1} next!</span>` : `<span class="stag">Owned ★${heroStar(own)}</span>`) : full ? '<span class="stag dim">Keep full</span>' : '';
-      const up = !own && c.el && EL_STACK.at.includes((fe0[c.el] || 0) + 1);
-      h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${c.el ? ELEMENTS[c.el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} title="${esc(d.name)} · ${esc(d.aName)}">
-        <span class="sprice">${COST(cost)}</span>${tag}<img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(d.name.split(' ')[0])}</b>
-        <span class="chips">${raceChip(d.race)}${clsChip(d.cls)}</span><span class="chips">${own ? elChip(own.el) : elChip(c.el)}</span><small>${up ? `${ELEMENTS[c.el].name} ${(fe0[c.el] || 0) + 1}: ${esc(STYLE_INFO[c.el].style)} up` : `${left} left in the pool`}</small></button>`;
+      // simplified card (Cam 2026-10-24): the whole card is the rarity colour; four icons say element, class, race and personality
+      const el = own ? own.el : c.el, tmp = own ? heroTemper(own) : c.temper, T = TEMPERS[tmp];
+      const tag = own ? (copiesToNext(own) === 1 ? `<span class="stag up">★${heroStar(own) + 1} next</span>` : `<span class="stag">Owned ★${heroStar(own)}</span>`) : full ? '<span class="stag dim">Keep full</span>' : '';
+      const up = !own && el && EL_STACK.at.includes((fe0[el] || 0) + 1);
+      const ic = (cls, glyph, label, tip, style = '') => `<span class="sic ${cls}" data-tip="${tip}" style="${style}"><i>${glyph}</i><em>${esc(label)}</em></span>`;
+      h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${el ? ELEMENTS[el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} aria-label="${esc(d.name)}, ${R.name}, ${cost} gold">
+        <span class="shead"><span class="srar">${R.name}</span><span class="sprice">${COST(cost)}</span></span>${tag}
+        <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(d.name.split(' ')[0])}</b>
+        <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || '●', ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
+        <small class="spool">${left} left</small></button>`;
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
-      <button class="btn small" data-act="barracks" ${prep && bc != null && run.gold >= bc ? '' : 'disabled'} title="Room for one more champion on the field">${bc == null ? `Field full size (${ROSTER_CAP})` : `Field slot ${fieldCap(run) + 1} ${COST(bc)}`}</button>
-      <button class="btn small" data-act="guildrank" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="Each rank shows rarer legends in the shop, on top of what beating bosses unlocks.">${gc == null ? 'Guild rank max' : `Guild rank ${(run.guild || 0) + 1} ${COST(gc)}`}</button>
+      <button class="btn small" data-act="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot (up to ${GUILD_LV.max}) and deals rarer legends in the shop.">${gc == null ? `Guild level ${GUILD_LV.max} (max)` : `Guild level ${guildLevel(run) + 1} ${COST(gc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
     h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
     for (const hr of run.roster) {
@@ -597,7 +607,7 @@ const UI = {
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     const onField = run.roster.filter(x => x.place || x.vault || x.fled), bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
-    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Field slots grow with barracks bunks in the Guild Hall."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
+    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Each guild level in the Guild Hall adds a field slot."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
     for (const hr of list) {
       if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
@@ -657,7 +667,7 @@ const UI = {
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
         ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(d.name.split(' ')[0])}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
-    h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${rarityOdds(castleTier(run)).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each boss you beat opens a rarer tier.</span>
+    h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${shopOdds(run).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each guild level opens rarer legends.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;

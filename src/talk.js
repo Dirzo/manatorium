@@ -413,7 +413,7 @@ function talkScene(run) {
 }
 // boss-siege replies: each is a trade-off (see spawnEnemy, bossPatience, damageCastle and startBattle in sim.js; Cam 2026-10-22)
 const TALK_CHOICES = [
-  { k: 'taunt', mod: 'taunt', label: 'Taunt', sub: 'The boss opens with its fury moves, but drops 25% more gold and you get a second loot pick.' },
+  { k: 'taunt', mod: 'taunt', label: 'Taunt', sub: 'The boss opens with its fury moves, but drops 25% more gold, and a big boss gives you an extra pick of components.' },
   { k: 'firm', mod: 'firm', label: 'Stand firm', sub: 'Your walls take 15% less damage and the boss stays 20% longer before it loses patience.' },
   { k: 'rally', mod: 'rallycry', label: 'Rally', sub: 'Every champion starts the siege with half their mana.' },
 ];
@@ -423,7 +423,7 @@ const TALK_CHOICES_FINALE = [
   TALK_CHOICES[1], TALK_CHOICES[2],
 ];
 // what the reply does, for the scouts panel during the siege
-const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, a second loot pick.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
+const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, and an extra pick of components if it is a big boss.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
   rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.' };
 
 // ----- the boss gloats (Cam 2026-10-24) -----

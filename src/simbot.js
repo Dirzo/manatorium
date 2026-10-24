@@ -80,9 +80,9 @@ function botCapGoal(s) { return Math.min(ROSTER_CAP, 3 + Math.floor((s - 1) / 4)
 function botBuyShop(run, meta, style, reroll) {
   if (!run.shop) rollShop(run, meta);
   const chaos = style === 'chaos', keep = chaos ? 0 : run.siege >= 5 ? Math.min(30, 10 * Math.floor(run.siege / 8) + 10) : 0;
-  while (barracksCost(run) != null && fieldCap(run) < botCapGoal(run.siege) && run.gold >= barracksCost(run) + (run.siege >= 5 ? 4 : 0)) buyBarracks(run);
-  // guild ranks: a rank ahead of the bosses from siege 4, two from siege 14
-  while (!chaos && guildCost(run) != null && (run.guild || 0) < (run.siege >= 14 ? 2 : run.siege >= 4 ? 1 : 0) && run.gold >= guildCost(run) + 2) buyGuild(run, meta);
+  // guild levels on the curve the horde is tuned for (GUILD_LV.pace); chaos levels whenever it has the gold and feels like it
+  const lvGoal = GUILD_LV.start + GUILD_LV.pace.filter(p => run.siege >= p).length;
+  while (guildCost(run) != null && (chaos ? Math.random() < 0.5 : guildLevel(run) < lvGoal) && run.gold >= guildCost(run)) buyGuild(run);
   // new legends while the field has room plus a couple on the bench; copies always (they star up)
   const room = () => Math.min(rosterCap(run), fieldCap(run) + (chaos ? BENCH_SLOTS : 2));
   for (let g = 0; g < 40; g++) {
@@ -208,8 +208,8 @@ function botPlayRun(style, meta, opts = {}) {
     if (rep.siege >= FINAL_SIEGE) { cause = 'won'; run.won = true; break; }
     log.push({ s: rep.siege, t: Math.round(t), lv: run.roster.map(h => h.level), castle: Math.round(100 * run.castle.hp / run.castle.max), gold: run.gold, deaths: rep.heroes.filter(h => !h.alive).length });
     if (LOOT_AFTER(rep.siege) && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-    if (rep.press) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-    if (taunted && !rep.breach) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
+    if (rep.press && rep.press.loot) { const lo = lootOptions(run, meta, 'comp'); takeLoot(run, botPickLoot(run, style, lo)); }
+    if (taunted && !rep.breach && ENEMIES[bossFor(rep.siege)].boss === 'big') { const lo = lootOptions(run, meta, 'comp'); takeLoot(run, botPickLoot(run, style, lo)); } // taunting the boss earns a second loot pick
     for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
     if (!run.roster.length) draft();
     // Legend Summons: take the best card; a full keep sends home its weakest legend
@@ -254,7 +254,7 @@ function playtestStep(P) {
     for (const e of B.enemies) e.alive = false; B.queue = []; run.castle.hp = Math.max(run.castle.hp, run.castle.max * 0.6); B.done = 'victory'; }
   const rep = finishSiege(run, meta, B);
   if (LOOT_AFTER(rep.siege)) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
-  if (taunted && rep.siege < FINAL_SIEGE) { const lo = lootOptions(run, meta); takeLoot(run, botPickLoot(run, style, lo)); }
+  if (taunted && rep.siege < FINAL_SIEGE && ENEMIES[bossFor(rep.siege)].boss === 'big') { const lo = lootOptions(run, meta, 'comp'); takeLoot(run, botPickLoot(run, style, lo)); }
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
   if (!run.roster.length) draft();
   checkCastleUnlock(run);
