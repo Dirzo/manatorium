@@ -35,11 +35,16 @@ function hring(g, x, y, r, c, a) { g.globalAlpha = a == null ? 1 : Math.max(0, a
 const hl = (a, b, k) => a + (b - a) * k, hc = (v, a, b) => Math.max(a, Math.min(b, v)), he = k => k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
 function hmarch(lane, n, front, seed) { const out = []; for (let i = 0; i < n; i++) out.push([front + i * 9, HD.LY[lane] + (hrnd(seed + i) * 6 - 3)]); return out; }
 const HDEMO = {
-  dark(g, t, c) { const P = 3.2, k = (t % P) / P, home = [46, 36], back = [[128, 18], [132, 54]];
-    hmarch(1, 3, 60, 1).forEach(p => hfoe(g, p[0], p[1])); back.forEach((p, i) => hfoe(g, p[0], p[1], i ? '#ff9a3a' : '#c050ff'));
-    const tg = back[Math.floor(t / P) % 2]; let x = home[0], y = home[1];
-    if (k >= .15 && k < .7) { x = tg[0] + 6; y = tg[1]; if (k < .2) { g.globalAlpha = .4; hhero(g, home[0], home[1], c); g.globalAlpha = 1; } else if (k % .1 < .05) hpx(g, tg[0], tg[1] - 5, 3, '#fff'); }
-    hhero(g, x, y, c); if (k > .15 && k < .22) hring(g, x, y, 7, c); },
+  dark(g, t, c) { const P = 3.2, k = (t % P) / P, h = [44, 36], v = [96, 36];
+    // small foes walk in, then flee in dread when the curse pulses
+    const fl = k > .45 ? he(hc((k - .45) / .3, 0, 1)) * 40 : 0;
+    [[84, 20], [88, 52], [110, 26], [112, 48]].forEach((p, i) => { const x = p[0] + (k > .45 ? fl + i * 2 : 0); hfoe(g, x, p[1]); if (k > .45 && k < .8 && (t * 8) % 2 < 1) hpx(g, x - 4, p[1] - 5, 1, '#d8c0ff'); });
+    hfoe(g, v[0], v[1], '#e0404a', 9);
+    if (k > .08) { const n = 16; for (let i = 0; i <= n; i++) { const q = i / n; hpx(g, hl(h[0], v[0], q), hl(h[1] - 2, v[1] - 2, q) + Math.sin(q * Math.PI) * Math.sin(t * 9 + i) * 2, 1, i % 2 ? '#2a1a4a' : c); }
+      for (let j = 0; j < 3; j++) { const q = 1 - ((t * 1.6 + j / 3) % 1); hpx(g, hl(h[0], v[0], q), hl(h[1] - 2, v[1] - 2, q), 2, '#ff5a7a'); }
+      const b = Math.floor(t * 4) % 2; hpx(g, v[0], v[1] - 10 - b, 5, OUTLINE); hpx(g, v[0], v[1] - 10 - b, 3, '#b48aff'); }
+    if (k > .4 && k < .6) hring(g, v[0], v[1], 6 + (k - .4) * 120, c, 1 - (k - .4) * 5);
+    hhero(g, h[0], h[1], c); if ((t * 1.6) % 1 > .9) hpx(g, h[0], h[1] - 6, 2, '#9f9'); },
   light(g, t, c) { const al = [52, 36], k = (t * 1.2) % 1, hp = .35 + .6 * ((t / 4) % 1); hhero(g, al[0], al[1], '#d0d0d0');
     g.fillStyle = '#300'; g.fillRect(al[0] - 5, al[1] - 8, 10, 2); g.fillStyle = '#5f5'; g.fillRect(al[0] - 5, al[1] - 8, 10 * hp, 2);
     hhero(g, al[0] - 10, al[1] + 4, c); hmarch(1, 3, 64, 3).forEach(p => hfoe(g, p[0], p[1]));

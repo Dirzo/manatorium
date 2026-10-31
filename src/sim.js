@@ -1183,6 +1183,7 @@ function stepEnemy(B, u, dt) {
   if (u.rage) { bossPatience(B, u, dt); return; }
   if (u.stun > 0) return;
   if (u.lureT > 0 && styleLured(B, u, dt)) return;
+  if (u.fearT > 0 && styleFeared(B, u, dt)) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it
