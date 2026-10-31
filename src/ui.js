@@ -209,7 +209,7 @@ const UI = {
   banner(title, sub, o = {}) {
     const T = String(title), k = o.kind || (/SLAIN|falls$/i.test(T) ? 'slain' : /^(BOSS|MINI-BOSS|Boss approaching)/.test(T) ? 'boss' : /OVERTIME|GOT AWAY|fallen/i.test(T) ? 'alarm' : 'info');
     const spr = o.spr ? `<img class="bspr px" src="${portrait(o.spr, k === 'boss' ? 'atk' : 'idle0')}" alt="">` : '';
-    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bnt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
   },
   // modal headings come alive, cards are dealt in with a flip
   liven(sh) {

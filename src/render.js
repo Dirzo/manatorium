@@ -293,10 +293,10 @@ function drawPlanLabels(ctx, k, run) {
   const P = planGroups(run); if (!P) return;
   ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE; ctx.lineJoin = 'round';
   P.plan.routes.forEach((rt, i) => { const K = ROUTE_KINDS[rt.kind], grp = P.groups[i], x = (W - 46) * k, y = (rt.y0 - 21) * k;
-    ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff';
     const head = `${grp.n + (grp.wb ? grp.wb.length : 0)} foes${grp.fly ? ` · ${grp.fly} flying` : ''}`; ctx.strokeText(head, x, y); ctx.fillText(head, x, y);
-    ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = K.col; const sub = K.name.toUpperCase(); ctx.strokeText(sub, x, y + 5.5 * k); ctx.fillText(sub, x, y + 5.5 * k); });
-  if (P.boss) { const x = (W - 70) * k, y = (GRID.y + GRID.rows * GRID.cell / 2 - 30) * k; ctx.textAlign = 'center'; ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ff9a9a'; ctx.strokeText(ENEMIES[P.boss].name, x, y); ctx.fillText(ENEMIES[P.boss].name, x, y); }
+    ctx.font = `600 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = K.col; const sub = K.name.toUpperCase(); ctx.strokeText(sub, x, y + 5.5 * k); ctx.fillText(sub, x, y + 5.5 * k); });
+  if (P.boss) { const x = (W - 70) * k, y = (GRID.y + GRID.rows * GRID.cell / 2 - 30) * k; ctx.textAlign = 'center'; ctx.font = `700 ${5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ff9a9a'; ctx.strokeText(ENEMIES[P.boss].name, x, y); ctx.fillText(ENEMIES[P.boss].name, x, y); }
   ctx.restore();
 }
 // during the siege: pulsing chevrons at each gate while the horde is still coming
@@ -513,12 +513,12 @@ function renderFrame(V, dt) {
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);
     ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, k);
-    ctx.font = `${6 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.5; ctx.strokeText(u.def.name, W * k / 2, by + 14 * k); ctx.fillText(u.def.name, W * k / 2, by + 14 * k);
+    ctx.font = `${6 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.5; ctx.strokeText(u.def.name, W * k / 2, by + 14 * k); ctx.fillText(u.def.name, W * k / 2, by + 14 * k);
     // patience: when this fills, the boss charges the wall
     const pf = u.rage ? 1 : Math.min(1, (u.patT || 0) / (u.patMax || bossLimit(u))), py = by + 17 * k, pw = 120 * k, px = (W * k - pw) / 2, hot = pf > 0.8;
     ctx.fillStyle = OUTLINE; ctx.fillRect(px - k, py - k, pw + 2 * k, 4 * k); ctx.fillStyle = '#2a2140'; ctx.fillRect(px, py, pw, 2 * k);
     ctx.fillStyle = hot && Math.floor(performance.now() / 150) % 2 ? '#ffffff' : '#ff7a3a'; ctx.fillRect(px, py, pw * pf, 2 * k);
-    ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = hot ? '#ff9a5c' : '#c9cff5'; ctx.strokeText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); ctx.fillText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); }
+    ctx.font = `${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = hot ? '#ff9a5c' : '#c9cff5'; ctx.strokeText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); ctx.fillText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); }
   for (const sw of FXS.shocks) { if (sw.t < 0) continue; const kk = sw.t / sw.life; ctx.globalAlpha = 1 - kk; ctx.strokeStyle = sw.color; ctx.lineWidth = k * sw.w * (1 - kk) + k * 0.5; ctx.beginPath(); ctx.ellipse(sw.x * k + ox, sw.y * k + oy, sw.r * k * (0.2 + 0.8 * Math.sqrt(kk)), sw.r * 0.55 * k * (0.2 + 0.8 * Math.sqrt(kk)), 0, 0, Math.PI * 2); ctx.stroke(); }
   ctx.globalAlpha = 1;
   for (const d of FXS.drops) { const x = d.x * k + ox, y = d.y * k + oy; ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(d.t * 12)); ctx.fillStyle = '#ffcf3a'; ctx.beginPath(); ctx.arc(x, y, 6 * k, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; ctx.drawImage(iconCanvas(COMPONENTS[d.key].glyph, k), x - 5 * k, y - 5 * k); }
@@ -526,11 +526,11 @@ function renderFrame(V, dt) {
   ctx.textAlign = 'center'; ctx.lineJoin = 'round';
   drawDmgNumbers(ctx, k, ox, oy);
   for (const c of FXS.combos) { const kk = c.t / c.life, pop = c.t < 0.12 ? 1.6 - c.t * 5 : 1, size = 11 * k * pop, x = c.x * k + ox, y = (c.y - 10 * kk) * k + oy;
-    ctx.globalAlpha = Math.min(1, 3 * (1 - kk)); ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, c.cols[0]); gr.addColorStop(1, c.cols[1]);
+    ctx.globalAlpha = Math.min(1, 3 * (1 - kk)); ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, c.cols[0]); gr.addColorStop(1, c.cols[1]);
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 2.4; ctx.strokeText(c.name, x, y); ctx.fillStyle = gr; ctx.fillText(c.name, x, y); }
   ctx.globalAlpha = 1;
   for (const tx of FXS.texts) { const a = Math.min(1, 3 * (1 - tx.t / tx.life)), pop = tx.t < 0.08 ? 1.35 : 1; const size = (tx.label ? 6 : tx.big ? 8 : 6) * k * pop;
-    ctx.globalAlpha = a; ctx.font = `${tx.big || tx.label ? 700 : 500} ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.6; ctx.strokeText(tx.s, tx.x * k + ox, tx.y * k + oy); ctx.fillStyle = tx.color; ctx.fillText(tx.s, tx.x * k + ox, tx.y * k + oy); }
+    ctx.globalAlpha = a; ctx.font = `${tx.big || tx.label ? 700 : 500} ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.6; ctx.strokeText(tx.s, tx.x * k + ox, tx.y * k + oy); ctx.fillStyle = tx.color; ctx.fillText(tx.s, tx.x * k + ox, tx.y * k + oy); }
   ctx.globalAlpha = 1;
   for (const c of FXS.cutins) drawCutin(ctx, k, c, ox, oy);
   if (FXS.flash) { ctx.globalAlpha = FXS.flash.a * (1 - FXS.flash.t / 0.25); ctx.fillStyle = FXS.flash.color; ctx.fillRect(0, 0, R.cv.width, R.cv.height); ctx.globalAlpha = 1; }
@@ -543,11 +543,11 @@ function drawDmgNumbers(ctx, k, ox, oy) {
     const rise = kk < 0.55 ? kk * 8 : 4.4 + (kk - 0.55) * 26, x = d.x * k + ox, y = (d.y - rise) * k + oy;
     ctx.globalAlpha = kk > 0.6 ? Math.max(0, 1 - (kk - 0.6) / 0.4) : 1;
     if (d.kind === 'crit') { ctx.save(); ctx.translate(x, y - size * 0.35); ctx.rotate(d.t * 2); ctx.fillStyle = 'rgba(255,42,106,0.55)'; ctx.beginPath(); for (let i = 0; i < 16; i++) { const r = (i % 2 ? 0.45 : 1) * size * 0.95; const a = i / 16 * Math.PI * 2; ctx.lineTo(Math.cos(a) * r * 1.4, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.restore(); }
-    ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`;
+    ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`;
     const gr = ctx.createLinearGradient(0, y - size * 0.85, 0, y); gr.addColorStop(0, pal[0]); gr.addColorStop(0.55, pal[1]); gr.addColorStop(1, shade(pal[1], -0.25));
     ctx.strokeStyle = pal[2]; ctx.lineWidth = k * (d.big ? 2.6 : 2); ctx.strokeText(d.s, x, y);
     ctx.fillStyle = gr; ctx.fillText(d.s, x, y);
-    if (d.kind === 'crit' && d.t < 0.6) { ctx.font = `700 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = k * 1.4; ctx.strokeStyle = pal[2]; ctx.strokeText('CRITICAL', x, y - size * 0.95); ctx.fillStyle = '#ffd0e0'; ctx.fillText('CRITICAL', x, y - size * 0.95); }
+    if (d.kind === 'crit' && d.t < 0.6) { ctx.font = `700 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = k * 1.4; ctx.strokeStyle = pal[2]; ctx.strokeText('CRITICAL', x, y - size * 0.95); ctx.fillStyle = '#ffd0e0'; ctx.fillText('CRITICAL', x, y - size * 0.95); }
   }
   ctx.globalAlpha = 1;
 }
@@ -556,11 +556,11 @@ function drawCutin(ctx, k, c, ox = 0, oy = 0) {
   const u = c.u, kk = c.t / c.life, fade = kk > 0.7 ? 1 - (kk - 0.7) / 0.3 : 1;
   const cw = ctx.canvas.width, wx = (u && u.alive !== false ? u.x : c.x) * k + ox, wy = (u && u.alive !== false ? u.y - (u.z || 0) : c.y) * k + oy;
   const pop = kk < 0.1 ? 0.5 + 5 * kk : kk < 0.18 ? 1.5 - 0.5 * (kk - 0.1) / 0.08 : 1, size = (c.big ? 9 : 7) * k * pop;
-  ctx.save(); ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; const label = c.name.toUpperCase(), tw = ctx.measureText(label).width;
+  ctx.save(); ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; const label = c.name.toUpperCase(), tw = ctx.measureText(label).width;
   const x = Math.max(tw / 2 + 4 * k, Math.min(cw - tw / 2 - 4 * k, wx)), y = Math.max(size + 4 * k, wy - (30 + 8 * kk) * k);
   const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, c.color);
   ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6 * k; ctx.strokeStyle = OUTLINE; ctx.strokeText(label, x, y); ctx.fillStyle = gr; ctx.fillText(label, x, y);
-  if (c.combo) { ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
+  if (c.combo) { ctx.font = `600 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
   ctx.restore();
 }
 

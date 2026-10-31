@@ -7,7 +7,7 @@
 <title>Siege of Legends</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@700&display=swap">
 <style>/* Layout: one castle arena framed by a top HUD, a left facility rail with a slide-out drawer, and a bottom roster drawer. */
 :root {
   --ink: #0f1430;        /* pixel outline */
@@ -22,9 +22,9 @@
   --rose: #ff5d8f;
   --sky: #5fd3ff;
   --violet: #a98aff;
-  --f-display: "Fredoka", "Atkinson Hyperlegible", "Segoe UI", sans-serif;
-  --f-logo: "Pixelify Sans", "Courier New", monospace;
-  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-display: "Cinzel", "Fredoka", "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+  --f-logo: "Cinzel", "Pixelify Sans", "Courier New", monospace;
+  --f-body: "Cinzel", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -1135,7 +1135,7 @@ h2.hoard { color: var(--gold); }
 
 /* banners */
 #banner .in { position: relative; display: inline-flex; align-items: center; gap: 16px; }
-#banner .bt { text-align: center; }
+#banner .bnt { text-align: center; }
 #banner .bspr { width: 76px; height: 76px; image-rendering: pixelated; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.4)); }
 @keyframes bsprIn { from { transform: translateY(40px) scale(.2) rotate(-30deg); opacity: 0; } }
 #banner h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chBob 1.5s ease-in-out infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 80ms + 600ms); }
@@ -1461,6 +1461,27 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .loadcard i { font-style: normal; animation: loaddot 1.2s steps(1) infinite; }
 .loadcard i:nth-child(2) { animation-delay: .2s; } .loadcard i:nth-child(3) { animation-delay: .4s; }
 @keyframes loaddot { 0%, 100% { opacity: .15; } 30%, 70% { opacity: 1; } }
+
+/* champion arrival banner as wordart (Cam 2026-10-31: "contained in a more stylish wordart").
+   A rarity-tinted ribbon with notched tails holds everything; the sprite sits in a round medallion; the name is gradient-filled, outlined, slanted letters. */
+#banner .k-hero { --bc2: color-mix(in srgb, var(--bc, var(--gold)) 55%, #1a0f3a); background: none; border: 0; box-shadow: none; padding: 14px 64px 16px 34px; gap: 18px; isolation: isolate; }
+#banner .k-hero::before { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--bc, var(--gold)) 30%, transparent), transparent 70%), linear-gradient(180deg, #2d2363, #160e35);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 50%, 100% 100%, 0 100%, 26px 50%);
+  filter: drop-shadow(0 0 2px var(--bc, var(--gold))); }
+#banner .k-hero::after { content: ''; position: absolute; inset: 5px 30px; z-index: -1; pointer-events: none;
+  border-block: 2px solid var(--bc, var(--gold)); opacity: .85; }
+#banner .k-hero .bspr { width: 84px; height: 84px; padding: 6px; border-radius: 50%; margin: -22px 0 -22px -8px;
+  background: radial-gradient(circle at 50% 38%, #3a3080, #140c30 72%); box-shadow: 0 0 0 3px var(--bc, var(--gold)), 0 0 0 6px #120a2a, 0 0 22px -2px var(--bc, var(--gold)); }
+#banner .k-hero .bnt { display: flex; flex-direction: column; align-items: center; }
+#banner .k-hero h2 { font: 700 clamp(30px, 3.4vw, 50px)/1.05 var(--f-display); letter-spacing: .03em; text-shadow: none; color: var(--bc, var(--gold));
+  transform: rotate(-3deg) skewX(-8deg); white-space: nowrap;
+  filter: drop-shadow(2px 0 0 #120a2a) drop-shadow(-2px 0 0 #120a2a) drop-shadow(0 2px 0 #120a2a) drop-shadow(0 -2px 0 #120a2a) drop-shadow(0 4px 0 var(--bc2)) drop-shadow(0 6px 4px rgba(0,0,0,.45)); }
+#banner .k-hero h2 .ch { background: linear-gradient(180deg, #fff 8%, color-mix(in srgb, var(--bc, var(--gold)) 45%, #fff) 42%, var(--bc, var(--gold)) 58%, var(--bc2) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+#banner .k-hero p { margin-top: 6px; padding: 2px 14px; border-radius: 99px; background: rgba(0,0,0,.35); font: 600 12px/1.4 var(--f-display); letter-spacing: .22em; text-transform: uppercase; color: #ffe9a8; }
+html.m #banner .k-hero { padding: 8px 40px 10px 22px; }
+html.m #banner .k-hero .bspr { width: 60px; height: 60px; margin: -14px 0 -14px -4px; }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -8721,10 +8742,10 @@ function drawPlanLabels(ctx, k, run) {
   const P = planGroups(run); if (!P) return;
   ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE; ctx.lineJoin = 'round';
   P.plan.routes.forEach((rt, i) => { const K = ROUTE_KINDS[rt.kind], grp = P.groups[i], x = (W - 46) * k, y = (rt.y0 - 21) * k;
-    ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff';
     const head = `${grp.n + (grp.wb ? grp.wb.length : 0)} foes${grp.fly ? ` · ${grp.fly} flying` : ''}`; ctx.strokeText(head, x, y); ctx.fillText(head, x, y);
-    ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = K.col; const sub = K.name.toUpperCase(); ctx.strokeText(sub, x, y + 5.5 * k); ctx.fillText(sub, x, y + 5.5 * k); });
-  if (P.boss) { const x = (W - 70) * k, y = (GRID.y + GRID.rows * GRID.cell / 2 - 30) * k; ctx.textAlign = 'center'; ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ff9a9a'; ctx.strokeText(ENEMIES[P.boss].name, x, y); ctx.fillText(ENEMIES[P.boss].name, x, y); }
+    ctx.font = `600 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = K.col; const sub = K.name.toUpperCase(); ctx.strokeText(sub, x, y + 5.5 * k); ctx.fillText(sub, x, y + 5.5 * k); });
+  if (P.boss) { const x = (W - 70) * k, y = (GRID.y + GRID.rows * GRID.cell / 2 - 30) * k; ctx.textAlign = 'center'; ctx.font = `700 ${5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ff9a9a'; ctx.strokeText(ENEMIES[P.boss].name, x, y); ctx.fillText(ENEMIES[P.boss].name, x, y); }
   ctx.restore();
 }
 // during the siege: pulsing chevrons at each gate while the horde is still coming
@@ -8941,12 +8962,12 @@ function renderFrame(V, dt) {
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);
     ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, k);
-    ctx.font = `${6 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.5; ctx.strokeText(u.def.name, W * k / 2, by + 14 * k); ctx.fillText(u.def.name, W * k / 2, by + 14 * k);
+    ctx.font = `${6 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.5; ctx.strokeText(u.def.name, W * k / 2, by + 14 * k); ctx.fillText(u.def.name, W * k / 2, by + 14 * k);
     // patience: when this fills, the boss charges the wall
     const pf = u.rage ? 1 : Math.min(1, (u.patT || 0) / (u.patMax || bossLimit(u))), py = by + 17 * k, pw = 120 * k, px = (W * k - pw) / 2, hot = pf > 0.8;
     ctx.fillStyle = OUTLINE; ctx.fillRect(px - k, py - k, pw + 2 * k, 4 * k); ctx.fillStyle = '#2a2140'; ctx.fillRect(px, py, pw, 2 * k);
     ctx.fillStyle = hot && Math.floor(performance.now() / 150) % 2 ? '#ffffff' : '#ff7a3a'; ctx.fillRect(px, py, pw * pf, 2 * k);
-    ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = hot ? '#ff9a5c' : '#c9cff5'; ctx.strokeText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); ctx.fillText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); }
+    ctx.font = `${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = hot ? '#ff9a5c' : '#c9cff5'; ctx.strokeText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); ctx.fillText(u.rage ? 'ENRAGED' : 'Patience', W * k / 2, py + 8 * k); }
   for (const sw of FXS.shocks) { if (sw.t < 0) continue; const kk = sw.t / sw.life; ctx.globalAlpha = 1 - kk; ctx.strokeStyle = sw.color; ctx.lineWidth = k * sw.w * (1 - kk) + k * 0.5; ctx.beginPath(); ctx.ellipse(sw.x * k + ox, sw.y * k + oy, sw.r * k * (0.2 + 0.8 * Math.sqrt(kk)), sw.r * 0.55 * k * (0.2 + 0.8 * Math.sqrt(kk)), 0, 0, Math.PI * 2); ctx.stroke(); }
   ctx.globalAlpha = 1;
   for (const d of FXS.drops) { const x = d.x * k + ox, y = d.y * k + oy; ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(d.t * 12)); ctx.fillStyle = '#ffcf3a'; ctx.beginPath(); ctx.arc(x, y, 6 * k, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; ctx.drawImage(iconCanvas(COMPONENTS[d.key].glyph, k), x - 5 * k, y - 5 * k); }
@@ -8954,11 +8975,11 @@ function renderFrame(V, dt) {
   ctx.textAlign = 'center'; ctx.lineJoin = 'round';
   drawDmgNumbers(ctx, k, ox, oy);
   for (const c of FXS.combos) { const kk = c.t / c.life, pop = c.t < 0.12 ? 1.6 - c.t * 5 : 1, size = 11 * k * pop, x = c.x * k + ox, y = (c.y - 10 * kk) * k + oy;
-    ctx.globalAlpha = Math.min(1, 3 * (1 - kk)); ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, c.cols[0]); gr.addColorStop(1, c.cols[1]);
+    ctx.globalAlpha = Math.min(1, 3 * (1 - kk)); ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, c.cols[0]); gr.addColorStop(1, c.cols[1]);
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 2.4; ctx.strokeText(c.name, x, y); ctx.fillStyle = gr; ctx.fillText(c.name, x, y); }
   ctx.globalAlpha = 1;
   for (const tx of FXS.texts) { const a = Math.min(1, 3 * (1 - tx.t / tx.life)), pop = tx.t < 0.08 ? 1.35 : 1; const size = (tx.label ? 6 : tx.big ? 8 : 6) * k * pop;
-    ctx.globalAlpha = a; ctx.font = `${tx.big || tx.label ? 700 : 500} ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.6; ctx.strokeText(tx.s, tx.x * k + ox, tx.y * k + oy); ctx.fillStyle = tx.color; ctx.fillText(tx.s, tx.x * k + ox, tx.y * k + oy); }
+    ctx.globalAlpha = a; ctx.font = `${tx.big || tx.label ? 700 : 500} ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = k * 1.6; ctx.strokeText(tx.s, tx.x * k + ox, tx.y * k + oy); ctx.fillStyle = tx.color; ctx.fillText(tx.s, tx.x * k + ox, tx.y * k + oy); }
   ctx.globalAlpha = 1;
   for (const c of FXS.cutins) drawCutin(ctx, k, c, ox, oy);
   if (FXS.flash) { ctx.globalAlpha = FXS.flash.a * (1 - FXS.flash.t / 0.25); ctx.fillStyle = FXS.flash.color; ctx.fillRect(0, 0, R.cv.width, R.cv.height); ctx.globalAlpha = 1; }
@@ -8971,11 +8992,11 @@ function drawDmgNumbers(ctx, k, ox, oy) {
     const rise = kk < 0.55 ? kk * 8 : 4.4 + (kk - 0.55) * 26, x = d.x * k + ox, y = (d.y - rise) * k + oy;
     ctx.globalAlpha = kk > 0.6 ? Math.max(0, 1 - (kk - 0.6) / 0.4) : 1;
     if (d.kind === 'crit') { ctx.save(); ctx.translate(x, y - size * 0.35); ctx.rotate(d.t * 2); ctx.fillStyle = 'rgba(255,42,106,0.55)'; ctx.beginPath(); for (let i = 0; i < 16; i++) { const r = (i % 2 ? 0.45 : 1) * size * 0.95; const a = i / 16 * Math.PI * 2; ctx.lineTo(Math.cos(a) * r * 1.4, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.restore(); }
-    ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`;
+    ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`;
     const gr = ctx.createLinearGradient(0, y - size * 0.85, 0, y); gr.addColorStop(0, pal[0]); gr.addColorStop(0.55, pal[1]); gr.addColorStop(1, shade(pal[1], -0.25));
     ctx.strokeStyle = pal[2]; ctx.lineWidth = k * (d.big ? 2.6 : 2); ctx.strokeText(d.s, x, y);
     ctx.fillStyle = gr; ctx.fillText(d.s, x, y);
-    if (d.kind === 'crit' && d.t < 0.6) { ctx.font = `700 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = k * 1.4; ctx.strokeStyle = pal[2]; ctx.strokeText('CRITICAL', x, y - size * 0.95); ctx.fillStyle = '#ffd0e0'; ctx.fillText('CRITICAL', x, y - size * 0.95); }
+    if (d.kind === 'crit' && d.t < 0.6) { ctx.font = `700 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = k * 1.4; ctx.strokeStyle = pal[2]; ctx.strokeText('CRITICAL', x, y - size * 0.95); ctx.fillStyle = '#ffd0e0'; ctx.fillText('CRITICAL', x, y - size * 0.95); }
   }
   ctx.globalAlpha = 1;
 }
@@ -8984,11 +9005,11 @@ function drawCutin(ctx, k, c, ox = 0, oy = 0) {
   const u = c.u, kk = c.t / c.life, fade = kk > 0.7 ? 1 - (kk - 0.7) / 0.3 : 1;
   const cw = ctx.canvas.width, wx = (u && u.alive !== false ? u.x : c.x) * k + ox, wy = (u && u.alive !== false ? u.y - (u.z || 0) : c.y) * k + oy;
   const pop = kk < 0.1 ? 0.5 + 5 * kk : kk < 0.18 ? 1.5 - 0.5 * (kk - 0.1) / 0.08 : 1, size = (c.big ? 9 : 7) * k * pop;
-  ctx.save(); ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; const label = c.name.toUpperCase(), tw = ctx.measureText(label).width;
+  ctx.save(); ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; const label = c.name.toUpperCase(), tw = ctx.measureText(label).width;
   const x = Math.max(tw / 2 + 4 * k, Math.min(cw - tw / 2 - 4 * k, wx)), y = Math.max(size + 4 * k, wy - (30 + 8 * kk) * k);
   const gr = ctx.createLinearGradient(0, y - size, 0, y); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, c.color);
   ctx.globalAlpha = fade; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 2.6 * k; ctx.strokeStyle = OUTLINE; ctx.strokeText(label, x, y); ctx.fillStyle = gr; ctx.fillText(label, x, y);
-  if (c.combo) { ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
+  if (c.combo) { ctx.font = `600 ${4.5 * k}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.lineWidth = 2 * k; const cy = y + 6 * k, cl = `+ ${c.combo.name.toUpperCase()}`; ctx.strokeText(cl, x, cy); ctx.fillStyle = c.combo.cb; ctx.fillText(cl, x, cy); }
   ctx.restore();
 }
 
@@ -10656,7 +10677,7 @@ const UI = {
   banner(title, sub, o = {}) {
     const T = String(title), k = o.kind || (/SLAIN|falls$/i.test(T) ? 'slain' : /^(BOSS|MINI-BOSS|Boss approaching)/.test(T) ? 'boss' : /OVERTIME|GOT AWAY|fallen/i.test(T) ? 'alarm' : 'info');
     const spr = o.spr ? `<img class="bspr px" src="${portrait(o.spr, k === 'boss' ? 'atk' : 'idle0')}" alt="">` : '';
-    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bnt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
   },
   // modal headings come alive, cards are dealt in with a flip
   liven(sh) {
@@ -11803,15 +11824,15 @@ function drawTower() {
   const ctx = T.ctx, sc = T.cv.width / TW; ctx.imageSmoothingEnabled = false; ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(T.lo, 0, 0, TW, LH, 0, 0, T.cv.width, LH * sc);
   ctx.textAlign = 'center'; ctx.lineJoin = 'round';
-  ctx.font = `600 ${6 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`;
+  ctx.font = `600 ${6 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`;
   for (const l of T.labels) { const px = (l.x + sh) * sc, py = l.y * sc; ctx.fillStyle = 'rgba(15,20,48,0.65)'; ctx.fillRect(px - 9 * sc, py - 5 * sc, 18 * sc, 10 * sc); ctx.fillStyle = l.boss ? '#ffcf3a' : '#ffffff'; ctx.fillText(String(l.i + 1), px, py + 2.2 * sc); }
-  for (const x of T.texts) { const a = 1 - x.t / 0.9, s = (x.big ? 14 : 10) * sc * (x.t < 0.08 ? 1.5 : 1); ctx.globalAlpha = a; ctx.font = `700 ${s / 1}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 2; const px = x.x * sc, py = toS(x.y) * sc - x.t * 20 * sc; ctx.strokeText(x.s, px, py); ctx.fillStyle = x.big ? '#ffcf3a' : '#ffffff'; ctx.fillText(x.s, px, py); }
+  for (const x of T.texts) { const a = 1 - x.t / 0.9, s = (x.big ? 14 : 10) * sc * (x.t < 0.08 ? 1.5 : 1); ctx.globalAlpha = a; ctx.font = `700 ${s / 1}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 2; const px = x.x * sc, py = toS(x.y) * sc - x.t * 20 * sc; ctx.strokeText(x.s, px, py); ctx.fillStyle = x.big ? '#ffcf3a' : '#ffffff'; ctx.fillText(x.s, px, py); }
   ctx.globalAlpha = 1;
   // counter
   const shown = T.phase === 'intro' ? 0 : T.placed;
-  ctx.font = `700 ${18 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 3; ctx.fillStyle = '#ffcf3a';
+  ctx.font = `700 ${18 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 3; ctx.fillStyle = '#ffcf3a';
   ctx.strokeText(`${shown} ${shown === 1 ? 'FLOOR' : 'FLOORS'}`, T.cv.width / 2, 26 * sc); ctx.fillText(`${shown} ${shown === 1 ? 'FLOOR' : 'FLOORS'}`, T.cv.width / 2, 26 * sc);
-  ctx.font = `500 ${7 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.lineWidth = sc * 2;
+  ctx.font = `500 ${7 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.lineWidth = sc * 2;
   const sub = T.phase === 'intro' ? 'The keep has fallen. Now it rises.' : T.phase === 'stack' ? 'One floor for every siege you held' : T.phase === 'climb' ? `${HERO_BY_ID[T.climber] ? HERO_BY_ID[T.climber].name : 'Your hero'} climbs to the top` : (T.N > T.prevBest && T.N > 0 ? 'A new record!' : 'The view from the top');
   ctx.strokeText(sub, T.cv.width / 2, 38 * sc); ctx.fillText(sub, T.cv.width / 2, 38 * sc);
 }
@@ -13782,7 +13803,7 @@ function startIntro(done) {
     // speech pops in screen space so the text stays crisp
     ctx.textAlign = 'center'; ctx.lineJoin = 'round';
     for (const p of INTRO.pops) { const a = Math.min(1, 3 * (1 - p.t / 1.1)), sc = p.t < 0.1 ? 1.5 - p.t * 5 : 1, size = (p.big ? 15 : 10) * k / 2.4 * sc * 1.4;
-      ctx.globalAlpha = a; ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = '#1a1230'; ctx.lineWidth = size * 0.22;
+      ctx.globalAlpha = a; ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = '#1a1230'; ctx.lineWidth = size * 0.22;
       const x = (p.x - sx) * k, y = oy + (p.y - sy - p.t * 10) * k; ctx.strokeText(p.s, x, y); ctx.fillStyle = p.col; ctx.fillText(p.s, x, y); }
     ctx.globalAlpha = 1;
     requestAnimationFrame(frame);
@@ -14677,7 +14698,7 @@ function boot(hotData) {
   $('bootCover')?.remove();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
-  try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
+  try { document.fonts && document.fonts.load('700 16px "Cinzel"'); } catch (e) { }
   TEL.init();
 }
 

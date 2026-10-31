@@ -762,6 +762,6 @@ function boot(hotData) {
   $('bootCover')?.remove();
   requestAnimationFrame(t => { lastT = t; frame(t); });
   window.claude?.hot?.snapshot?.(() => ({ v: 2, meta: G.meta, run: G.hasRun ? G.run : null }));
-  try { document.fonts && document.fonts.load('600 16px "Fredoka"'); } catch (e) { }
+  try { document.fonts && document.fonts.load('700 16px "Cinzel"'); } catch (e) { }
   TEL.init();
 }
