@@ -422,6 +422,9 @@ const UI = {
   tipRefresh() { if (!UI.tipKey || $('tip').hidden) return; if (UI.tipKey.startsWith('st:')) { const h = UI.tipHTML(UI.tipKey); if (h) { $('tip').innerHTML = h; if (UI.tipXY) UI.tipMove(...UI.tipXY); } } },
 
   // ----- left drawer -----
+  // where the shop and the guild Level up button are: the bottom bar on desktop, the Shop page on phones
+  shopEl() { return typeof BOARD !== 'undefined' && BOARD.on ? $('bShop') : $('nav-guild'); },
+  levelEl() { return document.querySelector(typeof BOARD !== 'undefined' && BOARD.on ? '#bEBtns [data-bact="guildlevel"]' : '#drawerBody [data-act="guildlevel"]'); },
   openPage(p) {
     if (p && G.phase !== 'prep') { UI.toast('Facilities open between sieges.', true); return; }
     if (p === 'hall') { const run = G.run; run.techSeen = run.techSeen || {}; UI.hallNew = new Set(Object.keys(TECH).filter(k => techState(run, k) === 'open' && !run.techSeen[k])); UI.hallNew.forEach(k => run.techSeen[k] = 1); }
@@ -431,7 +434,7 @@ const UI = {
   },
   renderPage() {
     const run = G.run, p = UI.page, body = $('drawerBody');
-    const titles = { guild: ['Guild Hall', 'Where champions are drafted and trained.'], armory: ['Armory', 'Hand out components. Two on one hero fuse into a finished item.'], hall: ["Artificers' Hall", 'A tree of castle technology. Some branches are found, not bought.'] };
+    const titles = { guild: ['Shop', 'Buy legends and level up the guild.'], armory: ['Armory', 'Hand out components. Two on one hero fuse into a finished item.'], hall: ["Artificers' Hall", 'A tree of castle technology. Some branches are found, not bought.'] };
     $('drawerTitle').textContent = titles[p][0]; $('drawerSub').textContent = titles[p][1];
     const scroll = body.scrollTop;
     body.innerHTML = p === 'guild' ? UI.guildHTML(run) : p === 'armory' ? UI.armoryHTML(run) : UI.hallHTML(run);
@@ -608,7 +611,7 @@ const UI = {
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     const onField = run.roster.filter(x => x.place || x.vault || x.fled), bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
-    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Each guild level in the Guild Hall adds a field slot."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
+    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Each guild level adds a field slot. Level up next to the shop."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
     for (const hr of list) {
       if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);

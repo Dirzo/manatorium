@@ -181,7 +181,8 @@ const BOARD = {
   UI.hud = function () { const r = hud0.apply(UI, arguments); if (BOARD.on && G.run) { BOARD.renderTop(G.run); BOARD.renderEcon(G.run); BOARD.renderShop(G.run); } return r; };
   UI.renderRoster = function () { const r = roster0.apply(UI, arguments); if (BOARD.on) { BOARD.renderBench(G.run); BOARD.renderTraits(G.run); BOARD.render(); } return r; };
   const openPage0 = UI.openPage;
-  UI.openPage = function (p) { const r = openPage0.apply(UI, arguments); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
+  // no Guild tab on desktop (Cam 2026-10-31): the shop and Level up live on the bottom bar, so a call for the guild page just closes the drawer
+  UI.openPage = function (p) { if (p === 'guild' && BOARD.on) p = null; const r = openPage0.call(UI, p); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
   G.select = function (uid) { BOARD.card = uid; return select0.apply(G, arguments); };
   // the S key and the old intel tab open the board's scout panel
   UI.setIntel = function (open, quiet) { const r = setIntel0.apply(UI, arguments); if (BOARD.on && BOARD.intel !== open) { BOARD.intel = open; $('intel').classList.toggle('bopen', open); const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open)); } return r; };
