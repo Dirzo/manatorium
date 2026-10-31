@@ -128,7 +128,7 @@ const HD_HEADS = {
   orc:      { e: [19, 23, 12], m: [23, 18], k: 16, wipe: [[10, 6], [10, 7], [12, 6], [12, 7], [11, 9], [9, 5], [10, 5], [11, 5], [12, 5], [13, 5]] },
   beast:    { e: [19, 23, 11], m: [28, 19], k: 15, wipe: [[10, 6], [10, 7], [12, 6], [11, 9]] },
   goblin:   { e: [17, 21, 14], m: [21, 20], k: 18, wipe: [[9, 7], [11, 7], [9, 8], [11, 8], [9, 10], [10, 10], [11, 10]] },
-  skeleton: { e: [16, 22, 10], m: [21, 18], k: 15, skull: true, wipe: [[9, 6], [12, 6]] },
+  skeleton: { e: [16, 22, 10], m: [21, 18], k: 15, skull: true, wipe: [[8, 5], [9, 5], [11, 5], [12, 5], [8, 6], [9, 6], [11, 6], [12, 6], [10, 7], [8, 9], [9, 9], [10, 9], [11, 9], [12, 9]] },
   toad:     { e: [15, 25, 4], m: [24, 16], k: 14, toad: true, wipe: [[8, 3], [13, 3], [8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8], [5, 7]] },
 };
 
@@ -138,18 +138,19 @@ function hdWipeFace(g, s, by) {
   for (const [x, y] of H.wipe) {
     const c = g.get(x, y + by); if (!c) continue;
     let to = s.skin;
-    if (H.skull) to = OUTLINE;
+    if (H.skull) to = s.skin;
     if (H.toad) to = y === 3 ? '#ffffff' : y === 8 && x <= 13 ? (s.belly || shade(s.skin, 0.4)) : s.skin;
     if (s.head === 'dwarf' && y >= 8) continue; // under the beard
     if (c === to) continue;
     // only wipe face colours: never a hat brim, hood or beard that happens to sit there
-    const face = c === OUTLINE || c === (s.eye || OUTLINE) || c === '#ff9aa8' || c === '#ffde3a' || c === '#ffffff' || c === '#ff5d8f' || c === s.eye || c === shade(s.skin, -0.3) || c === shade(s.skin, -0.35) || c === shade(s.skin, -0.45) || c === shade(s.skin, -0.5);
+    const face = H.skull || c === OUTLINE || c === (s.eye || OUTLINE) || c === '#ff9aa8' || c === '#ffde3a' || c === '#ffffff' || c === '#ff5d8f' || c === s.eye || c === shade(s.skin, -0.3) || c === shade(s.skin, -0.35) || c === shade(s.skin, -0.45) || c === shade(s.skin, -0.5);
     if (face) g.set(x, y + by, to, H.skull || H.toad);
   }
 }
 
 function hdPaintFace(g, s, by, temper) {
   const H = HD_HEADS[s.head]; if (!H) return;
+  if (H.skull) return hdSkullFace(g, s, by, temper);
   const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = F.fx || [], dy = by * HDK;
   const skin = s.skin, snout = s.snout || shade(skin, 0.4), belly = s.belly || shade(skin, 0.4), hair = s.hair || shade(skin, -0.4);
   // the face only lands on bare skin (or a dwarf's beard), so helms, hoods and fringes keep covering it
@@ -172,8 +173,10 @@ function hdPaintFace(g, s, by, temper) {
     pat.forEach((row, r) => [...row].forEach((ch, c) => { const col = eyeCol(ch); if (col) put(ex + c, ey + r - (pat.length > 3 && kinds[side] !== 'droop' ? 1 : 0), col); }));
     if (fx.includes('lash')) { put(ex + (side ? 3 : -1), ey - 1, ink); put(ex + (side ? 3 : -1), ey, ink); }
     if (fx.includes('bags')) { put(ex, ey + 3, shade(skin, -0.28)); put(ex + 1, ey + 3, shade(skin, -0.28)); put(ex + 2, ey + 3, shade(skin, -0.2)); }
-    const br = (HD_BROWS[F.brow] || HD_BROWS.flat)[side];
-    br.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'B') put(ex + c, ey - br.length - 1 + r + (br.length === 1 ? 0 : 1), browC); }));
+    // brows sit right on top of the eye (its first drawn row), and angled brows dip their inner tip onto the lid
+    const br = (HD_BROWS[F.brow] || HD_BROWS.flat)[side], top = ey + pat.findIndex(row => /[^.]/.test(row)) - (pat.length > 3 && kinds[side] !== 'droop' ? 1 : 0);
+    const low = F.brow === 'angry' || F.brow === 'firm' || F.brow === 'sly' ? top : top - 1;
+    br.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'B') put(ex + c, low - (br.length - 1) + r, browC); }));
   });
   // mouth
   const M0 = HD_MOUTHS[F.mouth] || HD_MOUTHS.flat, M = H.toad ? M0.map(r => { const m = r.length >> 1; return r.slice(0, m) + r[m].repeat(4) + r.slice(m); }) : M0, [mx0, my0] = H.m, mx = mx0 - Math.floor(M[0].length / 2), my = my0 + dy;
@@ -311,4 +314,64 @@ function hdCloud(g, x, y, w, col, under) {
       x2.fillStyle = top ? lit : bot ? low : Y > Hf * 0.6 && th < 0.5 ? low : mid; x2.fillRect(X, Y, 1, 1); }
   }
   g.drawImage(c, Math.round(x) - 3, Math.round(y) - 10, c.width / HDK, c.height / HDK);
+}
+
+// skulls have no skin to move, so the expression lives in the shape of the sockets, the glow inside them and the jaw
+// socket masks are 5x5 ('#' dark socket, 'g' glow, 'w' glint, '.' bone); back socket listed, the front one is mirrored
+const SKULL_EYES = {
+  open:    ['.###.', '#####', '##gw#', '##gg#', '.###.'],
+  bright:  ['.###.', '#####', '##gw#', '##gg#', '.###.'],
+  big:     ['.###.', '#ggw#', '#ggg#', '#ggg#', '.###.'],
+  wide:    ['.###.', '#####', '##g##', '#####', '.###.'],
+  happy:   ['.###.', '#ggg#', '#g#g#', '.....', '.....'],
+  soft:    ['.....', '.###.', '##gg#', '##gg#', '.###.'],
+  half:    ['.....', '.....', '#####', '##gg#', '.###.'],
+  narrow:  ['.....', '.....', '#####', '#ggg#', '.###.'],
+  sparkle: ['.###.', '#gwg#', '#ggg#', '##g##', '.###.'],
+  closed:  ['.....', '.....', '.....', '#####', '.###.'],
+  smug:    ['.....', '.....', '.....', '#ggg#', '.###.'],
+  side:    ['.###.', '#####', '###gg', '###gg', '.###.'],
+  droop:   ['.....', '.....', '.....', '#ggg#', '.###.'],
+};
+// brow ridges cut bone into the socket: 'angry' slopes down to the middle, 'worried' slopes up
+const SKULL_CUT = { angry: [[3, 0], [4, 0], [4, 1]], firm: [[4, 0]], sly: [[3, 0], [4, 0]], worried: [[0, 0], [1, 0], [0, 1]], raise: [] };
+const SKULL_JAW = {
+  smile:   ['#.....#', '.#####.', '..###..'],
+  grin:    ['#######', '#t#t#t#', '.#####.'],
+  flat:    ['.#####.', '.t#t#t.'],
+  smirk:   ['......#', '.#####.', '.t#t#..'],
+  shout:   ['.#####.', '#t#t#t#', '#######', '.#####.'],
+  teeth:   ['#######', 't#t#t#t', '#######'],
+  wobble:  ['.#.#.#.', '#.#.#.#'],
+  crooked: ['#......', '.##t#t#', '...##..'],
+  evil:    ['#.....#', '##t#t##', '.#####.'],
+  drool:   ['.#####.', '.t#t#t.', '....q..', '....q..'],
+  frown:   ['..###..', '.#####.', '#.....#'],
+  o:       ['..###..', '.#####.', '..###..'],
+};
+function hdSkullFace(g, s, by, temper) {
+  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = F.fx || [], dy = by * HDK, bone = s.skin, ridge = shade(bone, -0.32);
+  const glow = F.pupil || s.eye || '#ff5d8f', kinds = Array.isArray(F.eyes) ? F.eyes : [F.eyes, F.eyes];
+  const can = (x, y) => { const c = g.raw(x + g.ox, y + g.oy); return c === bone || c === OUTLINE || c === shade(bone, -0.25); };
+  const put = (x, y, c) => { if (can(x, y)) g.set(x, y, c, true); };
+  const col = ch => ch === '#' ? OUTLINE : ch === 'g' ? glow : ch === 'w' ? '#ffffff' : ch === 't' ? bone : ch === 'q' ? '#9fe6ff' : null;
+  // sockets: back one at x 15, front at x 21 (mirrored, so its glow looks forward)
+  [[15, false], [21, true]].forEach(([x0, mir], side) => {
+    const M = SKULL_EYES[kinds[side]] || SKULL_EYES.open, y0 = 9 + dy;
+    M.forEach((row, r) => [...row].forEach((ch, c) => { const cc = col(ch); if (cc) put(x0 + (mir ? c : 4 - c), y0 + r, cc); }));
+    // ridge over the socket, cut in at the brow's angle
+    for (const [cx, cy] of SKULL_CUT[F.brow] || []) put(x0 + (mir ? 4 - cx : cx), y0 + cy, bone);
+    if (F.brow === 'angry' || F.brow === 'firm' || F.brow === 'sly') for (let i = 0; i < 4; i++) put(x0 + (mir ? 4 - i : i) , y0 - 1 + Math.floor(i / 2), ridge);
+    else if (F.brow === 'worried') for (let i = 0; i < 4; i++) put(x0 + (mir ? i : 4 - i), y0 - 1 + Math.floor(i / 2), ridge);
+    else if (F.brow !== 'none') for (let i = 0; i < 5; i++) put(x0 + i, y0 - (F.brow === 'up' || (F.brow === 'raise' && side) ? 2 : 1), ridge);
+  });
+  // nose: a small dark heart
+  const ny = 15 + dy; put(20, ny, OUTLINE); put(21, ny, OUTLINE); put(20, ny + 1, OUTLINE); put(21, ny + 1, shade(bone, -0.45));
+  // jaw
+  const J = SKULL_JAW[F.mouth] || SKULL_JAW.flat, jx = 17, jy = 18 + dy;
+  J.forEach((row, r) => [...row].forEach((ch, c) => { const cc = col(ch); if (cc) put(jx + c, jy + r, cc); }));
+  if (fx.includes('vein')) for (const [a, b] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) g.set(25 + a, 4 + dy + b, '#ff3d6e', true);
+  if (fx.includes('sweat')) { g.set(27, 8 + dy, '#bff4ff', true); g.set(27, 9 + dy, '#7fd8ff', true); g.set(27, 10 + dy, '#5fb8f0', true); }
+  if (fx.includes('blush')) { put(25, 16 + dy, '#ff9aa8'); put(26, 16 + dy, '#ff9aa8'); put(14, 16 + dy, '#ffb3bf'); }
+  if (fx.includes('flush')) { put(25, 16 + dy, '#ff6a6a'); put(26, 16 + dy, '#ff6a6a'); }
 }
