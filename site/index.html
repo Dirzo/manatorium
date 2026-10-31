@@ -1454,6 +1454,13 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .lcard.boon .bicon { font-size: 40px; line-height: 1.1; filter: drop-shadow(2px 2px 0 var(--ink)); }
 .lcard.boon.b-prism { box-shadow: 0 4px 0 var(--ink), 0 0 0 2px #8fd7ff, 0 0 18px rgba(255, 159, 255, .45); }
 .loot.boons { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+/* loading card: shown on the boot cover and over the arena until its first frame is drawn */
+.loadcard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; pointer-events: none; background: #151030; color: #ffe6a0; z-index: 1; }
+.loadcard b { font-family: var(--f-logo); font-size: clamp(26px, 5vw, 56px); letter-spacing: .04em; text-shadow: 0 3px 0 #08060f, 0 0 18px rgba(255, 207, 58, .35); }
+.loadcard span { font-family: var(--f-display); font-size: clamp(13px, 1.6vw, 18px); letter-spacing: .14em; text-transform: uppercase; color: #b9ab8e; }
+.loadcard i { font-style: normal; animation: loaddot 1.2s steps(1) infinite; }
+.loadcard i:nth-child(2) { animation-delay: .2s; } .loadcard i:nth-child(3) { animation-delay: .4s; }
+@keyframes loaddot { 0%, 100% { opacity: .15; } 30%, 70% { opacity: 1; } }
 
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
@@ -1884,7 +1891,7 @@ html.m #mDet .ico img.pxi { width: 20px; height: 20px; vertical-align: middle; }
 html.native #tPlaytest, html.native #recBadge { display: none !important; }
 </style>
 <!-- covers the bare game screen while the castle art loads, so it never flashes as a green field before the splash -->
-<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"></div>
+<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"><div class="loadcard"><b>Siege of Legends</b><span>Loading<i>.</i><i>.</i><i>.</i></span></div></div>
 <div id="app">
   <header class="hud">
     <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
@@ -1918,6 +1925,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
   <div class="stage">
     <div class="arena-wrap" id="arenaWrap">
       <canvas id="arena" width="480" height="270" aria-label="Castle arena"></canvas>
+      <div class="loadcard" id="arenaLoad" aria-hidden="true"><b>Siege of Legends</b><span>Loading<i>.</i><i>.</i><i>.</i></span></div>
       <span class="arena-tag l">Courtyard</span><span class="arena-tag r" id="hordeTag">← Enemies enter here</span>
       <div id="prepHint">Drag heroes to position them, then begin the siege.</div>
       <div id="banner"></div>
@@ -8759,7 +8767,7 @@ function renderFrame(V, dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#161d3a'; ctx.fillRect(0, 0, R.cv.width, R.cv.height);
   const sh = FXS.shake > 0.2 ? FXS.shake : 0; const ox = Math.round(rand(-sh, sh)) * k, oy = Math.round(rand(-sh, sh)) * k;
   ctx.drawImage(R.lo, ox, oy, W * k, H * k);
-  R.painted = true;
+  if (!R.painted) { R.painted = true; const l = document.getElementById('arenaLoad'); if (l) l.remove(); }
   // beams + bolts at hi-res for smoothness
   for (const b of FXS.beams) { const a = 1 - b.t / b.life; ctx.globalAlpha = a; ctx.strokeStyle = b.color; ctx.lineWidth = b.w * k * (0.5 + a * 0.5); ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(b.x1 * k + ox, b.y1 * k + oy); ctx.lineTo(b.x2 * k + ox, b.y2 * k + oy); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, b.w * k * 0.35 * a); ctx.stroke(); }
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }

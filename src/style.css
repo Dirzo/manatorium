@@ -1444,3 +1444,10 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .lcard.boon .bicon { font-size: 40px; line-height: 1.1; filter: drop-shadow(2px 2px 0 var(--ink)); }
 .lcard.boon.b-prism { box-shadow: 0 4px 0 var(--ink), 0 0 0 2px #8fd7ff, 0 0 18px rgba(255, 159, 255, .45); }
 .loot.boons { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+/* loading card: shown on the boot cover and over the arena until its first frame is drawn */
+.loadcard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; pointer-events: none; background: #151030; color: #ffe6a0; z-index: 1; }
+.loadcard b { font-family: var(--f-logo); font-size: clamp(26px, 5vw, 56px); letter-spacing: .04em; text-shadow: 0 3px 0 #08060f, 0 0 18px rgba(255, 207, 58, .35); }
+.loadcard span { font-family: var(--f-display); font-size: clamp(13px, 1.6vw, 18px); letter-spacing: .14em; text-transform: uppercase; color: #b9ab8e; }
+.loadcard i { font-style: normal; animation: loaddot 1.2s steps(1) infinite; }
+.loadcard i:nth-child(2) { animation-delay: .2s; } .loadcard i:nth-child(3) { animation-delay: .4s; }
+@keyframes loaddot { 0%, 100% { opacity: .15; } 30%, 70% { opacity: 1; } }
