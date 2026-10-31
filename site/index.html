@@ -1719,7 +1719,7 @@ html.board #intel .mods b { color: #ffe6a0; }
 html.board .traitrail { position: fixed; z-index: 11; left: calc(var(--ax) + 8px); top: 58px; bottom: calc(var(--barH) + 10px); width: 52px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; overflow-x: visible; scrollbar-width: none; pointer-events: auto; }
 html.board .traitrail::-webkit-scrollbar { display: none; }
 html.board.trail-wide .traitrail { left: 0; top: 0; bottom: var(--barH); width: var(--trailW); padding: 14px 10px; gap: 5px; background: linear-gradient(90deg, rgba(10, 8, 20, .95), rgba(18, 14, 36, .9)); border-right: 2px solid var(--bpk); box-shadow: inset -1px 0 0 var(--btrim2); }
-html.board .tr { display: grid; grid-template-columns: 30px auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 3px 8px 3px 3px; border-radius: 8px; background: var(--bp); color: var(--bcream); text-align: left; font: inherit; cursor: help; flex: 0 0 auto; }
+html.board .tr { display: grid; grid-template-columns: 30px auto 1fr auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 3px 8px 3px 3px; border-radius: 8px; background: var(--bp); color: var(--bcream); text-align: left; font: inherit; cursor: help; flex: 0 0 auto; }
 html.board .tr .hex { grid-row: 1 / 3; width: 30px; height: 30px; display: grid; place-items: center; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: #3a3450; }
 html.board .tr .hex img.pxi { width: 22px; height: 22px; vertical-align: 0; filter: grayscale(.7) brightness(.8); }
 html.board .tr.on .hex img.pxi { filter: none; }
@@ -1728,12 +1728,43 @@ html.board .tr.t-silver .hex { background: linear-gradient(#eef2ff, #8a94b8); }
 html.board .tr.t-gold .hex { background: linear-gradient(#fff1a8, #d8a020); box-shadow: 0 0 8px rgba(255, 207, 58, .6); }
 html.board .tr .cnt { grid-row: 1 / 3; font-family: var(--f-display); font-size: 17px; font-weight: 700; color: #ffe6a0; min-width: 12px; text-align: center; }
 html.board .tr:not(.on) .cnt { color: var(--bmute); }
-html.board .tr .nm { font-family: var(--f-display); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html.board .tr .nm { grid-column: 3; font-family: var(--f-display); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 html.board .tr:not(.on) .nm { color: var(--bmute); font-weight: 500; }
-html.board .tr .tiers { grid-column: 3; display: flex; gap: 6px; font: 600 10px/1 var(--f-display); color: #6a6080; }
-html.board .tr .tiers i { font-style: normal; }
+html.board .tr .tiers { grid-column: 3 / 5; grid-row: 2; display: flex; align-items: center; gap: 3px; font: 600 10.5px/1 var(--f-display); color: #6a6080; }
+html.board .tr .tiers i { font-style: normal; padding: 1px 3px; border-radius: 3px; }
+html.board .tr .tiers em { font-style: normal; color: #4a4262; font-size: 9px; }
 html.board .tr .tiers i.f { color: #ffe6a0; }
-html.board .tr .nx { grid-column: 3; grid-row: 2; justify-self: end; font-size: 10px; color: var(--bmute); display: none; }
+html.board .tr .tiers i.cur { color: #1a1206; background: #ffe066; }
+html.board .tr.t-bronze .tiers i.cur { background: #e0965a; } html.board .tr.t-silver .tiers i.cur { background: #dfe6ff; }
+html.board .tr .nx { grid-column: 4; grid-row: 1; justify-self: end; font: 600 10px/1 var(--f-display); color: var(--bmute); white-space: nowrap; }
+html.board .tr .nx.mx { color: #ffe066; }
+html.board .tr .tpips { display: none; }
+/* live traits up top in full colour; the ones still short of a bonus sit dimmed under a divider */
+html.board .tr.off { background: #1c1730; }
+html.board .tr.off > * { opacity: .6; }
+html.board .tr.off:hover > *, html.board .tr.off.hl > *, html.board .tr.off.pv > * { opacity: 1; }
+html.board .tr.on:not(.combo):not(.tmp) { box-shadow: inset 3px 0 0 #ffe066, 0 3px 0 rgba(8, 6, 15, .55); }
+html.board .tr.on.t-bronze:not(.combo) { box-shadow: inset 3px 0 0 #e0965a, 0 3px 0 rgba(8, 6, 15, .55); }
+html.board .tr.on.t-silver:not(.combo):not(.tmp) { box-shadow: inset 3px 0 0 #dfe6ff, 0 3px 0 rgba(8, 6, 15, .55); }
+html.board .trdiv { flex: 0 0 auto; height: 0; margin: 3px 4px; border-top: 1px dashed rgba(255, 255, 255, .22); }
+/* highlight: hovered / tapped trait (hl) and the traits of the shop card or bench champion under the mouse (pv) */
+html.board .tr.hl { background: var(--bp2); outline: 2px solid #ffe066; outline-offset: -2px; }
+html.board .tr.pv { outline: 2px solid #7cf09a; outline-offset: -2px; animation: trpv 1s ease-in-out infinite; }
+@keyframes trpv { 50% { outline-color: #d8ffe0; } }
+html.board.trhl #boardBar .bs-card[data-trk]:not(.hl), html.board.trhl #boardBar .bt[data-trk]:not(.hl) { filter: brightness(.45) saturate(.4); }
+html.board.trhl #boardBar .bs-card.hl, html.board.trhl #boardBar .bt.hl { box-shadow: inset 0 0 0 2px #ffe066, 0 0 12px rgba(255, 224, 102, .75); }
+/* trait chips on shop cards and bench tiles: gold = already on the board (with the count), green = fielding them reaches the next breakpoint */
+html.board .tchip { position: relative; display: block; padding: 1px; border-radius: 4px; background: rgba(8, 6, 15, .7); line-height: 0; }
+html.board .tchip img.pxi { filter: grayscale(.45) brightness(.85); }
+html.board .tchip.have { background: #4a3410; box-shadow: 0 0 0 1px #ffcf3a; }
+html.board .tchip.have img.pxi, html.board .tchip.up img.pxi { filter: none; }
+html.board .tchip b { position: absolute; right: -5px; bottom: -4px; min-width: 11px; height: 11px; padding: 0 2px; border-radius: 6px; font: 700 9px/11px var(--f-display); text-align: center; color: #2a1a00; background: #ffcf3a; box-shadow: 0 0 0 1px var(--bpk); }
+html.board .tchip.up { background: #12401f; box-shadow: 0 0 0 1px #7cf09a, 0 0 7px #7cf09a; animation: tchipup 1.2s ease-in-out infinite; }
+html.board .tchip.up b { background: #7cf09a; color: #04220e; }
+@keyframes tchipup { 50% { box-shadow: 0 0 0 1px #d8ffe0, 0 0 11px #7cf09a; } }
+html.board .bt-ic { position: absolute; left: 2px; top: 2px; display: flex; flex-direction: column; gap: 2px; z-index: 1; }
+html.board .bt-ic img.pxi { width: 11px; height: 11px; vertical-align: 0; display: block; }
+html.board .bt-ic .tchip b { min-width: 9px; height: 9px; font-size: 7.5px; line-height: 9px; right: -4px; bottom: -3px; }
 html.board .tr.combo { cursor: pointer; grid-template-columns: 30px 1fr; }
 html.board .tr.combo .nm { grid-row: 1 / 3; font-size: 12px; white-space: normal; line-height: 1.1; }
 html.board .tr.combo.on { box-shadow: inset 0 0 0 1px var(--btrim), 0 3px 0 rgba(8, 6, 15, .55); }
@@ -1743,9 +1774,17 @@ html.board .tr:hover { background: var(--bp2); }
 html.board .trsep { font-family: var(--f-display); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--bmute); margin: 6px 0 0 4px; white-space: nowrap; }
 html.board .trnone { font-size: 12px; color: var(--bmute); margin: 0; }
 /* narrow screens: the rail floats over the board as hex badges only, names live in the hover tip */
-html.board:not(.trail-wide) .tr { grid-template-columns: 30px; padding: 3px; position: relative; }
-html.board:not(.trail-wide) .tr .nm, html.board:not(.trail-wide) .tr .tiers, html.board:not(.trail-wide) .trsep, html.board:not(.trail-wide) .trnone { display: none; }
-html.board:not(.trail-wide) .tr .cnt { position: absolute; right: -2px; bottom: -3px; font-size: 11px; min-width: 15px; height: 15px; line-height: 15px; border-radius: 7px; background: var(--bpk); }
+html.board:not(.trail-wide) .tr { grid-template-columns: 30px 10px; grid-template-rows: auto 1fr; column-gap: 3px; row-gap: 2px; padding: 3px; position: relative; }
+html.board:not(.trail-wide) .tr.combo, html.board:not(.trail-wide) .tr.tmp { grid-template-columns: 30px; }
+html.board:not(.trail-wide) .tr .nm, html.board:not(.trail-wide) .tr .tiers, html.board:not(.trail-wide) .tr .nx, html.board:not(.trail-wide) .trsep, html.board:not(.trail-wide) .trnone { display: none; }
+html.board:not(.trail-wide) .tr .tpips { display: flex; grid-column: 2; grid-row: 2; align-self: start; flex-direction: column-reverse; gap: 2px; }
+html.board .tr .tpips i { width: 9px; height: 4px; border-radius: 1px; background: #3a3450; box-shadow: 0 0 0 1px var(--bpk); }
+html.board .tr .tpips i.f { background: #ffe066; }
+html.board .tr.t-bronze .tpips i.f { background: #e0965a; } html.board .tr.t-silver .tpips i.f { background: #dfe6ff; }
+html.board .tr .tpips i.nx { background: transparent; box-shadow: inset 0 0 0 1px #9a90b8; }
+html.board:not(.trail-wide) .trdiv { margin: 2px 6px; }
+html.board:not(.trail-wide) .tr .cnt { grid-column: 2; grid-row: 1; font-size: 13px; line-height: 1; min-width: 0; }
+html.board:not(.trail-wide) .tr.combo .cnt, html.board:not(.trail-wide) .tr.tmp .cnt { grid-column: 1; position: absolute; right: -2px; bottom: -3px; font-size: 11px; min-width: 15px; height: 15px; line-height: 15px; border-radius: 7px; background: var(--bpk); }
 
 /* ----- bottom bar ----- */
 html.board #boardBar { position: fixed; z-index: 12; left: 0; right: 0; bottom: 0; height: var(--barH); display: flex; gap: 10px; align-items: stretch; padding: 8px 12px; border-width: 2px 0 0; border-radius: 0;
@@ -1788,9 +1827,8 @@ html.board .bs-card:hover:not(:disabled) { transform: translateY(-3px); box-shad
 html.board .bs-card:disabled { cursor: not-allowed; }
 html.board .bs-card:disabled .port { opacity: .55; }
 html.board .bs-card .port { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); height: calc(100% - 22px); width: auto; aspect-ratio: 1; object-fit: contain; }
-html.board .bs-ic { position: absolute; left: 3px; top: 3px; display: flex; flex-direction: column; gap: 1px; }
+html.board .bs-ic { position: absolute; left: 3px; top: 3px; display: flex; flex-direction: column; gap: 3px; z-index: 1; }
 html.board .bs-ic img.pxi { width: 16px; height: 16px; vertical-align: 0; display: block; }
-html.board .bs-ic .elup { display: block; border-radius: 4px; box-shadow: 0 0 0 1px #ffe066, 0 0 6px #ffe066; }
 html.board .bs-own { position: absolute; right: 3px; top: 3px; font: 700 9.5px/1 var(--f-display); background: rgba(8, 6, 15, .8); color: #ffe066; padding: 2px 4px; border-radius: 4px; }
 html.board .bs-own.dim { color: var(--bmute); }
 html.board .bs-card.starup { animation: bstar 1s ease-in-out infinite; }
@@ -1808,7 +1846,7 @@ html.board .bb-lab { font-family: var(--f-display); font-size: 10px; letter-spac
 html.board .bb-lab b { color: var(--bcream); font-weight: 600; }
 html.board .btiles { display: flex; gap: 5px; }
 html.board .bt { position: relative; width: 54px; height: 62px; border-radius: 7px; border: 2px solid var(--bpk); background: #241d3e; box-shadow: inset 0 0 0 1px var(--rc, rgba(255,255,255,.1)); cursor: grab; touch-action: none; }
-html.board .bt img.px { position: absolute; inset: 2px 0 auto; margin: auto; width: 50px; height: 50px; object-fit: contain; }
+html.board .bt > img.px { position: absolute; inset: 2px 0 auto; margin: auto; width: 50px; height: 50px; object-fit: contain; }
 html.board .bt .stars { position: absolute; left: 3px; bottom: 1px; font-size: 11px; }
 html.board .bt small { position: absolute; right: 3px; bottom: 2px; font: 600 10px/1 var(--f-display); color: var(--bmute); }
 html.board .bt.sel { box-shadow: inset 0 0 0 2px #ffe066, 0 0 10px rgba(255, 224, 102, .5); }
@@ -1869,18 +1907,19 @@ html.board .arena-tag { top: 64px !important; }
 html.board .arena-tag.l { left: 14%; }
 @media (min-width: 1800px) {
   html.board .bs-card { max-width: 150px; }
-  html.board .bt { width: 64px; height: 76px; } html.board .bt img.px { width: 60px; height: 60px; }
+  html.board .bt { width: 64px; height: 76px; } html.board .bt > img.px { width: 60px; height: 60px; }
   html.board .bb-econ { width: 210px; } html.board .bb-gold .coinbox { font-size: 30px; } html.board .bb-gold .coinbox img { width: 30px; height: 30px; }
   html.board #bTop { padding: 8px 18px 10px; min-width: 380px; } html.board #bTop .siegeinfo b { font-size: 24px; }
   html.board .pip { width: 26px; height: 26px; } html.board .pip img.pxi { width: 18px; height: 18px; }
   html.board .ibtn, html.board #bBtns .btn.ghost.small { width: 44px; height: 44px; } html.board .sface, html.board .sface img.px { width: 38px; height: 38px; }
-  html.board .tr .nm { font-size: 15px; } html.board .tr .hex { width: 36px; height: 36px; } html.board .tr { grid-template-columns: 36px auto 1fr; }
+  html.board .tr .nm { font-size: 15px; } html.board .tr .hex { width: 36px; height: 36px; } html.board .tr { grid-template-columns: 36px auto 1fr auto; } html.board .tr .tiers { font-size: 12px; } html.board .tr .nx { font-size: 11px; }
+  html.board .bs-ic img.pxi { width: 19px; height: 19px; } html.board .bt-ic img.pxi { width: 13px; height: 13px; }
   html.board .unitcard { width: 420px; }
 }
 @media (max-width: 1250px) {
   html.board .bb-fac .rail button { font-size: 0; gap: 0; padding: 0 5px; }
   html.board .bb-econ { width: 150px; }
-  html.board .bt { width: 44px; height: 54px; } html.board .bt img.px { width: 42px; height: 42px; }
+  html.board .bt { width: 44px; height: 54px; } html.board .bt > img.px { width: 42px; height: 42px; }
   html.board .bb-act { width: 250px; } html.board .bb-act #beginBtn { min-width: 0; font-size: 14px; padding: 6px 10px; } html.board .bb-act .hammerbtn kbd, html.board .bb-act .powerbtn kbd { display: none; }
   html.board #recBadge { display: none !important; }
 }
@@ -1917,7 +1956,7 @@ html.board.bphone .bb-bench { position: relative; }
 html.board.bphone .bb-lab { position: absolute; top: -17px; left: 2px; font-size: 9px; pointer-events: none; text-shadow: 0 1px 0 var(--bpk); }
 html.board.bphone .btiles { gap: 4px; }
 html.board.bphone .bt { width: 42px; height: calc(var(--barH) - 12px - env(safe-area-inset-bottom, 0px)); }
-html.board.bphone .bt img.px { width: 38px; height: 38px; inset: 0 0 auto; }
+html.board.bphone .bt > img.px { width: 38px; height: 38px; inset: 0 0 auto; }
 html.board.bphone .bt .stars { font-size: 9px; } html.board.bphone .bt small { font-size: 9px; }
 /* the shop tray */
 html.board.bphone .bb-shop { position: fixed; z-index: 13; left: calc(var(--ax) + 4px); width: calc(var(--aw) - 8px); bottom: calc(var(--barH) + 4px); height: min(104px, calc(var(--ah) * .36)); min-width: 0; padding: 6px; gap: 5px;
@@ -1953,7 +1992,10 @@ html.board.bphone .pip { width: 15px; height: 15px; } html.board.bphone .pip img
 html.board.bphone #bTL { top: 4px; left: calc(var(--ax) + 4px); } html.board.bphone #bTL .scorebox { font-size: 13px; padding: 3px 7px; } html.board.bphone #bTL .scorebox small { font-size: 8px; }
 html.board.bphone .traitrail { left: calc(4px + env(safe-area-inset-left, 0px)); top: 6px; bottom: calc(var(--barH) + 6px); width: 42px; gap: 3px; }
 html.board.bphone .tr { padding: 2px; } html.board.bphone .tr .hex { width: 26px; height: 26px; } html.board.bphone .tr .hex img.pxi { width: 18px; height: 18px; }
-html.board.bphone:not(.trail-wide) .tr { grid-template-columns: 26px; }
+html.board.bphone:not(.trail-wide) .tr { grid-template-columns: 26px 8px; column-gap: 2px; }
+html.board.bphone:not(.trail-wide) .tr.combo, html.board.bphone:not(.trail-wide) .tr.tmp { grid-template-columns: 26px; }
+html.board.bphone .tr .tpips i { width: 8px; height: 3px; } html.board.bphone:not(.trail-wide) .tr .cnt { font-size: 11px; }
+html.board.bphone .bt-ic img.pxi { width: 9px; height: 9px; } html.board.bphone .bt-ic .tchip b { display: none; }
 /* panels fit the short screen */
 html.board.bphone .unitcard { right: calc(var(--actW) + 6px); bottom: calc(var(--barH) + 6px); width: min(300px, calc(var(--aw) - 20px)); max-height: calc(100vh - var(--barH) - 12px); }
 html.board.bphone .unitcard .inspector { padding: 9px; gap: 6px; }
@@ -1980,6 +2022,13 @@ html.board.board-page .unitcard, html.board.board-team .unitcard { display: none
 html.board.bphone .unitcard { top: 6px; bottom: auto; width: min(280px, calc(var(--aw) * .5)); max-height: calc(100vh - var(--barH) - 12px); }
 html.board.bphone .unitcard .inspector h3 { font-size: 15px; }
 html.board.bphone .unitcard .inspector .stats > div { padding: 4px 6px; }
+
+/* trait tooltip: every legend with the trait, like TFT (gold rim = on the board, lit = on your bench, dim = not owned) */
+#tip .tlegs { display: flex; flex-wrap: wrap; gap: 3px; margin: 6px 0 2px; }
+#tip .tleg { width: 30px; height: 30px; border-radius: 4px; background: #1d2450; box-shadow: inset 0 0 0 1px var(--rc); opacity: .4; filter: grayscale(.85); }
+#tip .tleg img { width: 30px; height: 30px; display: block; }
+#tip .tleg.own { opacity: 1; filter: none; }
+#tip .tleg.onb { opacity: 1; filter: none; box-shadow: inset 0 0 0 1px var(--rc), 0 0 0 2px #ffcf3a; }
 
 /* ===== Store demo: road-ahead screen and title note ===== */
 .rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
@@ -8823,6 +8872,12 @@ function renderFrame(V, dt) {
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
   else units = V.prepUnits;
   units.sort((a, b) => (a.flying ? a.y + 30 : a.y) - (b.flying ? b.y + 30 : b.y));
+  // trait highlight (board.js): hovering or tapping a trait rings every fielded champion who carries it
+  if (!B && typeof BOARD !== 'undefined' && BOARD.on && BOARD.hlTok) { const on = Math.floor(t * 4) % 2;
+    for (const u of units) if (u.inst && BOARD.heroToks(run, u.inst).includes(BOARD.hlTok)) { const x = Math.round(u.x), y = Math.round(u.y);
+      g.strokeStyle = OUTLINE; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y, 11, 5.5, 0, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = on ? '#ffe066' : '#fff6c8'; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y, 11, 5.5, 0, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 31 - on, 7, 5); g.fillStyle = '#ffe066'; g.fillRect(x - 2, y - 30 - on, 5, 1); g.fillRect(x - 1, y - 29 - on, 3, 1); g.fillRect(x, y - 28 - on, 1, 1); } }
   // rafter units are drawn after the castle and before ground units sorted
   for (const u of units) {
     if (u.alive === false) { // tombstone
@@ -10378,7 +10433,11 @@ function synTipHTML(k) {
   const { race, cls } = synergyCounts(run), n = (isRace ? race : cls)[k] || 0, t = activeSynergies(run)[k];
   const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroShortName(heroDisplayName(h))));
   const tiers = D.at.map((v, i) => `<div class="ttier ${t === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(D.desc(i).replace(/^[^:]+: /, ''))}</span></div>`).join('');
-  return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
+  // every legend with this trait, like TFT's trait tooltip: on the board (gold rim), on the bench (lit) or not owned yet (dim)
+  const placed = new Set(placedHeroes(run).map(h => h.id)), owned = new Set(run.roster.filter(h => !h.vault && !h.fled).map(h => h.id));
+  const legends = HEROES.filter(h => (isRace ? h.race : h.cls) === k).sort((a, b) => (placed.has(b.id) - placed.has(a.id)) || (owned.has(b.id) - owned.has(a.id)) || (a.rar || 0) - (b.rar || 0));
+  const faces = legends.length && typeof portrait === 'function' ? `<div class="tlegs">${legends.map(h => `<span class="tleg ${placed.has(h.id) ? 'onb' : owned.has(h.id) ? 'own' : ''}" style="--rc:${RARITY[h.rar || 0].col}"><img class="px" src="${portrait('h:' + h.id, 'idle0')}" alt=""></span>`).join('')}</div>` : '';
+  return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}${faces}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.${legends.length ? ' Gold rim: on the board. Lit: on your bench.' : ''}</p>`;
 }
 function comboTipHTML(key) {
   const c = possibleCombos(G.run).find(c => c.key === key); if (!c) return ''; const [a, b] = key.split('+'), act = activeCombos(G.run).find(x => x.key === key);
@@ -14874,6 +14933,15 @@ const BOARD = {
     // the bar hands its clicks to the same actions the Guild page uses
     $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
     $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
+    // trait highlight: hover a trait row (mouse) to light up its champions; hover a shop card or bench tile to light up the traits they carry
+    const rail = $('traitRail'), bar = $('boardBar');
+    rail.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const r = e.target.closest('[data-trk]'); BOARD.setHL(r ? r.dataset.trk : null); });
+    rail.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') BOARD.setHL(null); });
+    bar.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const r = e.target.closest('[data-trk]'); BOARD.setPV(r ? r.dataset.trk.split(' ') : null); });
+    bar.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') BOARD.setPV(null); });
+    // touch: tapping a trait keeps it lit (with its tip) until the next tap somewhere else
+    rail.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; const r = e.target.closest('[data-trk]'); if (r) { BOARD.setHL(BOARD.hlTok === r.dataset.trk ? null : r.dataset.trk); BOARD.touchHL = true; } });
+    document.addEventListener('pointerdown', e => { if (BOARD.touchHL && !e.target.closest('#traitRail')) { BOARD.touchHL = false; BOARD.setHL(null); } }, true);
     $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
     // phones: a tap on a bench champion picks them for tap-to-place without the card covering the board (long-press shows their tip)
     $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) { BOARD.benchTap = BOARD.phone(); G.cardDown(e, t.dataset.uid); BOARD.benchTap = false; } });
@@ -14961,25 +15029,63 @@ const BOARD = {
     if (pe._k !== p) { pe._k = p; pe.innerHTML = p; }
   },
   // ---- left: TFT-style trait tracker (live ones first, tier pips, hover for the full text) ----
+  // Cam 2026-10-31: "enhance the traits a bit so they are easier to understand just by looking at them, highlight if you already
+  // have the trait on the board". Live traits sit on top in their tier colour, the rest are dimmed below a divider, every row
+  // shows its breakpoints as pips, and hovering (or tapping) a trait lights up every champion who carries it on the board,
+  // bench and shop. Each row carries data-trk tokens: r-<race>, c-<class>, e-<element>.
   renderTraits(run) {
     const { race, cls } = synergyCounts(run), act = activeSynergies(run), rows = [];
     const tierCls = t => t < 0 ? 't-off' : ['t-bronze', 't-silver', 't-gold'][Math.min(2, t)] || 't-gold';
-    const row = (key, def, n, icon, tip) => { const t = act[key] ?? -1, next = def.at.find(v => v > n);
-      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span><span class="tiers">${def.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span>${t < 0 ? `<small class="nx">${n}/${def.at[0]}</small>` : next ? '' : '<small class="nx mx">max</small>'}</div>` }); };
-    for (const k in RACES) if (race[k]) row(k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
-    for (const k in CLASSES) if (cls[k]) row(k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
+    const pips = (n, at) => `<span class="tpips">${at.map((v, i) => `<i class="${n >= v ? 'f' : at.findIndex(w => w > n) === i ? 'nx' : ''}"></i>`).join('')}</span>`;
+    const tiers = (n, at) => `<span class="tiers">${at.map(v => `<i class="${n >= v ? 'f' : ''} ${at.filter(w => n >= w).pop() === v ? 'cur' : ''}">${v}</i>`).join('<em>›</em>')}</span>`;
+    const goal = (n, at) => { const nx = at.find(v => v > n); return nx == null ? '<small class="nx mx">max</small>' : `<small class="nx">${nx - n} more</small>`; };
+    const row = (key, tok, def, n, icon, tip) => { const t = act[key] ?? -1;
+      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : 'off'} ${tierCls(t)}" data-trk="${tok}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span>${tiers(n, def.at)}${goal(n, def.at)}${pips(n, def.at)}</div>` }); };
+    for (const k in RACES) if (race[k]) row(k, 'r-' + k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
+    for (const k in CLASSES) if (cls[k]) row(k, 'c-' + k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
     rows.sort((a, b) => (b.on - a.on) || (b.t - a.t) || (b.n - a.n));
-    let h = rows.map(r => r.html).join('');
-    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => fe[b] - fe[a]);
+    const firstOff = rows.findIndex(r => !r.on);
+    let h = rows.map((r, i) => (i === firstOff && i > 0 ? '<div class="trdiv" aria-hidden="true"></div>' : '') + r.html).join('');
+    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => (elTier(fe[b]) - elTier(fe[a])) || fe[b] - fe[a]);
     if (els.length) { h += `<div class="trsep">Elements</div>`; for (const e of els) { const n = fe[e], t = elTier(n), E = ELEMENTS[e];
-      h += `<div class="tr el ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span><span class="tiers">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span></div>`; } }
+      h += `<div class="tr el ${t >= 0 ? 'on' : 'off'} ${tierCls(t)}" data-trk="e-${e}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span>${tiers(n, EL_STACK.at)}${goal(n, EL_STACK.at)}${pips(n, EL_STACK.at)}</div>`; } }
     const tc = temperCounts(run), tps = Object.keys(tc).filter(k => tc[k] >= 2);
     if (tps.length) { h += `<div class="trsep">Pairs</div>`; for (const k of tps) { const T = TEMPERS[k]; h += `<div class="tr on t-silver tmp ${T.side}" data-tip="tmp:${k}"><span class="hex">${pxi('tmp-' + k)}</span><b class="cnt">${tc[k]}</b><span class="nm">${esc(T.name)}</span></div>`; } }
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     if (all.length) { h += `<div class="trsep">Combos ${on.size}/${comboSlots(run)}</div>`;
       for (const c of all) h += `<button class="tr combo ${on.has(c.key) ? 'on t-gold' : 't-off'} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="hex">${pxi('cmb-' + c.kind)}</span><span class="nm">${esc(c.name)}</span></button>`; }
     if (!h) h = `<p class="trnone">Two champions of the same race or class switch on a bonus.</p>`;
-    BOARD.set('traitRail', h);
+    if (BOARD.set('traitRail', h)) BOARD.paintHL();
+  },
+  // ---- trait marks on shop cards and bench tiles: which of this legend's traits you already field, and which ones they'd switch on ----
+  // have: that trait is already on the board (gold rim + how many). up: fielding this legend reaches that trait's next breakpoint (green glow).
+  traitMarks(run, heroId, el, cached) {
+    const c = cached || { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
+    const d = HERO_BY_ID[heroId], adds = !c.placed.has(heroId), out = [];
+    const one = (tok, name, n, at, icon, extra = 0) => { const after = adds ? n + 1 + extra : n; out.push({ tok, name, n, after, at, icon, up: adds && at.some(v => v > n && v <= after) }); };
+    one('r-' + d.race, RACES[d.race].name, c.race[d.race] || 0, RACES[d.race].at, pxi('race-' + d.race));
+    one('c-' + d.cls, CLASSES[d.cls].name, c.cls[d.cls] || 0, CLASSES[d.cls].at, pxi('cls-' + d.cls));
+    // the castle's element counts once a champion carries it, so the first one of that element is worth two
+    if (el) { const n = c.fe[el] || 0; one('e-' + el, ELEMENTS[el].name, n, EL_STACK.at, pxi('el-' + el), !n && run.castleEl === el ? 1 : 0); }
+    return out;
+  },
+  markChips(marks) { return marks.map(m => `<span class="tchip ${m.n ? 'have' : ''} ${m.up ? 'up' : ''}">${m.icon}${m.n ? `<b>${m.n}</b>` : ''}</span>`).join(''); },
+  markText(marks) {
+    const lines = marks.filter(m => m.up).map(m => `${m.name} ${m.n} → ${m.after}${m.at[0] === m.after ? ' switches it on' : ' levels it up'}`);
+    const have = marks.filter(m => m.n && !m.up).map(m => `${m.name} (${m.n} on the board)`);
+    return (lines.length ? ' Fielding them: ' + lines.join(', ') + '.' : '') + (have.length ? ' Adds to ' + have.join(', ') + '.' : '');
+  },
+  // ---- trait highlight: hover a trait (tap on phones) and everyone who carries it lights up; the board canvas reads BOARD.hlTok ----
+  hlTok: null, pvToks: null,
+  heroToks(run, h) { const d = HERO_BY_ID[h.id]; return ['r-' + d.race, 'c-' + d.cls, ...heroElements(run, h).map(e => 'e-' + e)]; },
+  setHL(tok) { if (BOARD.hlTok === tok) return; BOARD.hlTok = tok; BOARD.paintHL(); },
+  setPV(toks) { const k = toks ? toks.join(' ') : null; if ((BOARD.pvToks && BOARD.pvToks.join(' ')) === k) return; BOARD.pvToks = toks; BOARD.paintHL(); },
+  paintHL() {
+    const tok = BOARD.hlTok, pv = BOARD.pvToks;
+    document.documentElement.classList.toggle('trhl', !!tok);
+    for (const el of document.querySelectorAll('#boardBar [data-trk]')) el.classList.toggle('hl', !!tok && el.dataset.trk.split(' ').includes(tok));
+    for (const el of document.querySelectorAll('#traitRail [data-trk]')) { el.classList.toggle('hl', el.dataset.trk === tok); el.classList.toggle('pv', !!pv && pv.includes(el.dataset.trk)); }
+    document.documentElement.classList.toggle('trpv', !!pv);
   },
   // ---- top right: the horde as a row of faces; the full report opens on click ----
   renderScouts(run) {
@@ -15003,31 +15109,32 @@ const BOARD = {
   // ---- bottom middle: the shop, always in reach while you plan ----
   renderShop(run) {
     const prep = G.phase === 'prep'; if (!run.shop) rollShop(run, G.meta);
-    const fe0 = stackElements(run), full = run.roster.length >= rosterCap(run);
+    const full = run.roster.length >= rosterCap(run), mc = { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
     let h = '';
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="bs-card sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], Rr = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), el = own ? own.el : c.el;
-      const up = own && copiesToNext(own) === 1, elUp = !own && el && EL_STACK.at.includes((fe0[el] || 0) + 1);
-      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}`;
-      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
+      const up = own && copiesToNext(own) === 1, marks = BOARD.traitMarks(run, c.id, el, mc);
+      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}${esc(BOARD.markText(marks))}`;
+      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''} ${marks.some(m => m.up) ? 'trup' : ''}" data-trk="${marks.map(m => m.tok).join(' ')}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
         <img class="px port" src="${portrait('h:' + c.id, 'idle0')}" alt="" draggable="false">
-        <span class="bs-ic">${pxi('cls-' + d.cls)}${pxi('race-' + d.race)}${el ? `<span class="${elUp ? 'elup' : ''}">${pxi('el-' + el)}</span>` : ''}</span>
+        <span class="bs-ic">${BOARD.markChips(marks)}</span>
         ${own ? `<span class="bs-own">${up ? `${heroStar(own) + 1}★ next` : `${heroStar(own)}★ owned`}</span>` : full ? '<span class="bs-own dim">Keep full</span>' : ''}
         <span class="bs-foot"><b>${esc(heroShortName(d.name))}</b><span class="bs-cost">${COST(cost)}</span></span></button>`;
     });
     h += `<button class="ibtn bs-lock ${run.shopLock ? 'on' : ''}" data-bact="shoplock" aria-pressed="${!!run.shopLock}" data-tip="txt:${run.shopLock ? 'Shop locked' : 'Lock the shop'}|${run.shopLock ? 'These five stay for the next siege.' : 'Keep these five for the next siege instead of a fresh deal.'}">${pxi(run.shopLock ? 'ui-lock' : 'ui-unlock')}</button>`;
-    BOARD.set('bShop', h);
+    if (BOARD.set('bShop', h)) BOARD.paintHL();
     $('bShop').classList.toggle('closed', !prep);
   },
   // ---- bottom right: the bench, five slots; drag a champion up onto the board ----
   renderBench(run) {
     const bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
     let h = `<span class="bb-lab" data-tip="txt:Bench|Bench champions don't fight. Drag one onto the field, or onto a field champion to swap. Drag a field champion down here to bench them.">Bench <b>${bench.length}/${BENCH_SLOTS}</b></span><div class="btiles">`;
-    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0];
-      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight."><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
+    const mc = { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
+    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0], marks = BOARD.traitMarks(run, x.id, x.el, mc);
+      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''} ${marks.some(m => m.up) ? 'trup' : ''}" data-trk="${marks.map(m => m.tok).join(' ')}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight.${esc(BOARD.markText(marks))}"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="bt-ic">${BOARD.markChips(marks)}</span><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
     for (let i = bench.length; i < BENCH_SLOTS; i++) h += `<div class="bt empty" aria-hidden="true"></div>`;
-    BOARD.set('bBench', h + '</div>');
+    if (BOARD.set('bBench', h + '</div>')) BOARD.paintHL();
   },
 };
 

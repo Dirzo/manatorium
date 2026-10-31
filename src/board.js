@@ -33,6 +33,15 @@ const BOARD = {
     // the bar hands its clicks to the same actions the Guild page uses
     $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
     $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
+    // trait highlight: hover a trait row (mouse) to light up its champions; hover a shop card or bench tile to light up the traits they carry
+    const rail = $('traitRail'), bar = $('boardBar');
+    rail.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const r = e.target.closest('[data-trk]'); BOARD.setHL(r ? r.dataset.trk : null); });
+    rail.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') BOARD.setHL(null); });
+    bar.addEventListener('pointerover', e => { if (e.pointerType === 'touch') return; const r = e.target.closest('[data-trk]'); BOARD.setPV(r ? r.dataset.trk.split(' ') : null); });
+    bar.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') BOARD.setPV(null); });
+    // touch: tapping a trait keeps it lit (with its tip) until the next tap somewhere else
+    rail.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; const r = e.target.closest('[data-trk]'); if (r) { BOARD.setHL(BOARD.hlTok === r.dataset.trk ? null : r.dataset.trk); BOARD.touchHL = true; } });
+    document.addEventListener('pointerdown', e => { if (BOARD.touchHL && !e.target.closest('#traitRail')) { BOARD.touchHL = false; BOARD.setHL(null); } }, true);
     $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
     // phones: a tap on a bench champion picks them for tap-to-place without the card covering the board (long-press shows their tip)
     $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) { BOARD.benchTap = BOARD.phone(); G.cardDown(e, t.dataset.uid); BOARD.benchTap = false; } });
@@ -120,25 +129,63 @@ const BOARD = {
     if (pe._k !== p) { pe._k = p; pe.innerHTML = p; }
   },
   // ---- left: TFT-style trait tracker (live ones first, tier pips, hover for the full text) ----
+  // Cam 2026-10-31: "enhance the traits a bit so they are easier to understand just by looking at them, highlight if you already
+  // have the trait on the board". Live traits sit on top in their tier colour, the rest are dimmed below a divider, every row
+  // shows its breakpoints as pips, and hovering (or tapping) a trait lights up every champion who carries it on the board,
+  // bench and shop. Each row carries data-trk tokens: r-<race>, c-<class>, e-<element>.
   renderTraits(run) {
     const { race, cls } = synergyCounts(run), act = activeSynergies(run), rows = [];
     const tierCls = t => t < 0 ? 't-off' : ['t-bronze', 't-silver', 't-gold'][Math.min(2, t)] || 't-gold';
-    const row = (key, def, n, icon, tip) => { const t = act[key] ?? -1, next = def.at.find(v => v > n);
-      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span><span class="tiers">${def.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span>${t < 0 ? `<small class="nx">${n}/${def.at[0]}</small>` : next ? '' : '<small class="nx mx">max</small>'}</div>` }); };
-    for (const k in RACES) if (race[k]) row(k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
-    for (const k in CLASSES) if (cls[k]) row(k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
+    const pips = (n, at) => `<span class="tpips">${at.map((v, i) => `<i class="${n >= v ? 'f' : at.findIndex(w => w > n) === i ? 'nx' : ''}"></i>`).join('')}</span>`;
+    const tiers = (n, at) => `<span class="tiers">${at.map(v => `<i class="${n >= v ? 'f' : ''} ${at.filter(w => n >= w).pop() === v ? 'cur' : ''}">${v}</i>`).join('<em>›</em>')}</span>`;
+    const goal = (n, at) => { const nx = at.find(v => v > n); return nx == null ? '<small class="nx mx">max</small>' : `<small class="nx">${nx - n} more</small>`; };
+    const row = (key, tok, def, n, icon, tip) => { const t = act[key] ?? -1;
+      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : 'off'} ${tierCls(t)}" data-trk="${tok}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span>${tiers(n, def.at)}${goal(n, def.at)}${pips(n, def.at)}</div>` }); };
+    for (const k in RACES) if (race[k]) row(k, 'r-' + k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
+    for (const k in CLASSES) if (cls[k]) row(k, 'c-' + k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
     rows.sort((a, b) => (b.on - a.on) || (b.t - a.t) || (b.n - a.n));
-    let h = rows.map(r => r.html).join('');
-    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => fe[b] - fe[a]);
+    const firstOff = rows.findIndex(r => !r.on);
+    let h = rows.map((r, i) => (i === firstOff && i > 0 ? '<div class="trdiv" aria-hidden="true"></div>' : '') + r.html).join('');
+    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => (elTier(fe[b]) - elTier(fe[a])) || fe[b] - fe[a]);
     if (els.length) { h += `<div class="trsep">Elements</div>`; for (const e of els) { const n = fe[e], t = elTier(n), E = ELEMENTS[e];
-      h += `<div class="tr el ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span><span class="tiers">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span></div>`; } }
+      h += `<div class="tr el ${t >= 0 ? 'on' : 'off'} ${tierCls(t)}" data-trk="e-${e}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span>${tiers(n, EL_STACK.at)}${goal(n, EL_STACK.at)}${pips(n, EL_STACK.at)}</div>`; } }
     const tc = temperCounts(run), tps = Object.keys(tc).filter(k => tc[k] >= 2);
     if (tps.length) { h += `<div class="trsep">Pairs</div>`; for (const k of tps) { const T = TEMPERS[k]; h += `<div class="tr on t-silver tmp ${T.side}" data-tip="tmp:${k}"><span class="hex">${pxi('tmp-' + k)}</span><b class="cnt">${tc[k]}</b><span class="nm">${esc(T.name)}</span></div>`; } }
     const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
     if (all.length) { h += `<div class="trsep">Combos ${on.size}/${comboSlots(run)}</div>`;
       for (const c of all) h += `<button class="tr combo ${on.has(c.key) ? 'on t-gold' : 't-off'} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="hex">${pxi('cmb-' + c.kind)}</span><span class="nm">${esc(c.name)}</span></button>`; }
     if (!h) h = `<p class="trnone">Two champions of the same race or class switch on a bonus.</p>`;
-    BOARD.set('traitRail', h);
+    if (BOARD.set('traitRail', h)) BOARD.paintHL();
+  },
+  // ---- trait marks on shop cards and bench tiles: which of this legend's traits you already field, and which ones they'd switch on ----
+  // have: that trait is already on the board (gold rim + how many). up: fielding this legend reaches that trait's next breakpoint (green glow).
+  traitMarks(run, heroId, el, cached) {
+    const c = cached || { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
+    const d = HERO_BY_ID[heroId], adds = !c.placed.has(heroId), out = [];
+    const one = (tok, name, n, at, icon, extra = 0) => { const after = adds ? n + 1 + extra : n; out.push({ tok, name, n, after, at, icon, up: adds && at.some(v => v > n && v <= after) }); };
+    one('r-' + d.race, RACES[d.race].name, c.race[d.race] || 0, RACES[d.race].at, pxi('race-' + d.race));
+    one('c-' + d.cls, CLASSES[d.cls].name, c.cls[d.cls] || 0, CLASSES[d.cls].at, pxi('cls-' + d.cls));
+    // the castle's element counts once a champion carries it, so the first one of that element is worth two
+    if (el) { const n = c.fe[el] || 0; one('e-' + el, ELEMENTS[el].name, n, EL_STACK.at, pxi('el-' + el), !n && run.castleEl === el ? 1 : 0); }
+    return out;
+  },
+  markChips(marks) { return marks.map(m => `<span class="tchip ${m.n ? 'have' : ''} ${m.up ? 'up' : ''}">${m.icon}${m.n ? `<b>${m.n}</b>` : ''}</span>`).join(''); },
+  markText(marks) {
+    const lines = marks.filter(m => m.up).map(m => `${m.name} ${m.n} → ${m.after}${m.at[0] === m.after ? ' switches it on' : ' levels it up'}`);
+    const have = marks.filter(m => m.n && !m.up).map(m => `${m.name} (${m.n} on the board)`);
+    return (lines.length ? ' Fielding them: ' + lines.join(', ') + '.' : '') + (have.length ? ' Adds to ' + have.join(', ') + '.' : '');
+  },
+  // ---- trait highlight: hover a trait (tap on phones) and everyone who carries it lights up; the board canvas reads BOARD.hlTok ----
+  hlTok: null, pvToks: null,
+  heroToks(run, h) { const d = HERO_BY_ID[h.id]; return ['r-' + d.race, 'c-' + d.cls, ...heroElements(run, h).map(e => 'e-' + e)]; },
+  setHL(tok) { if (BOARD.hlTok === tok) return; BOARD.hlTok = tok; BOARD.paintHL(); },
+  setPV(toks) { const k = toks ? toks.join(' ') : null; if ((BOARD.pvToks && BOARD.pvToks.join(' ')) === k) return; BOARD.pvToks = toks; BOARD.paintHL(); },
+  paintHL() {
+    const tok = BOARD.hlTok, pv = BOARD.pvToks;
+    document.documentElement.classList.toggle('trhl', !!tok);
+    for (const el of document.querySelectorAll('#boardBar [data-trk]')) el.classList.toggle('hl', !!tok && el.dataset.trk.split(' ').includes(tok));
+    for (const el of document.querySelectorAll('#traitRail [data-trk]')) { el.classList.toggle('hl', el.dataset.trk === tok); el.classList.toggle('pv', !!pv && pv.includes(el.dataset.trk)); }
+    document.documentElement.classList.toggle('trpv', !!pv);
   },
   // ---- top right: the horde as a row of faces; the full report opens on click ----
   renderScouts(run) {
@@ -162,31 +209,32 @@ const BOARD = {
   // ---- bottom middle: the shop, always in reach while you plan ----
   renderShop(run) {
     const prep = G.phase === 'prep'; if (!run.shop) rollShop(run, G.meta);
-    const fe0 = stackElements(run), full = run.roster.length >= rosterCap(run);
+    const full = run.roster.length >= rosterCap(run), mc = { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
     let h = '';
     run.shop.forEach((c, i) => {
       if (!c) { h += `<div class="bs-card sold"><span>Sold</span></div>`; return; }
       const d = HERO_BY_ID[c.id], Rr = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), el = own ? own.el : c.el;
-      const up = own && copiesToNext(own) === 1, elUp = !own && el && EL_STACK.at.includes((fe0[el] || 0) + 1);
-      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}`;
-      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
+      const up = own && copiesToNext(own) === 1, marks = BOARD.traitMarks(run, c.id, el, mc);
+      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}${esc(BOARD.markText(marks))}`;
+      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''} ${marks.some(m => m.up) ? 'trup' : ''}" data-trk="${marks.map(m => m.tok).join(' ')}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
         <img class="px port" src="${portrait('h:' + c.id, 'idle0')}" alt="" draggable="false">
-        <span class="bs-ic">${pxi('cls-' + d.cls)}${pxi('race-' + d.race)}${el ? `<span class="${elUp ? 'elup' : ''}">${pxi('el-' + el)}</span>` : ''}</span>
+        <span class="bs-ic">${BOARD.markChips(marks)}</span>
         ${own ? `<span class="bs-own">${up ? `${heroStar(own) + 1}★ next` : `${heroStar(own)}★ owned`}</span>` : full ? '<span class="bs-own dim">Keep full</span>' : ''}
         <span class="bs-foot"><b>${esc(heroShortName(d.name))}</b><span class="bs-cost">${COST(cost)}</span></span></button>`;
     });
     h += `<button class="ibtn bs-lock ${run.shopLock ? 'on' : ''}" data-bact="shoplock" aria-pressed="${!!run.shopLock}" data-tip="txt:${run.shopLock ? 'Shop locked' : 'Lock the shop'}|${run.shopLock ? 'These five stay for the next siege.' : 'Keep these five for the next siege instead of a fresh deal.'}">${pxi(run.shopLock ? 'ui-lock' : 'ui-unlock')}</button>`;
-    BOARD.set('bShop', h);
+    if (BOARD.set('bShop', h)) BOARD.paintHL();
     $('bShop').classList.toggle('closed', !prep);
   },
   // ---- bottom right: the bench, five slots; drag a champion up onto the board ----
   renderBench(run) {
     const bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
     let h = `<span class="bb-lab" data-tip="txt:Bench|Bench champions don't fight. Drag one onto the field, or onto a field champion to swap. Drag a field champion down here to bench them.">Bench <b>${bench.length}/${BENCH_SLOTS}</b></span><div class="btiles">`;
-    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0];
-      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight."><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
+    const mc = { ...synergyCounts(run), fe: stackElements(run), placed: new Set(placedHeroes(run).map(h => h.id)) };
+    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0], marks = BOARD.traitMarks(run, x.id, x.el, mc);
+      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''} ${marks.some(m => m.up) ? 'trup' : ''}" data-trk="${marks.map(m => m.tok).join(' ')}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight.${esc(BOARD.markText(marks))}"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="bt-ic">${BOARD.markChips(marks)}</span><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
     for (let i = bench.length; i < BENCH_SLOTS; i++) h += `<div class="bt empty" aria-hidden="true"></div>`;
-    BOARD.set('bBench', h + '</div>');
+    if (BOARD.set('bBench', h + '</div>')) BOARD.paintHL();
   },
 };
 

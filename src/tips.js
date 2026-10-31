@@ -48,7 +48,11 @@ function synTipHTML(k) {
   const { race, cls } = synergyCounts(run), n = (isRace ? race : cls)[k] || 0, t = activeSynergies(run)[k];
   const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroShortName(heroDisplayName(h))));
   const tiers = D.at.map((v, i) => `<div class="ttier ${t === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(D.desc(i).replace(/^[^:]+: /, ''))}</span></div>`).join('');
-  return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
+  // every legend with this trait, like TFT's trait tooltip: on the board (gold rim), on the bench (lit) or not owned yet (dim)
+  const placed = new Set(placedHeroes(run).map(h => h.id)), owned = new Set(run.roster.filter(h => !h.vault && !h.fled).map(h => h.id));
+  const legends = HEROES.filter(h => (isRace ? h.race : h.cls) === k).sort((a, b) => (placed.has(b.id) - placed.has(a.id)) || (owned.has(b.id) - owned.has(a.id)) || (a.rar || 0) - (b.rar || 0));
+  const faces = legends.length && typeof portrait === 'function' ? `<div class="tlegs">${legends.map(h => `<span class="tleg ${placed.has(h.id) ? 'onb' : owned.has(h.id) ? 'own' : ''}" style="--rc:${RARITY[h.rar || 0].col}"><img class="px" src="${portrait('h:' + h.id, 'idle0')}" alt=""></span>`).join('')}</div>` : '';
+  return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}${faces}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.${legends.length ? ' Gold rim: on the board. Lit: on your bench.' : ''}</p>`;
 }
 function comboTipHTML(key) {
   const c = possibleCombos(G.run).find(c => c.key === key); if (!c) return ''; const [a, b] = key.split('+'), act = activeCombos(G.run).find(x => x.key === key);
