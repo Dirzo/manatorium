@@ -154,3 +154,12 @@ html.m .rdiv b { font-size: 11px; } html.m .rdiv small { font-size: 10px; }
 html.m .hcard.bslot { min-height: 60px; }
 html.m .rdiv { flex: 0 0 auto; align-self: stretch; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 4px; border-left: 2px solid var(--ink); writing-mode: vertical-rl; transform: rotate(180deg); }
 html.m .rdiv.field { border-left: 0; }
+/* portrait: a card asking to turn the phone sideways (dismissable; see MOB.rotateHint) */
+#rotateCard { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #1d1838 0, #0b0916 80%); padding: 24px; }
+#rotateCard[hidden] { display: none; }
+#rotateCard .rc-box { max-width: 300px; text-align: center; color: #f6ecd2; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#rotateCard b { font-family: var(--f-display); font-size: 22px; color: #ffe6a0; }
+#rotateCard p { margin: 0; font-size: 14px; color: #b9ab8e; line-height: 1.4; }
+#rotateCard .rc-phone { width: 46px; height: 80px; border: 4px solid #ffe6a0; border-radius: 9px; position: relative; animation: rcturn 2.2s ease-in-out infinite; margin-bottom: 10px; }
+#rotateCard .rc-phone i { position: absolute; left: 50%; bottom: 5px; width: 10px; height: 3px; margin-left: -5px; border-radius: 2px; background: #ffe6a0; }
+@keyframes rcturn { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
