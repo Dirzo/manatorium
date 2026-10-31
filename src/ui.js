@@ -490,7 +490,7 @@ const UI = {
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
     h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
-    if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
+    if (!loose.length) h += `<div class="note">Nothing here yet. A foe in each of the first three sieges carries a component, then one every third siege, and bosses leave bigger loot.</div>`;
     for (const it of loose) {
       const fuse = sel && it.parts.length === 1 && heroItems(run, sel).find(x => x.parts.length === 1);
       const into = fuse ? FINISHED[itemKey(fuse.parts[0], it.parts[0])] : null;

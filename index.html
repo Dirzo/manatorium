@@ -522,6 +522,11 @@ h1, h2, h3, h4 { font-weight: 600; letter-spacing: 0; }
 .achlist { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .ach em .cost, .achlist em .cost { display: inline-flex; align-items: center; gap: 2px; } .ach em { display: flex; align-items: center; white-space: nowrap; color: var(--sky); }
 .coinbox[hidden] { display: none !important; }
+.sheet.intro { max-width: 520px; } .sheet.intro .cost img { width: 14px; height: 14px; vertical-align: -2px; }
+.iitem { display: flex; gap: 12px; align-items: center; } .iitem img { width: 48px; height: 48px; flex: none; }
+.irecs { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 4px; }
+.irec { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.05); }
+.irec img { width: 24px; height: 24px; flex: none; } .irec > span { opacity: 0.6; } .irec div { display: flex; flex-direction: column; margin-left: 4px; } .irec small { opacity: 0.8; }
 .nag { margin: 4px 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 /* intel split: scout report scrolls, battle stats sit at the bottom */
 .intel .intelmain { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
@@ -2550,6 +2555,9 @@ function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEY
 // (a finished item after a big boss, components after a mini-boss), components for every fourth press and for taunting a big boss,
 // and the odd drop from ITEM_DROP.
 const LOOT_AFTER = s => s % 5 === 0;
+// components arrive early, the TFT way (Cam 2026-10-31): one foe in each of the first three sieges carries a component,
+// so the first fused item is ready by siege 2, then one in every third regular siege up to siege 21 (bosses carry the late game)
+const COMP_DROP_AT = s => s <= 3 || (s <= 21 && s % 3 === 0 && s % 5 !== 0);
 const ITEM_DROP = { elite: 0.01, captain: 0.08, miniBoss: 0, bigBoss: 1, shard: 0.02 };
 // Guild level (Cam 2026-10-24, TFT style): one level sets both how many legends fight and which rarities the shop deals.
 // A run starts at level 3 (three on the field) and buys its way up to level 12; there is no other field cap.
@@ -4132,7 +4140,7 @@ function startBattle(run, meta) {
   for (const w of warbandFighters(run)) B.queue.push({ t: rand(4, 16), id: F0.elite, turncoat: w.id, wstar: warbandStar(w), defected: w.defected === run.siege, lane: run.lanes ? run.lanes.elite : undefined });
   B.queue.sort((a, b) => a.t - b.t); B.defectors = B.queue.filter(q => q.turncoat).map(q => q.turncoat);
   B.lanes = run.finale === 'ready' ? null : run.lanes; B.laneIdle = [0, 0, 0];
-  B.totalSpawn = B.queue.length; B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
+  B.totalSpawn = B.queue.length; B.carry = COMP_DROP_AT(run.siege) && run.finale !== 'ready' ? 1 : 0; B.carryAt = Math.max(3, Math.round(B.totalSpawn * rand(0.25, 0.5))); // the component carrier B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
   B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
@@ -4354,6 +4362,7 @@ function killUnit(B, u, src) {
   else if (u.captain) drops = Math.random() < ITEM_DROP.captain ? 1 : 0;
   else if (u.def.elite && Math.random() < ITEM_DROP.elite) drops = 1;
   else if (u.id === 'goose') drops = 1;
+  if (B.carry > 0 && !u.boss && B.kills >= B.carryAt) { B.carry--; drops++; }
   for (let i = 0; i < drops; i++) { const key = Math.random() < ITEM_DROP.shard ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
   if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
@@ -6126,6 +6135,7 @@ function finishSiege(run, meta, B) {
     run.castle.hp = Math.max(run.castle.hp, Math.round(run.castle.max * BREACH.rebuild)); }
   run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
   for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
+  if (B.done === 'victory') for (; B.carry > 0; B.carry--) B.drops.push(pick(COMP_KEYS)); // the carrier slipped away: its component turns up after the siege
   for (const key of B.drops) run.stash.push(makeItem([key]));
   if (run.tech.mimic && s % 3 === 0) { const key = pick(COMP_KEYS); run.stash.push(makeItem([key])); rep.mimic = key; }
   run.stats.kills += B.kills; run.stats.gold += rep.gold;
@@ -10052,7 +10062,7 @@ const UI = {
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
     h += UI.superAnvilHTML(run);
     h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
-    if (!loose.length) h += `<div class="note">Nothing here. Components drop from elites and bosses, and you choose one after every siege.</div>`;
+    if (!loose.length) h += `<div class="note">Nothing here yet. A foe in each of the first three sieges carries a component, then one every third siege, and bosses leave bigger loot.</div>`;
     for (const it of loose) {
       const fuse = sel && it.parts.length === 1 && heroItems(run, sel).find(x => x.parts.length === 1);
       const into = fuse ? FINISHED[itemKey(fuse.parts[0], it.parts[0])] : null;
@@ -12917,6 +12927,81 @@ function startTitleBg(cv) {
   requestAnimationFrame(frame);
 }
 
+// ----- first-time introductions (Cam 2026-10-31: the game never explained items, combining or the upgrades) -----
+// One card per visit to the prep phase, each shown once per player (G.meta.seen): items when the first component lands,
+// fusing when a legend holds one component and another is loose, then the guild level, then the Artificers' Hall.
+const INTROS = [
+  { key: 'intro-items', due: run => run.stash.some(it => !it.holder), show: introItems },
+  { key: 'intro-fuse', due: run => fusePair(run), show: introFuse },
+  { key: 'intro-guild', due: run => run.siege >= 2 && guildCost(run) != null, show: introGuild },
+  { key: 'intro-hall', due: run => run.siege >= 3 && openTechs(run).length, show: introHall },
+];
+function introSeen(key) { return !!(G.meta.seen && G.meta.seen[key]); }
+function introDone(key) { G.meta.seen = G.meta.seen || {}; G.meta.seen[key] = 1; save(); }
+// called from prepCues; false when nothing was shown (or a card is already up)
+function showIntro(run) {
+  if (!run || run.finale || run.playtest || !$('modal').hidden) return false;
+  const I = INTROS.find(x => !introSeen(x.key) && x.due(run)); if (!I) return false;
+  setTimeout(() => { if ($('modal').hidden && G.phase === 'prep') I.show(run, I.key); }, 450);
+  return true;
+}
+function openTechs(run) { return Object.keys(TECH).filter(k => techState(run, k) === 'open').sort((a, b) => TECH[a].cost - TECH[b].cost); }
+// a legend holding one component, and a loose component to fuse onto them
+function fusePair(run) {
+  const loose = run.stash.find(it => !it.holder && it.parts.length === 1); if (!loose) return null;
+  const h = run.roster.find(r => heroItems(run, r).some(x => x.parts.length === 1)); if (!h) return null;
+  return { h, has: heroItems(run, h).find(x => x.parts.length === 1), loose };
+}
+function finInfo(a, b) { const F = FINISHED[itemKey(a, b)]; return F[1] === 'crest' ? ['an Elemental Crest', 'Gives the legend a second element.'] : [F[0], F[2]]; }
+function introCard(eyebrow, title, body, btn, onGo, key) {
+  UI.modal(`<span class="eyebrow">${esc(eyebrow)}</span><h2>${esc(title)}</h2>${body}
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn" id="introLater">Got it</button><button class="btn primary" id="introGo">${esc(btn)}</button></div>`, sh => {
+    sh.querySelector('#introLater').onclick = () => { introDone(key); UI.closeModal(); };
+    sh.querySelector('#introGo').onclick = () => { introDone(key); UI.closeModal(); onGo(); };
+  }, 'intro');
+  SFX.play('level');
+}
+const recipeRow = (a, b) => { if (a === 'shard' || b === 'shard') return ''; const [n, d] = finInfo(a, b);
+  return `<div class="irec"><img class="px" src="${iconURL(COMPONENTS[a].glyph, 2)}" alt=""><span>+</span><img class="px" src="${iconURL(COMPONENTS[b].glyph, 2)}" alt=""><span>=</span><img class="px" src="${itemIconURL({ parts: itemKey(a, b).split('+') }, 2)}" alt=""><div><b>${esc(n)}</b><small>${esc(d)}</small></div></div>`; };
+
+function introItems(run, key) {
+  const it = run.stash.find(x => !x.holder), c = it.parts.length === 1 ? it.parts[0] : null;
+  const others = c && c !== 'shard' ? COMP_KEYS.filter(k => k !== c).sort(() => Math.random() - 0.5).slice(0, 3) : [];
+  introCard('New: items', c ? `Your first component: ${COMPONENTS[c].name}` : `Your first item: ${itemName(it)}`,
+    `<div class="iitem"><img class="px" src="${itemIconURL(it, 4)}" alt=""><p class="lede">${c ? `This is a <b>component</b>. On its own it gives a legend ${esc(compStat(c, false))}.` : esc(itemDesc(it))}</p></div>
+    <ul class="nag"><li>Components drop from the horde. A foe carries one in each of the first three sieges, then one every few sieges, and bosses leave bigger loot.</li>
+    <li>Give a second component to the <b>same legend</b> and the two fuse into a <b>finished item</b> with its own power. Every pair makes something different.</li>
+    <li>Each legend holds ${ITEM_SLOTS} items. Taking one off is free; splitting a finished item back into components costs ${UNFORGE_COST} gold.</li></ul>
+    ${c ? `<div class="eyebrow">What a ${esc(COMPONENTS[c].name)} can become</div><div class="irecs">${others.map(o => recipeRow(c, o)).join('')}</div>` : ''}`,
+    'Open the Armory', () => { UI.setRoster(true); UI.openPage('armory'); }, key);
+}
+function introFuse(run, key) {
+  const p = fusePair(run), name = HERO_BY_ID[p.h.id].name.split(' ')[0], [n] = finInfo(p.has.parts[0], p.loose.parts[0]);
+  introCard('Combining', `Fuse your first item`,
+    `<p class="lede">${esc(name)} holds the ${esc(COMPONENTS[p.has.parts[0]].name)}. Hand them the ${esc(COMPONENTS[p.loose.parts[0]].name)} and the two fuse into <b>${esc(n)}</b>.</p>
+    <div class="irecs">${recipeRow(p.has.parts[0], p.loose.parts[0])}</div>
+    <p class="note">Finished items are what make a legend your carry. Two on one legend is a big deal, so pick who hits hardest or holds the line.</p>`,
+    `Fuse it on ${name}`, () => { G.selected = p.h.uid; UI.setRoster(true); UI.openPage('armory'); setTimeout(() => { const b = document.querySelector(`#drawerBody [data-act="give"][data-arg="${p.loose.uid}"]`); if (b) b.scrollIntoView({ block: 'center' }); UI.coach('intro-fuse-btn', b, `Press Fuse to forge ${n}.`); }, 300); }, key);
+}
+function introGuild(run, key) {
+  const lv = guildLevel(run), c = guildCost(run), now = rarityOdds(shopRank(run)), next = rarityOdds(Math.min(RARITY_ODDS.length - 1, shopRank(run) + 1));
+  const odds = o => o.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ');
+  introCard('Upgrade: guild level', `Guild level ${lv}: ${lv} legends fight`,
+    `<p class="lede">The guild level is your main upgrade. Each level puts <b>one more legend on the field</b> and deals <b>rarer legends</b> in the shop.</p>
+    <ul class="nag"><li>Level ${lv + 1} costs ${COST(c)}. Buy it in the Guild Hall, under the shop.</li>
+    <li>Shop odds now: ${odds(now)}</li><li>At level ${lv + 1}: ${odds(next)}</li>
+    <li>Gold you keep earns interest, so level up when you have a legend worth fielding.</li></ul>`,
+    'Open the Guild Hall', () => { UI.setRoster(true); UI.openPage('guild'); setTimeout(() => UI.coach('intro-guild-btn', document.querySelector('#drawerBody [data-act="guildlevel"]'), `Raise the guild to level ${lv + 1} here.`), 300); }, key);
+}
+function introHall(run, key) {
+  const ts = openTechs(run).slice(0, 3);
+  introCard("Upgrade: the Artificers' Hall", 'Build up your castle',
+    `<p class="lede">The Hall is a tree of castle tech bought with gold. Each build opens the next, and some branches fork so you pick one path.</p>
+    <ul class="nag">${ts.map(k => `<li><b>${esc(TECH[k].name)}</b> ${COST(TECH[k].cost)}: ${esc(TECH[k].desc)}</li>`).join('')}</ul>
+    <p class="note">More techs open as the sieges go on. A NEW badge on the Hall means something just opened.</p>`,
+    "Open the Hall", () => { UI.setRoster(true); UI.openPage('hall'); }, key);
+}
+
 // ===== Game controller =====
 const SAVE_KEY = 'manatorium.save.v2', OLD_SAVE_KEY = 'manatorium.save.v1';
 const G = { meta: null, run: null, B: null, phase: 'title', speed: 1, selected: null, drag: null, armed: null, mouse: null, hover: null, hoverOk: false, prepUnits: [], paused: false, endT: 0, lastEnc: [] };
@@ -13256,9 +13341,10 @@ function prepCues() {
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
   if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends for your three lanes, then close the shop and press Begin siege.'); }, 300); }
   else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
-  if (run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
-  if (Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
-  if (run.siege === 2 && !run.shopIntro) setTimeout(() => UI.coach('rail-guild', $('nav-guild'), 'The Guild Hall is your shop: five legends each siege, priced by rarity from 1 to 6 gold. Three copies of one legend make it 2-star. Gold you bank earns interest. Raise the guild level to field more legends (up to 12) and see rarer ones.'), 600);
+  // first-time cards for items, fusing, the guild level and the Hall (intros.js); the rail nudges only when no card is showing
+  const intro = run.siege > 1 && showIntro(run);
+  if (!intro && run.stash.some(it => !it.holder)) setTimeout(() => UI.coach('rail-armory', $('nav-armory'), 'You earned an item. Open the Armory to hand it to a champion.'), 400);
+  if (!intro && Object.keys(TECH).some(k => techState(run, k) === 'open' && run.gold >= TECH[k].cost)) setTimeout(() => UI.coach('rail-hall', $('nav-hall'), "You have enough gold for castle tech. The Artificers' Hall is a tree: each build opens the next."), 500);
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
