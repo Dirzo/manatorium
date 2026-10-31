@@ -199,7 +199,14 @@ function hdHumanoid(spec, frame, temper) {
   try { g = genHumanoid(spec, frame); } finally { PixGrid.prototype.finish = fin; }
   const by = frame === 'idle1' ? 1 : 0;
   hdWipeFace(g, spec, by);
-  const G = hdScale2x(g), base = G.p.slice();
+  const G = hdScale2x(g);
+  // a blade held up by the face (Fenn's dagger next to his snout) gets an ink edge so it never melts into the skin
+  const metals = new Set([spec.metal || '#dfe6f5', '#dfe6f5', '#ffffff']), faceC = new Set([spec.skin, spec.snout || shade(spec.skin, 0.4)]), Wd = G.w;
+  const edge = [];
+  for (let i = 0; i < G.p.length; i++) { if (!metals.has(G.p[i])) continue; const x = i % Wd;
+    if ([i - 1, i + 1, i - Wd, i + Wd].some(j => j >= 0 && j < G.p.length && Math.abs((j % Wd) - x) <= 1 && faceC.has(G.p[j]))) edge.push(i); }
+  for (const i of edge) G.p[i] = OUTLINE;
+  const base = G.p.slice();
   hdPaintFace(G, spec, by, temper);
   const roles = new Map([[spec.skin, 'skin']]); if (spec.snout) roles.set(spec.snout, 'skin'); if (spec.belly) roles.set(spec.belly, 'skin');
   if (spec.hair) roles.set(spec.hair, 'hair');
@@ -374,4 +381,20 @@ function hdSkullFace(g, s, by, temper) {
   if (fx.includes('sweat')) { g.set(27, 8 + dy, '#bff4ff', true); g.set(27, 9 + dy, '#7fd8ff', true); g.set(27, 10 + dy, '#5fb8f0', true); }
   if (fx.includes('blush')) { put(25, 16 + dy, '#ff9aa8'); put(26, 16 + dy, '#ff9aa8'); put(14, 16 + dy, '#ffb3bf'); }
   if (fx.includes('flush')) { put(25, 16 + dy, '#ff6a6a'); put(26, 16 + dy, '#ff6a6a'); }
+}
+
+// any unit (foes, bosses, summons, champions without a temper) at the fine grid. Humanoid foes get a face too:
+// each kind of foe always wears the same mean look, picked from its id
+const FOE_FACES = ['angry', 'cruel', 'deranged', 'greedy', 'zealous', 'paranoid'];
+function hdGenericFrame(key, spec, frame) {
+  const gen = GENS[spec.gen || 'humanoid'];
+  if (gen === genHumanoid && HD_HEADS[spec.head]) {
+    const id = key.replace(/^[a-z]+:/, ''), hero = key.startsWith('h:'), tp = hero ? 'honorable' : FOE_FACES[Math.floor(hash(id.length * 7, id.charCodeAt(0) * 13 + id.charCodeAt(id.length - 1)) * FOE_FACES.length)];
+    return hdHumanoid(spec, frame, tp);
+  }
+  const fin = PixGrid.prototype.finish; let g;
+  PixGrid.prototype.finish = function () { return this; };
+  try { g = gen(spec, frame); } finally { PixGrid.prototype.finish = fin; }
+  const G = hdScale2x(g), roles = new Map([['#dfe6f5', 'metal'], ['#c8c8d8', 'metal'], ['#e8e8f0', 'metal']]);
+  return hdFinish(G, { base: G.p.slice(), roles });
 }

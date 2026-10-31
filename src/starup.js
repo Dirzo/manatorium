@@ -8,9 +8,9 @@ const STARUP = {
   next() {
     const job = this.queue.shift(); if (!job) { this.cur = null; return; }
     const { h, s0, s1 } = job, d = HERO_BY_ID[h.id], col = STAR_COL[s1 - 1], quiet = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const base = heroSpriteKey(h, true), oldKey = s0 > 1 ? base + '~' + s0 : base, newKey = base + '~' + s1;
+    const base = heroSpriteKey(h, true), face = k => heroFaceKey(k, h), oldKey = face(s0 > 1 ? base + '~' + s0 : base), newKey = face(base + '~' + s1);
     const ws0 = s0 > 1 ? STAR_LOOK[s0 - 1].ws : 1, ws1 = STAR_LOOK[s1 - 1].ws;
-    const grow = [0, 1, 2, 3, 4].map(i => { const k = newKey + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2); ensureSprite(k); return k; });
+    const grow = [0, 1, 2, 3, 4].map(i => { const k = face(base + '~' + s1 + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2)); ensureSprite(k); return k; });
     ensureSprite(oldKey); ensureSprite(newKey);
     const st = heroStats(h, G.run, G.meta), sig = s1 >= 3 ? `<p class="su-sig">Starforged signature: <b>${esc(st.aName || d.aName)}</b> +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power</p>` : '';
     const el = document.createElement('div'); el.className = `starup s${s1}`; el.style.setProperty('--sc', col);

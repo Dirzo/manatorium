@@ -435,7 +435,10 @@ const SPR = {};   // key -> { frames: {name: canvas}, white: {name: canvas}, sca
 function buildSprite(key, spec, flip, scale = 1) {
   const gen = GENS[spec.gen || 'humanoid'];
   const out = { frames: {}, white: {}, scale };
-  for (const f of FRAMES) { const g = gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); }
+  // hi-detail art (hdart.js): every unit is rebuilt at the fine grid so foes match the champions
+  const hd = typeof hdGenericFrame === 'function' && HD_ON;
+  for (const f of FRAMES) { const g = hd ? hdGenericFrame(key, spec, f) : gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); if (hd) out.frames[f].hd = out.white[f].hd = HDK; }
+  if (hd) out.hd = HDK;
   SPR[key] = out; return out;
 }
 
@@ -544,6 +547,7 @@ function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
   const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
   // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
-  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
-  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
+  // hi-detail frames (s.hd) are cropped in grid units and drawn with whole screen pixels per fine pixel
+  const D = s.hd || 1, [sx, sy, sw, sh] = s.width / D === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width / D, s.height / D], fp = Math.max(1, Math.ceil(px / D));
+  c.width = sw * D * fp; c.height = sh * D * fp; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx * D, sy * D, sw * D, sh * D, 0, 0, c.width, c.height); return c.toDataURL();
 }

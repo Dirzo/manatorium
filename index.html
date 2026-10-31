@@ -3494,7 +3494,10 @@ const SPR = {};   // key -> { frames: {name: canvas}, white: {name: canvas}, sca
 function buildSprite(key, spec, flip, scale = 1) {
   const gen = GENS[spec.gen || 'humanoid'];
   const out = { frames: {}, white: {}, scale };
-  for (const f of FRAMES) { const g = gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); }
+  // hi-detail art (hdart.js): every unit is rebuilt at the fine grid so foes match the champions
+  const hd = typeof hdGenericFrame === 'function' && HD_ON;
+  for (const f of FRAMES) { const g = hd ? hdGenericFrame(key, spec, f) : gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); if (hd) out.frames[f].hd = out.white[f].hd = HDK; }
+  if (hd) out.hd = HDK;
   SPR[key] = out; return out;
 }
 
@@ -3603,8 +3606,9 @@ function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
   const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
   // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
-  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
-  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
+  // hi-detail frames (s.hd) are cropped in grid units and drawn with whole screen pixels per fine pixel
+  const D = s.hd || 1, [sx, sy, sw, sh] = s.width / D === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width / D, s.height / D], fp = Math.max(1, Math.ceil(px / D));
+  c.width = sw * D * fp; c.height = sh * D * fp; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx * D, sy * D, sw * D, sh * D, 0, 0, c.width, c.height); return c.toDataURL();
 }
 
 // ===== Hi-detail champion art (Cam 2026-10-31: "32 bit character upgrades ... a different facial expression for the character trait they rolled")
@@ -3808,7 +3812,14 @@ function hdHumanoid(spec, frame, temper) {
   try { g = genHumanoid(spec, frame); } finally { PixGrid.prototype.finish = fin; }
   const by = frame === 'idle1' ? 1 : 0;
   hdWipeFace(g, spec, by);
-  const G = hdScale2x(g), base = G.p.slice();
+  const G = hdScale2x(g);
+  // a blade held up by the face (Fenn's dagger next to his snout) gets an ink edge so it never melts into the skin
+  const metals = new Set([spec.metal || '#dfe6f5', '#dfe6f5', '#ffffff']), faceC = new Set([spec.skin, spec.snout || shade(spec.skin, 0.4)]), Wd = G.w;
+  const edge = [];
+  for (let i = 0; i < G.p.length; i++) { if (!metals.has(G.p[i])) continue; const x = i % Wd;
+    if ([i - 1, i + 1, i - Wd, i + Wd].some(j => j >= 0 && j < G.p.length && Math.abs((j % Wd) - x) <= 1 && faceC.has(G.p[j]))) edge.push(i); }
+  for (const i of edge) G.p[i] = OUTLINE;
+  const base = G.p.slice();
   hdPaintFace(G, spec, by, temper);
   const roles = new Map([[spec.skin, 'skin']]); if (spec.snout) roles.set(spec.snout, 'skin'); if (spec.belly) roles.set(spec.belly, 'skin');
   if (spec.hair) roles.set(spec.hair, 'hair');
@@ -3983,6 +3994,22 @@ function hdSkullFace(g, s, by, temper) {
   if (fx.includes('sweat')) { g.set(27, 8 + dy, '#bff4ff', true); g.set(27, 9 + dy, '#7fd8ff', true); g.set(27, 10 + dy, '#5fb8f0', true); }
   if (fx.includes('blush')) { put(25, 16 + dy, '#ff9aa8'); put(26, 16 + dy, '#ff9aa8'); put(14, 16 + dy, '#ffb3bf'); }
   if (fx.includes('flush')) { put(25, 16 + dy, '#ff6a6a'); put(26, 16 + dy, '#ff6a6a'); }
+}
+
+// any unit (foes, bosses, summons, champions without a temper) at the fine grid. Humanoid foes get a face too:
+// each kind of foe always wears the same mean look, picked from its id
+const FOE_FACES = ['angry', 'cruel', 'deranged', 'greedy', 'zealous', 'paranoid'];
+function hdGenericFrame(key, spec, frame) {
+  const gen = GENS[spec.gen || 'humanoid'];
+  if (gen === genHumanoid && HD_HEADS[spec.head]) {
+    const id = key.replace(/^[a-z]+:/, ''), hero = key.startsWith('h:'), tp = hero ? 'honorable' : FOE_FACES[Math.floor(hash(id.length * 7, id.charCodeAt(0) * 13 + id.charCodeAt(id.length - 1)) * FOE_FACES.length)];
+    return hdHumanoid(spec, frame, tp);
+  }
+  const fin = PixGrid.prototype.finish; let g;
+  PixGrid.prototype.finish = function () { return this; };
+  try { g = gen(spec, frame); } finally { PixGrid.prototype.finish = fin; }
+  const G = hdScale2x(g), roles = new Map([['#dfe6f5', 'metal'], ['#c8c8d8', 'metal'], ['#e8e8f0', 'metal']]);
+  return hdFinish(G, { base: G.p.slice(), roles });
 }
 
 // Unique 12x12 icons for every finished item. Letters map to ITEM_PAL (falls back to ICON_PAL); '.' is transparent.
@@ -4796,7 +4823,9 @@ function activeSynergies(run) {
 function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
 // 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
-function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
+function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : '') + (!plain && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? '|' + h.temper : ''); }
+// the hi-detail look with the temper's face, for scenes that take a plain key (talk, star-up)
+function heroFaceKey(key, h) { return h && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? key + '|' + h.temper : key; }
 // an element title replaces the epithet: 'Brann the Blazing'. A name that starts with 'The' keeps its last word instead
 // ('The Great Toadmother' -> 'Toadmother the Radiant', never 'The the Radiant')
 function heroShortName(name) { const w = name.split(' '); return /^the$/i.test(w[0]) && w.length > 1 ? w[w.length - 1] : w[0]; }
@@ -11068,7 +11097,7 @@ const UI = {
       g.clearRect(0, 0, cv.width, cv.height);
       const x = cv.width / 2, y = cv.height - 6, ks = (t - act) / d, strike = ks >= 1 && ks < 1 + 0.35 / d;
       const fr = strike ? 'atk' : Math.floor(t * 2.5) % 2 ? 'idle1' : 'idle0', img = F[fr] || F.idle0;
-      if (strike) { const pad = img.width === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width * S, img.height * S); }
+      if (strike) { const D = img.hd || 1, pad = img.width / D === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width / D * S, img.height / D * S); }
       else drawIdleUnit(g, img, x, y, fs, false, { def, k: ks >= 0 && ks < 1 ? ks : -1, t: t * sp, by: fr === 'idle1' ? 1 : 0 });
       if (t < 4.5) requestAnimationFrame(step);
     };
@@ -11691,9 +11720,9 @@ const STARUP = {
   next() {
     const job = this.queue.shift(); if (!job) { this.cur = null; return; }
     const { h, s0, s1 } = job, d = HERO_BY_ID[h.id], col = STAR_COL[s1 - 1], quiet = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const base = heroSpriteKey(h, true), oldKey = s0 > 1 ? base + '~' + s0 : base, newKey = base + '~' + s1;
+    const base = heroSpriteKey(h, true), face = k => heroFaceKey(k, h), oldKey = face(s0 > 1 ? base + '~' + s0 : base), newKey = face(base + '~' + s1);
     const ws0 = s0 > 1 ? STAR_LOOK[s0 - 1].ws : 1, ws1 = STAR_LOOK[s1 - 1].ws;
-    const grow = [0, 1, 2, 3, 4].map(i => { const k = newKey + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2); ensureSprite(k); return k; });
+    const grow = [0, 1, 2, 3, 4].map(i => { const k = face(base + '~' + s1 + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2)); ensureSprite(k); return k; });
     ensureSprite(oldKey); ensureSprite(newKey);
     const st = heroStats(h, G.run, G.meta), sig = s1 >= 3 ? `<p class="su-sig">Starforged signature: <b>${esc(st.aName || d.aName)}</b> +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power</p>` : '';
     const el = document.createElement('div'); el.className = `starup s${s1}`; el.style.setProperty('--sc', col);
@@ -12210,7 +12239,7 @@ function drawTower() {
   if (T.phase === 'climb' || T.phase === 'flag') {
     const c = T.phase === 'flag' ? { x: cx - 8, y: towerTopWorld() - 24, dir: 1 } : climberWorld();
     const S = SPR['h:' + T.climber]; if (S) { const fr = T.phase === 'flag' ? (Math.floor(T.t * 3) % 2 ? 'atk' : 'idle0') : (Math.floor(T.t * 10) % 2 ? 'walk0' : 'walk1'); const sy = toS(c.y);
-      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); g.drawImage(S.frames[fr], -10, Math.round(sy) - 19); } else g.drawImage(S.frames[fr], Math.round(c.x) - 10, Math.round(sy) - 19); g.restore(); }
+      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, -10, Math.round(sy) - 19, im.width / D, im.height / D); } else { const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, Math.round(c.x) - 10, Math.round(sy) - 19, im.width / D, im.height / D); } g.restore(); }
   }
   // particles + texts
   for (const p of T.parts) { g.globalAlpha = 1 - p.t / p.life; g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(toS(p.y)), 1, 1); }
@@ -13028,15 +13057,15 @@ const JAW_CACHE = {};
 // pixels kept at both corners and a tongue in the middle of the wide frame.
 function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
-  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height;
-  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = JAW[id] || JAW.hero;
+  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
+  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
   const frames = [0, 1, 2].map(gap => {
-    const c = document.createElement('canvas'); c.width = W; c.height = H + 2; const g = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
     g.drawImage(src, 0, 0); if (!gap) return c;
     const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128;
-    for (let k = 0; k < gap; k++) for (let x = x0 + 1; x < x1; x++) {
+    for (let k = 0; k < gap * D; k++) for (let x = x0 + D; x < x1; x++) {
       const y = jy + k; if (!op(x, y)) continue;
-      const i = (y * W + x) * 4, tongue = gap === 2 && k === 1 && Math.abs(x - (x0 + x1) / 2) < 1.5;
+      const i = (y * W + x) * 4, tongue = gap === 2 && k >= D && Math.abs(x - (x0 + x1) / 2) < 1.5 * D;
       d.data.set(tongue ? [255, 106, 138, 255] : [42, 10, 30, 255], i);
     }
     g.putImageData(d, 0, 0); return c;
@@ -13097,7 +13126,7 @@ function showTalk(run, done, x = {}) {
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h, true); A.hero.className = 'tk-a tk-hero';
+  const setHero = h => { cur = h; keys.hero = heroFaceKey(heroSpriteKey(h, true), h); A.hero.className = 'tk-a tk-hero';
     const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
     tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
     tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
@@ -13127,7 +13156,7 @@ function showTalk(run, done, x = {}) {
   // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
   const fcv = el.querySelector('.tk-field'), fg = fcv.getContext('2d'); fg.imageSmoothingEnabled = false;
   const bgKey = hall ? 'hall' : sc.f + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(sc.f, run.castleEl);
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(sc.f, run.castleEl), run.castleEl);
   const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
   const camp = hall ? [] : campSpots.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
   const mouth = { hero: 0, boss: 0, fallen: 0, visitor: 0 };
@@ -13136,16 +13165,16 @@ function showTalk(run, done, x = {}) {
   const tick = now => {
     if (!TALKUI.on) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
-    fg.drawImage(R.bg[bgKey], 0, 0);
+    const bgc = R.bg[bgKey], bk = bgc.width / W; fg.drawImage(bgc, 0, 0, W, H);
     if (hall) { try { drawHallLive(fg, t, null); } catch (e) {} }
     else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
       fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
-    if (lair) { fg.drawImage(R.bg[bgKey], W - 28, 0, 28, H, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
-    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s;
+    if (lair) { fg.drawImage(bgc, (W - 28) * bk, 0, 28 * bk, H * bk, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width / (fr.hd || 1) * m.s, h = fr.height / (fr.hd || 1) * m.s;
       fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
-    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
       if (n === 'visitor' && !keys.visitor.startsWith('e:')) { g.save(); g.scale(-1, 1); g.drawImage(jawFrames(keys[n])[mouth[n]], -c.width, 0); g.restore(); } else g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); } // visitors face your hero
     requestAnimationFrame(tick);
   };
