@@ -388,8 +388,7 @@ G.act = function (act, arg) {
     case 'h-bench': hero.place = null; break;
     case 'h-recall': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && recallHero(G.B, u)) { TEL.event('recall', { id: hero.id, s: run.siege, hp: Math.round(100 * u.hp / u.maxHp) }); UI.renderInspector(); UI.hud(); } return; }
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
-    case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
-      SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
+    case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; if (!sellNow(hero)) return; break; }
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
@@ -440,6 +439,20 @@ G.cardDown = function (e, uid) {
   if (G.phase !== 'prep') return;
   G.drag = { h, sx: e.clientX, sy: e.clientY, active: false, fromCard: true };
 };
+// selling, TFT style (Cam 2026-10-31): the copies' gold comes back, items go back to the Armory, the copies go back to the pool
+function sellNow(h) {
+  const run = G.run, nm = heroDisplayName(h), r = sellHero(run, h); if (r.err) { UI.toast(r.err, true); return false; }
+  SFX.play('buy'); UI.toast(`${nm} sold for +${r.gold} gold. Items are back in the Armory.`); TEL.event('sell', { id: h.id, lv: h.level, star: heroStar(h) });
+  if (G.selected === h.uid) G.selected = run.roster[0] && run.roster[0].uid; return true;
+}
+// while a champion is dragged in prep, a Sell box shows at the top of the field; dropping on it sells
+function sellZone(d, e) {
+  const z = $('sellZone'), on = !!(d && d.active && G.phase === 'prep' && G.run.roster.length > 1);
+  z.hidden = !on; if (!on) return false;
+  z.querySelector('span').textContent = `${heroDisplayName(d.h).split(' ')[0]} for ${sellValue(d.h)} gold`;
+  const r = z.getBoundingClientRect(), hot = e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 8 && e.clientY <= r.bottom + 8;
+  z.classList.toggle('hot', hot); return hot;
+}
 function armPower() {
   const B = G.B, run = G.run; if (!B || G.phase !== 'siege' || !run.castleEl || B.cpow.cd > 0) return;
   const kind = CASTLE_POWERS[run.castleEl].kind;
@@ -463,6 +476,7 @@ function docMove(e) {
   const d = G.drag; if (!d) { if (G.phase === 'prep' && p.inside) { const h = heroAtPoint(p); $('arena').style.cursor = h ? 'grab' : 'default'; } return; }
   if (!d.active && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 5) { d.active = true; $('ghost').src = portrait(heroSpriteKey(d.h)); }
   if (!d.active) return;
+  if (sellZone(d, e)) { d.overCanvas = false; G.hover = null; const gh = $('ghost'); gh.hidden = false; gh.style.left = e.clientX + 'px'; gh.style.top = e.clientY + 'px'; rebuildPrepUnits(); return; }
   d.overCanvas = p.inside;
   const gh = $('ghost'); gh.hidden = p.inside; gh.style.left = e.clientX + 'px'; gh.style.top = e.clientY + 'px';
   if (p.inside) { const s = slotAt(p); G.hover = s; G.hoverOk = slotOk(d.h, s); } else G.hover = null;
@@ -470,9 +484,10 @@ function docMove(e) {
 }
 function docUp(e) {
   const d = G.drag; if (!d) return; G.drag = null; $('ghost').hidden = true;
-  const p = toLogical(e);
+  const p = toLogical(e), sell = sellZone(d, e); $('sellZone').hidden = true;
   if (d.active) {
-    if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
+    if (sell) sellNow(d.h);
+    else if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
     else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
       // field champion dropped on a bench card: they trade places
       if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }

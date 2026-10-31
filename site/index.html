@@ -216,6 +216,13 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 #fxlayer { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
 #fxlayer img { position: absolute; width: 14px; height: 14px; left: 0; top: 0; }
 #ghost { position: fixed; pointer-events: none; z-index: 45; width: 60px; height: 60px; transform: translate(-50%, -80%); }
+/* Sell box (Cam 2026-10-31): shows while a champion is dragged in prep; drop on it to sell */
+#sellZone { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); z-index: 44; pointer-events: none; display: flex; align-items: center; gap: 10px;
+  padding: 12px 22px; border: 2px dashed var(--gold); border-radius: 12px; background: rgba(15,20,48,.86); color: var(--text); font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+#sellZone[hidden] { display: none; }
+#sellZone b { color: var(--gold); font-size: 1.15em; letter-spacing: .04em; text-transform: uppercase; }
+#sellZone b::before { content: '\1FA99  '; }
+#sellZone.hot { border-style: solid; background: rgba(120,80,10,.92); transform: translateX(-50%) scale(1.08); box-shadow: 0 0 0 4px rgba(255,207,58,.35), 0 8px 22px rgba(0,0,0,.4); }
 
 .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(10,12,32,0.72); }
 .modal .sheet, #towerPanel .sheet { width: min(560px, 100%); max-height: calc(100% - 16px); overflow-y: auto; background: var(--panel); border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 6px 0 var(--ink), 0 0 0 3px var(--line) inset; padding: 18px; display: flex; flex-direction: column; gap: 12px; animation: sheetIn .3s cubic-bezier(.2,.9,.3,1.2); }
@@ -1645,6 +1652,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
 <div id="synStrip" aria-label="Active bonuses" hidden></div>
 <div id="tip" role="tooltip" hidden></div>
 <img id="ghost" class="px" alt="" hidden>
+<div id="sellZone" aria-hidden="true" hidden><b>Sell</b><span></span></div>
 <div id="toast" aria-live="polite"></div>
 <div id="coach" role="dialog" aria-live="polite" hidden></div>
 <div id="notes" hidden></div>
@@ -5805,16 +5813,10 @@ function draftBosses(run) { return shopRank(run) + (run.pressDraft > 0 && run.ro
 // rarity, weighted by how many copies are still in the pool. Each card also rolls the element that legend would bring.
 function draftPool(cands, rarity, run) { return cands.filter(h => h.rar === rarity && (!run || poolLeft(run, h.id) > 0)); }
 function draftCard(id, run) { return { id, rarity: HERO_BY_ID[id].rar, temper: rollTemper(), el: rollElement(run) }; }
-// each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable
+// each run has four elements in season: most legends arrive with one of them, so six of a kind (and its castle) is reachable.
+// The season lasts the whole run (Cam 2026-10-31: a new horde swapping two of them out felt like the elements reset).
 const SEASON = { n: 4, share: 0.7 };
 function runSeason(run) { if (!run) return null; if (!run.season) run.season = EL_KEYS.slice().sort(() => Math.random() - 0.5).slice(0, SEASON.n); return run.season; }
-// a new horde brings a new season (Cam 2026-10-23): the two in-season elements you field most stay, two new ones arrive
-function rotateSeason(run) {
-  const old = runSeason(run).slice(), n = fieldElements(run);
-  const keep = old.sort((a, b) => (n[b] || 0) - (n[a] || 0) || Math.random() - 0.5).slice(0, SEASON.n - 2);
-  const fresh = EL_KEYS.filter(e => !old.includes(e)).sort(() => Math.random() - 0.5).slice(0, SEASON.n - keep.length);
-  run.season = [...keep, ...fresh]; run.seasonNew = fresh; run.heraldDue = true;
-}
 function rollElement(run) { const s = runSeason(run); return s && Math.random() < SEASON.share ? pick(s) : pick(EL_KEYS); }
 function draftOptions(run, meta, focus) {
   const n = draftSize(run, meta), own = new Set(run.roster.map(h => h.id)), out = [];
@@ -6199,7 +6201,7 @@ function finishSiege(run, meta, B) {
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
-  run.siege++; if (factionIndex(run.siege) !== factionIndex(run.siege - 1) && run.siege < FINAL_SIEGE) rotateSeason(run);
+  run.siege++;
   rep.warband = warbandRecruit(run);
   run.lootRerolls = 0; run.tactic = rollTactic(run.siege); run.plan = null; planOf(run);
   if (!run.shopLock) rollShop(run, meta);
@@ -10129,7 +10131,7 @@ const UI = {
       <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
       <button class="btn small" data-act="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot (up to ${GUILD_LV.max}) and deals rarer legends in the shop.">${gc == null ? `Guild level ${GUILD_LV.max} (max)` : `Guild level ${guildLevel(run) + 1} ${COST(gc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
-    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
+    h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back (a starred legend loses 1): drag them onto the Sell box at the top of the field, or use Sell on the champion's card. Their items go back to the Armory. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
     for (const hr of run.roster) {
       const d = HERO_BY_ID[hr.id], st = heroStats(hr, run, G.meta), star = heroStar(hr), nx = copiesToNext(hr);
       const ms = hr.level < SIG_LEVEL ? `Signature unlocks at level ${SIG_LEVEL}` : `Signature rank ${st.rank}`;
@@ -10316,7 +10318,7 @@ const UI = {
         ${h.place ? `<button class="btn small" data-iact="bench" ${run.finale ? 'disabled' : ''}>To the bench</button>` : fieldFull(run, h) ? '' : `<button class="btn small" data-iact="place">Place on the field</button>`}
         ${ascendBtn(run, h, 'iact')}
         ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
-        ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Release this champion for gold. Their items go back to the Armory.">${UI.sellArm === h.uid ? 'Click again to confirm' : `Release for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
+        ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Sell this champion: the gold their copies cost comes back, and their items go back to the Armory. You can also drag a champion onto the Sell box.">${UI.sellArm === h.uid ? 'Click again to sell' : `Sell for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
     el.querySelectorAll('[data-act="swapin"]').forEach(b => b.onclick = () => G.act('swapin', b.dataset.arg));
@@ -10562,13 +10564,13 @@ const STARUP = {
   },
 };
 
-// ===== The herald (Cam 2026-10-23): before the first shop and whenever a new horde arrives, a card names the four
-// elements in season and shows each one's fighting style in a little looping battle.
+// ===== The herald (Cam 2026-10-23): before the first shop, a card names the four elements in season for the whole run
+// (Cam 2026-10-31: the season no longer turns with each horde) and shows each one's fighting style in a little looping battle.
 const HERALD_ORD = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
 function heraldHTML(run) {
   const season = runSeason(run), fe = stackElements(run), fi = factionIndex(run.siege), F = FACTIONS[fi], fresh = run.seasonNew || [];
   let h = `<span class="eyebrow">Sieges ${fi * 5 + 1} to ${fi * 5 + 5} · ${esc(F.name)}</span><h2 class="sp">The ${HERALD_ORD[fi] || 'Next'} Horde approaches</h2>
-    <p class="lede">${run.siege === 1 ? 'Four elements are in season. Most legends in the shop carry one of them. Every element is a way of fighting.' : 'The season turns. Two elements stay, two new ones arrive in the shop.'} Two champions of an element make its style stronger, four upgrade it, six wake its castle.</p><div class="hrld">`;
+    <p class="lede">Four elements are in season for the whole run. Most legends in the shop carry one of them. Every element is a way of fighting. Two champions of an element make its style stronger, four upgrade it, six wake its castle.</p><div class="hrld">`;
   season.forEach((e, i) => { const E = ELEMENTS[e], I = STYLE_INFO[e], n = fe[e] || 0, t = elTier(n);
     h += `<div class="hlcard" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.08}s"><div class="hhd"><b>${E.name}</b><span>${esc(I.role)}${fresh.includes(e) ? ' <i class="newb">new</i>' : ''}</span></div>
       <canvas class="hdemo" data-el="${e}" width="160" height="72"></canvas><p><b>${esc(I.style)}.</b> ${esc(I.how)}</p>
@@ -10577,7 +10579,7 @@ function heraldHTML(run) {
   return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="heraldGo">${run.siege === 1 ? 'Open the shop' : 'To the keep'}</button></div>`;
 }
 
-// ----- the looping demos: castle on the left, three lanes, the horde from the right -----
+// ----- the looping demos: castle on the left, one open field, the horde from the right -----
 const HD = { W: 160, H: 72, LY: [16, 36, 56], CX: 12 };
 function heraldDemos(root) {
   const views = [...root.querySelectorAll('canvas.hdemo')].map(c => [c.getContext('2d'), c.dataset.el, c]);
@@ -10592,7 +10594,7 @@ const hrnd = s => { const x = Math.sin(s * 99.13) * 43758.5; return x - Math.flo
 function hpx(g, x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
 function hhero(g, x, y, c, s) { s = s || 6; hpx(g, x, y, s, OUTLINE); hpx(g, x, y, s - 2, c); hpx(g, x + 1, y - 1, 1, OUTLINE); }
 function hfoe(g, x, y, c, s) { s = s || 5; hpx(g, x, y, s, '#2a0a10'); hpx(g, x, y, s - 2, c || '#e0404a'); }
-function hdField(g) { const { W, H, LY, CX } = HD; g.fillStyle = '#0d0b14'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a2440'; for (const y of LY) g.fillRect(CX, y - 8, W, 16);
+function hdField(g) { const { W, H, LY, CX } = HD; g.fillStyle = '#0d0b14'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a2440'; g.fillRect(CX, LY[0] - 8, W, LY[LY.length - 1] - LY[0] + 16);
   g.fillStyle = '#4a4560'; g.fillRect(0, 4, CX, H - 8); g.fillStyle = '#6a6488'; for (let y = 4; y < H - 4; y += 6) g.fillRect(CX - 3, y, 3, 3); }
 function hline(g, a, b, c) { g.strokeStyle = c; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0] + .5, a[1] + .5); g.lineTo(b[0] + .5, b[1] + .5); g.stroke(); }
 function hring(g, x, y, r, c, a) { g.globalAlpha = a == null ? 1 : Math.max(0, a); g.strokeStyle = c; g.beginPath(); g.arc(x, y, Math.max(0.5, r), 0, 7); g.stroke(); g.globalAlpha = 1; }
@@ -13412,8 +13414,7 @@ G.act = function (act, arg) {
     case 'h-bench': hero.place = null; break;
     case 'h-recall': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && recallHero(G.B, u)) { TEL.event('recall', { id: hero.id, s: run.siege, hp: Math.round(100 * u.hp / u.maxHp) }); UI.renderInspector(); UI.hud(); } return; }
     case 'h-jump': { const u = G.B && G.B.heroes.find(x => x.inst === hero); if (G.phase === 'siege' && rafterJump(G.B, u)) { TEL.event('jump', { id: hero.id, s: run.siege }); UI.renderInspector(); } return; }
-    case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; const nm = heroDisplayName(hero); r = sellHero(run, hero); if (r.err) return UI.toast(r.err, true);
-      SFX.play('buy'); UI.toast(`${nm} heads home. +${r.gold} gold, items back in the Armory.`); TEL.event('sell', { id: hero.id, lv: hero.level }); G.selected = run.roster[0] && run.roster[0].uid; break; }
+    case 'h-sell': { if (UI.sellArm !== hero.uid) { UI.sellArm = hero.uid; UI.renderInspector(); return; } UI.sellArm = null; if (!sellNow(hero)) return; break; }
     case 'combo': { if (G.phase !== 'prep') return; const c = possibleCombos(run).find(c => c.key === arg); if (c && c.unpicked) return showComboForm(arg); toggleCombo(run, arg); SFX.play('click'); break; }
     case 'h-ascend': case 'ascend': { const hr = hero; if (!hr || G.phase !== 'prep') return; const from = RARITY[hr.rarity || 0].name; r = ascendHero(run, hr); if (r.err) return UI.toast(r.err, true);
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
@@ -13464,6 +13465,20 @@ G.cardDown = function (e, uid) {
   if (G.phase !== 'prep') return;
   G.drag = { h, sx: e.clientX, sy: e.clientY, active: false, fromCard: true };
 };
+// selling, TFT style (Cam 2026-10-31): the copies' gold comes back, items go back to the Armory, the copies go back to the pool
+function sellNow(h) {
+  const run = G.run, nm = heroDisplayName(h), r = sellHero(run, h); if (r.err) { UI.toast(r.err, true); return false; }
+  SFX.play('buy'); UI.toast(`${nm} sold for +${r.gold} gold. Items are back in the Armory.`); TEL.event('sell', { id: h.id, lv: h.level, star: heroStar(h) });
+  if (G.selected === h.uid) G.selected = run.roster[0] && run.roster[0].uid; return true;
+}
+// while a champion is dragged in prep, a Sell box shows at the top of the field; dropping on it sells
+function sellZone(d, e) {
+  const z = $('sellZone'), on = !!(d && d.active && G.phase === 'prep' && G.run.roster.length > 1);
+  z.hidden = !on; if (!on) return false;
+  z.querySelector('span').textContent = `${heroDisplayName(d.h).split(' ')[0]} for ${sellValue(d.h)} gold`;
+  const r = z.getBoundingClientRect(), hot = e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 8 && e.clientY <= r.bottom + 8;
+  z.classList.toggle('hot', hot); return hot;
+}
 function armPower() {
   const B = G.B, run = G.run; if (!B || G.phase !== 'siege' || !run.castleEl || B.cpow.cd > 0) return;
   const kind = CASTLE_POWERS[run.castleEl].kind;
@@ -13487,6 +13502,7 @@ function docMove(e) {
   const d = G.drag; if (!d) { if (G.phase === 'prep' && p.inside) { const h = heroAtPoint(p); $('arena').style.cursor = h ? 'grab' : 'default'; } return; }
   if (!d.active && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 5) { d.active = true; $('ghost').src = portrait(heroSpriteKey(d.h)); }
   if (!d.active) return;
+  if (sellZone(d, e)) { d.overCanvas = false; G.hover = null; const gh = $('ghost'); gh.hidden = false; gh.style.left = e.clientX + 'px'; gh.style.top = e.clientY + 'px'; rebuildPrepUnits(); return; }
   d.overCanvas = p.inside;
   const gh = $('ghost'); gh.hidden = p.inside; gh.style.left = e.clientX + 'px'; gh.style.top = e.clientY + 'px';
   if (p.inside) { const s = slotAt(p); G.hover = s; G.hoverOk = slotOk(d.h, s); } else G.hover = null;
@@ -13494,9 +13510,10 @@ function docMove(e) {
 }
 function docUp(e) {
   const d = G.drag; if (!d) return; G.drag = null; $('ghost').hidden = true;
-  const p = toLogical(e);
+  const p = toLogical(e), sell = sellZone(d, e); $('sellZone').hidden = true;
   if (d.active) {
-    if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
+    if (sell) sellNow(d.h);
+    else if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
     else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
       // field champion dropped on a bench card: they trade places
       if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }
@@ -13886,7 +13903,7 @@ const MOB = {
     document.addEventListener('click', e => { if (eat) { eat = false; e.preventDefault(); e.stopPropagation(); } }, true);
     document.addEventListener('contextmenu', e => { if (MOB.touch && !e.target.closest('input,textarea')) e.preventDefault(); });
     // a scroll that steals the finger ends the drag cleanly
-    document.addEventListener('pointercancel', () => { if (!G.drag) return; G.drag = null; $('ghost').hidden = true; G.hover = null; changed(); });
+    document.addEventListener('pointercancel', () => { if (!G.drag) return; G.drag = null; $('ghost').hidden = true; $('sellZone').hidden = true; G.hover = null; changed(); });
   },
   wireNative() {
     const P = Capacitor.Plugins || {};
