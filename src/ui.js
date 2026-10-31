@@ -209,7 +209,25 @@ const UI = {
   banner(title, sub, o = {}) {
     const T = String(title), k = o.kind || (/SLAIN|falls$/i.test(T) ? 'slain' : /^(BOSS|MINI-BOSS|Boss approaching)/.test(T) ? 'boss' : /OVERTIME|GOT AWAY|fallen/i.test(T) ? 'alarm' : 'info');
     const spr = o.spr ? `<img class="bspr px" src="${portrait(o.spr, k === 'boss' ? 'atk' : 'idle0')}" alt="">` : '';
-    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${spr}<div class="bnt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+    const live = k === 'hero' && o.spr && /^h:/.test(o.spr) && typeof IDLES !== 'undefined' && IDLES[o.spr.split(':')[1].replace(/[~@].*/, '')];
+    $('banner').innerHTML = `<div class="in k-${k}"${o.col ? ` style="--bc:${o.col}"` : ''}>${live ? '<canvas class="bspr live" width="160" height="136"></canvas>' : spr}<div class="bnt"><h2 class="alive">${aliveText(T)}</h2>${sub ? `<p>${aliveWords(sub)}</p>` : ''}</div></div>`;
+    if (live) UI.bannerAnim($('banner').querySelector('canvas.bspr'), o.spr, live);
+  },
+  // the arriving champion plays their signature move (their own idle action from idles.js), then a strike, in the banner
+  bannerAnim(cv, key, def) {
+    const g = cv.getContext('2d'), S = 5, fs = 20 * S, t0 = performance.now(), act = 0.3, sp = Math.max(1, (def.d || 1) / 1.1), d = (def.d || 1) / sp;
+    g.imageSmoothingEnabled = false; ensureSprite(key);
+    const step = now => {
+      if (!cv.isConnected) return;
+      const t = (now - t0) / 1000, F = SPR[key] && SPR[key].frames; if (!F) return;
+      g.clearRect(0, 0, cv.width, cv.height);
+      const x = cv.width / 2, y = cv.height - 6, ks = (t - act) / d, strike = ks >= 1 && ks < 1 + 0.35 / d;
+      const fr = strike ? 'atk' : Math.floor(t * 2.5) % 2 ? 'idle1' : 'idle0', img = F[fr] || F.idle0;
+      if (strike) { const pad = img.width === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width * S, img.height * S); }
+      else drawIdleUnit(g, img, x, y, fs, false, { def, k: ks >= 0 && ks < 1 ? ks : -1, t: t * sp, by: fr === 'idle1' ? 1 : 0 });
+      if (t < 4.5) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   },
   // modal headings come alive, cards are dealt in with a flip
   liven(sh) {

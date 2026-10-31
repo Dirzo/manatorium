@@ -1454,7 +1454,7 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 
 /* champion arrival banner as dark wordart (Cam 2026-10-31): no box, ribbon or medallion; just the hopping champion and the name.
    Letters are a deep ink gradient with a thin rarity-tinted rim and a pale halo so they read on grass, sky and stone. */
-#banner .k-hero { --bc2: color-mix(in srgb, var(--bc, var(--gold)) 45%, #0c0720); background: none; border: 0; box-shadow: none; padding: 0; gap: 10px; }
+#banner .k-hero { animation-duration: 3.4s; --bc2: color-mix(in srgb, var(--bc, var(--gold)) 45%, #0c0720); background: none; border: 0; box-shadow: none; padding: 0; gap: 10px; }
 #banner .k-hero .bspr { width: 80px; height: 80px; filter: drop-shadow(0 0 3px rgba(255,255,255,.85)) drop-shadow(0 4px 0 rgba(0,0,0,.35)); }
 #banner .k-hero .bnt { display: flex; flex-direction: column; align-items: center; }
 #banner .k-hero h2 { font: 900 clamp(32px, 3.6vw, 54px)/1.05 var(--f-display); letter-spacing: .03em; text-shadow: none; color: #1a1030;
@@ -1465,4 +1465,6 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   -webkit-background-clip: text; background-clip: text; color: transparent; }
 #banner .k-hero p { margin-top: 2px; font: 800 13px/1.4 var(--f-display); letter-spacing: .24em; text-transform: uppercase; color: #1a1030;
   text-shadow: 0 0 2px #fff8e1, 0 0 2px #fff8e1, 0 0 6px rgba(255,248,225,.8); }
+#banner .k-hero .bspr.live { width: 160px; height: 136px; image-rendering: pixelated; margin: -10px -14px 0 0; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; }
 html.m #banner .k-hero .bspr { width: 56px; height: 56px; }
+html.m #banner .k-hero .bspr.live { width: 100px; height: 85px; }
