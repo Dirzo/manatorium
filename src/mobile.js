@@ -20,7 +20,7 @@ const MOB = {
     // a probe that reports the notch and home-bar insets
     const pr = document.createElement('div'); pr.id = 'safeProbe'; document.body.appendChild(pr); MOB.probe = pr;
     // phone-only controls: the "more" menu, the details toggle and the details panel wrapper
-    const more = document.createElement('button'); more.id = 'mMore'; more.className = 'btn small'; more.setAttribute('aria-label', 'More options'); more.setAttribute('aria-expanded', 'false'); more.textContent = '☰';
+    const more = document.createElement('button'); more.id = 'mMore'; more.className = 'btn small'; more.setAttribute('aria-label', 'More options'); more.setAttribute('aria-expanded', 'false'); more.innerHTML = pxi('ui-menu');
     document.querySelector('.hud').appendChild(more);
     const menu = document.createElement('div'); menu.id = 'mMenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
     menu.innerHTML = '<button class="btn small" id="mIntel">Scouts &amp; stats</button>';
@@ -29,9 +29,9 @@ const MOB = {
     document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== more) MOB.menu(false); });
     menu.addEventListener('click', e => { if (e.target.closest('button') && e.target.id !== 'soundBtn') setTimeout(() => MOB.menu(false), 0); });
     $('mIntel').onclick = () => { MOB.details(false); UI.setIntel($('intel').classList.contains('closed'), true); };
-    const det = document.createElement('button'); det.id = 'mDet'; det.className = 'mdet'; det.setAttribute('aria-expanded', 'false'); det.innerHTML = '<span class="ico">☰</span><span>Details</span>';
+    const det = document.createElement('button'); det.id = 'mDet'; det.className = 'mdet'; det.setAttribute('aria-expanded', 'false'); det.innerHTML = `<span class="ico">${pxi('ui-team')}</span><span>Details</span>`;
     det.onclick = () => MOB.details(!MOB.det);
-    document.querySelector('.hud .rail').appendChild(det);
+    document.querySelector('.rail').appendChild(det);
     const detX = document.createElement('button'); detX.id = 'mDetX'; detX.className = 'btn small'; detX.textContent = 'Done ▼';
     detX.onclick = () => MOB.details(false);
     document.querySelector('#roster > header').appendChild(detX);

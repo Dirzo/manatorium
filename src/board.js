@@ -1,0 +1,191 @@
+// ===== Board-first desktop layout (Cam 2026-10-31: "a brand new UI that shows off the board and characters more, built around the board like TFT") =====
+// The arena fills the screen. Thin plates float over its edges: the siege tracker on top, team traits down the left,
+// scouts on the top right, and one bottom bar that holds the facilities, gold, the shop, the bench and the siege buttons.
+// Big panels (the champion drawer, scout report, facilities) stay one click away instead of always open.
+// Desktop only: phone layouts (html.m, src/mobile.js) keep their own arrangement. Loaded after mobile.js.
+const BOARD = {
+  on: false, card: null, team: false, intel: false, homes: new Map(), keys: {},
+  wanted() { return !MOB.wanted() && innerWidth >= 900; },
+  build() {
+    if ($('boardBar')) return;
+    const mk = (id, cls, html = '') => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; d.innerHTML = html; return d; };
+    const app = $('app');
+    app.appendChild(mk('bTop', 'bplate btop'));
+    app.appendChild(mk('bTL', 'btl'));
+    app.appendChild(mk('bTR', 'btr', `<div id="scoutRow" class="scoutrow" role="button" tabindex="0" aria-label="Scout report"></div><div class="bbtns" id="bBtns">
+      <button class="ibtn" id="bIntelBtn" aria-pressed="false" data-tip="txt:Scout report|Who is coming, the horde's attack plan and its tricks. (S)">${pxi('ui-scout')}</button>
+      <button class="ibtn" id="bTeamBtn" aria-pressed="false" data-tip="txt:Team and battle stats|Every champion, team bonuses spelled out, element combos and the battle chart. (C)">${pxi('ui-team')}</button></div>`));
+    app.appendChild(mk('traitRail', 'traitrail'));
+    app.appendChild(mk('boardBar', 'boardbar', `<div class="bb-fac" id="bFac"></div>
+      <div class="bb-econ" id="bEcon"><div class="bb-gold" id="bGold"></div><div class="bb-lvl" id="bLvl"></div><div class="bb-ebtns" id="bEBtns"></div></div>
+      <div class="bb-shop" id="bShop"></div>
+      <div class="bb-bench" id="bBench"></div>
+      <div class="bb-act" id="bAct"></div>`));
+    app.appendChild(mk('unitCard', 'unitcard', `<button class="ibtn ucx" id="unitX" aria-label="Close">${pxi('ui-close')}</button><div id="unitBody"></div>`));
+    $('unitX').onclick = () => { BOARD.card = null; BOARD.render(); };
+    $('bIntelBtn').onclick = () => BOARD.setIntel(!BOARD.intel);
+    $('scoutRow').onclick = () => BOARD.setIntel(!BOARD.intel);
+    $('bTeamBtn').onclick = () => BOARD.setTeam(!BOARD.team);
+    // the bar hands its clicks to the same actions the Guild page uses
+    $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
+    $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
+    $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
+    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) G.cardDown(e, t.dataset.uid); });
+  },
+  // move the shared HUD pieces into the board plates; unmount puts every one back exactly where it was
+  move(el, into, before) { if (!el) return; if (!BOARD.homes.has(el)) { const mark = document.createComment('home'); el.parentNode.insertBefore(mark, el); BOARD.homes.set(el, mark); } before ? into.insertBefore(el, before) : into.appendChild(el); },
+  mount() {
+    BOARD.build(); if (BOARD.on) return; BOARD.on = true;
+    document.documentElement.classList.add('board');
+    const q = s => document.querySelector(s);
+    BOARD.move(q('.hud .siegeinfo'), $('bTop')); BOARD.move(q('.hud .castlebar'), $('bTop'));
+    BOARD.move($('scoreBox'), $('bTL'));
+    for (const id of ['recBadge', 'soundBtn', 'fsBtn', 'menuBtn']) BOARD.move($(id), $('bBtns'));
+    BOARD.move(q('.hud .rail'), $('bFac'));
+    BOARD.move($('goldBox'), $('bGold'));
+    BOARD.move(q('.hud .controls .speed'), $('bAct'));
+    for (const id of ['repairBtn', 'pressBtn', 'hammerBtn', 'powerBtn', 'beginBtn']) BOARD.move($(id), $('bAct'));
+    BOARD.move($('inspector'), $('unitBody'));
+    BOARD.keys = {}; BOARD.setTeam(BOARD.team, true); BOARD.setIntel(BOARD.intel, true);
+  },
+  unmount() {
+    if (!BOARD.on) return; BOARD.on = false;
+    document.documentElement.classList.remove('board', 'board-team');
+    for (const [el, mark] of BOARD.homes) { mark.parentNode && mark.parentNode.insertBefore(el, mark); mark.remove(); }
+    BOARD.homes.clear();
+    for (const k of ['--barH', '--trailW']) document.documentElement.style.removeProperty(k);
+    $('roster').classList.remove('bteam'); $('intel').classList.remove('bopen');
+  },
+  setTeam(open, quiet) {
+    BOARD.team = open; document.documentElement.classList.toggle('board-team', open && BOARD.on);
+    const b = $('bTeamBtn'); if (b) b.setAttribute('aria-pressed', String(open));
+    if (open) { BOARD.setIntel(false, true); UI.setRoster(false); }
+    if (!quiet) SFX.play('click');
+  },
+  setIntel(open, quiet) {
+    BOARD.intel = open; $('intel').classList.toggle('bopen', open && BOARD.on);
+    if (BOARD.on) UI.setIntel(open, true);
+    const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open));
+    if (open && BOARD.team) BOARD.setTeam(false, true);
+    if (!quiet) SFX.play('click');
+  },
+  // arena: as wide as the screen allows above the bar; spare width on the left becomes the trait column
+  layout() {
+    const st = document.documentElement.style, big = innerWidth >= 1800 && innerHeight >= 1000;
+    const barH = big ? 138 : innerHeight < 760 ? 98 : 116;
+    const availH = innerHeight - barH; let w = innerWidth, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
+    const free = innerWidth - w, wide = free >= 170;
+    const ax = wide ? free : free / 2;
+    st.setProperty('--aw', w + 'px'); st.setProperty('--ah', h + 'px'); st.setProperty('--ax', ax + 'px'); st.setProperty('--ay', Math.max(0, (availH - h) / 2) + 'px');
+    st.setProperty('--barH', barH + 'px'); st.setProperty('--hudH', '0px'); st.setProperty('--rosH', barH + 'px'); st.setProperty('--trailW', (wide ? free : 0) + 'px');
+    document.documentElement.classList.toggle('trail-wide', wide);
+    if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
+  },
+  render() {
+    if (!BOARD.on || !G.run) return;
+    const run = G.run;
+    BOARD.renderTop(run); BOARD.renderTraits(run); BOARD.renderScouts(run); BOARD.renderEcon(run); BOARD.renderShop(run); BOARD.renderBench(run);
+    const show = !!G.selected && BOARD.card === G.selected && !!run.roster.find(x => x.uid === G.selected) && $('title').hidden && !BOARD.team;
+    $('unitCard').classList.toggle('on', show);
+  },
+  set(id, html) { if (BOARD.keys[id] === html) return false; BOARD.keys[id] = html; $(id).innerHTML = html; return true; },
+  // ---- top: siege tracker with this horde's five sieges as pips ----
+  renderTop(run) {
+    const s = run.siege, within = (s - 1) % 5, first = s - within; let p = '';
+    for (let i = 0; i < 5; i++) { const n = first + i, boss = isBossSiege(n), cls = i < within ? 'done' : i === within ? 'now' : 'next';
+      p += `<i class="pip ${cls} ${boss ? 'boss' : ''}" data-tip="txt:Siege ${n}|${esc(UI.siegeBlurb(n))}">${boss ? pxi('ui-skull') : i < within ? pxi('ui-check') : ''}</i>`; }
+    let pe = $('hordePips'); if (!pe) { pe = document.createElement('div'); pe.id = 'hordePips'; pe.className = 'pips5'; $('bTop').insertBefore(pe, $('bTop').children[1] || null); }
+    if (pe._k !== p) { pe._k = p; pe.innerHTML = p; }
+  },
+  // ---- left: TFT-style trait tracker (live ones first, tier pips, hover for the full text) ----
+  renderTraits(run) {
+    const { race, cls } = synergyCounts(run), act = activeSynergies(run), rows = [];
+    const tierCls = t => t < 0 ? 't-off' : ['t-bronze', 't-silver', 't-gold'][Math.min(2, t)] || 't-gold';
+    const row = (key, def, n, icon, tip) => { const t = act[key] ?? -1, next = def.at.find(v => v > n);
+      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span><span class="tiers">${def.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span>${t < 0 ? `<small class="nx">${n}/${def.at[0]}</small>` : next ? '' : '<small class="nx mx">max</small>'}</div>` }); };
+    for (const k in RACES) if (race[k]) row(k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
+    for (const k in CLASSES) if (cls[k]) row(k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
+    rows.sort((a, b) => (b.on - a.on) || (b.t - a.t) || (b.n - a.n));
+    let h = rows.map(r => r.html).join('');
+    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => fe[b] - fe[a]);
+    if (els.length) { h += `<div class="trsep">Elements</div>`; for (const e of els) { const n = fe[e], t = elTier(n), E = ELEMENTS[e];
+      h += `<div class="tr el ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span><span class="tiers">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span></div>`; } }
+    const tc = temperCounts(run), tps = Object.keys(tc).filter(k => tc[k] >= 2);
+    if (tps.length) { h += `<div class="trsep">Pairs</div>`; for (const k of tps) { const T = TEMPERS[k]; h += `<div class="tr on t-silver tmp ${T.side}" data-tip="tmp:${k}"><span class="hex">${pxi('tmp-' + k)}</span><b class="cnt">${tc[k]}</b><span class="nm">${esc(T.name)}</span></div>`; } }
+    const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
+    if (all.length) { h += `<div class="trsep">Combos ${on.size}/${comboSlots(run)}</div>`;
+      for (const c of all) h += `<button class="tr combo ${on.has(c.key) ? 'on t-gold' : 't-off'} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="hex">${pxi('cmb-' + c.kind)}</span><span class="nm">${esc(c.name)}</span></button>`; }
+    if (!h) h = `<p class="trnone">Two champions of the same race or class switch on a bonus.</p>`;
+    BOARD.set('traitRail', h);
+  },
+  // ---- top right: the horde as a row of faces; the full report opens on click ----
+  renderScouts(run) {
+    const B = G.B, s = run.siege, F = FACTIONS[factionIndex(s)], within = (s - 1) % 5;
+    let ids, counts = null;
+    if (B && G.phase === 'siege') { counts = {}; for (const q of B.queue) if (!q.turncoat) counts[q.id] = (counts[q.id] || 0) + 1; for (const e of B.enemies) if (e.alive && !e.turncoat) counts[e.id] = (counts[e.id] || 0) + 1; ids = Object.keys(counts); }
+    else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); }
+    const tag = d => d.boss ? (d.boss === 'big' ? 'Boss' : 'Mini-boss') : d.elite ? 'Elite, may drop an item' : d.kind === 'flyer' ? 'Flies over the line' : d.kind === 'ranged' ? 'Ranged' : d.kind === 'healer' ? 'Heals the horde' : d.split ? 'Splits when slain' : d.spd > 35 ? 'Fast' : 'Melee';
+    let h = `<span class="srlab">${counts ? 'Still coming' : esc(F.name)}</span>`;
+    for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<span class="sface ${d.boss ? 'boss' : d.elite ? 'elite' : ''}" data-tip="txt:${esc(d.name)}|${esc(tag(d))}"><img class="px" src="${portrait('e:' + id)}" alt="">${counts ? `<b>${counts[id]}</b>` : ''}</span>`; }
+    const tc = run.tactic && TACTICS[run.tactic]; if (tc && !counts) h += `<span class="sface tac" data-tip="txt:Horde tactic: ${esc(tc.name)}|${esc(tc.desc)}">${pxi('tac-' + run.tactic)}</span>`;
+    BOARD.set('scoutRow', h);
+  },
+  // ---- bottom left: gold, guild level, level up and reroll (TFT's buy XP and refresh) ----
+  renderEcon(run) {
+    const prep = G.phase === 'prep', gc = guildCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold, run);
+    BOARD.set('bLvl', `<b data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot and deals rarer legends in the shop.">Lv ${guildLevel(run)}</b><small>${fieldCount(run)}/${fieldCap(run)} on the field</small><small class="intr" data-tip="txt:Interest|1 gold per ${SHOP.interestPer} banked, paid after the siege.">+${intr} interest</small>`);
+    BOARD.set('bEBtns', `<button class="bbtn lvup" data-bact="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Level up the guild|One more champion on the field and rarer shop odds.">${pxi('ui-up')}<span>${gc == null ? 'Max level' : 'Level up'}</span>${gc == null ? '' : COST(gc)}</button>
+      <button class="bbtn rr" data-bact="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'} data-tip="txt:New shop|Deal five fresh legends.">${pxi('ui-reroll')}<span>Reroll</span>${COST(rc)}</button>`);
+  },
+  // ---- bottom middle: the shop, always in reach while you plan ----
+  renderShop(run) {
+    const prep = G.phase === 'prep'; if (!run.shop) rollShop(run, G.meta);
+    const fe0 = stackElements(run), full = run.roster.length >= rosterCap(run);
+    let h = '';
+    run.shop.forEach((c, i) => {
+      if (!c) { h += `<div class="bs-card sold"><span>Sold</span></div>`; return; }
+      const d = HERO_BY_ID[c.id], Rr = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), el = own ? own.el : c.el;
+      const up = own && copiesToNext(own) === 1, elUp = !own && el && EL_STACK.at.includes((fe0[el] || 0) + 1);
+      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}`;
+      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
+        <img class="px port" src="${portrait('h:' + c.id, 'idle0')}" alt="" draggable="false">
+        <span class="bs-ic">${pxi('cls-' + d.cls)}${pxi('race-' + d.race)}${el ? `<span class="${elUp ? 'elup' : ''}">${pxi('el-' + el)}</span>` : ''}</span>
+        ${own ? `<span class="bs-own">${up ? `${heroStar(own) + 1}★ next` : `${heroStar(own)}★ owned`}</span>` : full ? '<span class="bs-own dim">Keep full</span>' : ''}
+        <span class="bs-foot"><b>${esc(heroShortName(d.name))}</b><span class="bs-cost">${COST(cost)}</span></span></button>`;
+    });
+    h += `<button class="ibtn bs-lock ${run.shopLock ? 'on' : ''}" data-bact="shoplock" aria-pressed="${!!run.shopLock}" data-tip="txt:${run.shopLock ? 'Shop locked' : 'Lock the shop'}|${run.shopLock ? 'These five stay for the next siege.' : 'Keep these five for the next siege instead of a fresh deal.'}">${pxi(run.shopLock ? 'ui-lock' : 'ui-unlock')}</button>`;
+    BOARD.set('bShop', h);
+    $('bShop').classList.toggle('closed', !prep);
+  },
+  // ---- bottom right: the bench, five slots; drag a champion up onto the board ----
+  renderBench(run) {
+    const bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
+    let h = `<span class="bb-lab" data-tip="txt:Bench|Bench champions don't fight. Drag one onto the field, or onto a field champion to swap. Drag a field champion down here to bench them.">Bench <b>${bench.length}/${BENCH_SLOTS}</b></span><div class="btiles">`;
+    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0];
+      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight."><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
+    for (let i = bench.length; i < BENCH_SLOTS; i++) h += `<div class="bt empty" aria-hidden="true"></div>`;
+    BOARD.set('bBench', h + '</div>');
+  },
+};
+
+// ----- wiring: wrap the shared UI so the board plates follow every refresh, and swap layouts with the phone code -----
+(function boardWire() {
+  const layout0 = UI.layout, refresh0 = UI.refresh, hud0 = UI.hud, select0 = G.select, roster0 = UI.renderRoster, setIntel0 = UI.setIntel;
+  UI.layout = function () {
+    if (!BOARD.wanted()) BOARD.unmount();
+    const r = layout0.apply(UI, arguments);
+    if (!MOB.on && innerWidth >= 900) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
+    return r;
+  };
+  UI.refresh = function () { const r = refresh0.apply(UI, arguments); BOARD.render(); return r; };
+  UI.hud = function () { const r = hud0.apply(UI, arguments); if (BOARD.on && G.run) { BOARD.renderTop(G.run); BOARD.renderEcon(G.run); BOARD.renderShop(G.run); } return r; };
+  UI.renderRoster = function () { const r = roster0.apply(UI, arguments); if (BOARD.on) { BOARD.renderBench(G.run); BOARD.renderTraits(G.run); BOARD.render(); } return r; };
+  const openPage0 = UI.openPage;
+  UI.openPage = function (p) { const r = openPage0.apply(UI, arguments); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
+  G.select = function (uid) { BOARD.card = uid; return select0.apply(G, arguments); };
+  // the S key and the old intel tab open the board's scout panel
+  UI.setIntel = function (open, quiet) { const r = setIntel0.apply(UI, arguments); if (BOARD.on && BOARD.intel !== open) { BOARD.intel = open; $('intel').classList.toggle('bopen', open); const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open)); } return r; };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && BOARD.on) { if (BOARD.team) BOARD.setTeam(false); else if (BOARD.intel) BOARD.setIntel(false); else if (BOARD.card) { BOARD.card = null; BOARD.render(); } } }, true);
+  // clicking empty board closes the champion card
+  document.addEventListener('pointerdown', e => { if (!BOARD.on || e.target.id !== 'arena') return; setTimeout(() => { if (!G.drag) { const p = toLogical(e); if (G.phase === 'prep' && !heroAtPoint(p)) { BOARD.card = null; BOARD.render(); } } }, 0); });
+})();

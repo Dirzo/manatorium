@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@400;500;600;700&family=Pixelify+Sans:wght@700&display=swap">
 <style>/*CSS*/</style>
 <!-- covers the bare game screen while the castle art loads, so it never flashes as a green field before the splash -->
-<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"></div>
+<div id="bootCover" style="position:fixed;inset:0;z-index:90;background:#151030"><div class="loadcard"><b>Siege of Legends</b><span>Loading<i>.</i><i>.</i><i>.</i></span></div></div>
 <div id="app">
   <header class="hud">
     <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
@@ -44,6 +44,7 @@
   <div class="stage">
     <div class="arena-wrap" id="arenaWrap">
       <canvas id="arena" width="480" height="270" aria-label="Castle arena"></canvas>
+      <div class="loadcard" id="arenaLoad" aria-hidden="true"><b>Siege of Legends</b><span>Loading<i>.</i><i>.</i><i>.</i></span></div>
       <span class="arena-tag l">Courtyard</span><span class="arena-tag r" id="hordeTag">← Enemies enter here</span>
       <div id="prepHint">Drag heroes to position them, then begin the siege.</div>
       <div id="banner"></div>

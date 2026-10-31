@@ -36,7 +36,10 @@ function initRender(canvas) {
 }
 function resizeRender() {
   const r = R.cv.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
-  R.k = Math.max(1, Math.ceil(r.width * dpr / W)); R.cv.width = W * R.k; R.cv.height = H * R.k;
+  const k = Math.max(1, Math.ceil(r.width * dpr / W)); if (k === R.k && R.cv.width === W * k) return;
+  R.k = k; R.cv.width = W * k; R.cv.height = H * k;
+  // resizing wipes the canvas; put the last frame back at once so a paused game (title, menus) never shows a bare field
+  if (R.lo && R.painted) { R.ctx.imageSmoothingEnabled = false; R.ctx.drawImage(R.lo, 0, 0, W * k, H * k); }
 }
 
 function buildBackground(fi, el) {
@@ -492,6 +495,7 @@ function renderFrame(V, dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#161d3a'; ctx.fillRect(0, 0, R.cv.width, R.cv.height);
   const sh = FXS.shake > 0.2 ? FXS.shake : 0; const ox = Math.round(rand(-sh, sh)) * k, oy = Math.round(rand(-sh, sh)) * k;
   ctx.drawImage(R.lo, ox, oy, W * k, H * k);
+  if (!R.painted) { R.painted = true; const l = document.getElementById('arenaLoad'); if (l) l.remove(); }
   // beams + bolts at hi-res for smoothness
   for (const b of FXS.beams) { const a = 1 - b.t / b.life; ctx.globalAlpha = a; ctx.strokeStyle = b.color; ctx.lineWidth = b.w * k * (0.5 + a * 0.5); ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(b.x1 * k + ox, b.y1 * k + oy); ctx.lineTo(b.x2 * k + ox, b.y2 * k + oy); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, b.w * k * 0.35 * a); ctx.stroke(); }
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
