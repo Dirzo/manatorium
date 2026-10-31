@@ -15,7 +15,9 @@ const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 2.0, foeHp: 3.4, hpBase: 1
 // HORDE_DIFF scales each horde (five sieges)
 // retuned 2026-10-23 for the TFT shop with no meta progression; 2026-10-24 foeHp 2.4->3.0, foeAtk 1.6->1.8 for breaches, race/class thresholds and guild ranks (bots win ~1 run in 6)
 // 2026-10-24 (later): retuned per horde for guild levels 3-12, rare items and boss warbands (GUILD_LV.pace, WARBAND); bots ~1 run in 7
-const HORDE_DIFF = [1.431, 0.909, 0.681, 0.644, 0.365, 0.405, 0.24, 0.085, 0.201, 0.024];
+// 2026-10-31 (TFT single-player audit): bots won 97-99% of sieges until a wall at the siege 40 boss. Hordes 2-7 (sieges 6-35)
+// are tougher so the first crack comes around siege 20, and the Brass Colossus (siege 40) is softer (BOSS_TOUGH)
+const HORDE_DIFF = [1.431, 1.15, 1.3, 1.22, 0.66, 0.7, 0.3, 0.085, 0.201, 0.024];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -34,7 +36,7 @@ const PRESS = { budget: 1.35, elites: 1, gold: 2 };
 function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
 function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
-const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
+const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.5, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
 // ----- hex field and the horde's attack plan (Cam 2026-10-24: no more lanes) -----
@@ -127,7 +129,10 @@ function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
 // 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
 function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
-function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
+// an element title replaces the epithet: 'Brann the Blazing'. A name that starts with 'The' keeps its last word instead
+// ('The Great Toadmother' -> 'Toadmother the Radiant', never 'The the Radiant')
+function heroShortName(name) { const w = name.split(' '); return /^the$/i.test(w[0]) && w.length > 1 ? w[w.length - 1] : w[0]; }
+function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${heroShortName(d.name)} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
 // flat power bonuses that used to be +1 rolls: mustache, Aether Engine, Heart of the Twelve (+3)
@@ -291,6 +296,7 @@ function heroStats(h, run, meta, syn) {
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
+  if (typeof boonStats === 'function') boonStats(run, s); // Boons (state.js)
   s.hp = Math.round(s.hp); s.atk = Math.round(s.atk);
   // ability power as a number, so signatures can show and scale with it (st.ap stays the multiplier)
   s.apv = Math.round(CLASS_AP[d.cls] * tm * lm * gm * 1.1 * s.ap);
@@ -439,7 +445,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   // a legend you left in the shop, fighting for the horde (beat them and their copy goes back to the pool)
   if (tc) { u.turncoat = tc.id; u.wstar = ws; u.key = 'h:' + tc.id; u.nativeFace = 1; u.scale = 1.1;
-    u.name = (opts.defected ? 'Turncoat ' : bossShort(bossFor(s)) + '\'s ') + tc.name.split(' ')[0] + (ws > 1 ? ' ' + '★'.repeat(ws) : '');
+    u.name = (opts.defected ? 'Turncoat ' : bossShort(bossFor(s)) + '\'s ') + heroShortName(tc.name) + (ws > 1 ? ' ' + '★'.repeat(ws) : '');
     if (CLASS_BASE[tc.cls].range > 40) { u.range = Math.min(110, CLASS_BASE[tc.cls].range); u.proj = tc.cls === 'mage' || tc.cls === 'cleric' ? 'spark' : 'arrow'; }
     FX.text(u.x - 20, u.y - 22, opts.defected ? 'TURNCOAT' : 'WARBAND', '#c58cff', true, true); }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
@@ -656,7 +662,11 @@ function damageCastle(B, dmg, src) {
   dmg *= traitCastleMul(B);
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
-  if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
+  // Stonework techs fight back instead of adding wall HP (Cam 2026-10-31): Murder Holes / Spiked Bastion reflect, Tar Pots slow, Boiling Oil splashes
+  const T = B.run.tech;
+  if (src && src.alive && src.range <= 40 && (T.bastion || T.walls1)) dealDamage(B, null, src, dmg * (T.bastion ? 0.8 : 0.3), { quiet: true });
+  if (src && src.alive && T.fountain && !src.boss) { src.slowT = Math.max(src.slowT || 0, 2); src.slowAmt = Math.max(src.slowAmt || 0, 0.4); }
+  if (src && T.walls2) { for (const e of B.enemies) if (e.alive && e !== src && dist(e, src) < 26) dealDamage(B, null, e, dmg * 0.5, { quiet: true }); if (Math.random() < 0.3) FX.particles(src.x, src.y - 8, 5, ['#ffd27a', '#ff9a3a', '#5a3a1a'], { spread: 12 }); }
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 

@@ -46,7 +46,7 @@ function statTipHTML(st) {
 function synTipHTML(k) {
   const run = G.run, isRace = !!RACES[k], D = RACES[k] || CLASSES[k]; if (!D) return '';
   const { race, cls } = synergyCounts(run), n = (isRace ? race : cls)[k] || 0, t = activeSynergies(run)[k];
-  const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroDisplayName(h).split(' ')[0]));
+  const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroShortName(heroDisplayName(h))));
   const tiers = D.at.map((v, i) => `<div class="ttier ${t === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(D.desc(i).replace(/^[^:]+: /, ''))}</span></div>`).join('');
   return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
 }

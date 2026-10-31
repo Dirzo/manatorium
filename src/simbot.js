@@ -183,6 +183,9 @@ function botPress(run, style, log) {
   run.press = style === 'chaos' ? Math.random() < 0.3 : !!last && last.deaths === 0 && last.castle >= 70 && run.castle.hp >= run.castle.max * 0.6 && !isBossSiege(run.siege + 1);
 }
 // one full run. opts: { dt, maxSiege, onSiege }
+// boons: chaos picks at random; the others favour board size and combat power, then gold
+const BOT_BOON = { heart: 9, blessing: 8, charter: 7, vault: 6, fortune: 5, hymn: 6, hide: 5, smith: 4, banker: 4, mend: 3, windfall: 3, recruit: 5, drill: 4, parts: 3, eagle: 3, warchest: 2, haggler: 2 };
+function botBoon(run, style, os) { if (style === 'chaos') return pick(os); if (run.breaches && os.includes('mend')) return 'mend'; return os.slice().sort((a, b) => (BOT_BOON[b] || 0) - (BOT_BOON[a] || 0))[0]; }
 function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
   const run = newRun(meta); const log = [];
@@ -216,6 +219,7 @@ function botPlayRun(style, meta, opts = {}) {
     const tier = summonTier(rep.siege); if (tier) { const os = summonOptions(run, tier); if (os.length) { const o = os.sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0];
       if (run.roster.length >= rosterCap(run)) swapHero(run, run.roster.slice().sort((a, b) => (a.rarity || 0) * 50 + a.level - (b.rarity || 0) * 50 - b.level)[0], o);
       else { const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); } } }
+    { const bt = boonDue(rep.siege); if (bt) { const os = boonOptions(run, bt); if (os.length) takeBoon(run, meta, botBoon(run, style, os)); } }
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
@@ -258,6 +262,7 @@ function playtestStep(P) {
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
   if (!run.roster.length) draft();
   checkCastleUnlock(run);
+  { const bt = boonDue(rep.siege); if (bt) { const os = boonOptions(run, bt); if (os.length) takeBoon(run, meta, botBoon(run, style, os)); } }
   run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
   resolveEncounter(run, meta, pick(drawEncounter(run).opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
   if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null; run.mods = {};

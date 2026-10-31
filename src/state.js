@@ -2,10 +2,11 @@
 let uidN = 1;
 const nuid = () => 'u' + (uidN++) + Math.random().toString(36).slice(2, 5);
 
-function newMeta() { return { diamonds: 0, ranks: {}, best: 0, runs: 0, totalFloors: 0, seen: {} }; }
+function newMeta() { return { diamonds: 0, ranks: {}, best: 0, runs: 0, totalFloors: 0, seen: {}, scores: [], bestScore: 0 }; }
 
 function rafterSlots(run) { return run.tech.rafters1 ? (run.tech.rafters2 ? 3 : 1) : 0; }
-function castleMaxFor(run, meta) { return Math.round(1000 * (1 + 0.15 * (meta.ranks.masonry || 0)) * (run.tech.walls1 ? 1.25 : 1) * (run.tech.walls2 ? 1.35 : 1) * (run.tech.bastion ? 1.3 : 1) * (run.mods.maxhp || 1) * (run.maxhpMul || 1) * castleGrowth(run)); }
+// base 1300 since the Stonework techs stopped adding wall HP (Cam 2026-10-31)
+function castleMaxFor(run, meta) { return Math.round(1300 * (1 + 0.15 * (meta.ranks.masonry || 0)) * (run.mods.maxhp || 1) * (run.maxhpMul || 1) * castleGrowth(run)); }
 // every boss slain makes the keep bigger: +30% max HP each, compounding
 function castleGrowth(run) { return Math.pow(1.3, castleTier(run)); }
 function castleTier(run) { return run.stats && run.stats.bosses ? run.stats.bosses.length : 0; }
@@ -106,12 +107,12 @@ function rollShop(run, meta) {
   if (boosted && run.pressDraft > 0) run.pressDraft--;
   return out;
 }
-function shopRerollCost(run) { return SHOP.reroll; }
-function rerollShop(run, meta) { const c = shopRerollCost(run); if (run.gold < c) return { err: `A new shop costs ${c} gold.` }; run.gold -= c; run.shopRerolls = (run.shopRerolls || 0) + 1; rollShop(run, meta); return { ok: true }; }
+function shopRerollCost(run) { return run.boons && run.boons.haggler && run.freeRr !== run.siege ? 0 : SHOP.reroll; }
+function rerollShop(run, meta) { const c = shopRerollCost(run); if (run.gold < c) return { err: `A new shop costs ${c} gold.` }; run.gold -= c; if (c === 0) run.freeRr = run.siege; run.shopRerolls = (run.shopRerolls || 0) + 1; rollShop(run, meta); return { ok: true }; }
 // buying a copy of a legend you already have adds to their copies (and maybe a star); otherwise they join, if there is room
 function buyShopCard(run, i) {
   const c = run.shop && run.shop[i]; if (!c) return { err: 'That card is gone.' };
-  const cost = shopCost(c.id); if (run.gold < cost) return { err: `${HERO_BY_ID[c.id].name.split(' ')[0]} costs ${cost} gold. You have ${run.gold}.` };
+  const cost = shopCost(c.id); if (run.gold < cost) return { err: `${heroShortName(HERO_BY_ID[c.id].name)} costs ${cost} gold. You have ${run.gold}.` };
   if (poolLeft(run, c.id) <= 0) { run.shop[i] = null; return { err: 'The horde got there first.' }; }
   const own = run.roster.find(h => h.id === c.id);
   if (own) { const s0 = heroStar(own); run.gold -= cost; own.copies = (own.copies || 1) + 1; poolTake(run, c.id, 1); run.shop[i] = null; return { ok: true, h: own, merged: true, starUp: heroStar(own) > s0 }; }
@@ -156,7 +157,7 @@ function warbandFighters(run) {
   const fresh = W.filter(w => w.defected === run.siege), rest = W.filter(w => !fresh.includes(w)).sort((a, b) => val(b) - val(a));
   return fresh.concat(rest.slice(0, Math.max(0, WARBAND.field(run.siege) - fresh.length)));
 }
-function interestFor(gold) { return Math.min(SHOP.interestMax, Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
+function interestFor(gold, run) { return Math.min(SHOP.interestMax + (run && run.boons && run.boons.banker ? BOON_FX.bankerCap : 0), Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
 
 function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
 function summonOptions(run, tier) {
@@ -259,7 +260,7 @@ function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.hold
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
   if (it.holder === h.uid) return { ok: true };
-  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries a super item. One each.` };
+  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${heroShortName(HERO_BY_ID[h.id].name)} already carries a super item. One each.` };
   if (it.parts.length === 1) {
     const partner = heroItems(run, h).find(x => x.parts.length === 1);
     if (partner) {
@@ -272,7 +273,7 @@ function giveItem(run, it, h) {
       return { fused };
     }
   }
-  if (h.items.length >= ITEM_SLOTS) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries ${ITEM_SLOTS} items.` };
+  if (h.items.length >= ITEM_SLOTS) return { err: `${heroShortName(HERO_BY_ID[h.id].name)} already carries ${ITEM_SLOTS} items.` };
   unequipItem(run, it); h.items.push(it.uid); it.holder = h.uid; return { ok: true };
 }
 const UNFORGE_COST = 3;
@@ -293,7 +294,7 @@ function forgeSuper(run, a, b) {
   if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
   if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
   const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
-  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${HERO_BY_ID[holder.id].name.split(' ')[0]} already carries a super item. One each.` };
+  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${heroShortName(HERO_BY_ID[holder.id].name)} already carries a super item. One each.` };
   run.gold -= SUPER_COST; unequipItem(run, a); unequipItem(run, b);
   run.stash = run.stash.filter(x => x !== a && x !== b);
   const it = makeItem(a.parts, a.el); it.sub = { parts: b.parts.slice(), el: b.el || null }; it.sup = superKind(a, b);
@@ -322,7 +323,6 @@ function buyTech(run, meta, id) {
   if (st === 'locked') return { err: `Needs ${techNeeds(run, id)} first.` };
   if (run.gold < T.cost) return { err: `You need ${T.cost - run.gold} more gold.` };
   run.gold -= T.cost; run.tech[id] = 1; run.stats.techs.push({ s: run.siege, id });
-  if (['walls1', 'walls2', 'bastion'].includes(id)) { const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp = Math.min(run.castle.max, run.castle.hp + (run.castle.max - old)); }
   if (id === 'rafters1' || id === 'rafters2') { const ranged = run.roster.filter(h => isRangedHero(h.id) && h.place && h.place.type === 'grid'); for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { const h = ranged.shift(); if (h) h.place = { type: 'rafter', i }; } }
   return { ok: true };
 }
@@ -366,7 +366,7 @@ function resolveEncounter(run, meta, fxs) {
       case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +5% attack, ability power and HP.`); } break; }
       case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { const l = addXP(h, Math.round(30 * (1 + 0.1 * run.siege))); if (l) levels.push([h, l]); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled, but learns something. +${Math.round(30 * (1 + 0.1 * run.siege))} XP.`); } break; }
       case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
-      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon admires your nerve. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
+      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon admires your nerve. Two free components.'); } else { const a = Math.min(3, run.gold); run.gold -= a; out.push(`The dragon sneezes on your purse. ${a ? `${a} gold melts` : 'It was empty anyway'} and it smells like toast.`); } break;
     }
   }
   const modText = { fewer: 'The next siege will be smaller.', curse: 'The next horde is angry about taxes.', chickens: 'Chickens. So many chickens. They are coming next siege.', partyhats: 'The next horde is wearing party hats.', giant: 'Your heroes will be ENORMOUS next siege.', tiny: 'The next horde will be tiny and zoomy.', inspire: 'Heroes +25% attack next siege.', tonic: 'Heroes start the next siege at full mana.', honked: 'The goose will be at the next siege.' };
@@ -375,14 +375,41 @@ function resolveEncounter(run, meta, fxs) {
   return { out, levels };
 }
 
+// ----- siege score (Cam 2026-10-31, TFT Tocker's Trials style): every held siege scores how well it was held -----
+// walls kept, champions standing, speed against par and the boss slain, times a multiplier that grows with the siege.
+// A lost siege scores nothing. Winning the finale adds a bonus, plus more for every crack the keep never took.
+const SCORE = { walls: 100, standing: 100, speed: 100, boss: 200, kill: 0.5, killCap: 300, sMul: 0.06, press: 1.25, parBase: 25, parS: 0.9, win: 3000, crackLeft: 750, board: 10 };
+function scorePar(s) { return SCORE.parBase + SCORE.parS * s; }
+function siegeScore(run, B) {
+  const s = run.siege;
+  if (B.done !== 'victory') return { total: 0, lost: true };
+  const walls = Math.round(SCORE.walls * clamp(run.castle.hp / Math.max(1, B.castleStart), 0, 1));
+  const hs = B.heroes.filter(u => !u.temp), standing = hs.length ? Math.round(SCORE.standing * hs.filter(u => u.alive || u.recalled).length / hs.length) : 0;
+  const par = scorePar(s), speed = Math.round(SCORE.speed * clamp((par * 1.6 - B.t) / (par * 0.8), 0, 1));
+  const boss = B.bossKilled ? SCORE.boss : 0, kills = Math.round(SCORE.kill * Math.min(SCORE.killCap, B.kills || 0));
+  const mul = (1 + SCORE.sMul * (s - 1)) * (pressOn(run) ? SCORE.press : 1);
+  return { walls, standing, speed, boss, kills, mul: +mul.toFixed(2), pressed: pressOn(run), par: Math.round(par), total: Math.round((walls + standing + speed + boss + kills) * mul) };
+}
+// the run's final score: what the sieges earned, plus the finale bonus for a win
+function runScore(run) { return (run.score || 0) + (run.won ? SCORE.win + SCORE.crackLeft * Math.max(0, BREACH.max - (run.breaches || 0)) : 0); }
+// the best-score board: the top SCORE.board runs, kept between runs (playtests never count)
+function recordScore(run, meta) {
+  if (run.playtest || run.scoreRecorded) return null; run.scoreRecorded = true;
+  const e = { score: runScore(run), siege: Math.min(run.siege, FINAL_SIEGE), won: !!run.won, at: Date.now() };
+  const b = (meta.scores || []).concat([e]).sort((a, b) => b.score - a.score).slice(0, SCORE.board);
+  meta.scores = b; meta.bestScore = Math.max(meta.bestScore || 0, e.score);
+  return { entry: e, rank: b.indexOf(e) + 1 };
+}
+
 // ----- siege end bookkeeping -----
 function finishSiege(run, meta, B) {
+  const score = siegeScore(run, B); run.score = (run.score || 0) + score.total;
   // TFT-style income: interest on what you banked, then the siege's pay
-  const s = run.siege, interest = interestFor(run.gold), bounty = SHOP.base + interest;
+  const s = run.siege, interest = interestFor(run.gold, run), bounty = SHOP.base + interest;
   run.gold += bounty;
   const xpMul = 1 + (run.tech.drill ? 0.15 : 0) + (run.tech.college ? 0.25 : 0);
   const survive = BAL.xpSurvive + BAL.xpSurviveS * s;
-  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, interest, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
+  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, interest, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), score, runScore: run.score, heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
     // a champion called back keeps what they learned, but misses the reward for holding the line
@@ -411,7 +438,6 @@ function finishSiege(run, meta, B) {
   if (B.bossKilled) { run.stats.bosses.push({ siege: s, kind: B.bossKilled });
     const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); const grow = run.castle.max - old, fix = Math.round(run.castle.max * 0.25);
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
-  if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a better roll on the next shop, and every fourth press a loot pick
   if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; rep.press = { gold: g, loot: A2.pressed % 4 === 0 }; }
@@ -427,3 +453,63 @@ function finishSiege(run, meta, B) {
 
 // diamonds only come from achievements (see achievements.js), never from playing a run
 function diamondsForRun(run) { return 0; }
+
+
+// ----- Boons (Cam 2026-10-31): three run-shaping picks at set sieges, like TFT's augments -----
+// After siege 3 a Silver pick, after siege 10 a Gold pick, after siege 20 a Prismatic pick. Each offers three of its tier.
+const BOON_AT = { 3: 'silver', 10: 'gold', 20: 'prism' };
+const BOON_TIERS = { silver: { name: 'Silver Boon', col: '#cfd8ff' }, gold: { name: 'Gold Boon', col: '#ffcf3a' }, prism: { name: 'Prismatic Boon', col: '#ff9fff' } };
+const BOON_FX = { bankerCap: 3, drillAs: 0.15, hideHp: 0.25, eagleCrit: 0.15, hymnDmg: 0.2, blessHp: 0.3, blessDmg: 0.3 };
+const BOONS = {
+  warchest:  { t: 'silver', icon: '💰', name: 'War Chest',        desc: '+10 gold now.' },
+  parts:     { t: 'silver', icon: '🧰', name: 'Spare Parts',      desc: 'Two random item components.' },
+  recruit:   { t: 'silver', icon: '📯', name: 'Recruiting Drive', desc: 'One free guild level: one more champion on the field and better shop odds.' },
+  eagle:     { t: 'silver', icon: '🦅', name: 'Eagle Eyes',       desc: 'All champions get +15% critical strike chance.' },
+  haggler:   { t: 'silver', icon: '🤝', name: 'Haggler',          desc: 'Your first shop reroll every siege is free.' },
+  drill:     { t: 'silver', icon: '🥁', name: 'Drill Sergeant',   desc: 'All champions attack 15% faster.' },
+  banker:    { t: 'gold',   icon: '🏦', name: 'Royal Banker',     desc: 'Interest can reach 8 gold a siege instead of 5.' },
+  smith:     { t: 'gold',   icon: '⚒️', name: 'Master Smith',     desc: 'A random finished item and a component.' },
+  hide:      { t: 'gold',   icon: '🛡️', name: 'Iron Hide',        desc: 'All champions get 25% more HP.' },
+  windfall:  { t: 'gold',   icon: '🪙', name: 'Windfall',         desc: '+22 gold now.' },
+  hymn:      { t: 'gold',   icon: '🎺', name: 'Battle Hymn',      desc: 'All champions deal 20% more damage.' },
+  mend:      { t: 'gold',   icon: '🪨', name: 'Stonemasons',      desc: 'Mend one crack in the keep.' },
+  heart:     { t: 'prism',  icon: '💖', name: 'Heart of the Keep', desc: 'One more champion on the field, on top of your guild level.' },
+  charter:   { t: 'prism',  icon: '📜', name: 'Golden Charter',   desc: 'Two free guild levels.' },
+  blessing:  { t: 'prism',  icon: '✨', name: 'Legend\'s Blessing', desc: 'All champions get 30% more HP and deal 30% more damage.' },
+  vault:     { t: 'prism',  icon: '👑', name: 'Treasure Vault',   desc: 'Two random finished items.' },
+  fortune:   { t: 'prism',  icon: '🎁', name: 'Fortune',          desc: '+45 gold now.' },
+};
+function boonDue(s) { return BOON_AT[s] || null; }
+function boonOptions(run, tier) {
+  const ks = Object.keys(BOONS).filter(k => BOONS[k].t === tier && !(run.boons || {})[k]
+    && !(k === 'recruit' && guildCost(run) == null) && !(k === 'charter' && guildLevel(run) > GUILD_LV.max - 2) && !(k === 'mend' && !run.breaches));
+  const out = []; while (out.length < 3 && ks.length) out.push(ks.splice(Math.floor(Math.random() * ks.length), 1)[0]);
+  return out;
+}
+// applies a boon; returns a line for the toast
+function takeBoon(run, meta, k) {
+  const B = BOONS[k]; if (!B) return ''; run.boons = Object.assign({}, run.boons, { [k]: true }); run.boonLog = [...(run.boonLog || []), { k, s: run.siege - 1 }];
+  const finished = () => { let it; do { it = randomFinished(); } while (it.parts.includes('shard')); run.stash.push(it); return it; };
+  switch (k) {
+    case 'warchest': run.gold += 10; return '+10 gold.';
+    case 'windfall': run.gold += 22; return '+22 gold.';
+    case 'fortune': run.gold += 45; return '+45 gold.';
+    case 'parts': for (let i = 0; i < 2; i++) run.stash.push(makeItem([pick(COMP_KEYS)])); return 'Two components are waiting in the Armory.';
+    case 'smith': { const it = finished(); run.stash.push(makeItem([pick(COMP_KEYS)])); return `${itemName(it)} and a component are waiting in the Armory.`; }
+    case 'vault': { const a = finished(), b = finished(); return `${itemName(a)} and ${itemName(b)} are waiting in the Armory.`; }
+    case 'recruit': run.glv = Math.min(GUILD_LV.max, guildLevel(run) + 1); return `Guild level ${guildLevel(run)}.`;
+    case 'charter': run.glv = Math.min(GUILD_LV.max, guildLevel(run) + 2); return `Guild level ${guildLevel(run)}.`;
+    case 'mend': run.breaches = Math.max(0, (run.breaches || 0) - 1); return `The masons mend a crack. ${BREACH.max - run.breaches} more and the keep falls.`;
+    case 'heart': return `${fieldCap(run)} champions can take the field.`;
+    default: return B.desc;
+  }
+}
+// boons that change champions in battle (heroStats in sim.js calls this)
+function boonStats(run, s) {
+  const b = run.boons; if (!b) return;
+  if (b.drill) s.as *= 1 + BOON_FX.drillAs;
+  if (b.eagle) s.crit += BOON_FX.eagleCrit;
+  if (b.hide) s.hp *= 1 + BOON_FX.hideHp;
+  if (b.hymn) s.atk *= 1 + BOON_FX.hymnDmg, s.ap *= 1 + BOON_FX.hymnDmg;
+  if (b.blessing) { s.hp *= 1 + BOON_FX.blessHp; s.atk *= 1 + BOON_FX.blessDmg; s.ap *= 1 + BOON_FX.blessDmg; }
+}

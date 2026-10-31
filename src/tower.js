@@ -7,12 +7,13 @@ function startTower() {
   const pt = !!run.playtest; // playtest runs earn nothing and set no records
   const ach = pt ? [] : grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
   const earned = diamondsForRun(run) + achDia;
+  const scoreRec = recordScore(run, G.meta), finalScore = runScore(run);
   const prevBest = G.meta.best; if (!pt) { G.meta.diamonds += earned - achDia; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N; }
   G.hasRun = false;
   const mvpId = Object.entries(run.stats.dmgByHero).sort((a, b) => b[1] - a[1])[0];
   const climber = mvpId ? mvpId[0] : (run.roster[0] && run.roster[0].id) || 'brann';
   const bosses = run.stats.bosses;
-  Object.assign(TOWER, { ach, on: true, t: 0, N, placed: 0, nextT: 1.2, drops: [], parts: [], texts: [], camY: 0, shake: 0, phase: 'intro', climber, climbK: 0, earned, prevBest, bosses,
+  Object.assign(TOWER, { ach, scoreRec, finalScore, won: !!run.won, breaches: run.breaches || 0, on: true, t: 0, N, placed: 0, nextT: 1.2, drops: [], parts: [], texts: [], camY: 0, shake: 0, phase: 'intro', climber, climbK: 0, earned, prevBest, bosses,
     stars: Array.from({ length: 140 }, () => ({ x: Math.random() * TW, y: Math.random(), s: Math.random() < 0.2 ? 2 : 1 })), fireworks: [], panelShown: false,
     stats: { kills: run.stats.kills, gold: run.stats.gold, mvp: climber, mvpDmg: mvpId ? mvpId[1] : 0 } });
   save();
@@ -169,6 +170,7 @@ function showTowerPanel() {
   $('towerPanel').innerHTML = `<div class="sheet" style="animation:sheetIn .4s">
     <h2>${G.run && G.run.won ? 'Victory! The Eternal Goose is defeated' : `${T.N} ${T.N === 1 ? 'floor' : 'floors'} tall`}</h2>
     <p class="lede">${T.N > T.prevBest && T.N > 0 ? `Your highest keep yet, beating ${T.prevBest}.` : `Your record is ${G.meta.best} floors.`}</p>
+    ${scoreBoardHTML(T)}
     <div class="tiles"><div class="tile"><small>Bosses slain</small><span>${T.bosses.length}</span></div><div class="tile"><small>Foes slain</small><span>${fmt(T.stats.kills)}</span></div><div class="tile"><small>Gold earned</small><span style="color:var(--gold)">${fmt(T.stats.gold)}</span></div></div>
     ${T.ach.length ? `<div class="achlist"><span class="eyebrow">New achievements</span>${T.ach.map(a => `<div class="ach got"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`).join('')}</div>` : `<p class="note">No new achievements this run. There are ${ACHIEVEMENTS.filter(a => !G.meta.ach[a.id]).length} left to find in the Keep Ledger.</p>`}
     ${mvp ? `<p class="note">Hero of the run: <b style="color:var(--gold)">${esc(mvp.name)}</b> with ${fmt(T.stats.mvpDmg)} damage.</p>` : ''}
@@ -176,4 +178,13 @@ function showTowerPanel() {
   let n = 0; const tick = () => { n = Math.min(T.earned, n + Math.max(1, Math.ceil(T.earned / 20))); const el = $('diaCount'); if (el) el.textContent = '+' + n; if (n < T.earned) setTimeout(tick, 50); }; tick();
   $('twLedger').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.run = newRun(G.meta); G.hasRun = false; G.phase = 'title'; G.B = null; rebuildPrepUnits(); save(); showTitle(); };
   $('twAgain').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.paused = false; startRun(true); };
+}
+
+// the run's score and the best-score board (SCORE in state.js)
+function scoreBoardHTML(T) {
+  const b = G.meta.scores || [], rk = T.scoreRec && T.scoreRec.rank, bonus = T.won ? SCORE.win + SCORE.crackLeft * Math.max(0, BREACH.max - T.breaches) : 0;
+  const when = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+  return `<div class="scorecard"><div class="scoretop"><small>Score</small><b class="num">${fmt(T.finalScore)}</b>${rk === 1 && b.length > 1 ? '<span class="newbest">New best!</span>' : rk ? `<span class="rank">#${rk} on your board</span>` : ''}</div>
+    ${bonus ? `<small class="note">Includes ${fmt(SCORE.win)} for beating the Goose${T.breaches < BREACH.max ? ` and ${fmt(bonus - SCORE.win)} for ${BREACH.max - T.breaches} uncracked ${BREACH.max - T.breaches === 1 ? 'wall' : 'walls'}` : ''}.</small>` : ''}
+    ${b.length ? `<ol class="scoreboard">${b.map((e, i) => `<li class="${T.scoreRec && T.scoreRec.entry === e ? 'me' : ''}"><span>${i + 1}</span><b class="num">${fmt(e.score)}</b><small>${e.won ? 'Goose beaten' : 'Siege ' + e.siege}</small><small>${when(e.at)}</small></li>`).join('')}</ol>` : ''}</div>`;
 }
