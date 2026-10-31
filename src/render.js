@@ -181,7 +181,9 @@ function drawUnit(g, u, t, opts = {}) {
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
   // an angry boss winding up: it swells, trembles and flushes red
   const fu = u.fury && u.alive !== false ? Math.min(1, u.fury.t / u.fury.dur) : 0;
-  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  const img0 = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  // a Dark shade is the fallen foe as a purple silhouette
+  const img = u.shade ? tintFrame(img0, u.hitT > 0 ? '#b48aff' : '#4a2a7a') : img0;
   const fs = fu ? Math.round(size * (1 + 0.14 * fu + 0.04 * Math.sin(t * 30))) : size, fx = fu ? x + randi(-1, 1) : x;
   // a champion standing still plays its own little idle (src/idles.js)
   const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;

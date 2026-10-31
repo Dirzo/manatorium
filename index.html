@@ -4944,6 +4944,7 @@ function stepEnemy(B, u, dt) {
   if (u.rage) { bossPatience(B, u, dt); return; }
   if (u.stun > 0) return;
   if (u.lureT > 0 && styleLured(B, u, dt)) return;
+  if (u.fearT > 0 && styleFeared(B, u, dt)) return;
   if (B.otT > BAL.otCharge && !u.boss) { overtimeCharge(B, u, dt); return; }
   if (u.boss && bossPatience(B, u, dt)) return;
   // the angry wind-up before a signature move: the boss plants its feet, steams, then unleashes it
@@ -5039,8 +5040,8 @@ function hammerCooldown(run, meta) { return Math.max(10, 34 - 2 * (meta.ranks.ha
 // Style level per element (st.sty): 0 alone, 1 with 2 on the field, 2 with 4, 3 with 6 (six also wakes the castle).
 // u.sty is the champion's own element and sets targeting and movement; a crest's second element only adds its on-hit part.
 const STYLE_INFO = {
-  dark:      { style: 'Shadowstep', role: 'Assassin',   how: 'Blinks behind the horde to hit the weakest foe, archers and healers first, then blinks home.',
-    tiers: ['A blink every 5s. The first hit after a blink deals +60%.', 'A kill refunds the blink. Finishes non-boss foes under 12%.', 'Each blink leaves a shadow clone that fights for 4s.'] },
+  dark:      { style: 'Soul drain', role: 'Hexer',     how: 'Curses the toughest foe in reach and drains its life through a shadow tether. Cursed foes take extra damage. Hits wither foes so they hit softer.',
+    tiers: ['A curse every 5s. Cursed foes take +15% damage and the drain heals the Dark champion.', 'Each curse fills foes around it with dread: they turn and flee. A cursed foe that dies passes the curse on.', 'Foes that die cursed rise as shades that fight for you for 5s.'] },
   light:     { style: 'Lantern bearer', role: 'Beacon', how: 'Never chases. Stands beside the most hurt ally, and every hit also heals that ally. Hits blind foes.',
     tiers: ['Each hit heals the ally for 30% of its damage.', 'Every 4th hit is a flash that blinds every foe nearby.', 'The first ally to fall each siege gets back up at 30% HP.'] },
   lightning: { style: 'Hop', role: 'Skirmisher', how: 'Every attack hops it to a different foe, zapping whatever it passes.',
@@ -5088,7 +5089,7 @@ function styleStats(s, e, lv, p) {
 }
 
 function styleInit(B) {
-  B.styInit = true; B.styLv = {}; B.fire = []; B.pulls = []; B.snacks = []; B.wires = []; B.styT = 0;
+  B.styInit = true; B.styLv = {}; B.fire = []; B.dark = []; B.pulls = []; B.snacks = []; B.wires = []; B.styT = 0;
   for (const u of B.heroes) if (u.st && u.st.sty) {
     for (const e in u.st.sty) B.styLv[e] = Math.max(B.styLv[e] || 0, u.st.sty[e]);
     u.sty = u.inst && u.inst.el && u.st.sty[u.inst.el] != null ? u.inst.el : Object.keys(u.st.sty)[0] || null;
@@ -5117,11 +5118,17 @@ function styleTick(B, dt) {
         if (lv >= 2) { e.iceT = (e.iceT || 0) + dt; if (e.iceT >= 3) { e.iceT = 0; e.stun = Math.max(e.stun, e.boss ? 0.4 : 1.2); e.frozen = e.boss ? 0.4 : 1.2; FX.particles(e.x, e.y - 8, 8, ['#bfeeff', '#ffffff'], { spread: 12 }); FX.text(e.x, e.y - 20, 'frozen', '#bfeeff'); } }
       }
     }
+    if (u.sty === 'dark' && u.sx.curse) { const c = u.sx.curse;
+      if (!c.alive || !(c.hexT > 0) || dist(c, u) > 170) { if (c.hexer === u) c.hexT = 0; u.sx.curse = null; }
+      else if ((u.sx.drainT -= dt) <= 0) { u.sx.drainT = 0.5; const amt = u.st.atk * SL([0.2, 0.3, 0.4, 0.5], lv) * 0.5;
+        dealDamage(B, u, c, amt, { noProc: true, kind: 'magic', from: 'element', quiet: true }); healUnit(B, u, u, amt * 0.8, true, 'element'); } }
     if (u.sty === 'sweet' && u.buddy && u.buddy.alive) {
       const b = u.buddy, k = lv >= 3 ? 2 : 1;
       b.auraAs = Math.max(b.auraAs, SL([0.15, 0.25, 0.25, 0.25], lv) * k); b.sweetDmg = Math.max(b.sweetDmg, (lv >= 2 ? 0.2 : 0.08) * k);
     }
   }
+  for (const e of B.enemies) if (e.hexT > 0) e.hexT -= dt;
+  for (const d of B.dark) d.t += dt; B.dark = B.dark.filter(d => d.t < 0.35);
   for (const e of B.enemies) if (e.iceT && !(e.inRing > 0)) e.iceT = Math.max(0, e.iceT - dt); else if (e.inRing > 0) e.inRing -= dt;
   // fire trail
   for (const f of B.fire) { f.t += dt; f.tick -= dt; if (f.tick <= 0) { f.tick = 0.5; for (const e of B.enemies) if (e.alive && !e.flying && Math.abs(e.x - f.x) < f.r && Math.abs(e.y - f.y) < f.r * 0.7) e.poison.push({ dps: f.dps, t: 1, src: f.src, fire: true, from: 'element' }); } }
@@ -5154,6 +5161,22 @@ function pullFoe(B, src, e, tx, ty, col, land) {
   e.stun = Math.max(e.stun, 0.5); e.target = null;
 }
 
+// Dark: a curse with a draining tether. At 4 it spreads dread (foes nearby flee) and jumps on when the cursed foe dies
+function curseFoe(B, u, v, lv, from) {
+  v.hexT = SL([3, 4, 4, 5], lv); v.hexAmp = SL([0.1, 0.15, 0.2, 0.25], lv); v.hexer = u; u.sx.curse = v; u.sx.drainT = 0.5;
+  FX.text(v.x, v.y - 24, 'CURSED', '#b48aff', !from); FX.particles(v.x, v.y - 10, 8, ['#8a5ad8', '#2a1a4a'], { spread: 10, up: true });
+  if (from) B.dark.push({ a: { x: from.x, y: from.y }, b: v, t: 0 });
+  if (lv >= 2) { let n = 0; for (const e of inRadius(B.enemies, v, 34)) if (!e.boss && e !== v && !e.onRafter && !e.climb && !(e.calmT > B.t)) { e.fearT = 1.2; e.calmT = B.t + 4; e.fearOf = v; e.target = null; n++; }
+    if (n) { FX.ring(v.x, v.y - 6, 30, '#8a5ad8'); FX.text(v.x, v.y - 34, 'dread', '#d8c0ff'); } }
+}
+// a frightened foe runs back toward its camp instead of fighting
+function styleFeared(B, e, dt) {
+  e.fearT -= dt; if (e.boss) { e.fearT = 0; return false; }
+  const from = e.fearOf && e.fearOf.alive ? e.fearOf : { x: e.x - 10, y: e.y };
+  moveToward(e, Math.min(W - 8, e.x + 30), clamp(e.y + (e.y - from.y) * 0.5, GRID.y + 4, GRID.y + GRID.rows * GRID.cell - 4), e.spd * 0.8 * hzSpd(B, e), dt); e.facing = 1;
+  return true;
+}
+
 // per hero, every frame. Returns true when the style used the frame (a blink)
 function styleStep(B, u, dt) {
   if (!B.styInit) styleInit(B);
@@ -5162,14 +5185,10 @@ function styleStep(B, u, dt) {
   if (foesUp) S.cd -= dt;
   S.look = (S.look || 0) - dt; const look = S.look <= 0; if (look) S.look = 0.4;
   switch (e0) {
-    case 'dark': {
-      if (S.deep > 0) { S.deep -= dt; if (S.deep <= 0 || ((!u.target || !u.target.alive) && !nearest(B.enemies, u, 40))) { FX.afterimage(u); u.x = u.h0.x; u.y = u.h0.y; S.deep = 0; u.target = null; FX.ring(u.x, u.y - 6, 10, '#8a5ad8'); } return false; }
-      if (S.cd <= 0) { const v = styleFoes(B, e => !e.flying || u.st.range > 40).sort((a, b) => (backRow(b) - backRow(a)) || (a.hp / a.maxHp - b.hp / b.maxHp))[0];
-        if (!v) return false; S.cd = SL([7, 5, 4.5, 4], lv); FX.afterimage(u); u.x = clamp(v.x + 9, CASTLE_X + 20, W - 8); u.y = v.y; u.facing = -1; u.target = v; u.retarget = 1; S.deep = 3; S.bonus = true;
-        FX.ring(u.x, u.y - 6, 12, '#8a5ad8'); FX.sound('whoosh');
-        if (lv >= 3) { summonThrall(B, u, 0.45, u.key, { name: 'Shadow', col: '#8a5ad8' }); const c = B.heroes[B.heroes.length - 1]; c.lifeT = 4; c.x = u.x; c.y = u.y + 6; c.hx = c.x; c.hy = c.y; c.shade = true; }
-        return true; }
-      break; }
+    case 'dark': if (S.cd <= 0) {
+      // the toughest foe in reach gets the curse (most HP left, so the drain has something to drink)
+      const v = styleFoes(B, e => dist(e, u) < u.st.range + 70 && !(e.hexT > 0)).sort((a, b) => b.hp - a.hp)[0];
+      if (v) { S.cd = SL([7, 5, 4.5, 4], lv); curseFoe(B, u, v, lv); FX.sound('whoosh'); } else S.cd = 0.5; } break;
     case 'light': if (look) { const w = B.heroes.filter(h => h.alive && h !== u && !h.temp && !h.rafter && h.hp < h.maxHp * 0.92).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; u.ward = w || null;
       const p = w ? { x: w.x - 11, y: w.y + 3 } : u.h0; u.hx = p.x; u.hy = p.y; } break;
     case 'sweet': if (look) { const taken = new Set(lv >= 3 ? B.heroes.filter(h => h !== u && h.sty === 'sweet' && h.buddy).map(h => h.buddy) : []);
@@ -5219,7 +5238,7 @@ function styleTarget(B, u) {
   const e0 = u.sty; if (!e0 || u.rafter) return false;
   const lv = styLv(u, e0), reach = u.st.range + 6;
   switch (e0) {
-    case 'dark': if (u.sx.deep > 0) { u.target = u.target && u.target.alive ? u.target : nearest(B.enemies, u, 40, e => !e.flying || u.st.range > 40); return true; } return false;
+    case 'dark': { const c = u.sx.curse; if (c && c.alive && c.hexT > 0 && dist(c, u) < reach + 30 && (u.st.range > 40 || !c.flying)) { u.target = c; return true; } return false; }
     case 'light': if (u.def.cls === 'cleric') return false; u.target = nearest(B.enemies, u, reach, e => !e.onRafter && !e.climb); return !!u.target || !wallUnderAttack(B);
     case 'nature': u.target = nearest(B.enemies, u, reach + 4, e => !e.onRafter && !e.climb && (u.st.range > 40 || !e.flying)); return true;
     case 'ice': { const R = SL([26, 34, 46, 54], lv); u.target = styleFoes(B, e => dist(e, u.h0) < R + reach && (u.st.range > 40 || !e.flying)).sort((a, b) => b.spd * (1 - b.slowAmt) - a.spd * (1 - a.slowAmt))[0] || null; return !!u.target || !wallUnderAttack(B); }
@@ -5250,10 +5269,11 @@ function styleAttacked(B, u, t) {
 function styleDmgMul(B, src, tgt, o, amount) {
   let m = 1;
   if (src && src.side === 'hero' && src.sx) {
-    if (src.sx.bonus && !o.sig && src.sty === 'dark') { m *= 1 + SL([0.4, 0.6, 0.7, 0.8], styLv(src, 'dark')); src.sx.bonus = false; }
     if (src.sty === 'salty' && tgt === src.grudge && src.grudgeN) m *= 1 + SL([0.05, 0.08, 0.1, 0.12], styLv(src, 'salty')) * src.grudgeN;
   }
   if (src && src.sweetDmg) m *= 1 + src.sweetDmg;
+  if (tgt.hexT > 0 && src && src.side === 'hero') m *= 1 + tgt.hexAmp;
+  if (src && src.side === 'enemy' && src.witherT > B.t) m *= 1 - src.witherAmt;
   if (tgt.side === 'hero' && src && src.side === 'enemy' && !o.shared && (B.styLv.meat || 0) >= 2 && tgt.sty !== 'meat') {
     const g = B.heroes.find(h => h.alive && h.sty === 'meat' && styLv(h, 'meat') >= 2 && dist(h, tgt) < 30);
     if (g) { dealDamage(B, src, g, amount * 0.3, { shared: true, noProc: true, quiet: true, unavoidable: true }); m *= 0.7; }
@@ -5275,7 +5295,7 @@ function styleHit(B, src, tgt, dmg, o) {
   const st = src.st.sty;
   for (const e in st) { const lv = st[e];
     switch (e) {
-      case 'dark': if (!tgt.boss && tgt.hp > 0 && tgt.hp < tgt.maxHp * (lv >= 2 ? 0.12 : 0.08)) { FX.text(tgt.x, tgt.y - 22, 'EXECUTED', '#8a5ad8', true); tgt.hp = 0; } break;
+      case 'dark': tgt.witherAmt = Math.max(tgt.witherT > B.t ? tgt.witherAmt || 0 : 0, SL([0.08, 0.1, 0.12, 0.15], lv)); tgt.witherT = B.t + 2; break;
       case 'light': tgt.blindT = 2;
         if (src.ward && src.ward.alive && src.sty === 'light') { healUnit(B, src, src.ward, dmg * SL([0.2, 0.3, 0.4, 0.5], lv), false, 'element'); if (Math.random() < 0.3) FX.particles(src.ward.x, src.ward.y - 10, 2, '#fff3b0', { spread: 4, up: true }); }
         if (lv >= 2 && !o.sig && src.hits % 4 === 3) { for (const f of inRadius(B.enemies, src, 44)) f.blindT = 3; FX.ring(src.x, src.y - 6, 40, '#fff3b0'); FX.flash && FX.flash('#fff3b0', 0.08); }
@@ -5302,9 +5322,11 @@ function styleKill(B, src, v) {
   let g = 1;
   if (src && src.sty) {
     const lv = styLv(src, src.sty);
-    if (src.sty === 'dark' && lv >= 1 && src.sx) src.sx.cd = Math.min(src.sx.cd, lv >= 2 ? 0.4 : 1.5);
     if (src.sty === 'salty' && v === src.grudge) { if (lv >= 3) { const a = B.heroes.filter(h => h.alive && h !== src && h.sty === 'salty').sort((a, b) => dist(a, src) - dist(b, src))[0]; if (a) { a.rage = src.grudgeN; FX.text(a.x, a.y - 26, 'RAGE', '#e8eef8'); } } src.grudge = null; src.grudgeN = 0; }
   }
+  if (v.hexT > 0 && v.hexer) { const h = v.hexer, lv = styLv(h, 'dark'); v.hexT = 0;
+    if (lv >= 3 && h.alive && B.heroes.filter(x => x.alive && x.shadeOf === h).length < 2) { summonThrall(B, h, 0.3, v.boss ? h.key : v.key, { name: 'Shade', col: '#8a5ad8' }); const c = B.heroes[B.heroes.length - 1]; c.lifeT = 5; if (!v.boss) c.nativeFace = -1; c.x = c.hx = v.x; c.y = c.hy = v.y; c.shade = true; c.shadeOf = h; FX.text(v.x, v.y - 22, 'rises', '#b48aff'); }
+    if (lv >= 2 && h.alive) { const n = styleFoes(B, e => e !== v && !(e.hexT > 0) && dist(e, v) < 60).sort((a, b) => dist(a, v) - dist(b, v))[0]; if (n) curseFoe(B, h, n, lv, v); } }
   if (src && src.st && src.st.sty && src.st.sty.treat != null) { const lv = src.st.sty.treat; g *= SL([1.15, 1.25, 1.4, 1.5], lv);
     if (lv >= 2) { const low = B.heroes.filter(h => h.alive && !h.temp).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (low) healUnit(B, src, low, low.maxHp * 0.05, false, 'element'); } }
   if ((B.styLv.fire || 0) >= 2 && v.poison && v.poison.some(p => p.fire)) {
@@ -5347,6 +5369,14 @@ function drawStyleOver(g, B, t) {
   if (!B || !B.styInit) return;
   for (const p of B.pulls) if (p.e.alive && p.src && p.src.alive) { g.strokeStyle = p.col; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(p.src.x) + 0.5, Math.round(p.src.y - 8) + 0.5);
     const mx = (p.src.x + p.e.x) / 2, my = (p.src.y + p.e.y) / 2 - 6 + Math.sin(t * 20) * 2; g.quadraticCurveTo(mx, my, Math.round(p.e.x) + 0.5, Math.round(p.e.y - 8) + 0.5); g.stroke(); }
+  for (const u of B.heroes) if (u.alive && u.sty === 'dark' && u.sx && u.sx.curse && u.sx.curse.alive) { const c = u.sx.curse, x0 = u.x, y0 = u.y - 9, x1 = c.x, y1 = c.y - 8 - (c.z || 0), n = Math.max(4, Math.round(Math.hypot(x1 - x0, y1 - y0) / 2));
+    // a dotted shadow tether, with drops of life sliding back down it to the Dark champion
+    for (let i = 0; i <= n; i++) { const k = i / n, w = Math.sin(k * Math.PI) * Math.sin(t * 9 + i * 0.7) * 2; const px = Math.round(x0 + (x1 - x0) * k), py = Math.round(y0 + (y1 - y0) * k + w); g.fillStyle = '#1a0e30'; g.fillRect(px, py + 1, 1, 1); g.fillStyle = (i + Math.floor(t * 8)) % 3 ? '#8a5ad8' : '#d8c0ff'; g.fillRect(px, py, 1, 1); }
+    for (let j = 0; j < 3; j++) { const k = 1 - ((t * 1.6 + j / 3) % 1); const px = Math.round(x0 + (x1 - x0) * k), py = Math.round(y0 + (y1 - y0) * k + Math.sin(k * Math.PI) * Math.sin(t * 9 + k * n * 0.7) * 2); g.fillStyle = OUTLINE; g.fillRect(px - 1, py - 1, 3, 3); g.fillStyle = '#ff5a7a'; g.fillRect(px, py - 1, 1, 2); g.fillRect(px - 1, py, 3, 1); } }
+  for (const d of B.dark) { const k = d.t / 0.35; g.fillStyle = '#b48aff'; for (let i = 0; i < 5; i++) { const q = Math.min(1, k + i * 0.05); g.fillRect(Math.round(d.a.x + (d.b.x - d.a.x) * q), Math.round(d.a.y - 8 + (d.b.y - d.a.y) * q - Math.sin(q * Math.PI) * 10), 1, 1); } }
+  for (const e of B.enemies) if (e.alive) { const x = Math.round(e.x), y = Math.round(e.y - 24 * (e.scale || 1) - (e.z || 0));
+    if (e.hexT > 0) { const b = Math.floor(t * 4) % 2; g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 6 - b, 7, 6); g.fillStyle = '#b48aff'; g.fillRect(x - 2, y - 5 - b, 5, 3); g.fillRect(x - 1, y - 2 - b, 3, 1); g.fillStyle = '#2a1a4a'; g.fillRect(x - 1, y - 4 - b, 1, 1); g.fillRect(x + 1, y - 4 - b, 1, 1); }
+    else if (e.fearT > 0) { g.fillStyle = '#d8c0ff'; const o = Math.floor(t * 8) % 2; g.fillRect(x - 4 + o, y - 3, 1, 2); g.fillRect(x - 4 + o, y, 1, 1); g.fillRect(x + 3 - o, y - 4, 1, 2); g.fillRect(x + 3 - o, y - 1, 1, 1); } }
   for (const [a, b] of B.wires) { g.strokeStyle = Math.floor(t * 14) % 2 ? '#9ff6ff' : '#ffffff'; g.lineWidth = 1; g.beginPath(); const n = 6; g.moveTo(a.x, a.y - 10);
     for (let i = 1; i < n; i++) { const k = i / n; g.lineTo(a.x + (b.x - a.x) * k + Math.sin(t * 40 + i) * 2, a.y - 10 + (b.y - a.y) * k + Math.cos(t * 37 + i * 2) * 2); } g.lineTo(b.x, b.y - 10); g.stroke(); }
   for (const u of B.heroes) {
@@ -7794,7 +7824,9 @@ function drawUnit(g, u, t, opts = {}) {
   if (opts.selected) { g.fillStyle = '#ffd84a'; g.fillRect(x - 7, Math.round(u.y) + 1, 14, 1); g.fillRect(x - 6, Math.round(u.y) - 2, 1, 3); g.fillRect(x + 5, Math.round(u.y) - 2, 1, 3); }
   // an angry boss winding up: it swells, trembles and flushes red
   const fu = u.fury && u.alive !== false ? Math.min(1, u.fury.t / u.fury.dur) : 0;
-  const img = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  const img0 = u.hitT > 0 && u.alive !== false ? S.white[fr] : fu && Math.floor(t * 12) % 2 ? redFrame(S, fr) : S.frames[fr];
+  // a Dark shade is the fallen foe as a purple silhouette
+  const img = u.shade ? tintFrame(img0, u.hitT > 0 ? '#b48aff' : '#4a2a7a') : img0;
   const fs = fu ? Math.round(size * (1 + 0.14 * fu + 0.04 * Math.sin(t * 30))) : size, fx = fu ? x + randi(-1, 1) : x;
   // a champion standing still plays its own little idle (src/idles.js)
   const idle = !fu && !opts.frame && u.alive !== false && (fr === 'idle0' || fr === 'idle1') && typeof idleFor === 'function' ? idleFor(u, t, fr) : null;
@@ -10494,11 +10526,16 @@ function hring(g, x, y, r, c, a) { g.globalAlpha = a == null ? 1 : Math.max(0, a
 const hl = (a, b, k) => a + (b - a) * k, hc = (v, a, b) => Math.max(a, Math.min(b, v)), he = k => k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
 function hmarch(lane, n, front, seed) { const out = []; for (let i = 0; i < n; i++) out.push([front + i * 9, HD.LY[lane] + (hrnd(seed + i) * 6 - 3)]); return out; }
 const HDEMO = {
-  dark(g, t, c) { const P = 3.2, k = (t % P) / P, home = [46, 36], back = [[128, 18], [132, 54]];
-    hmarch(1, 3, 60, 1).forEach(p => hfoe(g, p[0], p[1])); back.forEach((p, i) => hfoe(g, p[0], p[1], i ? '#ff9a3a' : '#c050ff'));
-    const tg = back[Math.floor(t / P) % 2]; let x = home[0], y = home[1];
-    if (k >= .15 && k < .7) { x = tg[0] + 6; y = tg[1]; if (k < .2) { g.globalAlpha = .4; hhero(g, home[0], home[1], c); g.globalAlpha = 1; } else if (k % .1 < .05) hpx(g, tg[0], tg[1] - 5, 3, '#fff'); }
-    hhero(g, x, y, c); if (k > .15 && k < .22) hring(g, x, y, 7, c); },
+  dark(g, t, c) { const P = 3.2, k = (t % P) / P, h = [44, 36], v = [96, 36];
+    // small foes walk in, then flee in dread when the curse pulses
+    const fl = k > .45 ? he(hc((k - .45) / .3, 0, 1)) * 40 : 0;
+    [[84, 20], [88, 52], [110, 26], [112, 48]].forEach((p, i) => { const x = p[0] + (k > .45 ? fl + i * 2 : 0); hfoe(g, x, p[1]); if (k > .45 && k < .8 && (t * 8) % 2 < 1) hpx(g, x - 4, p[1] - 5, 1, '#d8c0ff'); });
+    hfoe(g, v[0], v[1], '#e0404a', 9);
+    if (k > .08) { const n = 16; for (let i = 0; i <= n; i++) { const q = i / n; hpx(g, hl(h[0], v[0], q), hl(h[1] - 2, v[1] - 2, q) + Math.sin(q * Math.PI) * Math.sin(t * 9 + i) * 2, 1, i % 2 ? '#2a1a4a' : c); }
+      for (let j = 0; j < 3; j++) { const q = 1 - ((t * 1.6 + j / 3) % 1); hpx(g, hl(h[0], v[0], q), hl(h[1] - 2, v[1] - 2, q), 2, '#ff5a7a'); }
+      const b = Math.floor(t * 4) % 2; hpx(g, v[0], v[1] - 10 - b, 5, OUTLINE); hpx(g, v[0], v[1] - 10 - b, 3, '#b48aff'); }
+    if (k > .4 && k < .6) hring(g, v[0], v[1], 6 + (k - .4) * 120, c, 1 - (k - .4) * 5);
+    hhero(g, h[0], h[1], c); if ((t * 1.6) % 1 > .9) hpx(g, h[0], h[1] - 6, 2, '#9f9'); },
   light(g, t, c) { const al = [52, 36], k = (t * 1.2) % 1, hp = .35 + .6 * ((t / 4) % 1); hhero(g, al[0], al[1], '#d0d0d0');
     g.fillStyle = '#300'; g.fillRect(al[0] - 5, al[1] - 8, 10, 2); g.fillStyle = '#5f5'; g.fillRect(al[0] - 5, al[1] - 8, 10 * hp, 2);
     hhero(g, al[0] - 10, al[1] + 4, c); hmarch(1, 3, 64, 3).forEach(p => hfoe(g, p[0], p[1]));
