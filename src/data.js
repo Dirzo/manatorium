@@ -275,11 +275,11 @@ const ENEMIES = {
   // The Feathered Host
   rooster: { name: 'War Rooster', hp: 2600, atk: 60, as: 0.9, range: 15, spd: 30, armor: 40, gold: 95, cost: 10, kind: 'melee', elite: true, scale: 1.5, spr: { gen: 'bird', body: '#c8402a', wing: '#2a6a3a', beak: '#ffb02e', comb: '#ff3d3d' } },
   duck:    { name: 'Duck Sniper', hp: 200, atk: 30, as: 0.7, range: 100, spd: 22, armor: 5, gold: 20, cost: 2.6, kind: 'ranged', proj: 'spit', spr: { gen: 'bird', body: '#4a8a4a', wing: '#c8b890', beak: '#ffd03a' } },
-  pigeon:  { name: 'Pigeon Squadron', hp: 140, atk: 22, as: 1.3, range: 13, spd: 50, armor: 0, gold: 13, cost: 1.8, kind: 'flyer', spr: { gen: 'flyer', body: '#8a90a8', wing: '#c8ccd8', eye: '#ff7a3a' } },
+  pigeon:  { name: 'Pigeon Squadron', hp: 140, atk: 22, as: 1.3, range: 13, spd: 50, armor: 0, gold: 13, cost: 6.8, kind: 'flyer', spr: { gen: 'flyer', body: '#8a90a8', wing: '#c8ccd8', eye: '#ff7a3a' } },
   gosling: { name: 'Gosling Shock Troop', hp: 260, atk: 26, as: 1.3, range: 12, spd: 44, armor: 10, gold: 15, cost: 2.2, kind: 'melee', spr: { gen: 'bird', body: '#f4e48a', wing: '#e0c860', beak: '#ff8a1a', neck: true } },
   // chaos guests
   chicken: { name: 'Very Confident Chicken', hp: 38, atk: 5, as: 1.2, range: 12, spd: 46, armor: 0, gold: 4, cost: 0.5, kind: 'melee', small: true, spr: { gen: 'bird', body: '#ffffff', wing: '#e8e4d8', beak: '#ffb02e', comb: '#ff3d3d' } },
-  goose:   { name: 'The Goose', hp: 520, atk: 6, as: 1.4, range: 12, spd: 52, armor: 10, gold: 45, cost: 3, kind: 'melee', spr: { gen: 'bird', body: '#f4f4f0', wing: '#c8c8d0', beak: '#ff8a1a', neck: true } },
+  goose:   { name: 'The Goose', hp: 520, atk: 6, as: 1.4, range: 12, spd: 52, armor: 10, gold: 45, cost: 6, kind: 'melee', spr: { gen: 'bird', body: '#f4f4f0', wing: '#c8c8d0', beak: '#ff8a1a', neck: true } },
   // bosses
   grubnose: { name: 'Grubnose the Goblin King', boss: 'mini', hp: 2600, atk: 34, as: 0.8, range: 22, spd: 13, armor: 25, gold: 220, kind: 'melee', scale: 2, skills: ['slam', 'summon:grunt'], spr: { gen: 'humanoid', head: 'goblin', skin: '#7ac83a', hat: 'crown', armor: '#d83a5a', armor2: '#8a1a3a', cloth: '#ffd84a', weapon: 'kingclub', metal: '#ffcf3a', cape: '#7a3ad8' } },
   gloop:    { name: 'Mother Gloop', boss: 'mini', hp: 4200, atk: 36, as: 0.7, range: 22, spd: 11, armor: 15, gold: 300, kind: 'melee', scale: 2, split: 'slime', skills: ['slam', 'summon:slimelet'], spr: { gen: 'slime', body: '#5ad84a', eye: '#1a1230', crown: true } },
@@ -569,41 +569,42 @@ function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T
 // branch columns: 0 Stonework, 1 Engineering, 2 Alchemy, 3 Logistics ; secret: discovered through encounters
 const TECH_BRANCHES = ['Stonework', 'Engineering', 'Alchemy', 'Logistics'];
 // tech forks (Cam 2026-10-23): tiers 2 and 3 of each branch split into two paths; building into one path seals the other for the run
+// costs raised (Cam 2026-10-31, "make artificers upgrades cost more"): tier 1 x1.5, tier 2 x1.75, tier 3+ x2, secrets x1.5
 const TECH = {
-  walls1:   { name: 'Murder Holes',       b: 0, t: 1, cost: 3,   req: [],                 desc: 'Foes that hit the wall take 30% of that damage back.' },
-  fountain: { name: 'Tar Pots',           fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 6,   req: ['walls1'],         desc: 'Foes that hit the wall get tarred: 40% slower for 2s.' },
-  rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 7,   req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
-  walls2:   { name: 'Boiling Oil',        fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 15,  req: ['fountain'],       desc: 'Every hit on the wall spills boiling oil: foes around the attacker take half that damage.' },
-  rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 16,  req: ['rafters1'],       desc: 'Two more rafter slots.' },
-  sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 5,   req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
-  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 32,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take 80% of that damage back.' },
-  ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 4,   req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
-  ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 10,  req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
-  pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 8,   req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
-  ballista3:{ name: 'Piercing Bolts',     fork: 'b1', path: 'Ballista', b: 1, t: 3, cost: 20,  req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
-  hammer2:  { name: 'Heavier Hammer',     fork: 'b1', path: 'Sky Hammer', b: 1, t: 3, cost: 18,  req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
-  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 35,  req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
-  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 30,  any: true, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
-  wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 4,   req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
-  lab:      { name: 'Elemental Lab',      fork: 'b2', path: 'Signatures', b: 2, t: 2, cost: 11,  req: ['wells'],          desc: 'Shop cards lean toward your biggest element: a third of them bring it.' },
-  resonance:{ name: 'Resonance Coils',    fork: 'b2', path: 'Combos', b: 2, t: 2, cost: 12,  req: ['wells'],          desc: 'Element combos are 30% stronger.' },
-  prism:    { name: 'Prism Array',        fork: 'b2', path: 'Combos', b: 2, t: 3, cost: 22,  req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
-  focus:    { name: 'Signature Focus',    fork: 'b2', path: 'Signatures', b: 2, t: 3, cost: 20,  req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
-  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 34,  any: true, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
-  vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 3,   req: [],                 desc: '+15% gold from kills.' },
-  scav:     { name: 'Scavengers',         fork: 'b3', path: 'Treasury', b: 3, t: 2, cost: 8,   req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
-  drill:    { name: 'Drill Yard',         fork: 'b3', path: 'Training', b: 3, t: 2, cost: 9,  req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
-  vault2:   { name: 'Counting House',     fork: 'b3', path: 'Treasury', b: 3, t: 3, cost: 16,  req: ['scav'],           desc: '+20% gold from kills.' },
-  trophy:   { name: 'Trophy Room',        fork: 'b3', path: 'Training', b: 3, t: 3, cost: 18,  req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
-  college:  { name: 'War College',        b: 3, t: 4, cost: 32,  any: true, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
+  walls1:   { name: 'Murder Holes',       b: 0, t: 1, cost: 5,   req: [],                 desc: 'Foes that hit the wall take 30% of that damage back.' },
+  fountain: { name: 'Tar Pots',           fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 11,   req: ['walls1'],         desc: 'Foes that hit the wall get tarred: 40% slower for 2s.' },
+  rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 12,   req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
+  walls2:   { name: 'Boiling Oil',        fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 30,  req: ['fountain'],       desc: 'Every hit on the wall spills boiling oil: foes around the attacker take half that damage.' },
+  rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 32,  req: ['rafters1'],       desc: 'Two more rafter slots.' },
+  sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 8,   req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
+  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 64,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take 80% of that damage back.' },
+  ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 6,   req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
+  ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 18,  req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
+  pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 14,   req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
+  ballista3:{ name: 'Piercing Bolts',     fork: 'b1', path: 'Ballista', b: 1, t: 3, cost: 40,  req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
+  hammer2:  { name: 'Heavier Hammer',     fork: 'b1', path: 'Sky Hammer', b: 1, t: 3, cost: 36,  req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 70,  req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
+  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 60,  any: true, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
+  wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 6,   req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
+  lab:      { name: 'Elemental Lab',      fork: 'b2', path: 'Signatures', b: 2, t: 2, cost: 19,  req: ['wells'],          desc: 'Shop cards lean toward your biggest element: a third of them bring it.' },
+  resonance:{ name: 'Resonance Coils',    fork: 'b2', path: 'Combos', b: 2, t: 2, cost: 21,  req: ['wells'],          desc: 'Element combos are 30% stronger.' },
+  prism:    { name: 'Prism Array',        fork: 'b2', path: 'Combos', b: 2, t: 3, cost: 44,  req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
+  focus:    { name: 'Signature Focus',    fork: 'b2', path: 'Signatures', b: 2, t: 3, cost: 40,  req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
+  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 68,  any: true, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
+  vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 5,   req: [],                 desc: '+15% gold from kills.' },
+  scav:     { name: 'Scavengers',         fork: 'b3', path: 'Treasury', b: 3, t: 2, cost: 14,   req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
+  drill:    { name: 'Drill Yard',         fork: 'b3', path: 'Training', b: 3, t: 2, cost: 16,  req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
+  vault2:   { name: 'Counting House',     fork: 'b3', path: 'Treasury', b: 3, t: 3, cost: 32,  req: ['scav'],           desc: '+20% gold from kills.' },
+  trophy:   { name: 'Trophy Room',        fork: 'b3', path: 'Training', b: 3, t: 3, cost: 36,  req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
+  college:  { name: 'War College',        b: 3, t: 4, cost: 64,  any: true, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
   // secrets (discovered by encounters)
   goose:    { name: 'Goose Moat',         b: 4, secret: true, cost: 4,   req: [], desc: 'Geese guard the gate and honk at foes that reach the wall, biting for damage.' },
-  cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 6,   req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
-  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 5,   req: [], desc: 'Every 18s the bard plays a rousing number: heroes +40% attack speed for 5s.' },
+  cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 9,   req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
+  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 8,   req: [], desc: 'Every 18s the bard plays a rousing number: heroes +40% attack speed for 5s.' },
   pigeon:   { name: 'Pigeon Post',        b: 4, secret: true, cost: 4,   req: [], desc: 'Hero drafts offer one more champion.' },
-  mimic:    { name: 'Mimic Pantry',       b: 4, secret: true, cost: 6,  req: [], desc: 'A friendly mimic spits out a component after every third siege.' },
-  intern:   { name: 'Necromancy Intern',  b: 4, secret: true, cost: 6,  req: [], desc: 'Hires two skeleton helpers who fight beside your heroes in every siege. They are interns. They are trying their best.' },
-  hottub:   { name: 'Hero Hot Tub',       b: 4, secret: true, cost: 7,  req: [], desc: 'Heroes regenerate 1.2% HP per second during sieges.' },
+  mimic:    { name: 'Mimic Pantry',       b: 4, secret: true, cost: 9,  req: [], desc: 'A friendly mimic spits out a component after every third siege.' },
+  intern:   { name: 'Necromancy Intern',  b: 4, secret: true, cost: 9,  req: [], desc: 'Hires two skeleton helpers who fight beside your heroes in every siege. They are interns. They are trying their best.' },
+  hottub:   { name: 'Hero Hot Tub',       b: 4, secret: true, cost: 11,  req: [], desc: 'Heroes regenerate 1.2% HP per second during sieges.' },
 };
 
 // ===== Diamond meta (between runs) =====
@@ -821,7 +822,7 @@ const ENCOUNTERS = [
   { id: 'bard', title: 'A Bard at the Gate', text: 'Their song about your last siege is wildly exaggerated. In this version, your castle can fly.',
     opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire,hz:gale', sub: 'Heroes +25% attack. The song is so loud it whips up a gale next siege.' }] },
   { id: 'pigeons', title: 'Pigeons With Opinions', text: 'Forty pigeons have landed on the walls and are all looking at you. One has a tiny scroll.',
-    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:2', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
+    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in drafts)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:2', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
   { id: 'hottub', title: 'Hot Spring Under the Keep', text: 'The dwarves dug too deep. They found a hot spring. The dwarves are now refusing to leave the hot spring.',
     opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,xpAll:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
   { id: 'alchemist', title: 'Free Sample Day', text: 'The alchemist is offering free samples. All the potions are bubbling. One is screaming quietly.',
@@ -840,7 +841,7 @@ const ENCOUNTERS = [
 ];
 // the three choices on every boon card
 function boonOpts(run) {
-  return [{ label: 'Take the gold', fx: 'gold:55', sub: 'A fat purse for the Guild Hall or the Artificers.' },
+  return [{ label: 'Take the gold', fx: 'gold:55', sub: 'A fat purse for the shop or the Artificers.' },
     { label: 'Train every hero', fx: 'xpAll:45', sub: 'Every champion on your roster gains XP.' },
     { label: 'Reforge an item', fx: 'reforge', sub: 'Pick one of your finished items and turn it into a different one. Shuffles your build.' }];
 }

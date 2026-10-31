@@ -224,7 +224,7 @@ function botPlayRun(style, meta, opts = {}) {
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
   return { style, reached: run.siege, cause, breaches, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
-    techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
+    techs: Object.keys(run.tech), techAt: run.stats.techs.map(t => [t.s, t.id]), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {
   const by = {};

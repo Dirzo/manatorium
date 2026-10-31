@@ -45,6 +45,15 @@ const MOB = {
     if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) || MOB.native) de.classList.add('nofs');
     MOB.ready = true; UI.layout();
   },
+  // like TFT mobile, the game is built to be held sideways; portrait still works for anyone who waves the card away
+  rotateHint(port) {
+    let c = $('rotateCard'); let off = false; try { off = localStorage.getItem('sol-portrait-ok') === '1'; } catch (e) { }
+    if (!port || off) { if (c) c.hidden = true; return; }
+    if (!c) { c = document.createElement('div'); c.id = 'rotateCard'; c.innerHTML = `<div class="rc-box"><div class="rc-phone"><i></i></div><b>Turn your phone sideways</b><p>The board fills the screen sideways, with the shop and bench along the bottom.</p><button class="btn small ghost" id="rotateAnyway">Play upright anyway</button></div>`;
+      document.body.appendChild(c); $('rotateAnyway').onclick = () => { try { localStorage.setItem('sol-portrait-ok', '1'); } catch (e) { } c.hidden = true; }; }
+    c.hidden = false;
+  },
+  boardPhone() { return MOB.wanted() && innerWidth > innerHeight; },
   menu(open) { $('mMenu').hidden = !open; $('mMore').setAttribute('aria-expanded', String(open)); },
   details(open) {
     MOB.det = open; $('roster').classList.toggle('m-details', open); $('mDet').setAttribute('aria-expanded', String(open));
@@ -54,8 +63,10 @@ const MOB = {
   // switch the DOM between the desktop and phone arrangements
   sync() {
     if (!MOB.ready) return;
-    const want = MOB.wanted(), land = innerWidth > innerHeight, de = document.documentElement;
-    MOB.land = land; de.classList.toggle('m-land', want && land); de.classList.toggle('m-port', want && !land);
+    // phones held sideways get the board-first layout (src/board.js), like TFT mobile; only portrait keeps the stacked phone layout
+    const phone = MOB.wanted(), land = innerWidth > innerHeight, want = phone && !land, de = document.documentElement;
+    MOB.land = land; de.classList.toggle('m-land', false); de.classList.toggle('m-port', want); de.classList.toggle('bphone', phone && land);
+    MOB.rotateHint(want);
     if (want === MOB.on) return;
     MOB.on = want; de.classList.toggle('m', want);
     const menu = $('mMenu'), ctl = document.querySelector('.hud .controls'), rb = document.querySelector('#roster .rbody'), cards = $('rosterCards');

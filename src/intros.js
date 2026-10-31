@@ -59,10 +59,10 @@ function introGuild(run, key) {
   const odds = o => o.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ');
   introCard('Upgrade: guild level', `Guild level ${lv}: ${lv} legends fight`,
     `<p class="lede">The guild level is your main upgrade. Each level puts <b>one more legend on the field</b> and deals <b>rarer legends</b> in the shop.</p>
-    <ul class="nag"><li>Level ${lv + 1} costs ${COST(c)}. Buy it in the Guild Hall, under the shop.</li>
+    <ul class="nag"><li>Level ${lv + 1} costs ${COST(c)}. Press Level up next to the shop.</li>
     <li>Shop odds now: ${odds(now)}</li><li>At level ${lv + 1}: ${odds(next)}</li>
     <li>Gold you keep earns interest, so level up when you have a legend worth fielding.</li></ul>`,
-    'Open the Guild Hall', () => { UI.setRoster(true); UI.openPage('guild'); setTimeout(() => UI.coach('intro-guild-btn', document.querySelector('#drawerBody [data-act="guildlevel"]'), `Raise the guild to level ${lv + 1} here.`), 300); }, key);
+    'Show me', () => { UI.setRoster(true); UI.openPage('guild'); setTimeout(() => UI.coach('intro-guild-btn', UI.levelEl(), `Raise the guild to level ${lv + 1} here.`), 300); }, key);
 }
 function introHall(run, key) {
   const ts = openTechs(run).slice(0, 3);

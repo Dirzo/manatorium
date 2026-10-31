@@ -1617,6 +1617,15 @@ html.m .rdiv b { font-size: 11px; } html.m .rdiv small { font-size: 10px; }
 html.m .hcard.bslot { min-height: 60px; }
 html.m .rdiv { flex: 0 0 auto; align-self: stretch; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 4px; border-left: 2px solid var(--ink); writing-mode: vertical-rl; transform: rotate(180deg); }
 html.m .rdiv.field { border-left: 0; }
+/* portrait: a card asking to turn the phone sideways (dismissable; see MOB.rotateHint) */
+#rotateCard { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #1d1838 0, #0b0916 80%); padding: 24px; }
+#rotateCard[hidden] { display: none; }
+#rotateCard .rc-box { max-width: 300px; text-align: center; color: #f6ecd2; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#rotateCard b { font-family: var(--f-display); font-size: 22px; color: #ffe6a0; }
+#rotateCard p { margin: 0; font-size: 14px; color: #b9ab8e; line-height: 1.4; }
+#rotateCard .rc-phone { width: 46px; height: 80px; border: 4px solid #ffe6a0; border-radius: 9px; position: relative; animation: rcturn 2.2s ease-in-out infinite; margin-bottom: 10px; }
+#rotateCard .rc-phone i { position: absolute; left: 50%; bottom: 5px; width: 10px; height: 3px; margin-left: -5px; border-radius: 2px; background: #ffe6a0; }
+@keyframes rcturn { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
 /* ===== Board-first desktop layout (src/board.js). Everything is scoped to html.board so phone layouts stay as they are. ===== */
 img.pxi { width: 18px; height: 18px; vertical-align: -3px; image-rendering: pixelated; display: inline-block; flex: 0 0 auto; }
 .chip img.pxi, .btn img.pxi { width: 16px; height: 16px; }
@@ -1751,6 +1760,8 @@ html.board .bb-fac .rail button img { width: 22px; height: 22px; }
 html.board .bb-fac .rail button:hover:not([disabled]) { background: #332a58; }
 html.board .bb-fac .rail button[aria-pressed="true"] { background: #6a4a14; color: #fff3c8; box-shadow: inset 0 0 0 1px var(--btrim); }
 html.board .bb-fac .rail button[disabled] { opacity: .5; }
+/* no Guild tab on desktop (Cam 2026-10-31): the shop, reroll and Level up already sit on this bar */
+html.board #nav-guild { display: none !important; }
 html.board .bb-fac .rail button[data-badge]:not([data-badge=""])::after { content: attr(data-badge); position: absolute; top: -6px; right: -6px; background: #ff5d8f; color: #fff; font: 700 9px/14px var(--f-display); padding: 0 4px; border-radius: 7px; border: 1px solid var(--bpk); }
 /* gold, level, buttons */
 html.board .bb-econ { flex-direction: column; justify-content: space-between; width: 178px; gap: 4px; }
@@ -1875,6 +1886,101 @@ html.board .arena-tag.l { left: 14%; }
 }
 html.m #mDet .ico img.pxi { width: 20px; height: 20px; vertical-align: middle; }
 
+/* ===== Phones held sideways (html.bphone, Cam 2026-10-31: "closer to TFT mobile"): the board fills the screen between
+   the trait badges on the left and the siege buttons on the right; a slim bar holds gold, level, bench and the Shop button,
+   and the shop slides up over the bottom of the board. ===== */
+html.board .bb-shopbtn { display: none !important; }
+html.board #mDet, html.board #mMore { display: none !important; }
+html.board.bphone .bb-shopbtn { display: flex !important; align-items: center; }
+html.board.bphone #boardBar { gap: 8px; padding: 5px calc(var(--actW) + 6px) calc(5px + env(safe-area-inset-bottom, 0px)) calc(8px + env(safe-area-inset-left, 0px)); overflow: visible; }
+/* facilities: two square icon buttons */
+html.board.bphone .bb-fac .rail { flex-direction: row; gap: 5px; align-items: stretch; }
+html.board.bphone .bb-fac .rail button { font-size: 0; gap: 0; padding: 0; width: 44px; justify-content: center; }
+html.board.bphone .bb-fac .rail button img { width: 28px; height: 28px; }
+/* gold and level on one line, the two buttons under them */
+html.board.bphone .bb-econ { width: auto; flex-direction: row; align-items: center; gap: 6px; }
+html.board.bphone .bb-gold .coinbox { font-size: 20px; } html.board.bphone .bb-gold .coinbox img { width: 20px; height: 20px; }
+html.board.bphone .bb-lvl { flex-direction: column; align-items: flex-start; gap: 1px; font-size: 10px; }
+html.board.bphone .bb-lvl b { font-size: 13px; }
+html.board.bphone .bb-lvl .intr { display: none; }
+html.board.bphone .bb-ebtns { grid-template-columns: auto auto; gap: 5px; }
+html.board.bphone .bbtn { grid-template-columns: auto; grid-template-rows: auto auto; justify-items: center; padding: 2px 6px; font-size: 10px; min-width: 50px; min-height: 44px; }
+html.board.bphone .bbtn img.pxi { grid-row: auto; width: 18px; height: 18px; }
+html.board.bphone .bbtn span { display: none; }
+html.board.bphone .bbtn .cost { font-size: 12px; }
+html.board.bphone .bbtn.shopbtn { background: linear-gradient(#ffe27a, #d8a020); color: #2a1a00; min-width: 58px; }
+html.board.bphone .bbtn.shopbtn span { display: block; font-size: 11px; }
+html.board.bphone .bbtn.shopbtn img.px { width: 20px; height: 20px; }
+html.board.bphone .bbtn.shopbtn[aria-pressed="true"] { background: linear-gradient(#8a6a24, #5a4214); color: #fff3c8; box-shadow: inset 0 0 0 2px var(--btrim), 0 1px 0 var(--bpk); transform: translateY(2px); }
+/* bench: five small tiles, the label sits on the first */
+html.board.bphone .bb-bench { position: relative; }
+html.board.bphone .bb-lab { position: absolute; top: -17px; left: 2px; font-size: 9px; pointer-events: none; text-shadow: 0 1px 0 var(--bpk); }
+html.board.bphone .btiles { gap: 4px; }
+html.board.bphone .bt { width: 42px; height: calc(var(--barH) - 12px - env(safe-area-inset-bottom, 0px)); }
+html.board.bphone .bt img.px { width: 38px; height: 38px; inset: 0 0 auto; }
+html.board.bphone .bt .stars { font-size: 9px; } html.board.bphone .bt small { font-size: 9px; }
+/* the shop tray */
+html.board.bphone .bb-shop { position: fixed; z-index: 13; left: calc(var(--ax) + 4px); width: calc(var(--aw) - 8px); bottom: calc(var(--barH) + 4px); height: min(104px, calc(var(--ah) * .36)); min-width: 0; padding: 6px; gap: 5px;
+  background: rgba(16, 12, 32, .94); border: 2px solid var(--bpk); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--btrim), 0 -4px 14px rgba(0, 0, 0, .5); transform: translateY(calc(100% + var(--barH) + 10px)); opacity: 0; pointer-events: none; transition: transform .2s cubic-bezier(.2, .9, .3, 1.1), opacity .15s; }
+html.board.bphone.bshop-open .bb-shop { transform: none; opacity: 1; pointer-events: auto; }
+html.board.bphone .bs-card { min-width: 0; max-width: none; }
+html.board.bphone .bs-foot { height: 18px; } html.board.bphone .bs-foot b { font-size: 10px; } html.board.bphone .bs-cost { font-size: 11px; }
+html.board.bphone .bs-card .port { height: calc(100% - 19px); }
+html.board.bphone .bs-ic img.pxi { width: 13px; height: 13px; }
+html.board.bphone .bs-own { font-size: 8.5px; }
+html.board.bphone .bs-lock { width: 30px; height: 30px; }
+html.board.bphone .bs-card:hover:not(:disabled) { transform: none; }
+/* siege buttons: a column down the right edge */
+html.board.bphone .bb-act { position: fixed; z-index: 12; right: 0; top: 0; bottom: 0; width: var(--actW); margin: 0; padding: 92px calc(6px + env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) 6px; flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-end; gap: 6px;
+  background: linear-gradient(90deg, rgba(10, 8, 20, .9), #100c20); border-left: 2px solid var(--bpk); box-shadow: inset 1px 0 0 var(--btrim2); }
+html.board.bphone .bb-act .speed { order: 0; margin: 0; display: flex; }
+html.board.bphone .bb-act .speed button { flex: 1 1 0; padding: 6px 0; font-size: 12px; }
+html.board.bphone .bb-act .btn, html.board.bphone .bb-act .repairBtn { justify-content: center; min-height: 36px; font-size: 11.5px; padding: 4px 6px; white-space: normal; line-height: 1.1; }
+html.board.bphone .bb-act .hammerbtn kbd, html.board.bphone .bb-act .powerbtn kbd, html.board.bphone .bb-act #beginBtn kbd { display: none; }
+html.board.bphone .bb-act #beginBtn { flex: 0 0 auto; min-width: 0; min-height: 52px; font-size: 15px; padding: 6px; order: 9; }
+html.board.bphone .bb-act #beginBtn:disabled { font-size: 11.5px; }
+/* top right: the small buttons sit above the siege column; the scout row lives in its panel */
+html.board.bphone #bTR { right: 0; top: 0; width: var(--actW); padding: calc(6px + env(safe-area-inset-top, 0px)) calc(6px + env(safe-area-inset-right, 0px)) 0 6px; z-index: 13; }
+html.board.bphone #scoutRow { display: none; }
+html.board.bphone .bbtns { flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+html.board.bphone .ibtn, html.board.bphone #bBtns .btn.ghost.small { width: 30px; height: 30px; } html.board.bphone .ibtn img.pxi, html.board.bphone #bBtns .btn.ghost.small img.pxi { width: 20px; height: 20px; }
+html.board.bphone #recBadge { display: none !important; }
+/* top centre and left */
+html.board.bphone #bTop { top: 0; min-width: 0; width: min(300px, calc(var(--aw) - 120px)); padding: 3px 10px 5px; gap: 2px 8px; }
+html.board.bphone #bTop .siegeinfo b { font-size: 14px; } html.board.bphone #bTop .siegeinfo small { font-size: 10px; }
+html.board.bphone #bTop .castlebar small { font-size: 9.5px; } html.board.bphone #bTop .castlebar .bar { height: 7px; }
+html.board.bphone .pip { width: 15px; height: 15px; } html.board.bphone .pip img.pxi { width: 11px; height: 11px; }
+html.board.bphone #bTL { top: 4px; left: calc(var(--ax) + 4px); } html.board.bphone #bTL .scorebox { font-size: 13px; padding: 3px 7px; } html.board.bphone #bTL .scorebox small { font-size: 8px; }
+html.board.bphone .traitrail { left: calc(4px + env(safe-area-inset-left, 0px)); top: 6px; bottom: calc(var(--barH) + 6px); width: 42px; gap: 3px; }
+html.board.bphone .tr { padding: 2px; } html.board.bphone .tr .hex { width: 26px; height: 26px; } html.board.bphone .tr .hex img.pxi { width: 18px; height: 18px; }
+html.board.bphone:not(.trail-wide) .tr { grid-template-columns: 26px; }
+/* panels fit the short screen */
+html.board.bphone .unitcard { right: calc(var(--actW) + 6px); bottom: calc(var(--barH) + 6px); width: min(300px, calc(var(--aw) - 20px)); max-height: calc(100vh - var(--barH) - 12px); }
+html.board.bphone .unitcard .inspector { padding: 9px; gap: 6px; }
+html.board.bphone #intel { top: 6px; right: calc(var(--actW) + 6px); width: min(300px, calc(var(--aw) - 20px)); max-height: calc(100vh - var(--barH) - 12px); }
+html.board.bphone.board-team #roster { left: calc(var(--ax) + 6px); right: calc(var(--actW) + 6px); top: 6px; bottom: calc(var(--barH) + 6px); }
+html.board.bphone.board-team #roster .rbody { grid-template-columns: 1fr; overflow-y: auto; }
+html.board.bphone .drawer { top: 4px; bottom: calc(var(--barH) + 4px); left: calc(4px + env(safe-area-inset-left, 0px)); right: auto; width: min(460px, calc(100vw - var(--actW) - 12px)); }
+html.board.bphone #prepHint { display: none; }
+html.board.bphone #sellZone { min-width: 0; width: min(320px, 60vw); height: calc(var(--barH) - 10px); bottom: 5px; }
+html.board.bphone .arena-tag { top: 44px !important; font-size: 10px; }
+/* TFT mobile keeps level up and reroll on the shop panel's left edge: so do we, which frees the bar for the bench */
+html.board.bphone .bb-ebtns { position: fixed; z-index: 14; left: calc(var(--ax) + 4px); bottom: calc(var(--barH) + 4px); height: min(104px, calc(var(--ah) * .36)); width: 64px; padding: 6px 0 6px 6px; display: flex; flex-direction: column; gap: 5px;
+  opacity: 0; pointer-events: none; transform: translateY(calc(100% + var(--barH) + 10px)); transition: transform .2s cubic-bezier(.2, .9, .3, 1.1), opacity .15s; }
+html.board.bphone.bshop-open .bb-ebtns { opacity: 1; pointer-events: auto; transform: none; }
+html.board.bphone .bb-ebtns .bbtn { flex: 1 1 0; min-height: 0; min-width: 0; grid-template-columns: auto auto; grid-template-rows: auto; column-gap: 3px; }
+html.board.bphone.bshop-open .bb-shop { left: calc(var(--ax) + 4px); padding-left: 72px; }
+html.board.bphone .bb-econ { gap: 8px; }
+@media (max-width: 760px) {
+  html.board.bphone .bb-lvl small { display: none; }
+  html.board.bphone .bb-fac .rail button { width: 38px; }
+  html.board.bphone .bt { width: 40px; }
+}
+html.board.board-page .unitcard, html.board.board-team .unitcard { display: none !important; }
+html.board.bphone .unitcard { top: 6px; bottom: auto; width: min(280px, calc(var(--aw) * .5)); max-height: calc(100vh - var(--barH) - 12px); }
+html.board.bphone .unitcard .inspector h3 { font-size: 15px; }
+html.board.bphone .unitcard .inspector .stats > div { padding: 4px 6px; }
+
 /* ===== Store demo: road-ahead screen and title note ===== */
 .rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
 .rah { display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 5px; padding: 4px 8px 4px 4px; }
@@ -1897,7 +2003,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
     <div class="brand"><h1>Siege of Legends</h1><span>Castle defense auto battler</span></div>
     <div class="siegeinfo"><b id="siegeName">Siege 1</b><small id="siegeSub">Goblin Warband</small></div>
     <nav class="rail" aria-label="Castle facilities">
-      <button id="nav-guild" data-page="guild" title="Guild"><img class="px" alt="">Guild</button>
+      <button id="nav-guild" data-page="guild" title="Shop"><img class="px" alt="">Shop</button>
       <button id="nav-armory" data-page="armory" title="Armory"><img class="px" alt="">Armory</button>
       <button id="nav-hall" data-page="hall" title="Artificers' Hall"><img class="px" alt="">Artificers' Hall</button>
       <div class="hint" id="railHint">Facilities open between sieges.</div>
@@ -2243,11 +2349,11 @@ const ENEMIES = {
   // The Feathered Host
   rooster: { name: 'War Rooster', hp: 2600, atk: 60, as: 0.9, range: 15, spd: 30, armor: 40, gold: 95, cost: 10, kind: 'melee', elite: true, scale: 1.5, spr: { gen: 'bird', body: '#c8402a', wing: '#2a6a3a', beak: '#ffb02e', comb: '#ff3d3d' } },
   duck:    { name: 'Duck Sniper', hp: 200, atk: 30, as: 0.7, range: 100, spd: 22, armor: 5, gold: 20, cost: 2.6, kind: 'ranged', proj: 'spit', spr: { gen: 'bird', body: '#4a8a4a', wing: '#c8b890', beak: '#ffd03a' } },
-  pigeon:  { name: 'Pigeon Squadron', hp: 140, atk: 22, as: 1.3, range: 13, spd: 50, armor: 0, gold: 13, cost: 1.8, kind: 'flyer', spr: { gen: 'flyer', body: '#8a90a8', wing: '#c8ccd8', eye: '#ff7a3a' } },
+  pigeon:  { name: 'Pigeon Squadron', hp: 140, atk: 22, as: 1.3, range: 13, spd: 50, armor: 0, gold: 13, cost: 6.8, kind: 'flyer', spr: { gen: 'flyer', body: '#8a90a8', wing: '#c8ccd8', eye: '#ff7a3a' } },
   gosling: { name: 'Gosling Shock Troop', hp: 260, atk: 26, as: 1.3, range: 12, spd: 44, armor: 10, gold: 15, cost: 2.2, kind: 'melee', spr: { gen: 'bird', body: '#f4e48a', wing: '#e0c860', beak: '#ff8a1a', neck: true } },
   // chaos guests
   chicken: { name: 'Very Confident Chicken', hp: 38, atk: 5, as: 1.2, range: 12, spd: 46, armor: 0, gold: 4, cost: 0.5, kind: 'melee', small: true, spr: { gen: 'bird', body: '#ffffff', wing: '#e8e4d8', beak: '#ffb02e', comb: '#ff3d3d' } },
-  goose:   { name: 'The Goose', hp: 520, atk: 6, as: 1.4, range: 12, spd: 52, armor: 10, gold: 45, cost: 3, kind: 'melee', spr: { gen: 'bird', body: '#f4f4f0', wing: '#c8c8d0', beak: '#ff8a1a', neck: true } },
+  goose:   { name: 'The Goose', hp: 520, atk: 6, as: 1.4, range: 12, spd: 52, armor: 10, gold: 45, cost: 6, kind: 'melee', spr: { gen: 'bird', body: '#f4f4f0', wing: '#c8c8d0', beak: '#ff8a1a', neck: true } },
   // bosses
   grubnose: { name: 'Grubnose the Goblin King', boss: 'mini', hp: 2600, atk: 34, as: 0.8, range: 22, spd: 13, armor: 25, gold: 220, kind: 'melee', scale: 2, skills: ['slam', 'summon:grunt'], spr: { gen: 'humanoid', head: 'goblin', skin: '#7ac83a', hat: 'crown', armor: '#d83a5a', armor2: '#8a1a3a', cloth: '#ffd84a', weapon: 'kingclub', metal: '#ffcf3a', cape: '#7a3ad8' } },
   gloop:    { name: 'Mother Gloop', boss: 'mini', hp: 4200, atk: 36, as: 0.7, range: 22, spd: 11, armor: 15, gold: 300, kind: 'melee', scale: 2, split: 'slime', skills: ['slam', 'summon:slimelet'], spr: { gen: 'slime', body: '#5ad84a', eye: '#1a1230', crown: true } },
@@ -2537,41 +2643,42 @@ function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T
 // branch columns: 0 Stonework, 1 Engineering, 2 Alchemy, 3 Logistics ; secret: discovered through encounters
 const TECH_BRANCHES = ['Stonework', 'Engineering', 'Alchemy', 'Logistics'];
 // tech forks (Cam 2026-10-23): tiers 2 and 3 of each branch split into two paths; building into one path seals the other for the run
+// costs raised (Cam 2026-10-31, "make artificers upgrades cost more"): tier 1 x1.5, tier 2 x1.75, tier 3+ x2, secrets x1.5
 const TECH = {
-  walls1:   { name: 'Murder Holes',       b: 0, t: 1, cost: 3,   req: [],                 desc: 'Foes that hit the wall take 30% of that damage back.' },
-  fountain: { name: 'Tar Pots',           fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 6,   req: ['walls1'],         desc: 'Foes that hit the wall get tarred: 40% slower for 2s.' },
-  rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 7,   req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
-  walls2:   { name: 'Boiling Oil',        fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 15,  req: ['fountain'],       desc: 'Every hit on the wall spills boiling oil: foes around the attacker take half that damage.' },
-  rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 16,  req: ['rafters1'],       desc: 'Two more rafter slots.' },
-  sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 5,   req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
-  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 32,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take 80% of that damage back.' },
-  ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 4,   req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
-  ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 10,  req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
-  pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 8,   req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
-  ballista3:{ name: 'Piercing Bolts',     fork: 'b1', path: 'Ballista', b: 1, t: 3, cost: 20,  req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
-  hammer2:  { name: 'Heavier Hammer',     fork: 'b1', path: 'Sky Hammer', b: 1, t: 3, cost: 18,  req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
-  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 35,  req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
-  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 30,  any: true, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
-  wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 4,   req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
-  lab:      { name: 'Elemental Lab',      fork: 'b2', path: 'Signatures', b: 2, t: 2, cost: 11,  req: ['wells'],          desc: 'Shop cards lean toward your biggest element: a third of them bring it.' },
-  resonance:{ name: 'Resonance Coils',    fork: 'b2', path: 'Combos', b: 2, t: 2, cost: 12,  req: ['wells'],          desc: 'Element combos are 30% stronger.' },
-  prism:    { name: 'Prism Array',        fork: 'b2', path: 'Combos', b: 2, t: 3, cost: 22,  req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
-  focus:    { name: 'Signature Focus',    fork: 'b2', path: 'Signatures', b: 2, t: 3, cost: 20,  req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
-  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 34,  any: true, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
-  vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 3,   req: [],                 desc: '+15% gold from kills.' },
-  scav:     { name: 'Scavengers',         fork: 'b3', path: 'Treasury', b: 3, t: 2, cost: 8,   req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
-  drill:    { name: 'Drill Yard',         fork: 'b3', path: 'Training', b: 3, t: 2, cost: 9,  req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
-  vault2:   { name: 'Counting House',     fork: 'b3', path: 'Treasury', b: 3, t: 3, cost: 16,  req: ['scav'],           desc: '+20% gold from kills.' },
-  trophy:   { name: 'Trophy Room',        fork: 'b3', path: 'Training', b: 3, t: 3, cost: 18,  req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
-  college:  { name: 'War College',        b: 3, t: 4, cost: 32,  any: true, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
+  walls1:   { name: 'Murder Holes',       b: 0, t: 1, cost: 5,   req: [],                 desc: 'Foes that hit the wall take 30% of that damage back.' },
+  fountain: { name: 'Tar Pots',           fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 11,   req: ['walls1'],         desc: 'Foes that hit the wall get tarred: 40% slower for 2s.' },
+  rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 12,   req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
+  walls2:   { name: 'Boiling Oil',        fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 30,  req: ['fountain'],       desc: 'Every hit on the wall spills boiling oil: foes around the attacker take half that damage.' },
+  rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 32,  req: ['rafters1'],       desc: 'Two more rafter slots.' },
+  sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 8,   req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
+  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 64,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take 80% of that damage back.' },
+  ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 6,   req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
+  ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 18,  req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
+  pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 14,   req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
+  ballista3:{ name: 'Piercing Bolts',     fork: 'b1', path: 'Ballista', b: 1, t: 3, cost: 40,  req: ['ballista2'],      desc: 'Ballista bolts pierce through the whole line and hit 60% harder.' },
+  hammer2:  { name: 'Heavier Hammer',     fork: 'b1', path: 'Sky Hammer', b: 1, t: 3, cost: 36,  req: ['pulleys'],        desc: 'Sky Hammer radius +50% and damage +50%.' },
+  superanvil:{ name: 'Super Anvil',      b: 1, t: 5, cost: 70,  req: [],                 desc: 'A great anvil in the Armory that forges two finished items into one super item with both powers and a bonus.' },
+  kiln:     { name: "Philosopher's Kiln", b: 1, t: 4, cost: 60,  any: true, req: ['ballista3', 'hammer2'], desc: 'Castle power cooldown −35%.' },
+  wells:    { name: 'Mana Wells',         b: 2, t: 1, cost: 6,   req: [],                 desc: 'Heroes begin sieges with +25% mana.' },
+  lab:      { name: 'Elemental Lab',      fork: 'b2', path: 'Signatures', b: 2, t: 2, cost: 19,  req: ['wells'],          desc: 'Shop cards lean toward your biggest element: a third of them bring it.' },
+  resonance:{ name: 'Resonance Coils',    fork: 'b2', path: 'Combos', b: 2, t: 2, cost: 21,  req: ['wells'],          desc: 'Element combos are 30% stronger.' },
+  prism:    { name: 'Prism Array',        fork: 'b2', path: 'Combos', b: 2, t: 3, cost: 44,  req: ['resonance'],      desc: 'Element combos pulse 30% more often.' },
+  focus:    { name: 'Signature Focus',    fork: 'b2', path: 'Signatures', b: 2, t: 3, cost: 40,  req: ['lab'],            desc: 'Signatures deal +25% and start each siege half charged.' },
+  aether:   { name: 'Aether Engine',      b: 2, t: 4, cost: 68,  any: true, req: ['prism', 'focus'], desc: 'Every hero gains +5% attack, ability power and HP.' },
+  vault1:   { name: 'Gold Vault',         b: 3, t: 1, cost: 5,   req: [],                 desc: '+15% gold from kills.' },
+  scav:     { name: 'Scavengers',         fork: 'b3', path: 'Treasury', b: 3, t: 2, cost: 14,   req: ['vault1'],         desc: 'Loot after a siege offers 4 choices.' },
+  drill:    { name: 'Drill Yard',         fork: 'b3', path: 'Training', b: 3, t: 2, cost: 16,  req: ['vault1'],         desc: 'Heroes earn 15% more experience.' },
+  vault2:   { name: 'Counting House',     fork: 'b3', path: 'Treasury', b: 3, t: 3, cost: 32,  req: ['scav'],           desc: '+20% gold from kills.' },
+  trophy:   { name: 'Trophy Room',        fork: 'b3', path: 'Training', b: 3, t: 3, cost: 36,  req: ['drill'],          desc: 'Mini-bosses and bosses drop an extra component.' },
+  college:  { name: 'War College',        b: 3, t: 4, cost: 64,  any: true, req: ['vault2', 'trophy'], desc: 'Heroes earn 25% more experience.' },
   // secrets (discovered by encounters)
   goose:    { name: 'Goose Moat',         b: 4, secret: true, cost: 4,   req: [], desc: 'Geese guard the gate and honk at foes that reach the wall, biting for damage.' },
-  cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 6,   req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
-  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 5,   req: [], desc: 'Every 18s the bard plays a rousing number: heroes +40% attack speed for 5s.' },
+  cheese:   { name: 'Cheese Trebuchet',   b: 4, secret: true, cost: 9,   req: [], desc: 'Every 7s a wheel of cheese rolls down the field, bowling foes over.' },
+  bard:     { name: 'Bard Tower',         b: 4, secret: true, cost: 8,   req: [], desc: 'Every 18s the bard plays a rousing number: heroes +40% attack speed for 5s.' },
   pigeon:   { name: 'Pigeon Post',        b: 4, secret: true, cost: 4,   req: [], desc: 'Hero drafts offer one more champion.' },
-  mimic:    { name: 'Mimic Pantry',       b: 4, secret: true, cost: 6,  req: [], desc: 'A friendly mimic spits out a component after every third siege.' },
-  intern:   { name: 'Necromancy Intern',  b: 4, secret: true, cost: 6,  req: [], desc: 'Hires two skeleton helpers who fight beside your heroes in every siege. They are interns. They are trying their best.' },
-  hottub:   { name: 'Hero Hot Tub',       b: 4, secret: true, cost: 7,  req: [], desc: 'Heroes regenerate 1.2% HP per second during sieges.' },
+  mimic:    { name: 'Mimic Pantry',       b: 4, secret: true, cost: 9,  req: [], desc: 'A friendly mimic spits out a component after every third siege.' },
+  intern:   { name: 'Necromancy Intern',  b: 4, secret: true, cost: 9,  req: [], desc: 'Hires two skeleton helpers who fight beside your heroes in every siege. They are interns. They are trying their best.' },
+  hottub:   { name: 'Hero Hot Tub',       b: 4, secret: true, cost: 11,  req: [], desc: 'Heroes regenerate 1.2% HP per second during sieges.' },
 };
 
 // ===== Diamond meta (between runs) =====
@@ -2789,7 +2896,7 @@ const ENCOUNTERS = [
   { id: 'bard', title: 'A Bard at the Gate', text: 'Their song about your last siege is wildly exaggerated. In this version, your castle can fly.',
     opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire,hz:gale', sub: 'Heroes +25% attack. The song is so loud it whips up a gale next siege.' }] },
   { id: 'pigeons', title: 'Pigeons With Opinions', text: 'Forty pigeons have landed on the walls and are all looking at you. One has a tiny scroll.',
-    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:2', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
+    opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in drafts)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:2', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
   { id: 'hottub', title: 'Hot Spring Under the Keep', text: 'The dwarves dug too deep. They found a hot spring. The dwarves are now refusing to leave the hot spring.',
     opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,xpAll:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
   { id: 'alchemist', title: 'Free Sample Day', text: 'The alchemist is offering free samples. All the potions are bubbling. One is screaming quietly.',
@@ -2808,7 +2915,7 @@ const ENCOUNTERS = [
 ];
 // the three choices on every boon card
 function boonOpts(run) {
-  return [{ label: 'Take the gold', fx: 'gold:55', sub: 'A fat purse for the Guild Hall or the Artificers.' },
+  return [{ label: 'Take the gold', fx: 'gold:55', sub: 'A fat purse for the shop or the Artificers.' },
     { label: 'Train every hero', fx: 'xpAll:45', sub: 'Every champion on your roster gains XP.' },
     { label: 'Reforge an item', fx: 'reforge', sub: 'Pick one of your finished items and turn it into a different one. Shuffles your build.' }];
 }
@@ -10175,7 +10282,7 @@ function botPlayRun(style, meta, opts = {}) {
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
   return { style, reached: run.siege, cause, breaches, log, heroes: run.roster.map(h => ({ id: h.id, lv: h.level, el: h.el, rarity: h.rarity || 0, items: heroItems(run, h).map(i => i.parts.join('+')) })), castleEl: run.castleEl,
-    techs: Object.keys(run.tech), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
+    techs: Object.keys(run.tech), techAt: run.stats.techs.map(t => [t.s, t.id]), gold: run.gold, combos: activeCombos(run).map(c => c.name), diamonds: diamondsForRun(run) };
 }
 function summarizeBots(results) {
   const by = {};
@@ -10703,6 +10810,9 @@ const UI = {
   tipRefresh() { if (!UI.tipKey || $('tip').hidden) return; if (UI.tipKey.startsWith('st:')) { const h = UI.tipHTML(UI.tipKey); if (h) { $('tip').innerHTML = h; if (UI.tipXY) UI.tipMove(...UI.tipXY); } } },
 
   // ----- left drawer -----
+  // where the shop and the guild Level up button are: the bottom bar on desktop, the Shop page on phones
+  shopEl() { return typeof BOARD !== 'undefined' && BOARD.on ? $('bShop') : $('nav-guild'); },
+  levelEl() { return document.querySelector(typeof BOARD !== 'undefined' && BOARD.on ? '#bEBtns [data-bact="guildlevel"]' : '#drawerBody [data-act="guildlevel"]'); },
   openPage(p) {
     if (p && G.phase !== 'prep') { UI.toast('Facilities open between sieges.', true); return; }
     if (p === 'hall') { const run = G.run; run.techSeen = run.techSeen || {}; UI.hallNew = new Set(Object.keys(TECH).filter(k => techState(run, k) === 'open' && !run.techSeen[k])); UI.hallNew.forEach(k => run.techSeen[k] = 1); }
@@ -10712,7 +10822,7 @@ const UI = {
   },
   renderPage() {
     const run = G.run, p = UI.page, body = $('drawerBody');
-    const titles = { guild: ['Guild Hall', 'Where champions are drafted and trained.'], armory: ['Armory', 'Hand out components. Two on one hero fuse into a finished item.'], hall: ["Artificers' Hall", 'A tree of castle technology. Some branches are found, not bought.'] };
+    const titles = { guild: ['Shop', 'Buy legends and level up the guild.'], armory: ['Armory', 'Hand out components. Two on one hero fuse into a finished item.'], hall: ["Artificers' Hall", 'A tree of castle technology. Some branches are found, not bought.'] };
     $('drawerTitle').textContent = titles[p][0]; $('drawerSub').textContent = titles[p][1];
     const scroll = body.scrollTop;
     body.innerHTML = p === 'guild' ? UI.guildHTML(run) : p === 'armory' ? UI.armoryHTML(run) : UI.hallHTML(run);
@@ -10889,7 +10999,7 @@ const UI = {
     if (UI.teamKey !== tp) { UI.teamKey = tp; $('teamPanel').innerHTML = tp; $('teamPanel').querySelectorAll('[data-act]').forEach(b => b.onclick = () => G.act(b.dataset.act, b.dataset.arg)); UI.renderStats(); }
     let h = '';
     const onField = run.roster.filter(x => x.place || x.vault || x.fled), bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
-    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Each guild level in the Guild Hall adds a field slot."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
+    const list = [{ div: `<div class="rdiv field" title="Champions who fight this siege. Each guild level adds a field slot. Level up next to the shop."><b>Field</b><small>${fieldCount(run)}/${fieldCap(run)}</small></div>` }, ...onField, { div: `<div class="rdiv bench" title="Bench champions don't fight. Drag one onto a field champion, or onto the field, to swap them in."><b>Bench</b><small>${bench.length}/${BENCH_SLOTS}</small></div>` }, ...bench];
     for (const hr of list) {
       if (hr.div) { h += hr.div; continue; }
       const d = HERO_BY_ID[hr.id], u = B && B.heroes.find(x => x.inst === hr);
@@ -13730,10 +13840,10 @@ function introGuild(run, key) {
   const odds = o => o.map((v, i) => v ? `<b style="color:${RARITY[i].col}">${RARITY[i].name} ${v}%</b>` : '').filter(Boolean).join(' · ');
   introCard('Upgrade: guild level', `Guild level ${lv}: ${lv} legends fight`,
     `<p class="lede">The guild level is your main upgrade. Each level puts <b>one more legend on the field</b> and deals <b>rarer legends</b> in the shop.</p>
-    <ul class="nag"><li>Level ${lv + 1} costs ${COST(c)}. Buy it in the Guild Hall, under the shop.</li>
+    <ul class="nag"><li>Level ${lv + 1} costs ${COST(c)}. Press Level up next to the shop.</li>
     <li>Shop odds now: ${odds(now)}</li><li>At level ${lv + 1}: ${odds(next)}</li>
     <li>Gold you keep earns interest, so level up when you have a legend worth fielding.</li></ul>`,
-    'Open the Guild Hall', () => { UI.setRoster(true); UI.openPage('guild'); setTimeout(() => UI.coach('intro-guild-btn', document.querySelector('#drawerBody [data-act="guildlevel"]'), `Raise the guild to level ${lv + 1} here.`), 300); }, key);
+    'Show me', () => { UI.setRoster(true); UI.openPage('guild'); setTimeout(() => UI.coach('intro-guild-btn', UI.levelEl(), `Raise the guild to level ${lv + 1} here.`), 300); }, key);
 }
 function introHall(run, key) {
   const ts = openTechs(run).slice(0, 3);
@@ -14097,7 +14207,7 @@ function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
-  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends, drag them onto the hexes where the scout arrows come in, then close the shop and press Begin siege.'); }, 300); }
+  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', UI.shopEl(), 'This is the shop. You have 5 gold: commons cost 1. Buy legends, drag them onto the hexes where the scout arrows come in, then ' + (UI.page ? 'close the shop and ' : '') + 'press Begin siege.'); }, 300); }
   else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   // first-time cards for items, fusing, the guild level and the Hall (intros.js); the rail nudges only when no card is showing
   const intro = run.siege > 1 && showIntro(run);
@@ -14106,7 +14216,7 @@ function prepCues() {
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
-    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `Five legends are for sale in the Guild Hall. Commons cost 1 gold. Open it to recruit them.`); }, 350);
+    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the shop`); SFX.play('level'); UI.coach('draft-ready', UI.shopEl(), `Five legends are for sale in the shop. Commons cost 1 gold.`); }, 350);
   }
 }
 
@@ -14302,7 +14412,7 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
-      <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
+      <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
       <div><b>Score and boons</b>Every siege you hold scores points for walls kept, champions standing, speed and the boss slain, and later sieges count for more. A lost siege scores nothing. After sieges 3, 10 and 20 you pick a Silver, Gold and Prismatic boon that lasts the run. Your ten best scores are kept on the tower.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
@@ -14559,6 +14669,15 @@ const MOB = {
     if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) || MOB.native) de.classList.add('nofs');
     MOB.ready = true; UI.layout();
   },
+  // like TFT mobile, the game is built to be held sideways; portrait still works for anyone who waves the card away
+  rotateHint(port) {
+    let c = $('rotateCard'); let off = false; try { off = localStorage.getItem('sol-portrait-ok') === '1'; } catch (e) { }
+    if (!port || off) { if (c) c.hidden = true; return; }
+    if (!c) { c = document.createElement('div'); c.id = 'rotateCard'; c.innerHTML = `<div class="rc-box"><div class="rc-phone"><i></i></div><b>Turn your phone sideways</b><p>The board fills the screen sideways, with the shop and bench along the bottom.</p><button class="btn small ghost" id="rotateAnyway">Play upright anyway</button></div>`;
+      document.body.appendChild(c); $('rotateAnyway').onclick = () => { try { localStorage.setItem('sol-portrait-ok', '1'); } catch (e) { } c.hidden = true; }; }
+    c.hidden = false;
+  },
+  boardPhone() { return MOB.wanted() && innerWidth > innerHeight; },
   menu(open) { $('mMenu').hidden = !open; $('mMore').setAttribute('aria-expanded', String(open)); },
   details(open) {
     MOB.det = open; $('roster').classList.toggle('m-details', open); $('mDet').setAttribute('aria-expanded', String(open));
@@ -14568,8 +14687,10 @@ const MOB = {
   // switch the DOM between the desktop and phone arrangements
   sync() {
     if (!MOB.ready) return;
-    const want = MOB.wanted(), land = innerWidth > innerHeight, de = document.documentElement;
-    MOB.land = land; de.classList.toggle('m-land', want && land); de.classList.toggle('m-port', want && !land);
+    // phones held sideways get the board-first layout (src/board.js), like TFT mobile; only portrait keeps the stacked phone layout
+    const phone = MOB.wanted(), land = innerWidth > innerHeight, want = phone && !land, de = document.documentElement;
+    MOB.land = land; de.classList.toggle('m-land', false); de.classList.toggle('m-port', want); de.classList.toggle('bphone', phone && land);
+    MOB.rotateHint(want);
     if (want === MOB.on) return;
     MOB.on = want; de.classList.toggle('m', want);
     const menu = $('mMenu'), ctl = document.querySelector('.hud .controls'), rb = document.querySelector('#roster .rbody'), cards = $('rosterCards');
@@ -14724,8 +14845,9 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
 // Big panels (the champion drawer, scout report, facilities) stay one click away instead of always open.
 // Desktop only: phone layouts (html.m, src/mobile.js) keep their own arrangement. Loaded after mobile.js.
 const BOARD = {
-  on: false, card: null, team: false, intel: false, homes: new Map(), keys: {},
-  wanted() { return !MOB.wanted() && innerWidth >= 900; },
+  on: false, shopOpen: true, lastPhase: null, card: null, team: false, intel: false, homes: new Map(), keys: {},
+  wanted() { return MOB.boardPhone() || (!MOB.wanted() && innerWidth >= 900); },
+  phone() { return document.documentElement.classList.contains('bphone'); },
   build() {
     if ($('boardBar')) return;
     const mk = (id, cls, html = '') => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; d.innerHTML = html; return d; };
@@ -14738,6 +14860,7 @@ const BOARD = {
     app.appendChild(mk('traitRail', 'traitrail'));
     app.appendChild(mk('boardBar', 'boardbar', `<div class="bb-fac" id="bFac"></div>
       <div class="bb-econ" id="bEcon"><div class="bb-gold" id="bGold"></div><div class="bb-lvl" id="bLvl"></div><div class="bb-ebtns" id="bEBtns"></div></div>
+      <div class="bb-shopbtn" id="bShopBtnWrap"><button class="bbtn shopbtn" id="bShopBtn" aria-pressed="false" data-tip="txt:Shop|Five legends for sale. Tap to open or close."><img class="px" src="${coinImg()}" alt=""><span>Shop</span></button></div>
       <div class="bb-shop" id="bShop"></div>
       <div class="bb-bench" id="bBench"></div>
       <div class="bb-act" id="bAct"></div>`));
@@ -14746,11 +14869,14 @@ const BOARD = {
     $('bIntelBtn').onclick = () => BOARD.setIntel(!BOARD.intel);
     $('scoutRow').onclick = () => BOARD.setIntel(!BOARD.intel);
     $('bTeamBtn').onclick = () => BOARD.setTeam(!BOARD.team);
+    // phones: the shop is a tray that slides up over the board, like TFT mobile (opens itself at the start of each prep)
+    $('bShopBtn').onclick = () => { SFX.play('click'); BOARD.shopOpen = !BOARD.shopOpen; BOARD.render(); };
     // the bar hands its clicks to the same actions the Guild page uses
     $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
     $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
     $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
-    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) G.cardDown(e, t.dataset.uid); });
+    // phones: a tap on a bench champion picks them for tap-to-place without the card covering the board (long-press shows their tip)
+    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) { BOARD.benchTap = BOARD.phone(); G.cardDown(e, t.dataset.uid); BOARD.benchTap = false; } });
   },
   // move the shared HUD pieces into the board plates; unmount puts every one back exactly where it was
   move(el, into, before) { if (!el) return; if (!BOARD.homes.has(el)) { const mark = document.createComment('home'); el.parentNode.insertBefore(mark, el); BOARD.homes.set(el, mark); } before ? into.insertBefore(el, before) : into.appendChild(el); },
@@ -14770,7 +14896,8 @@ const BOARD = {
   },
   unmount() {
     if (!BOARD.on) return; BOARD.on = false;
-    document.documentElement.classList.remove('board', 'board-team');
+    document.documentElement.classList.remove('board', 'board-team', 'bshop-open');
+    document.documentElement.style.removeProperty('--actW');
     for (const [el, mark] of BOARD.homes) { mark.parentNode && mark.parentNode.insertBefore(el, mark); mark.remove(); }
     BOARD.homes.clear();
     for (const k of ['--barH', '--trailW']) document.documentElement.style.removeProperty(k);
@@ -14791,6 +14918,7 @@ const BOARD = {
   },
   // arena: as wide as the screen allows above the bar; spare width on the left becomes the trait column
   layout() {
+    if (BOARD.phone()) return BOARD.layoutPhone();
     const st = document.documentElement.style, big = innerWidth >= 1800 && innerHeight >= 1000;
     const barH = big ? 138 : innerHeight < 760 ? 98 : 116;
     const availH = innerHeight - barH; let w = innerWidth, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
@@ -14801,9 +14929,24 @@ const BOARD = {
     document.documentElement.classList.toggle('trail-wide', wide);
     if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
   },
+  // phones held sideways: the board sits between the trait badges (left) and the siege buttons (right), above a slim bar
+  layoutPhone() {
+    const st = document.documentElement.style, S = MOB.safe(), H = innerHeight, W = innerWidth;
+    const barH = (H < 360 ? 54 : 60) + S.b, leftW = 50 + S.l, actW = (W < 700 ? 104 : 118) + S.r;
+    const availW = W - leftW - actW, availH = H - barH; let w = availW, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
+    const ax = leftW + (availW - w) / 2;
+    st.setProperty('--aw', w + 'px'); st.setProperty('--ah', h + 'px'); st.setProperty('--ax', ax + 'px'); st.setProperty('--ay', Math.max(0, (availH - h) / 2) + 'px');
+    st.setProperty('--barH', barH + 'px'); st.setProperty('--hudH', '0px'); st.setProperty('--rosH', barH + 'px'); st.setProperty('--trailW', '0px'); st.setProperty('--actW', actW + 'px');
+    document.documentElement.classList.remove('trail-wide');
+    if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
+  },
   render() {
     if (!BOARD.on || !G.run) return;
     const run = G.run;
+    if (G.phase !== BOARD.lastPhase) { if (G.phase === 'prep') BOARD.shopOpen = true; BOARD.lastPhase = G.phase; }
+    const tray = BOARD.phone() && BOARD.shopOpen && G.phase === 'prep';
+    document.documentElement.classList.toggle('bshop-open', tray);
+    const sb = $('bShopBtn'); if (sb) { sb.setAttribute('aria-pressed', String(tray)); sb.disabled = G.phase !== 'prep'; }
     BOARD.renderTop(run); BOARD.renderTraits(run); BOARD.renderScouts(run); BOARD.renderEcon(run); BOARD.renderShop(run); BOARD.renderBench(run);
     const show = !!G.selected && BOARD.card === G.selected && !!run.roster.find(x => x.uid === G.selected) && $('title').hidden && !BOARD.team;
     $('unitCard').classList.toggle('on', show);
@@ -14894,15 +15037,16 @@ const BOARD = {
   UI.layout = function () {
     if (!BOARD.wanted()) BOARD.unmount();
     const r = layout0.apply(UI, arguments);
-    if (!MOB.on && innerWidth >= 900) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
+    if (BOARD.wanted()) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
     return r;
   };
   UI.refresh = function () { const r = refresh0.apply(UI, arguments); BOARD.render(); return r; };
   UI.hud = function () { const r = hud0.apply(UI, arguments); if (BOARD.on && G.run) { BOARD.renderTop(G.run); BOARD.renderEcon(G.run); BOARD.renderShop(G.run); } return r; };
   UI.renderRoster = function () { const r = roster0.apply(UI, arguments); if (BOARD.on) { BOARD.renderBench(G.run); BOARD.renderTraits(G.run); BOARD.render(); } return r; };
   const openPage0 = UI.openPage;
-  UI.openPage = function (p) { const r = openPage0.apply(UI, arguments); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
-  G.select = function (uid) { BOARD.card = uid; return select0.apply(G, arguments); };
+  // no Guild tab on desktop (Cam 2026-10-31): the shop and Level up live on the bottom bar, so a call for the guild page just closes the drawer
+  UI.openPage = function (p) { if (p === 'guild' && BOARD.on) p = null; const r = openPage0.call(UI, p); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
+  G.select = function (uid) { BOARD.card = BOARD.benchTap ? null : uid; return select0.apply(G, arguments); };
   // the S key and the old intel tab open the board's scout panel
   UI.setIntel = function (open, quiet) { const r = setIntel0.apply(UI, arguments); if (BOARD.on && BOARD.intel !== open) { BOARD.intel = open; $('intel').classList.toggle('bopen', open); const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open)); } return r; };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && BOARD.on) { if (BOARD.team) BOARD.setTeam(false); else if (BOARD.intel) BOARD.setIntel(false); else if (BOARD.card) { BOARD.card = null; BOARD.render(); } } }, true);

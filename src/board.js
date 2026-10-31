@@ -4,8 +4,9 @@
 // Big panels (the champion drawer, scout report, facilities) stay one click away instead of always open.
 // Desktop only: phone layouts (html.m, src/mobile.js) keep their own arrangement. Loaded after mobile.js.
 const BOARD = {
-  on: false, card: null, team: false, intel: false, homes: new Map(), keys: {},
-  wanted() { return !MOB.wanted() && innerWidth >= 900; },
+  on: false, shopOpen: true, lastPhase: null, card: null, team: false, intel: false, homes: new Map(), keys: {},
+  wanted() { return MOB.boardPhone() || (!MOB.wanted() && innerWidth >= 900); },
+  phone() { return document.documentElement.classList.contains('bphone'); },
   build() {
     if ($('boardBar')) return;
     const mk = (id, cls, html = '') => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; d.innerHTML = html; return d; };
@@ -18,6 +19,7 @@ const BOARD = {
     app.appendChild(mk('traitRail', 'traitrail'));
     app.appendChild(mk('boardBar', 'boardbar', `<div class="bb-fac" id="bFac"></div>
       <div class="bb-econ" id="bEcon"><div class="bb-gold" id="bGold"></div><div class="bb-lvl" id="bLvl"></div><div class="bb-ebtns" id="bEBtns"></div></div>
+      <div class="bb-shopbtn" id="bShopBtnWrap"><button class="bbtn shopbtn" id="bShopBtn" aria-pressed="false" data-tip="txt:Shop|Five legends for sale. Tap to open or close."><img class="px" src="${coinImg()}" alt=""><span>Shop</span></button></div>
       <div class="bb-shop" id="bShop"></div>
       <div class="bb-bench" id="bBench"></div>
       <div class="bb-act" id="bAct"></div>`));
@@ -26,11 +28,14 @@ const BOARD = {
     $('bIntelBtn').onclick = () => BOARD.setIntel(!BOARD.intel);
     $('scoutRow').onclick = () => BOARD.setIntel(!BOARD.intel);
     $('bTeamBtn').onclick = () => BOARD.setTeam(!BOARD.team);
+    // phones: the shop is a tray that slides up over the board, like TFT mobile (opens itself at the start of each prep)
+    $('bShopBtn').onclick = () => { SFX.play('click'); BOARD.shopOpen = !BOARD.shopOpen; BOARD.render(); };
     // the bar hands its clicks to the same actions the Guild page uses
     $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
     $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
     $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
-    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) G.cardDown(e, t.dataset.uid); });
+    // phones: a tap on a bench champion picks them for tap-to-place without the card covering the board (long-press shows their tip)
+    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) { BOARD.benchTap = BOARD.phone(); G.cardDown(e, t.dataset.uid); BOARD.benchTap = false; } });
   },
   // move the shared HUD pieces into the board plates; unmount puts every one back exactly where it was
   move(el, into, before) { if (!el) return; if (!BOARD.homes.has(el)) { const mark = document.createComment('home'); el.parentNode.insertBefore(mark, el); BOARD.homes.set(el, mark); } before ? into.insertBefore(el, before) : into.appendChild(el); },
@@ -50,7 +55,8 @@ const BOARD = {
   },
   unmount() {
     if (!BOARD.on) return; BOARD.on = false;
-    document.documentElement.classList.remove('board', 'board-team');
+    document.documentElement.classList.remove('board', 'board-team', 'bshop-open');
+    document.documentElement.style.removeProperty('--actW');
     for (const [el, mark] of BOARD.homes) { mark.parentNode && mark.parentNode.insertBefore(el, mark); mark.remove(); }
     BOARD.homes.clear();
     for (const k of ['--barH', '--trailW']) document.documentElement.style.removeProperty(k);
@@ -71,6 +77,7 @@ const BOARD = {
   },
   // arena: as wide as the screen allows above the bar; spare width on the left becomes the trait column
   layout() {
+    if (BOARD.phone()) return BOARD.layoutPhone();
     const st = document.documentElement.style, big = innerWidth >= 1800 && innerHeight >= 1000;
     const barH = big ? 138 : innerHeight < 760 ? 98 : 116;
     const availH = innerHeight - barH; let w = innerWidth, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
@@ -81,9 +88,24 @@ const BOARD = {
     document.documentElement.classList.toggle('trail-wide', wide);
     if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
   },
+  // phones held sideways: the board sits between the trait badges (left) and the siege buttons (right), above a slim bar
+  layoutPhone() {
+    const st = document.documentElement.style, S = MOB.safe(), H = innerHeight, W = innerWidth;
+    const barH = (H < 360 ? 54 : 60) + S.b, leftW = 50 + S.l, actW = (W < 700 ? 104 : 118) + S.r;
+    const availW = W - leftW - actW, availH = H - barH; let w = availW, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
+    const ax = leftW + (availW - w) / 2;
+    st.setProperty('--aw', w + 'px'); st.setProperty('--ah', h + 'px'); st.setProperty('--ax', ax + 'px'); st.setProperty('--ay', Math.max(0, (availH - h) / 2) + 'px');
+    st.setProperty('--barH', barH + 'px'); st.setProperty('--hudH', '0px'); st.setProperty('--rosH', barH + 'px'); st.setProperty('--trailW', '0px'); st.setProperty('--actW', actW + 'px');
+    document.documentElement.classList.remove('trail-wide');
+    if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
+  },
   render() {
     if (!BOARD.on || !G.run) return;
     const run = G.run;
+    if (G.phase !== BOARD.lastPhase) { if (G.phase === 'prep') BOARD.shopOpen = true; BOARD.lastPhase = G.phase; }
+    const tray = BOARD.phone() && BOARD.shopOpen && G.phase === 'prep';
+    document.documentElement.classList.toggle('bshop-open', tray);
+    const sb = $('bShopBtn'); if (sb) { sb.setAttribute('aria-pressed', String(tray)); sb.disabled = G.phase !== 'prep'; }
     BOARD.renderTop(run); BOARD.renderTraits(run); BOARD.renderScouts(run); BOARD.renderEcon(run); BOARD.renderShop(run); BOARD.renderBench(run);
     const show = !!G.selected && BOARD.card === G.selected && !!run.roster.find(x => x.uid === G.selected) && $('title').hidden && !BOARD.team;
     $('unitCard').classList.toggle('on', show);
@@ -174,15 +196,16 @@ const BOARD = {
   UI.layout = function () {
     if (!BOARD.wanted()) BOARD.unmount();
     const r = layout0.apply(UI, arguments);
-    if (!MOB.on && innerWidth >= 900) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
+    if (BOARD.wanted()) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
     return r;
   };
   UI.refresh = function () { const r = refresh0.apply(UI, arguments); BOARD.render(); return r; };
   UI.hud = function () { const r = hud0.apply(UI, arguments); if (BOARD.on && G.run) { BOARD.renderTop(G.run); BOARD.renderEcon(G.run); BOARD.renderShop(G.run); } return r; };
   UI.renderRoster = function () { const r = roster0.apply(UI, arguments); if (BOARD.on) { BOARD.renderBench(G.run); BOARD.renderTraits(G.run); BOARD.render(); } return r; };
   const openPage0 = UI.openPage;
-  UI.openPage = function (p) { const r = openPage0.apply(UI, arguments); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
-  G.select = function (uid) { BOARD.card = uid; return select0.apply(G, arguments); };
+  // no Guild tab on desktop (Cam 2026-10-31): the shop and Level up live on the bottom bar, so a call for the guild page just closes the drawer
+  UI.openPage = function (p) { if (p === 'guild' && BOARD.on) p = null; const r = openPage0.call(UI, p); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
+  G.select = function (uid) { BOARD.card = BOARD.benchTap ? null : uid; return select0.apply(G, arguments); };
   // the S key and the old intel tab open the board's scout panel
   UI.setIntel = function (open, quiet) { const r = setIntel0.apply(UI, arguments); if (BOARD.on && BOARD.intel !== open) { BOARD.intel = open; $('intel').classList.toggle('bopen', open); const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open)); } return r; };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && BOARD.on) { if (BOARD.team) BOARD.setTeam(false); else if (BOARD.intel) BOARD.setIntel(false); else if (BOARD.card) { BOARD.card = null; BOARD.render(); } } }, true);

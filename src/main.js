@@ -351,7 +351,7 @@ function prepCues() {
   const run = G.run;
   if (run.finale === 'ready') {} else if (isBossSiege(run.siege)) UI.banner('Boss approaching', ENEMIES[bossFor(run.siege)].name, { kind: 'boss', spr: 'e:' + bossFor(run.siege) });
   if (run.siege === techOpensAt('superanvil') && !run.tech.superanvil) setTimeout(() => { UI.banner('Super Anvil unlocked', "Build it in the Artificers' Hall"); SFX.play('level'); }, isBossSiege(run.siege) ? 2600 : 900);
-  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', $('nav-guild'), 'This is the shop. You have 5 gold: commons cost 1. Buy legends, drag them onto the hexes where the scout arrows come in, then close the shop and press Begin siege.'); }, 300); }
+  if (run.siege === 1 && !run.shopIntro) { run.shopIntro = true; save(); setTimeout(() => { UI.setRoster(true); UI.openPage('guild'); UI.coach('shop-first', UI.shopEl(), 'This is the shop. You have 5 gold: commons cost 1. Buy legends, drag them onto the hexes where the scout arrows come in, then ' + (UI.page ? 'close the shop and ' : '') + 'press Begin siege.'); }, 300); }
   else if (run.siege === 1) { setTimeout(() => { const u = G.prepUnits[0]; UI.coach('place', $('arenaWrap'), 'This is your champion. Drag them anywhere on the field, then press Begin siege. They fight on their own.'); UI.coach('begin', $('beginBtn'), 'Begin the siege here, or press Space.'); }, 500); }
   // first-time cards for items, fusing, the guild level and the Hall (intros.js); the rail nudges only when no card is showing
   const intro = run.siege > 1 && showIntro(run);
@@ -360,7 +360,7 @@ function prepCues() {
   // first time each run you can afford a champion: say so loudly (Cam)
   if (!run.paidDrafts && !run.draftNag && run.siege > 1 && run.roster.length < rosterCap(run) && (run.shop || []).some(c => c && run.gold >= shopCost(c.id))) {
     run.draftNag = true; if (G.meta.seen) delete G.meta.seen['draft-ready'];
-    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the Guild Hall`); SFX.play('level'); UI.coach('draft-ready', $('nav-guild'), `Five legends are for sale in the Guild Hall. Commons cost 1 gold. Open it to recruit them.`); }, 350);
+    setTimeout(() => { UI.banner('The shop is open', `You have ${run.gold} gold. Visit the shop`); SFX.play('level'); UI.coach('draft-ready', UI.shopEl(), `Five legends are for sale in the shop. Commons cost 1 gold.`); }, 350);
   }
 }
 
@@ -556,7 +556,7 @@ function showTitle() {
     <section class="metabox" id="ledger">${metaHTML}</section>
     <div class="howto">
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
-      <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
+      <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
       <div><b>Score and boons</b>Every siege you hold scores points for walls kept, champions standing, speed and the boss slain, and later sieges count for more. A lost siege scores nothing. After sieges 3, 10 and 20 you pick a Silver, Gold and Prismatic boon that lasts the run. Your ten best scores are kept on the tower.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
