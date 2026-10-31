@@ -127,7 +127,7 @@ const MOB = {
     document.addEventListener('click', e => { if (eat) { eat = false; e.preventDefault(); e.stopPropagation(); } }, true);
     document.addEventListener('contextmenu', e => { if (MOB.touch && !e.target.closest('input,textarea')) e.preventDefault(); });
     // a scroll that steals the finger ends the drag cleanly
-    document.addEventListener('pointercancel', () => { if (!G.drag) return; G.drag = null; $('ghost').hidden = true; G.hover = null; changed(); });
+    document.addEventListener('pointercancel', () => { if (!G.drag) return; G.drag = null; $('ghost').hidden = true; $('sellZone').hidden = true; G.hover = null; changed(); });
   },
   wireNative() {
     const P = Capacitor.Plugins || {};

@@ -209,48 +209,101 @@ function drawUnit(g, u, t, opts = {}) {
   if (u.poison && u.poison.length) { if (Math.floor(t * 8) % 3 === 0) { g.fillStyle = '#9be05a'; g.fillRect(x + randi(-4, 4), y - randi(4, 14), 1, 1); } }
 }
 
-// pulsing red chevrons on the right edge show where the horde walks in
-// prep only: faint dashed lines between the three lanes, so placement reads at a glance
-function drawLaneLines(g, t, V) {
-  // Cam 2026-10-23: lanes have to read clearly while placing. Bands alternate and the lane under the cursor lights up
-  const hl = V.hover && V.hover.type === 'grid' ? laneOf(cellPos(V.hover.c, V.hover.r).y) : -1;
-  for (let l = 0; l < LANES; l++) { const S = laneSpan(l);
-    g.fillStyle = l === hl ? 'rgba(255,216,74,0.16)' : l % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(10,14,40,0.07)'; g.fillRect(CASTLE_X + 6, S.y0, W - CASTLE_X - 6, S.y1 - S.y0); }
+// ----- the hex field (Cam 2026-10-24) -----
+// flat-topped hexes, a pixel gap between them so the grid reads as tiles; half-width at row dy shrinks towards the flat top
+function hexHalf(dy) { return Math.round(14 - 7 * Math.abs(dy) / 11); }
+function fillHex(g, cx, cy, inset) { for (let dy = -10 + inset; dy <= 10 - inset; dy++) { const w = hexHalf(dy) - inset; g.fillRect(cx - w, cy + dy, w * 2, 1); } }
+function hexCentre(c, r) { const p = cellPos(c, r); return { x: Math.round(p.x), y: Math.round(p.y - 6) }; }
+// prep: every hex, the hovered one, and the two-hex circle the dragged or selected champion will guard
+function drawHexGrid(g, t, run, V) {
+  let zone = null;
+  if (V.hover && V.hover.type === 'grid') zone = V.hover;
+  else if (V.selected) { const h = run.roster.find(x => x.uid === V.selected && x.place && x.place.type === 'grid'); if (h) zone = h.place; }
+  for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < hexRows(c); r++) {
+    const p = hexCentre(c, r), hov = V.hover && V.hover.type === 'grid' && V.hover.c === c && V.hover.r === r, inZ = zone && hexDist(zone, { c, r }) <= HEX.guard;
+    const court = c < GRID.courtCols;
+    // a dark rim, then the tile: warm on the courtyard stones, green out on the field
+    g.fillStyle = court ? 'rgba(60,40,20,0.30)' : 'rgba(20,50,20,0.22)'; fillHex(g, p.x, p.y, 0);
+    g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : inZ ? 'rgba(255,216,74,' + (0.38 + 0.08 * Math.sin(t * 4)).toFixed(3) + ')' : court ? 'rgba(255,240,200,0.20)' : 'rgba(200,255,170,0.14)';
+    fillHex(g, p.x, p.y, 1);
+    g.fillStyle = inZ ? 'rgba(255,240,170,0.7)' : 'rgba(255,255,255,0.35)'; const w = hexHalf(-9) - 1; g.fillRect(p.x - w, p.y - 9, w * 2, 1);
+  }
 }
-// always: a row of wooden stakes with torches on every lane border, so the three lanes read as separate paths (Cam 2026-10-23)
-function drawLaneFences(g, t) {
-  for (let l = 1; l < LANES; l++) { const y = Math.round(laneSpan(l).y0), x0 = GRID.x + GRID.courtCols * GRID.cell + 4, x1 = W - 30;
-    g.fillStyle = 'rgba(26,18,48,0.25)'; g.fillRect(x0, y + 1, x1 - x0, 2);
-    for (let x = x0; x < x1; x += 7) { const lean = ((x * 7) % 3) - 1;
-      g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 6, 4, 8); g.fillStyle = '#8a5a2a'; g.fillRect(x, y - 5, 2, 6); g.fillStyle = '#c9a35a'; g.fillRect(x, y - 5, 1, 5);
-      g.fillStyle = '#e8e2d0'; g.fillRect(x + (lean > 0 ? 1 : 0), y - 7, 1, 2); }
-    for (let x = x0 + 18; x < x1; x += 56) { const f = Math.floor(t * 10 + x) % 3;
-      g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 14, 3, 15); g.fillStyle = '#5a3a1a'; g.fillRect(x, y - 13, 1, 13); g.fillStyle = '#3a2410'; g.fillRect(x - 1, y - 14, 3, 2);
-      g.fillStyle = '#ff6a3d'; g.fillRect(x - 1, y - 18 + (f === 1 ? 1 : 0), 3, 4 - (f === 1 ? 1 : 0)); g.fillStyle = '#ffd23a'; g.fillRect(x, y - 17 + f % 2, 1, 2); if (f === 2) { g.fillStyle = '#ffffff'; g.fillRect(x, y - 16, 1, 1); }
-      g.globalAlpha = 0.12 + 0.04 * f; g.fillStyle = '#ffb02e'; g.fillRect(x - 5, y - 20, 11, 9); g.globalAlpha = 1; } }
+// battle: a faint ring of hexes under the selected champion, so you can see what it will hold
+function drawGuardRing(g, t, B, V) {
+  const u = V.selected && B.heroes.find(h => h.alive && !h.temp && !h.rafter && h.inst && h.inst.uid === V.selected); if (!u || u.hx == null) return;
+  const home = hexAt(u.hx, u.hy); if (!home) return;
+  for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < hexRows(c); r++) if (hexDist(home, { c, r }) <= HEX.guard) { const p = hexCentre(c, r); g.fillStyle = 'rgba(255,216,74,0.12)'; fillHex(g, p.x, p.y, 1); }
 }
-// prep only, at hi-res: each lane's name and how much of the horde the scouts expect in it
-function drawLaneLabels(ctx, k, run) {
-  const L = run.lanes; ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE;
-  for (let l = 0; l < LANES; l++) { const S = laneSpan(l), y = ((S.y0 + S.y1) / 2) * k, x = (W - 34) * k;
-    ctx.font = `700 ${5.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8;
-    const name = LANE_NAMES[l].toUpperCase() + ' LANE'; ctx.strokeText(name, x, y - 4 * k); ctx.fillText(name, x, y - 4 * k);
-    if (L && L.w) { ctx.font = `${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = l === L.heavy ? '#ff9a9a' : '#c9cff5'; const sub = `${Math.round(L.w[l] * 100)}% of the horde${L.elite === l ? ' · elites' : ''}`; ctx.strokeText(sub, x, y + 3 * k); ctx.fillText(sub, x, y + 3 * k); } }
+
+// ----- the horde's camp and attack plan, shown before the siege -----
+// what each gate will send: the real wave the scouts rolled, counted by foe
+function planGroups(run) {
+  const plan = planOf(run); if (!plan) return null;
+  const wave = planWave(run), groups = plan.routes.map(() => ({ n: 0, ids: {}, elite: 0, fly: 0 }));
+  for (const q of wave) if (q.id && !q.boss && q.route != null) { const G0 = groups[q.route]; G0.n++; G0.ids[q.id] = (G0.ids[q.id] || 0) + 1; if (ENEMIES[q.id].elite) G0.elite++; if (ENEMIES[q.id].kind === 'flyer') G0.fly++; }
+  const wb = warbandFighters(run); if (wb.length) groups[plan.elite].wb = wb;
+  const boss = wave.find(q => q.boss);
+  return { plan, groups, boss: boss && boss.id };
+}
+function drawCampGate(g, x, y, F, t) {
+  // two sharpened posts, a crossbar and the horde's banner
+  g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 21, 4, 22); g.fillRect(x + 15, y - 21, 4, 22); g.fillRect(x - 1, y - 18, 20, 3);
+  g.fillStyle = '#8a5a2a'; g.fillRect(x, y - 20, 2, 20); g.fillRect(x + 16, y - 20, 2, 20); g.fillStyle = '#b07a3a'; g.fillRect(x, y - 17, 18, 1);
+  g.fillStyle = '#e8e2d0'; g.fillRect(x, y - 22, 2, 1); g.fillRect(x + 16, y - 22, 2, 1);
+  const wv = Math.round(Math.sin(t * 3 + y) * 1); g.fillStyle = OUTLINE; g.fillRect(x + 5, y - 16, 8, 9 + wv); g.fillStyle = F.tint; g.fillRect(x + 6, y - 16, 6, 8 + wv); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x + 6, y - 16, 6, 1);
+}
+// the horde's camp wall along the right edge, with a gap for every gate the scouts saw
+function drawCampWall(g, t, plan) {
+  const gaps = plan ? plan.routes.map(r => r.y0) : [];
+  // two staggered rows of sharpened logs, the back row taller; each log is drawn from its foot up
+  for (const [x, h0, dy] of [[W - 8, 16, 0], [W - 13, 11, 2]]) for (let y = GRID.y + dy; y < H + 8; y += 5) { if (gaps.some(gy => y > gy - 14 && y < gy + 8)) continue; const h = h0 + ((y * 7) % 4);
+    g.fillStyle = OUTLINE; g.fillRect(x - 1, y - h - 1, 6, h + 2); g.fillStyle = '#7a4a2a'; g.fillRect(x, y - h, 4, h); g.fillStyle = '#a8703a'; g.fillRect(x, y - h, 1, h); g.fillStyle = '#5a3418'; g.fillRect(x + 3, y - h, 1, h);
+    g.fillStyle = OUTLINE; g.fillRect(x + 1, y - h - 2, 2, 1); g.fillStyle = '#e8e2d0'; g.fillRect(x + 1, y - h - 1, 2, 1); }
+}
+function drawAttackPlan(g, t, run) {
+  const P = planGroups(run); if (!P) return;
+  const F = FACTIONS[factionIndex(run.siege)], x1 = CASTLE_X + 14;
+  drawCampWall(g, t, P.plan); for (const rt of P.plan.routes) drawCampGate(g, W - 22, rt.y0 + 4, F, t);
+  P.plan.routes.forEach((rt, i) => {
+    const K = ROUTE_KINDS[rt.kind], grp = P.groups[i], thick = rt.w > 0.45 ? 3 : rt.w > 0.25 ? 2 : 1;
+    // the path: a dotted trail of chevrons marching from the gate to the wall
+    for (let x = W - 46; x > x1; x -= 3) { const y = Math.round(routeY(rt, x)), ph = ((W - x) / 3 + Math.floor(t * 8)) % 6;
+      g.fillStyle = OUTLINE; g.globalAlpha = 0.35; g.fillRect(x, y + 1, 2, thick); g.globalAlpha = ph < 2 ? 0.95 : 0.45; g.fillStyle = K.col; g.fillRect(x, y, 2, thick); }
+    g.globalAlpha = 1;
+    // arrowhead where the column hits the wall
+    const ay = Math.round(routeY(rt, x1)); g.fillStyle = OUTLINE; for (let d = -4; d <= 4; d++) g.fillRect(x1 - 1 + Math.abs(d), ay + d, 3, 1); g.fillStyle = K.col; for (let d = -3; d <= 3; d++) g.fillRect(x1 + Math.abs(d), ay + d, 2, 1);
+    // the column itself, standing in front of its gate: the commonest foes first, an elite or turncoat at the head
+    const ids = Object.entries(grp.ids).sort((a, b) => (ENEMIES[b[0]].elite ? 99 : b[1]) - (ENEMIES[a[0]].elite ? 99 : a[1])).map(e => e[0]);
+    const show = []; for (const id of ids) for (let k = 0; k < Math.min(grp.ids[id], ENEMIES[id].elite ? 1 : 3) && show.length < 5; k++) show.push({ key: 'e:' + id, d: ENEMIES[id] });
+    if (grp.wb) for (const w of grp.wb.slice(0, 2)) show.unshift({ key: 'h:' + w.id, hero: true });
+    show.slice(0, 6).forEach((m, j) => { const u = { key: m.key, x: W - 36 - (j % 3) * 9 - Math.floor(j / 3) * 4, y: rt.y0 + (j < 3 ? -3 : 5) + (j % 2), side: 'enemy', facing: -1, phase: i + j * 0.37, scale: m.d ? m.d.scale || 1 : 1.05, flying: m.d && m.d.kind === 'flyer', z: m.d && m.d.kind === 'flyer' ? 8 : 0, nativeFace: m.hero ? 1 : undefined, alive: true };
+      drawUnit(g, u, t); });
+    if (i === P.plan.elite && (grp.elite || grp.wb)) { const cx = W - 40, cy = rt.y0 - 26; g.fillStyle = OUTLINE; g.fillRect(cx - 1, cy - 1, 9, 6); g.fillStyle = '#ffd84a'; g.fillRect(cx, cy + 1, 7, 3); g.fillRect(cx, cy - 1, 1, 2); g.fillRect(cx + 3, cy - 1, 1, 2); g.fillRect(cx + 6, cy - 1, 1, 2); }
+  });
+  if (P.boss) drawUnit(g, { key: 'e:' + P.boss, x: W - 70, y: GRID.y + GRID.rows * GRID.cell / 2 + 6, side: 'enemy', facing: -1, phase: 0, scale: ENEMIES[P.boss].scale || 1, alive: true }, t);
+}
+// hi-res labels for the plan: how many foes each gate sends and what that column goes for
+function drawPlanLabels(ctx, k, run) {
+  const P = planGroups(run); if (!P) return;
+  ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.lineWidth = 1.5 * k; ctx.strokeStyle = OUTLINE; ctx.lineJoin = 'round';
+  P.plan.routes.forEach((rt, i) => { const K = ROUTE_KINDS[rt.kind], grp = P.groups[i], x = (W - 46) * k, y = (rt.y0 - 21) * k;
+    ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff';
+    const head = `${grp.n + (grp.wb ? grp.wb.length : 0)} foes${grp.fly ? ` · ${grp.fly} flying` : ''}`; ctx.strokeText(head, x, y); ctx.fillText(head, x, y);
+    ctx.font = `600 ${4.5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = K.col; const sub = K.name.toUpperCase(); ctx.strokeText(sub, x, y + 5.5 * k); ctx.fillText(sub, x, y + 5.5 * k); });
+  if (P.boss) { const x = (W - 70) * k, y = (GRID.y + GRID.rows * GRID.cell / 2 - 30) * k; ctx.textAlign = 'center'; ctx.font = `700 ${5 * k}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ff9a9a'; ctx.strokeText(ENEMIES[P.boss].name, x, y); ctx.fillText(ENEMIES[P.boss].name, x, y); }
   ctx.restore();
 }
-function drawSpawnArrows(g, t, live, lanes) {
-  const y0 = GRID.y + 4, y1 = GRID.y + GRID.rows * GRID.cell;
-  for (let i = 0; i < 3; i++) {
-    const cy = Math.round(y0 + (y1 - y0) * (i + 0.5) / 3), n = lanes ? (i === lanes.heavy && lanes.w[i] > 0.4 ? 3 : lanes.w[i] > 0.3 ? 2 : 1) : 3;
-    // the lane the scouts expect the elites in gets a gold crown marker
-    if (lanes && lanes.elite === i && !live) { const x = W - 40, y = cy - 3; g.fillStyle = OUTLINE; g.fillRect(x - 1, y - 1, 9, 6); g.fillStyle = '#ffd84a'; g.fillRect(x, y + 1, 7, 3); g.fillRect(x, y - 1, 1, 2); g.fillRect(x + 3, y - 1, 1, 2); g.fillRect(x + 6, y - 1, 1, 2); }
+// during the siege: pulsing chevrons at each gate while the horde is still coming
+function drawSpawnArrows(g, t, live, plan) {
+  const ys = plan ? plan.routes.map(r => r.y0 - 6) : [0, 1, 2].map(i => Math.round(GRID.y + 4 + (GRID.rows * GRID.cell - 4) * (i + 0.5) / 3));
+  ys.forEach((cy, i) => { const n = plan ? (plan.routes[i].w > 0.45 ? 3 : plan.routes[i].w > 0.25 ? 2 : 1) : 3, col = plan ? ROUTE_KINDS[plan.routes[i].kind].col : '#ff4a6a';
     for (let j = 0; j < n; j++) {
       const ph = (t * 1.6 + j / 3) % 1, x = Math.round(W - 6 - ph * 22), a = Math.sin(ph * Math.PI);
       g.globalAlpha = a * (live ? 0.9 : 0.75);
       g.fillStyle = OUTLINE; for (let d = -5; d <= 5; d++) g.fillRect(x + Math.abs(d) - 1, cy + d, 4, 1);
-      g.fillStyle = '#ff4a6a'; for (let d = -4; d <= 4; d++) g.fillRect(x + Math.abs(d), cy + d, 2, 1);
-    }
-  }
+      g.fillStyle = col; for (let d = -4; d <= 4; d++) g.fillRect(x + Math.abs(d), cy + d, 2, 1);
+    } });
   g.globalAlpha = 1;
 }
 function drawBar(g, u, sc) {
@@ -372,18 +425,14 @@ function renderFrame(V, dt) {
   }
   // grid in prep
   if (!B) {
-    for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < GRID.rows; r++) {
-      const x = GRID.x + c * GRID.cell, y = GRID.y + r * GRID.cell, hov = V.hover && V.hover.type === 'grid' && V.hover.c === c && V.hover.r === r;
-      g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.45)' : 'rgba(255,93,143,0.45)') : c < GRID.courtCols ? 'rgba(120,90,40,0.10)' : 'rgba(30,80,30,0.10)';
-      g.fillRect(x + 1, y + 1, GRID.cell - 2, GRID.cell - 2);
-      g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(x + 1, y + 1, 2, 1); g.fillRect(x + 1, y + 1, 1, 2); g.fillRect(x + GRID.cell - 3, y + GRID.cell - 2, 2, 1); g.fillRect(x + GRID.cell - 2, y + GRID.cell - 3, 1, 2);
-    }
+    drawHexGrid(g, t, run, V);
     for (let i = 0; i < rafterSlots(run); i++) { const slot = rafterPosition(run, i), x = slot.x, hov = V.hover && V.hover.type === 'rafter' && V.hover.i === i;
       g.fillStyle = hov ? (V.hoverOk ? 'rgba(124,240,154,0.6)' : 'rgba(255,93,143,0.6)') : 'rgba(255,216,74,0.25)'; g.fillRect(x - 8, slot.y - 18, 16, 19); }
   }
   drawHazard(g, B ? B.hz : run.mods.hz, { x: CASTLE_X + 4, y: 98, w: W - CASTLE_X - 4, h: H - 98 }, t, B, false);
-  if (!B && run.lanes && run.finale !== 'ready') drawLaneLines(g, t, V);
-  if (run.finale !== 'ready') drawLaneFences(g, t);
+  if (B) drawGuardRing(g, t, B, V);
+  if (B && B.plan) { const F = FACTIONS[factionIndex(run.siege)]; drawCampWall(g, t, B.plan); for (const rt of B.plan.routes) drawCampGate(g, W - 22, rt.y0 + 4, F, t); }
+  if (!B && run.finale !== 'ready') drawAttackPlan(g, t, run);
   drawSpellDecals(g); drawStyleGround(g, B, t); if (typeof drawUltGround === 'function') drawUltGround(g, typeof B !== 'undefined' ? B : null);
   // units
   let units;
@@ -400,7 +449,7 @@ function renderFrame(V, dt) {
   for (const gh of FXS.ghosts) { const S = SPR[gh.key]; if (!S) continue; g.globalAlpha = 0.4 * (1 - gh.t / gh.life); const b = frameBox(S.white.atk, Math.round(gh.x), Math.round(gh.y), 20); g.drawImage(S.white.atk, b.x, b.y, b.w, b.h); g.globalAlpha = 1; }
   if (B) for (const u of units) if (u.alive !== false && !u.boss && !(u.critter && u.hp >= u.maxHp)) drawBar(g, u, u.scale || 1);
   if (B && !B.done && V.selected && recallsLeft(B) > 0) { const u = B.heroes.find(h => h.alive && !h.temp && h.inst && h.inst.uid === V.selected); if (u) drawRecallChip(g, u, t); }
-  if (!B || B.queue.length || B.t < 8) drawSpawnArrows(g, t, !!B, run.finale === 'ready' ? null : run.lanes);
+  if (!B || B.queue.length || B.t < 8) { if (B) drawSpawnArrows(g, t, true, B.plan); }
   // zones
   if (B) for (const z of B.zones) {
     if (z.type === 'telegraph') { const k = z.t / z.dur; g.strokeStyle = z.friendly ? `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(t * 20))})` : `rgba(255,61,110,${0.4 + 0.5 * Math.abs(Math.sin(t * 20))})`; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(z.x), Math.round(z.y), z.r, z.r * 0.55, 0, 0, Math.PI * 2); g.stroke();
@@ -446,7 +495,7 @@ function renderFrame(V, dt) {
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
   ctx.globalAlpha = 1;
   drawSpellFX(ctx, k, ox, oy, B);
-  if (!B && typeof G !== 'undefined' && G.run && G.run.lanes && G.run.finale !== 'ready' && G.phase === 'prep') drawLaneLabels(ctx, k, G.run);
+  if (!B && typeof G !== 'undefined' && G.run && G.run.finale !== 'ready' && G.phase === 'prep') drawPlanLabels(ctx, k, G.run);
   if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;

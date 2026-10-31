@@ -8,7 +8,7 @@ const STYLE_INFO = {
   light:     { style: 'Lantern bearer', role: 'Beacon', how: 'Never chases. Stands beside the most hurt ally, and every hit also heals that ally. Hits blind foes.',
     tiers: ['Each hit heals the ally for 30% of its damage.', 'Every 4th hit is a flash that blinds every foe nearby.', 'The first ally to fall each siege gets back up at 30% HP.'] },
   lightning: { style: 'Hop', role: 'Skirmisher', how: 'Every attack hops it to a different foe, zapping whatever it passes.',
-    tiers: ['Hops reach further.', 'Hops cross lanes. Every 3rd hop drops a bolt where it lands.', 'Lightning champions are linked by a live wire that zaps foes crossing it.'] },
+    tiers: ['Hops reach further.', 'Hops leave the two-hex circle. Every 3rd hop drops a bolt where it lands.', 'Lightning champions are linked by a live wire that zaps foes crossing it.'] },
   fire:      { style: 'Firewalk', role: 'Charger', how: 'Charges into the thickest crowd and leaves a burning trail.',
     tiers: ['The trail burns for 3s.', 'Burning foes burst when they die and set their neighbours alight.', 'The trail becomes a wall of fire that lasts twice as long.'] },
   water:     { style: 'Pushback', role: 'Tide', how: 'Holds its lane. Hits shove foes back, and a foe shoved into another foe hurts both.',
@@ -201,7 +201,7 @@ function styleTarget(B, u) {
 function styleAttacked(B, u, t) {
   if (u.sty !== 'lightning' || u.rafter || u.healing) return;
   const lv = styLv(u, 'lightning'), R = SL([50, 62, 76, 90], lv), melee = u.st.range <= 40;
-  const nx = styleFoes(B, e => e !== t && dist(e, u) < R && (melee ? !e.flying && dist(e, u.h0) < 120 + 20 * lv : true) && (lv >= 2 || heroLaneOk(B, u, e))).sort((a, b) => dist(a, u) - dist(b, u))[0];
+  const nx = styleFoes(B, e => e !== t && dist(e, u) < R && (melee ? !e.flying && dist(e, u.h0) < 120 + 20 * lv : true) && (lv >= 2 || heroZoneOk(B, u, e))).sort((a, b) => dist(a, u) - dist(b, u))[0];
   if (!nx) return;
   { const mid = { x: (u.x + nx.x) / 2, y: (u.y + nx.y) / 2 }, z = nearest(B.enemies, mid, 26, e => e !== nx && e !== t); if (z) { dealDamage(B, u, z, u.st.atk * 0.6, { noProc: true, kind: 'magic', from: 'element' }); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: z.x, y: z.y - 8 }], '#9ff6ff'); } }
   if (melee) { FX.afterimage(u); FX.bolt([{ x: u.x, y: u.y - 10 }, { x: nx.x, y: nx.y - 8 }], '#9ff6ff'); u.x = nx.x + (nx.x > u.x ? -9 : 9); u.y = nx.y; }
@@ -250,7 +250,7 @@ function styleHit(B, src, tgt, dmg, o) {
           if (lv >= 1) for (const f of inRadius(B.enemies, tgt, 9)) if (f !== tgt) { dealDamage(B, src, f, dmg * 0.35, { noProc: true, quiet: true, from: 'element' }); dealDamage(B, src, tgt, dmg * 0.2, { noProc: true, quiet: true, from: 'element' }); FX.text(f.x, f.y - 18, 'bonk', '#4ab8ff'); break; }
           if (lv >= 3) tgt.soakT = 3;
         }
-        if (lv >= 2 && !o.sig && src.sty === 'water' && src.hits % 5 === 4) { B.waves.push({ type: 'tide', x: src.x, y: src.y, vx: 150, life: 1.1, t: 0, src, dmg: src.st.atk * 0.8, hit: new Set(), kb: 18, h: laneH() / 2 }); FX.sound('whoosh'); }
+        if (lv >= 2 && !o.sig && src.sty === 'water' && src.hits % 5 === 4) { B.waves.push({ type: 'tide', x: src.x, y: src.y, vx: 150, life: 1.1, t: 0, src, dmg: src.st.atk * 0.8, hit: new Set(), kb: 18, h: 26 }); FX.sound('whoosh'); }
         break;
       case 'ice': tgt.slowT = Math.max(tgt.slowT, 1.5); tgt.slowAmt = Math.max(tgt.slowAmt, 0.2); break;
       case 'void': tgt.shred = Math.min(20 + 10 * lv, tgt.shred + 3); break;

@@ -1,10 +1,10 @@
-// ===== The herald (Cam 2026-10-23): before the first shop and whenever a new horde arrives, a card names the four
-// elements in season and shows each one's fighting style in a little looping battle.
+// ===== The herald (Cam 2026-10-23): before the first shop, a card names the four elements in season for the whole run
+// (Cam 2026-10-31: the season no longer turns with each horde) and shows each one's fighting style in a little looping battle.
 const HERALD_ORD = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
 function heraldHTML(run) {
   const season = runSeason(run), fe = stackElements(run), fi = factionIndex(run.siege), F = FACTIONS[fi], fresh = run.seasonNew || [];
   let h = `<span class="eyebrow">Sieges ${fi * 5 + 1} to ${fi * 5 + 5} · ${esc(F.name)}</span><h2 class="sp">The ${HERALD_ORD[fi] || 'Next'} Horde approaches</h2>
-    <p class="lede">${run.siege === 1 ? 'Four elements are in season. Most legends in the shop carry one of them. Every element is a way of fighting.' : 'The season turns. Two elements stay, two new ones arrive in the shop.'} Two champions of an element make its style stronger, four upgrade it, six wake its castle.</p><div class="hrld">`;
+    <p class="lede">Four elements are in season for the whole run. Most legends in the shop carry one of them. Every element is a way of fighting. Two champions of an element make its style stronger, four upgrade it, six wake its castle.</p><div class="hrld">`;
   season.forEach((e, i) => { const E = ELEMENTS[e], I = STYLE_INFO[e], n = fe[e] || 0, t = elTier(n);
     h += `<div class="hlcard" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.08}s"><div class="hhd"><b>${E.name}</b><span>${esc(I.role)}${fresh.includes(e) ? ' <i class="newb">new</i>' : ''}</span></div>
       <canvas class="hdemo" data-el="${e}" width="160" height="72"></canvas><p><b>${esc(I.style)}.</b> ${esc(I.how)}</p>
@@ -13,7 +13,7 @@ function heraldHTML(run) {
   return h + `</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="heraldGo">${run.siege === 1 ? 'Open the shop' : 'To the keep'}</button></div>`;
 }
 
-// ----- the looping demos: castle on the left, three lanes, the horde from the right -----
+// ----- the looping demos: castle on the left, one open field, the horde from the right -----
 const HD = { W: 160, H: 72, LY: [16, 36, 56], CX: 12 };
 function heraldDemos(root) {
   const views = [...root.querySelectorAll('canvas.hdemo')].map(c => [c.getContext('2d'), c.dataset.el, c]);
@@ -28,7 +28,7 @@ const hrnd = s => { const x = Math.sin(s * 99.13) * 43758.5; return x - Math.flo
 function hpx(g, x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
 function hhero(g, x, y, c, s) { s = s || 6; hpx(g, x, y, s, OUTLINE); hpx(g, x, y, s - 2, c); hpx(g, x + 1, y - 1, 1, OUTLINE); }
 function hfoe(g, x, y, c, s) { s = s || 5; hpx(g, x, y, s, '#2a0a10'); hpx(g, x, y, s - 2, c || '#e0404a'); }
-function hdField(g) { const { W, H, LY, CX } = HD; g.fillStyle = '#0d0b14'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a2440'; for (const y of LY) g.fillRect(CX, y - 8, W, 16);
+function hdField(g) { const { W, H, LY, CX } = HD; g.fillStyle = '#0d0b14'; g.fillRect(0, 0, W, H); g.fillStyle = '#1a2440'; g.fillRect(CX, LY[0] - 8, W, LY[LY.length - 1] - LY[0] + 16);
   g.fillStyle = '#4a4560'; g.fillRect(0, 4, CX, H - 8); g.fillStyle = '#6a6488'; for (let y = 4; y < H - 4; y += 6) g.fillRect(CX - 3, y, 3, 3); }
 function hline(g, a, b, c) { g.strokeStyle = c; g.lineWidth = 1; g.beginPath(); g.moveTo(a[0] + .5, a[1] + .5); g.lineTo(b[0] + .5, b[1] + .5); g.stroke(); }
 function hring(g, x, y, r, c, a) { g.globalAlpha = a == null ? 1 : Math.max(0, a); g.strokeStyle = c; g.beginPath(); g.arc(x, y, Math.max(0.5, r), 0, 7); g.stroke(); g.globalAlpha = 1; }

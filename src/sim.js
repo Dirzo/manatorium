@@ -8,7 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function factionIndex(s) { return Math.min(FACTIONS.length - 1, Math.floor((s - 1) / 5)); }
 function cycleOf(s) { return 0; } // the campaign ends at FINAL_SIEGE; no ascended loops
 // Tuning knobs (tools/sim.mjs and the in-game Sim Lab read these)
-const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 1.8, foeHp: 3.0, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
+const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 2.0, foeHp: 3.4, hpBase: 1.25, atkBase: 1.18, budget0: 3.5, budgetS: 3, budgetW: 0.8, goldK: 0.21, xpK: 14, xpSurvive: 30, xpSurviveS: 8, lvlGrow: 1.13, bossHp: 1.3, miniBoss: 5, bigBoss: 22, bossDecay: 1, eliteCap: 0.3, late: 1.5, early: 0.9, miniAtk: 2.1, bigAtk: 3.8, bossGold: 0.35, hammer: 0.85, ballista: 0.25, sigMana: 1.5, auto: 0.8, critMul: 1.6,
   otStart: 30, otRamp: 0.08, otCharge: 15, otSlam: 4,
   patMini: 60, patBig: 90, patFinal: 120, patAgain: 45, patTrample: 0.2, patSmashMini: 0.3, patSmashBig: 0.5,
   swarm: 0.05, thin: 0.8, maxSpawn: 240, rafterRange: 360, extraShot: 0.45 };
@@ -37,32 +37,59 @@ function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
 const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
-// ----- lanes (Cam 2026-10-23): the horde comes down three lanes, and champions on the ground hold their own -----
-// The scouts report the plan before each siege (run.lanes): how the horde splits, and which lane its elites take.
-const LANES = 3, LANE_NAMES = ['Top', 'Middle', 'Bottom'];
-// lanes follow the placement grid's rows (Cam 2026-10-23: a champion dropped in a lane must belong to it): 2, 3 and 2 rows
-const LANE_ROWS = [2, 3, 2], LANE_EDGE = [0, 2, 5, 7];
-function laneH() { return GRID.rows * GRID.cell / LANES; }
-function laneSpan(l) { return { y0: GRID.y + LANE_EDGE[l] * GRID.cell, y1: GRID.y + LANE_EDGE[l + 1] * GRID.cell }; }
-// unit feet stand 6px below the centre of their cell (cellPos), so the same offset decides the lane
-function laneOf(y) { const r = Math.floor((y - 6 - GRID.y) / GRID.cell); return r < LANE_EDGE[1] ? 0 : r < LANE_EDGE[2] ? 1 : 2; }
-function laneBand(l) { const S = laneSpan(l); return { y0: S.y0 + 6 + 5, y1: S.y1 + 6 - 5 }; }
-function rollLanes(s, tac) {
-  const heavy = randi(0, LANES - 1), w = [0, 0, 0], big = tac === 'blitz' ? 0.7 : s < 3 ? 0.34 : rand(0.42, 0.58);
-  for (let l = 0; l < LANES; l++) w[l] = l === heavy ? big : (1 - big) / (LANES - 1);
-  return { w, heavy, elite: randi(0, LANES - 1) };
+// ----- hex field and the horde's attack plan (Cam 2026-10-24: no more lanes) -----
+// Champions stand on a hex grid and guard a circle two hexes wide around their starting hex: they never chase past it and
+// walk straight back to their hex once it is clear. Hexes are flat-topped; odd columns sit half a hex lower and hold one fewer.
+const HEX = { guard: 2 };
+function hexRows(c) { return c % 2 ? GRID.rows - 1 : GRID.rows; }
+function hexOk(c, r) { return c >= 0 && c < GRID.cols && r >= 0 && r < hexRows(c); }
+function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + (c % 2 ? GRID.cell / 2 : 0) + 6 }; }
+// the hex whose centre is nearest a point (feet sit 6px below a hex centre), or null off the grid
+function hexAt(x, y) {
+  let best = null, bd = GRID.cell * 0.62;
+  for (let c = 0; c < GRID.cols; c++) for (let r = 0; r < hexRows(c); r++) { const p = cellPos(c, r), d = Math.hypot((x - p.x) * 0.86, y - (p.y - 6)); if (d < bd) { bd = d; best = { c, r }; } }
+  return best;
 }
-function pickLane(w) { let x = Math.random(); for (let l = 0; l < w.length; l++) { x -= w[l]; if (x < 0) return l; } return w.length - 1; }
-// may this champion take on that foe? Rafters, bosses, overtime and self-defense ignore lanes; ranged champions also cover the
-// next lane; and once a champion's own lane has been quiet for 2s they rotate to help next door.
-function heroLaneOk(B, u, e) {
-  if (u.rafter || u.lane == null || B.overtime || e.boss || e.target === u || !B.lanes) return true;
-  const d = Math.abs(laneOf(e.y) - u.lane);
-  return d === 0 || (d === 1 && (u.st.range > 40 || (B.laneIdle[u.lane] || 0) > 2));
+// hex steps between two cells (odd-q offset coordinates)
+function hexDist(a, b) { const cube = h => { const x = h.c, z = h.r - (x - (x & 1)) / 2; return { x, z, y: -x - z }; }; const A = cube(a), Bc = cube(b); return Math.max(Math.abs(A.x - Bc.x), Math.abs(A.y - Bc.y), Math.abs(A.z - Bc.z)); }
+function guardRadius() { return HEX.guard * GRID.cell + 6; }
+// may this champion take on that foe? Only if it can reach the foe without leaving its two-hex circle.
+// Rafters, overtime and the finale in the great hall are free.
+function heroZoneOk(B, u, e) {
+  if (u.rafter || !B.leash || B.overtime || u.hx == null) return true;
+  const reach = u.st.range > 40 ? u.st.range : u.st.range + 10 + (e.scale > 1 ? 8 * e.scale : 0);
+  return Math.hypot(e.x - u.hx, e.y - u.hy) <= guardRadius() + reach;
 }
-function stepLanes(B, dt) { if (!B.lanes) return; const busy = [0, 0, 0]; for (const e of B.enemies) if (e.alive && e.x < W - 4 && !e.boss) busy[laneOf(e.y)]++; for (let l = 0; l < LANES; l++) B.laneIdle[l] = busy[l] ? 0 : (B.laneIdle[l] || 0) + dt; }
+function leashHero(B, u) {
+  if (u.rafter || !B.leash || B.overtime || u.hx == null) return;
+  const dx = u.x - u.hx, dy = u.y - u.hy, d = Math.hypot(dx, dy), R = guardRadius(); if (d > R) { u.x = u.hx + dx / d * R; u.y = u.hy + dy / d * R; }
+}
 
-function cellPos(c, r) { return { x: GRID.x + c * GRID.cell + GRID.cell / 2, y: GRID.y + r * GRID.cell + GRID.cell / 2 + 6 }; }
+// The scouts report the plan before each siege (run.plan): which gates of its camp the horde marches out of, the path each
+// column walks to the wall, how much of the horde takes it, and what that column goes for.
+const ROUTE_KINDS = {
+  march: { name: 'March', col: '#ff4a6a', hunt: 1, blurb: 'walks to the wall and fights whoever stands in the way' },
+  hunt: { name: 'Hunters', col: '#c58cff', hunt: 2, blurb: 'go after your champions' },
+  rush: { name: 'Wall rush', col: '#ffb02e', hunt: 0.3, blurb: 'run past champions straight for the wall' },
+};
+const GATES_Y = [130, 168, 206, 244];
+function fieldTop() { return GRID.y + 4; }
+function fieldBot() { return GRID.y + GRID.rows * GRID.cell + 2; }
+function rollPlan(s, tac) {
+  const n = tac === 'blitz' ? 1 : s < 3 ? 2 : s < 8 ? randi(2, 3) : 3;
+  const gates = [0, 1, 2, 3].sort(() => Math.random() - 0.5).slice(0, n).sort((a, b) => a - b);
+  const kinds = s < 3 ? ['march', 'march'] : ['march', s >= 4 ? 'rush' : 'march', s >= 6 ? 'hunt' : 'march'].sort(() => Math.random() - 0.5);
+  const routes = gates.map((g, i) => { const kind = n === 1 ? 'march' : kinds[i % kinds.length], y0 = GATES_Y[g];
+    // a wall rush cuts across to the far side of the wall; a march drifts a little; hunters head for the middle of the field
+    const y1 = kind === 'rush' ? clamp(y0 < 187 ? y0 + rand(50, 80) : y0 - rand(50, 80), fieldTop() + 8, fieldBot() - 8) : kind === 'hunt' ? rand(170, 205) : clamp(y0 + rand(-18, 18), fieldTop() + 6, fieldBot() - 6);
+    return { gate: g, y0, y1, kind, w: 1 }; });
+  if (n > 1) { const heavy = randi(0, n - 1), big = s < 3 ? 1 / n : rand(0.42, 0.58); routes.forEach((r, i) => r.w = i === heavy ? big : (1 - big) / (n - 1)); }
+  return { routes, elite: randi(0, n - 1), heavy: routes.reduce((m, r, i) => r.w > routes[m].w ? i : m, 0) };
+}
+function routeHunt(u) { return u.route && !u.boss ? ROUTE_KINDS[u.route.kind].hunt : 1; }
+function pickRoute(routes) { let x = Math.random(); for (let i = 0; i < routes.length; i++) { x -= routes[i].w; if (x < 0) return i; } return routes.length - 1; }
+// a route's height at a given x: it leaves its gate level, then bends towards its spot on the wall
+function routeY(r, x) { const k = clamp((x - CASTLE_X - 10) / (W - 40 - CASTLE_X - 10), 0, 1), e = k * k * (3 - 2 * k); return r.y1 + (r.y0 - r.y1) * e; }
 
 // ----- synergies -----
 function placedHeroes(run) { return run.roster.filter(h => h.place && !h.vault && !h.fled); }
@@ -272,7 +299,7 @@ function heroStats(h, run, meta, syn) {
 
 // ----- wave generation -----
 function swarmK(s) { return 1 + BAL.swarm * (s - 1); }
-function genWave(s, mods, tac, finale, lanes) {
+function genWave(s, mods, tac, finale, plan) {
   const fi = factionIndex(s), F = FACTIONS[fi], within = (s - 1) % 5, cyc = cycleOf(s);
   const pool = F.pool.slice(0, Math.min(F.pool.length, 2 + within));
   let budget = (BAL.budget0 + s * BAL.budgetS + within * BAL.budgetW + cyc * 10) * (s < 5 ? BAL.early + (1 - BAL.early) * (s - 1) / 4 : 1);
@@ -307,7 +334,7 @@ function genWave(s, mods, tac, finale, lanes) {
     w.forEach((id, i) => { const cp = capt && ENEMIES[id].elite; if (cp) capt = false; out.push({ t, id, sw: ENEMIES[id].elite ? 1 : sw, rush: last, captain: cp || undefined });
       t += last ? (i % 6 === 5 ? rand(0.5, 0.8) : rand(0.04, 0.12)) : wi === 1 ? rand(0.2, 0.45) : (i % 4 === 3 ? rand(1.2, 1.8) : rand(0.4, 0.8)); }); });
   if (boss) out.push({ t: Math.max(4, t * 0.45), id: boss, boss: true });
-  if (lanes) for (const q of out) if (q.id && !q.boss) q.lane = ENEMIES[q.id].elite ? lanes.elite : pickLane(lanes.w);
+  if (plan) for (const q of out) if (q.id && !q.boss) q.route = ENEMIES[q.id].elite ? plan.elite : pickRoute(plan.routes);
   out.sort((a, b) => a.t - b.t);
   return out;
 }
@@ -319,19 +346,29 @@ function makeUnit(side, o) {
     frenzyStacks: 0, struck: false, retarget: 0, target: null, z: 0, vz: 0, hits: 0, xp: 0, soakT: 0, blindT: 0, curseT: 0, shred: 0, grumble: 0, qs: 0, spellblade: 0, uid: Math.random().toString(36).slice(2) }, o);
 }
 
+// the scouts see the wave before it comes: it is rolled once in prep (so the camp preview shows the real horde) and rolled
+// again only if something that shapes it changes (pressing the attack, an encounter, the siege itself)
+function planOf(run) { if (run.finale === 'ready') return null; return run.plan && run.plan.siege === run.siege ? run.plan : (run.plan = Object.assign(rollPlan(run.siege, run.tactic), { siege: run.siege })); }
+function planWave(run) {
+  const plan = planOf(run), press = pressOn(run), key = JSON.stringify([run.siege, press, run.mods, run.tactic, run.finale]);
+  if (plan && plan.waveKey === key && plan.wave) return plan.wave;
+  const wave = genWave(run.siege, press ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready', plan);
+  if (plan) { plan.wave = wave; plan.waveKey = key; }
+  return wave;
+}
 function startBattle(run, meta) {
   enforceField(run);
   const syn = activeSynergies(run);
-  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: genWave(run.siege, pressOn(run) ? Object.assign({}, run.mods, { press: true }) : run.mods, run.tactic, run.finale === 'ready', run.finale === 'ready' ? null : run.lanes || (run.lanes = rollLanes(run.siege, run.tactic))), projs: [], zones: [], waves: [], marks: [], summons: [],
+  const B = { t: 0, siege: run.siege, heroes: [], enemies: [], queue: planWave(run).map(q => Object.assign({}, q)), projs: [], zones: [], waves: [], marks: [], summons: [],
     ach: { sigs: 0, combos: 0, hammer: 0, chickens: 0 }, castle: run.castle, ballistaCd: 1.5, hammer: { cd: 0, pending: null }, cpow: { cd: 4 }, syn, done: null, goldEarned: 0, kills: 0, bossUnit: null, events: [], run, meta,
     bulwarkT: 0, undyingUsed: false, totalSpawn: 0, castleStart: run.castle.hp, drops: [], combos: [], goldBonus: 0, pinataT: 0, gooseT: 0, cheeseT: 4, bardT: 9, kettleT: 0 };
+  B.plan = run.finale === 'ready' ? null : run.plan; B.leash = run.finale !== 'ready';
   // the horde recruits from your shop: leftover cards may defect and join this siege as elites
   const F0 = FACTIONS[factionIndex(run.siege)];
   // the boss's warband: legends it recruited from the pool, plus any cards you left in the shop that defect to it now
   if (!run.finale && run.siege > 1) for (const c of shopDefectors(run)) warbandAdd(run, c.id, true);
-  for (const w of warbandFighters(run)) B.queue.push({ t: rand(4, 16), id: F0.elite, turncoat: w.id, wstar: warbandStar(w), defected: w.defected === run.siege, lane: run.lanes ? run.lanes.elite : undefined });
+  for (const w of warbandFighters(run)) B.queue.push({ t: rand(4, 16), id: F0.elite, turncoat: w.id, wstar: warbandStar(w), defected: w.defected === run.siege, route: B.plan ? B.plan.elite : undefined });
   B.queue.sort((a, b) => a.t - b.t); B.defectors = B.queue.filter(q => q.turncoat).map(q => q.turncoat);
-  B.lanes = run.finale === 'ready' ? null : run.lanes; B.laneIdle = [0, 0, 0];
   B.totalSpawn = B.queue.length; B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
   B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
@@ -356,7 +393,7 @@ function startBattle(run, meta) {
       maxMana: st.mana * BAL.sigMana, mana: !st.sigOn ? 0 : run.mods.tonic ? st.mana * BAL.sigMana - 1 : Math.min(st.mana * BAL.sigMana - 1, st.mana * BAL.sigMana * st.startMana), name: heroDisplayName(h), els: Object.keys(st.el) });
     if (run.mods.shaken === h.uid) u.stun = Math.max(u.stun || 0, 5); // boss talk: the voice lost their nerve
     if (st.startShield) u.shield = Math.max(u.shield || 0, u.maxHp * st.startShield);
-    u.lane = laneOf(u.hy); B.heroes.push(u);
+    B.heroes.push(u);
   }
   if (run.tech.intern) for (let i = 0; i < 2; i++) summonThrall(B, B.heroes[0] || { x: GRID.x + 30, y: GRID.y + 60, inst: { level: Math.max(1, run.siege) }, st: { ap: 1 } }, 0.6, 'thrall');
   applyBulwark(B);
@@ -390,13 +427,13 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'gale') spdM *= 1.2;
   if (hzK === 'goldrush') hm *= 1.2;
   const fly = d.kind === 'flyer';
-  const band = opts.lane != null ? laneBand(opts.lane) : null;
-  const y = opts.y != null ? opts.y : band ? rand(band.y0, band.y1) : rand(GRID.y + 4, GRID.y + GRID.rows * GRID.cell + 2);
+  const route = opts.route != null && B.plan ? B.plan.routes[opts.route] : null;
+  const y = opts.y != null ? opts.y : route ? clamp(route.y0 + rand(-9, 9), fieldTop(), fieldBot()) : rand(fieldTop(), fieldBot());
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
     flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
-    boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats });
+    boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats, route, rofs: route ? y - route.y0 : 0 });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   // a legend you left in the shop, fighting for the horde (beat them and their copy goes back to the pool)
@@ -910,11 +947,10 @@ function stepBattle(B, dt) {
   if (B.done) return;
   B.t += dt;
   const run = B.run;
-  stepLanes(B, dt);
   if (B.bossUnit && B.bossUnit.shards) stepShards(B);
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
-    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, wstar: q.wstar, defected: q.defected, lane: q.lane }); B.lastSpawn = B.t; }
+    spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, wstar: q.wstar, defected: q.defected, route: q.route }); B.lastSpawn = B.t; }
   // overtime: once the last foe has arrived and the fight drags on, heroes hit harder every second.
   // Normal foes still standing after a while stop fighting and charge the wall instead, so a siege always ends.
   if (!B.overtime && !B.queue.length && !(B.bossUnit && B.bossUnit.alive) && B.t - Math.max(B.lastSpawn || 0, B.bossGoneT || 0) > BAL.otStart) {
@@ -1020,7 +1056,7 @@ function separate(list) {
 
 function chaseTarget(B, u, groundOnly) {
   let best = null, bs = Infinity;
-  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb)) || (u.side === 'hero' && !heroLaneOk(B, u, e))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
+  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb)) || (u.side === 'hero' && !heroZoneOk(B, u, e))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
   return best;
 }
 function moveToward(u, tx, ty, spd, dt) {
@@ -1036,7 +1072,7 @@ function rafterJump(B, u) {
   if (!u || !u.alive || !u.rafter || u.leap) return false;
   const tx = CASTLE_X + 40 + rand(0, 20), ty = GRID.y + GRID.rows * GRID.cell / 2 + rand(-16, 16);
   u.rafter = false; u.st.range = u.st.groundRange || u.st.range; u.target = null;
-  u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; u.lane = laneOf(ty); FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
+  u.leap = { sx: u.x, sy: u.y, tx, ty, t: 0, dur: 0.55, h: 34, onLand: () => { u.hx = tx; u.hy = ty; FX.shockwave(tx, ty, 30, '#ffd84a'); FX.particles(tx, ty, 12, ['#c9b48a', '#ffffff'], { spread: 14 }); FX.shake(3); FX.sound('thud'); } };
   FX.text(u.x, u.y - 24, 'TO THE FRONT!', '#ffd84a', true); FX.sound('whoosh'); return true;
 }
 // Call them back (Cam 2026-10-23): pull a champion into the keep mid-siege. They keep the XP they earned (a fallen legend earns none), out for the rest of the siege
@@ -1097,16 +1133,18 @@ function stepHero(B, u, dt) {
     if (held) {} else if (cls === 'cleric') { const a = B.heroes.filter(h => h.alive && h.hp < h.maxHp * 0.85 && dist(h, u) <= u.st.range * 1.2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]; if (a) { u.target = a; u.healing = true; } else u.healing = false; }
     // awareness: anything hitting the castle gets dealt with first by heroes close enough to reach it
     if (!held && !u.target) { const near = u.rafter ? u.st.range : ranged ? u.st.range + 90 : 240;
-      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && heroLaneOk(B, u, e) && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
+      u.target = nearest(B.enemies, u, near, e => e.siegeT != null && B.t - e.siegeT < 2 && heroZoneOk(B, u, e) && (u.rafter || ranged || (!e.onRafter && !e.climb && !e.flying))); }
     if (!held && !u.target) {
-      if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70), e => heroLaneOk(B, u, e));
-      else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120 && heroLaneOk(B, u, e)).sort((a, b) => b.x - a.x)[0] || null;
-      else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && heroLaneOk(B, u, e) && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb)
-        || nearest(B.enemies, u, 150, e => e.target && e.target.side === 'hero' && e.range > 40 && heroLaneOk(B, u, e));
+      if (ranged) u.target = u.rafter ? nearest(B.enemies, u, u.st.range, e => e.x < W - 6) : nearest(B.enemies, u, u.st.range + (B.overtime ? 999 : 70), e => heroZoneOk(B, u, e));
+      else if (cls === 'rogue' && !u.struck) u.target = B.enemies.filter(e => e.alive && dist(e, { x: u.hx, y: u.hy }) < 120 && heroZoneOk(B, u, e)).sort((a, b) => b.x - a.x)[0] || null;
+      else u.target = nearest(B.enemies, { x: u.hx, y: u.hy }, B.overtime ? 999 : cls === 'guardian' ? 110 : cls === 'rogue' ? 160 : 130, e => !e.onRafter && !e.climb && heroZoneOk(B, u, e) && (B.overtime || !e.flying || dist(e, u) < 40)) || nearest(B.enemies, u, 30, e => !e.onRafter && !e.climb && heroZoneOk(B, u, e))
+        || nearest(B.enemies, u, 150, e => e.target && e.target.side === 'hero' && e.range > 40 && heroZoneOk(B, u, e));
       // nothing in the hero's zone: chase whatever is left, leakers nearest the castle first
       if (!u.target && !u.rafter) u.target = chaseTarget(B, u, !ranged);
     }
   }
+  // a foe that walked out of the champion's two-hex circle is let go; the champion heads back to its hex
+  if (u.target && u.target.side === 'enemy' && u.target.alive && !heroZoneOk(B, u, u.target)) u.target = null;
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
@@ -1137,6 +1175,7 @@ function stepHero(B, u, dt) {
   } else if (!u.rafter && !u.noMove) {
     const dh = dist(u, { x: u.hx, y: u.hy }); if (dh > 2) moveToward(u, u.hx, u.hy, u.st.spd, dt); else u.facing = 1;
   }
+  leashHero(B, u);
 }
 
 function stepEnemy(B, u, dt) {
@@ -1162,8 +1201,9 @@ function stepEnemy(B, u, dt) {
     if (!u.target) {
       if (u.flying) u.target = nearest(heroes, u, u.range + 30, h => h.rafter) || nearest(heroes, u, Math.max(u.range, 20) + 6);
       // the horde hunts heroes first and only hits the wall when none are close (Cam: combat is about keeping heroes alive)
-      else if (u.range > 40) u.target = nearest(heroes, u, u.range + BAL.huntRanged);
-      else u.target = nearest(heroes, u, BAL.huntMelee + 8 * (u.scale - 1), h => !h.rafter && (!B.lanes || u.boss || laneOf(h.y) === laneOf(u.y) || dist(h, u) < 36));
+      // the scouts' plan says what each column goes for: hunters look far for champions, a wall rush barely looks at all
+      else if (u.range > 40) u.target = nearest(heroes, u, u.range + BAL.huntRanged * routeHunt(u));
+      else u.target = nearest(heroes, u, (BAL.huntMelee + 8 * (u.scale - 1)) * routeHunt(u), h => !h.rafter);
     }
   }
   const t = u.target;
@@ -1178,7 +1218,7 @@ function stepEnemy(B, u, dt) {
       else { dealDamage(B, u, t, u.atk); FX.slash(t.x, t.y - 8, -1, '#ff7a9a'); FX.sound('ehit'); } } }
   } else {
     const stopX = CASTLE_X + (u.range > 40 ? u.range * 0.8 : 6) + (u.scale - 1) * 10;
-    if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.y, GRID.y, GRID.y + GRID.rows * GRID.cell), spd, dt); u.facing = -1; }
+    if (u.x > stopX) { moveToward(u, u.x - 30, clamp(u.route && !u.flying ? routeY(u.route, u.x - 30) + u.rofs : u.y, GRID.y, GRID.y + GRID.rows * GRID.cell), spd, dt); u.facing = -1; }
     else { u.facing = -1; u.cd -= dt; if (u.cd <= 0) { u.cd = 1 / u.as; u.atkT = 0.2;
       if (u.range > 40) fireProj(B, u, null, u.def.proj || 'rock', 0, { tx: CASTLE_X - rand(4, 30), ty: rand(70, 180), fixed: true, onLand: p => { damageCastle(B, u.atk, u); FX.particles(p.tx, p.ty, 4, '#c9c4e6', { spread: 10 }); } });
       else if (!u.ram) { damageCastle(B, u.atk, u); FX.particles(CASTLE_X, u.y - 10, 3, '#c9c4e6', { spread: 8 }); FX.sound('thud'); } } }

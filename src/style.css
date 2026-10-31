@@ -206,6 +206,13 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 #fxlayer { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
 #fxlayer img { position: absolute; width: 14px; height: 14px; left: 0; top: 0; }
 #ghost { position: fixed; pointer-events: none; z-index: 45; width: 60px; height: 60px; transform: translate(-50%, -80%); }
+/* Sell box (Cam 2026-10-31): shows while a champion is dragged in prep; drop on it to sell */
+#sellZone { position: fixed; top: 76px; left: 50%; transform: translateX(-50%); z-index: 44; pointer-events: none; display: flex; align-items: center; gap: 10px;
+  padding: 12px 22px; border: 2px dashed var(--gold); border-radius: 12px; background: rgba(15,20,48,.86); color: var(--text); font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+#sellZone[hidden] { display: none; }
+#sellZone b { color: var(--gold); font-size: 1.15em; letter-spacing: .04em; text-transform: uppercase; }
+#sellZone b::before { content: '\1FA99  '; }
+#sellZone.hot { border-style: solid; background: rgba(120,80,10,.92); transform: translateX(-50%) scale(1.08); box-shadow: 0 0 0 4px rgba(255,207,58,.35), 0 8px 22px rgba(0,0,0,.4); }
 
 .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(10,12,32,0.72); }
 .modal .sheet, #towerPanel .sheet { width: min(560px, 100%); max-height: calc(100% - 16px); overflow-y: auto; background: var(--panel); border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 6px 0 var(--ink), 0 0 0 3px var(--line) inset; padding: 18px; display: flex; flex-direction: column; gap: 12px; animation: sheetIn .3s cubic-bezier(.2,.9,.3,1.2); }
