@@ -21,11 +21,11 @@ const pips = (n, at) => { const top = at[at.length - 1]; let s = ''; for (let i 
 function draftFit(run, o) {
   const d = HERO_BY_ID[o.id], { c, r } = teamCounts(run), out = [];
   for (const [kind, key, T, n0] of [['cls', d.cls, CLASSES[d.cls], c[d.cls] || 0], ['race', d.race, RACES[d.race], r[d.race] || 0]]) {
-    const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${T.name}` : T.name;
-    if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${esc(label)}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
-    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
-    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
-    else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
+    const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${esc(T.name)}` : esc(T.name);
+    if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${label}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
+    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${label} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
+    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${label} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
+    else out.push({ score: 0, html: `<div class="fit dim"><b>${label} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
     if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(heroShortName(HERO_BY_ID[mate.id].name))}</b><small>${esc(T.pdesc)}</small></div>` }); }
@@ -52,8 +52,8 @@ function keepStripHTML(run) {
 // classes and races you are one champion away from: cheap targeted searches
 function draftFocusOptions(run) {
   const { c, r } = teamCounts(run), out = [];
-  for (const [k, n] of Object.entries(c)) if (CLASSES[k].at.includes(n + 1)) out.push({ kind: 'cls', key: k, label: `${CLASSES[k].icon} ${CLASSES[k].name}` });
-  for (const [k, n] of Object.entries(r)) if (RACES[k].at.includes(n + 1)) out.push({ kind: 'race', key: k, label: RACES[k].name });
+  for (const [k, n] of Object.entries(c)) if (CLASSES[k].at.includes(n + 1)) out.push({ kind: 'cls', key: k, label: `${CLASSES[k].icon} ${CLASSES[k].name}`, name: CLASSES[k].name });
+  for (const [k, n] of Object.entries(r)) if (RACES[k].at.includes(n + 1)) out.push({ kind: 'race', key: k, label: RACES[k].name, name: RACES[k].name });
   return out.slice(0, 4);
 }
 
@@ -113,7 +113,8 @@ const STAT_SRC = {
   melee: { name: 'Melee foes', col: '#ff8a8a' }, ranged: { name: 'Ranged foes', col: '#ffb07a' }, boss: { name: 'The boss', col: '#ff3d6e' }, poison: { name: 'Poison and burns', col: '#9be05a' }, other: { name: 'Traps and boss moves', col: '#c9a8ff' }, shield: { name: 'Blocked by shields (not counted)', col: '#9ff6ff' },
   stun: { name: 'Stuns and freezes', col: '#bfeeff' }, taunt: { name: 'Taunts', col: '#ffd84a' }, slow: { name: 'Slows (half credit)', col: '#8ab8ff' },
 };
-const COMBO_GLYPH = { nova: '✹', rain: '☄', wave: '≋', heal: '✚', shield: '⛨', haste: '➹', rage: '✊', freeze: '❄', gold: '◉', shred: '✂', vortex: '◎', critter: '❧', execute: '☠', beam: '═', bolts: 'ϟ', roots: '❦', salt: '✧', candy: '✿', ham: '♨', pinata: '★' };
+// pixel icons per combo kind (src/pxicons.js); unknown kinds fall back to the nova burst
+const COMBO_GLYPH = new Proxy({}, { get: (o, k) => typeof k === 'string' ? pxi(PXI['cmb-' + k] ? 'cmb-' + k : 'cmb-nova') : undefined });
 const DSRC_ORDER = ['auto', 'ability', 'item', 'element', 'bonus', 'summon'], HSRC_ORDER = ['ability', 'auto', 'lifesteal', 'item', 'element'], TSRC_ORDER = ['melee', 'ranged', 'boss', 'poison', 'other'];
 function aliveText(t) { let i = 0; return String(t).split(' ').map(w => `<span class="wd">${[...w].map(c => `<span class="ch" style="--i:${i++}">${esc(c)}</span>`).join('')}</span>`).join(' '); }
 function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(' '); }
@@ -146,7 +147,7 @@ function voiceFlag(run, h) {
   if (!run.voice || run.voice.uid !== h.uid) return '';
   const boss = bossFor(run.siege), dread = BOSS_DREAD[boss] || [], scared = dreadedBy(boss, h);
   const tip = `The keep's voice|${heroDisplayName(h)} answers the bosses before every siege. ${ENEMIES[boss].name} dreads ${dread.map(t => TEMPERS[t].name).join(' and ')} legends: a voice with one of those tempers loses their nerve and starts the boss siege stunned.${scared ? ` ${heroDisplayName(h)} is ${TEMPERS[heroTemper(h)].name}.` : ''} You can hand the banner to another legend once per horde.`;
-  return `<span class="vflag ${scared ? 'dread' : ''}" data-tip="txt:${esc(tip)}">⚑</span>`;
+  return `<span class="vflag ${scared ? 'dread' : ''}" data-tip="txt:${esc(tip)}">${pxi('ui-flag')}</span>`;
 }
 const UI = {
   pendingGold: 0, shownGold: 0, page: null, techSel: null, recipeSel: null,
@@ -161,7 +162,7 @@ const UI = {
     $('rosterToggle').onclick = () => UI.setRoster(!$('roster').classList.contains('collapsed'));
     $('rosterPull').onclick = () => UI.setRoster(!$('roster').classList.contains('collapsed'));
     $('intelTab').onclick = () => UI.setIntel($('intel').classList.contains('closed'));
-    $('fsBtn').onclick = () => UI.fullscreen();
+    $('fsBtn').onclick = () => UI.fullscreen(); UI.fsLabel(); $('repairBtn').querySelector('b').innerHTML = pxi('ui-repair') + ' Repair';
     let iv = null; try { iv = localStorage.getItem('sol.intel'); } catch (e) {}
     UI.setIntel(iv ? iv === 'open' : innerWidth >= 1400, true);
     addEventListener('resize', () => UI.layout()); document.addEventListener('fullscreenchange', () => { UI.layout(); UI.fsLabel(); });
@@ -274,7 +275,7 @@ const UI = {
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
     const pr = $('pressBtn'); pr.hidden = G.phase !== 'prep' || !canPress(run);
-    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · gold · loot every 4th</small>' : '⚑ Hold <small>tap to press</small>'; }
+    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? pxi('ui-flag') + ' Press <small>harder · gold · loot every 4th</small>' : pxi('ui-flag') + ' Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
     else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : (run.breaches || 0) >= BREACH.max ? 'The keep fell' : 'Walls breached'; }
@@ -341,7 +342,7 @@ const UI = {
     if (!req) { UI.toast('Fullscreen is not available here. Try your browser\'s fullscreen key (F11).', true); return; }
     try { const p = req.call(el); if (p && p.catch) p.catch(() => UI.toast('The browser blocked fullscreen. Try F11, or open the game in its own tab.', true)); } catch (e) { UI.toast('The browser blocked fullscreen. Try F11.', true); }
   },
-  fsLabel() { $('fsBtn').textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen'; },
+  fsLabel() { const on = !!document.fullscreenElement; $('fsBtn').innerHTML = pxi(on ? 'ui-exitfull' : 'ui-full') + `<span>${on ? 'Exit fullscreen' : 'Fullscreen'}</span>`; $('fsBtn').dataset.tip = `txt:${on ? 'Exit fullscreen' : 'Fullscreen'}|F toggles it.`; },
 
   // ----- battle stats: four small bars per champion, hover for where it came from -----
   renderStats() {
@@ -455,11 +456,11 @@ const UI = {
       h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${el ? ELEMENTS[el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} aria-label="${esc(d.name)}, ${R.name}, ${cost} gold">
         <span class="shead"><span class="srar">${R.name}</span><span class="sprice">${COST(cost)}</span></span>${tag}
         <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(heroShortName(d.name))}</b>
-        <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || '●', ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
+        <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || pxi('ui-dot'), ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
         <small class="spool">${left} left</small></button>`;
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
-      <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
+      <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? pxi('ui-lock') + ' Locked' : pxi('ui-unlock') + ' Lock shop'}</button>
       <button class="btn small" data-act="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot (up to ${GUILD_LV.max}) and deals rarer legends in the shop.">${gc == null ? `Guild level ${GUILD_LV.max} (max)` : `Guild level ${guildLevel(run) + 1} ${COST(gc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
     h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back (a starred legend loses 1): drag them onto the Sell box at the top of the field, or use Sell on the champion's card. Their items go back to the Armory. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
@@ -533,9 +534,9 @@ const UI = {
       const open = key in UI.hallOpen ? UI.hallOpen[key] : (ready.length > 0 || fresh > 0);
       const tags = `${fresh ? `<i class="newb">${fresh} NEW</i>` : ''}${ready.length ? `<span class="rdy ${afford ? 'ok' : ''}">${ready.length} ready</span>` : ''}`;
       return `<details class="hbranch" data-br="${key}" ${open ? 'open' : ''}><summary><span class="bi">${icon}</span><b>${title}</b>${tags}<span class="prog"><i style="width:${100 * built.length / Math.max(1, ids.length)}%"></i></span><small>${built.length}/${ids.length}</small><span class="car">▾</span></summary>
-        ${built.length ? `<div class="tbuilt">${built.map(k => `<span class="chip ok" data-tip="txt:${esc(TECH[k].name)}|${esc(TECH[k].desc)}">✓ ${esc(TECH[k].name)}</span>`).join('')}</div>` : ''}
+        ${built.length ? `<div class="tbuilt">${built.map(k => `<span class="chip ok" data-tip="txt:${esc(TECH[k].name)}|${esc(TECH[k].desc)}">${pxi('ui-check')} ${esc(TECH[k].name)}</span>`).join('')}</div>` : ''}
         <div class="tlist">${rest.map(row).join('') || '<p class="note">Every tech in this branch is built.</p>'}</div></details>`; };
-    const icons = ['🧱', '⚙️', '⚗️', '💰'];
+    const icons = [pxi('tech-stone'), pxi('tech-gear'), pxi('tech-flask'), pxi('tech-bag')];
     const totalReady = Object.keys(TECH).filter(k => techState(run, k) === 'open'), canBuy = totalReady.filter(k => run.gold >= TECH[k].cost).length;
     const open = run.castleOpen || [];
     const castleRow = open.length > 1 ? `<div class="card castlesw"><span class="eyebrow">Castle element</span><p class="note">Six champions of one element woke these castles. The keep can take on any of them between sieges.</p><div class="row">${open.map(e => `<button class="btn small ${run.castleEl === e ? 'primary' : ''}" data-act="castleel" data-arg="${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} · ${esc(CASTLE_POWERS[e].name)}</button>`).join('')}</div></div>` : '';
@@ -544,7 +545,7 @@ const UI = {
       const ids = Object.keys(TECH).filter(k => TECH[k].b === b && !TECH[k].secret).sort((x, y) => TECH[x].t - TECH[y].t);
       h += branch('b' + b, TECH_BRANCHES[b], icons[b], ids);
     }
-    h += branch('sec', 'Secrets', '🗝️', Object.keys(TECH).filter(k => TECH[k].secret));
+    h += branch('sec', 'Secrets', pxi('tech-key'), Object.keys(TECH).filter(k => TECH[k].secret));
     const rc = repairCost(run);
     h += `<div class="card row between"><div><h4>Hire masons</h4><p class="note" style="margin:0">Repair 20% of the castle.</p></div><button class="btn small" data-act="repair" ${run.gold < rc || run.castle.hp >= run.castle.max ? 'disabled' : ''}>${COST(rc)}</button></div>`;
     return h;
@@ -642,13 +643,13 @@ const UI = {
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroShortName(heroDisplayName(h)))} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroShortName(heroDisplayName(x)))} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
-      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
+      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ${pxi('ui-recall')} <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
-        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
+        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ${pxi('ui-jump')}</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench" ${run.finale ? 'disabled' : ''}>To the bench</button>` : fieldFull(run, h) ? '' : `<button class="btn small" data-iact="place">Place on the field</button>`}
         ${ascendBtn(run, h, 'iact')}
-        ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
+        ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ${pxi('ui-flag')}</button>` : ''}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Sell this champion: the gold their copies cost comes back, and their items go back to the Armory. You can also drag a champion onto the Sell box.">${UI.sellArm === h.uid ? 'Click again to sell' : `Sell for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
@@ -668,7 +669,7 @@ const UI = {
         ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(heroShortName(d.name))}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${shopOdds(run).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each guild level opens rarer legends.</span>
-      <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
+      <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.name)}|New cards, and at least one of them is a ${esc(f.name)}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
   },
@@ -767,7 +768,7 @@ const UI = {
       <p class="lede">A bot plays every siege before the one you pick, so your champions, items, tech and gold look like a real run there. It never loses on the way. Playtest runs earn no diamonds or achievements.</p>
       <div class="pt">
         <div class="ptrow"><b>Start at siege <span id="ptSiegeV"></span></b><input type="range" id="ptSiege" min="1" max="${FINAL_SIEGE}" value="${P.siege}"><span id="ptSiegeInfo" class="muted"></span>
-          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ☠' : ''}</button>`).join('')}</div></div>
+          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ' + pxi('ui-skull') : ''}</button>`).join('')}</div></div>
         <div class="ptrow"><b>Castle</b><div class="ptcastles">${els.map(([e, n, url]) => `<button class="ptc ${(P.el || '') === e ? 'on' : ''}" data-ptel="${e}" ${e ? `style="--ec:${ELEMENTS[e].col}"` : ''}>${url ? `<img class="px" src="${url}" alt="">` : '<span class="ptq">?</span>'}<small>${esc(n)}</small></button>`).join('')}</div>
           <small class="muted">"Run picks" leaves it to the run: six champions of one element wake that castle. Picking one gives you that castle from the start.</small></div>
         <div class="ptsel"><label>Field hazard<select id="ptHz"><option value="">None</option>${Object.entries(HAZARDS).map(([k, z]) => `<option value="${k}" ${P.hz === k ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}</select></label>

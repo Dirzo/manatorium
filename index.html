@@ -221,7 +221,7 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
   padding: 12px 22px; border: 2px dashed var(--gold); border-radius: 12px; background: rgba(15,20,48,.86); color: var(--text); font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
 #sellZone[hidden] { display: none; }
 #sellZone b { color: var(--gold); font-size: 1.15em; letter-spacing: .04em; text-transform: uppercase; }
-#sellZone b::before { content: '\1FA99  '; }
+#sellZone b::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: .4em; vertical-align: -.1em; background: var(--pxi-coin) center / contain no-repeat; image-rendering: pixelated; }
 #sellZone.hot { border-style: solid; background: rgba(120,80,10,.92); transform: translateX(-50%) scale(1.08); box-shadow: 0 0 0 4px rgba(255,207,58,.35), 0 8px 22px rgba(0,0,0,.4); }
 
 .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(10,12,32,0.72); }
@@ -1228,11 +1228,11 @@ h2.hoard { color: var(--gold); }
 @keyframes tkShiver { from { transform: translateX(-2%); } to { transform: translateX(2%); } }
 .tk-a.mishap.flee canvas { animation: tkFlee 1.4s cubic-bezier(.5,0,.9,.4) .35s forwards !important; }
 @keyframes tkFlee { 0% { transform: translateX(0) scaleX(1); } 12% { transform: translateX(4%) scaleX(-1) translateY(-6%); } 100% { transform: translateX(-420%) scaleX(-1); } }
-.tk-a.mishap.flee::after { content: '💨'; position: absolute; left: 30%; bottom: 0; font-size: 2.2em; animation: tkDust .9s ease-out .45s both; }
+.tk-a.mishap.flee::after { content: ''; width: 1.6em; height: 1.6em; background: var(--pxi-dust) center / contain no-repeat; image-rendering: pixelated; position: absolute; left: 30%; bottom: 0; font-size: 2.2em; animation: tkDust .9s ease-out .45s both; }
 @keyframes tkDust { from { opacity: 0; transform: scale(.4); } 40% { opacity: 1; } to { opacity: 0; transform: translateX(-60%) scale(1.5); } }
 .tk-a.mishap.faint canvas { animation: tkFaint .7s cubic-bezier(.5,0,.6,1.4) .3s forwards !important; transform-origin: 50% 91%; }
 @keyframes tkFaint { to { transform: rotate(-90deg) translateX(-8%); } }
-.tk-a.mishap.faint::after { content: '💫'; position: absolute; left: -30%; bottom: 20%; font-size: 1.8em; animation: tkFlicker .4s steps(2) 1s infinite alternate both; }
+.tk-a.mishap.faint::after { content: ''; width: 1.4em; height: 1.4em; background: var(--pxi-daze) center / contain no-repeat; image-rendering: pixelated; position: absolute; left: -30%; bottom: 20%; font-size: 1.8em; animation: tkFlicker .4s steps(2) 1s infinite alternate both; }
 /* speech bubble */
 .tk-bub { position: absolute; max-width: min(380px, 40vw); background: #fffdf4; color: #1a1230; border: 3px solid var(--ink); border-radius: 16px; padding: 10px 14px 12px; box-shadow: 0 5px 0 rgba(15,20,48,.55);
   animation: tkPop .22s cubic-bezier(.2,1.4,.4,1); pointer-events: none; }
@@ -1610,6 +1610,263 @@ html.m .rdiv b { font-size: 11px; } html.m .rdiv small { font-size: 10px; }
 html.m .hcard.bslot { min-height: 60px; }
 html.m .rdiv { flex: 0 0 auto; align-self: stretch; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 4px; border-left: 2px solid var(--ink); writing-mode: vertical-rl; transform: rotate(180deg); }
 html.m .rdiv.field { border-left: 0; }
+/* ===== Board-first desktop layout (src/board.js). Everything is scoped to html.board so phone layouts stay as they are. ===== */
+img.pxi { width: 18px; height: 18px; vertical-align: -3px; image-rendering: pixelated; display: inline-block; flex: 0 0 auto; }
+.chip img.pxi, .btn img.pxi { width: 16px; height: 16px; }
+.btn img.pxi { margin-right: 2px; }
+.syb .glyph img.pxi { width: 24px; height: 24px; vertical-align: middle; }
+.syb.combo .glyph img.pxi { width: 22px; height: 22px; }
+.vflag img.pxi, .hcard .port .vflag img.pxi { width: 14px; height: 14px; vertical-align: 0; object-fit: contain; }
+.hcard .hmeta .cg img.pxi { width: 15px; height: 15px; vertical-align: middle; }
+.sic i img.pxi { width: 16px; height: 16px; vertical-align: middle; }
+.bicon img.pxi { width: 44px; height: 44px; }
+.hbranch > summary .bi img.pxi { width: 22px; height: 22px; }
+.repairBtn b img.pxi { width: 15px; height: 15px; }
+.pressbtn img.pxi { width: 15px; height: 15px; }
+
+html.board {
+  --bp: rgba(14, 11, 30, 0.86);      /* plate */
+  --bp2: rgba(28, 22, 52, 0.94);     /* raised plate */
+  --bpk: #08060f;                    /* plate outline */
+  --btrim: #c9a45a;                  /* gold trim */
+  --btrim2: rgba(201, 164, 90, 0.35);
+  --bcream: #f6ecd2;
+  --bmute: #b9ab8e;
+}
+html.board .hud, html.board .pull, html.board #synStrip, html.board .intab, html.board .rail .hint, html.board .stage::before { display: none !important; }
+html.board #app { background: radial-gradient(ellipse at 60% 40%, #1d1838 0, #0b0916 75%); }
+html.board .arena-wrap, html.board .arena-wrap.spot { left: var(--ax, 0); top: var(--ay, 0); width: var(--aw); height: var(--ah); }
+/* a soft vignette ties the board into the frame */
+html.board .arena-wrap::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 2px var(--bpk), inset 0 -40px 40px -30px rgba(8, 6, 15, .55); }
+
+/* plates */
+html.board .bplate, html.board .btl > *, html.board #scoutRow, html.board .ibtn, html.board .tr, html.board #boardBar, html.board .unitcard {
+  border: 2px solid var(--bpk); box-shadow: inset 0 0 0 1px var(--btrim2), 0 3px 0 rgba(8, 6, 15, .55); }
+
+/* ----- top centre: the siege tracker ----- */
+html.board #bTop { position: fixed; z-index: 12; top: 6px; left: calc(var(--ax) + var(--aw) / 2); transform: translateX(-50%); display: grid; grid-template-columns: auto auto; grid-template-areas: "name pips" "bar bar"; gap: 4px 12px; align-items: center;
+  padding: 6px 12px 8px; background: var(--bp); border-radius: 0 0 10px 10px; border-top: 0; min-width: 300px; max-width: 46vw; color: var(--bcream); }
+html.board #bTop .siegeinfo { grid-area: name; min-width: 0; max-width: none; overflow: visible; }
+html.board #bTop .siegeinfo b { font-family: var(--f-logo); font-size: 19px; letter-spacing: .03em; color: #ffe6a0; text-shadow: 0 2px 0 var(--bpk); line-height: 1.05; }
+html.board #bTop .siegeinfo small { color: var(--bmute); font-size: 11.5px; }
+html.board #bTop .siegeinfo small.boss { color: #ff8aa8; }
+html.board #bTop .pips5 { grid-area: pips; display: flex; gap: 5px; justify-self: end; }
+html.board .pip { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--bpk); background: #2a2440; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+html.board .pip img.pxi { width: 14px; height: 14px; vertical-align: 0; }
+html.board .pip.done { background: #3c5a3a; }
+html.board .pip.now { background: #ffcf3a; box-shadow: 0 0 0 2px #ffe6a0, 0 0 10px rgba(255, 207, 58, .7); }
+html.board .pip.boss { background: #5a1d34; } html.board .pip.boss.now { background: #ff5d8f; box-shadow: 0 0 0 2px #ffc0d0, 0 0 10px rgba(255, 93, 143, .8); }
+html.board .pip.boss img.pxi { width: 16px; height: 16px; }
+html.board #bTop .castlebar { grid-area: bar; max-width: none; min-width: 0; width: 100%; }
+html.board #bTop .castlebar small { color: var(--bmute); font-size: 11px; }
+html.board #bTop .castlebar .bar { height: 10px; border-color: var(--bpk); background: #2a1a2e; }
+
+/* ----- top left: score ----- */
+html.board #bTL { position: fixed; z-index: 12; top: 8px; left: calc(var(--ax) + 10px); display: flex; gap: 8px; }
+html.board #bTL .scorebox { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 10px 5px; border-radius: 8px; background: var(--bp); line-height: 1; color: #ffe6a0; font-family: var(--f-display); font-size: 18px; }
+html.board #bTL .scorebox small { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--bmute); margin-bottom: 2px; }
+
+/* ----- top right: scouts and small buttons ----- */
+html.board #bTR { position: fixed; z-index: 12; top: 6px; right: max(8px, calc(100vw - var(--ax) - var(--aw) + 8px)); display: flex; gap: 8px; align-items: flex-start; }
+html.board .bbtns { display: flex; gap: 6px; align-items: center; }
+html.board .ibtn { width: 36px; height: 36px; padding: 0; border-radius: 8px; background: var(--bp); display: grid; place-items: center; color: var(--bcream); cursor: pointer; position: relative; }
+html.board .ibtn img.pxi { width: 24px; height: 24px; vertical-align: 0; }
+html.board .ibtn:hover { background: var(--bp2); transform: translateY(-1px); }
+html.board .ibtn[aria-pressed="true"] { background: #4a3a1a; box-shadow: inset 0 0 0 2px var(--btrim), 0 3px 0 rgba(8, 6, 15, .55); }
+html.board #bBtns .btn.ghost.small { width: 36px; height: 36px; padding: 0; font-size: 0; border-radius: 8px; background: var(--bp); border: 2px solid var(--bpk); box-shadow: inset 0 0 0 1px var(--btrim2), 0 3px 0 rgba(8, 6, 15, .55); display: grid; place-items: center; }
+html.board #bBtns .btn.ghost.small img.pxi { width: 24px; height: 24px; margin: 0; }
+html.board #bBtns .btn.ghost.small:hover { background: var(--bp2); }
+html.board #bBtns #menuBtn::after { content: none; }
+html.board #recBadge { max-width: 180px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center; }
+html.board .scoutrow { display: flex; align-items: center; gap: 4px; padding: 3px 8px 3px 10px; border-radius: 8px; background: var(--bp); cursor: pointer; min-height: 36px; }
+html.board .scoutrow:hover { background: var(--bp2); }
+html.board .srlab { font-family: var(--f-display); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--bmute); margin-right: 4px; white-space: nowrap; }
+html.board .sface { position: relative; width: 30px; height: 30px; border-radius: 6px; background: #2a2142; border: 1px solid var(--bpk); display: grid; place-items: center; }
+html.board .sface img.px { width: 30px; height: 30px; object-fit: cover; object-position: 50% 20%; border-radius: 5px; }
+html.board .sface img.pxi { width: 22px; height: 22px; vertical-align: 0; }
+html.board .sface.boss { box-shadow: 0 0 0 2px #ff5d8f, 0 0 8px rgba(255, 93, 143, .6); animation: bpulse 1.4s ease-in-out infinite; }
+html.board .sface.elite { box-shadow: 0 0 0 2px #ffcf3a; }
+html.board .sface.tac { background: #3a1a2a; }
+html.board .sface b { position: absolute; right: -4px; bottom: -4px; min-width: 16px; height: 15px; padding: 0 3px; border-radius: 7px; background: var(--bpk); color: #ffe6a0; font: 600 10px/15px var(--f-display); text-align: center; }
+@keyframes bpulse { 50% { box-shadow: 0 0 0 2px #ff5d8f, 0 0 14px rgba(255, 93, 143, .9); } }
+
+/* scout report: opens under the scout row */
+html.board #intel { position: fixed; z-index: 13; top: 52px; right: max(8px, calc(100vw - var(--ax) - var(--aw) + 8px)); bottom: auto; left: auto; width: 320px; max-height: calc(100vh - var(--barH) - 64px); overflow-y: auto; border-radius: 10px;
+  background: var(--bp2); border: 2px solid var(--bpk); box-shadow: inset 0 0 0 1px var(--btrim2), 0 6px 18px rgba(0, 0, 0, .45); transform: none; transition: none; display: none; padding: 10px 12px; color: var(--bcream); font-size: 12.5px; }
+html.board #intel.bopen { display: block; }
+html.board #intel h3 { font-size: 16px; color: #ffe6a0; }
+html.board #intel .eyebrow { color: var(--bmute); }
+html.board #intel .mods p, html.board #intel .foe span { color: #d9cfb8; }
+html.board #intel .mods b { color: #ffe6a0; }
+
+/* ----- left: trait tracker ----- */
+html.board .traitrail { position: fixed; z-index: 11; left: calc(var(--ax) + 8px); top: 58px; bottom: calc(var(--barH) + 10px); width: 52px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; overflow-x: visible; scrollbar-width: none; pointer-events: auto; }
+html.board .traitrail::-webkit-scrollbar { display: none; }
+html.board.trail-wide .traitrail { left: 0; top: 0; bottom: var(--barH); width: var(--trailW); padding: 14px 10px; gap: 5px; background: linear-gradient(90deg, rgba(10, 8, 20, .95), rgba(18, 14, 36, .9)); border-right: 2px solid var(--bpk); box-shadow: inset -1px 0 0 var(--btrim2); }
+html.board .tr { display: grid; grid-template-columns: 30px auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 3px 8px 3px 3px; border-radius: 8px; background: var(--bp); color: var(--bcream); text-align: left; font: inherit; cursor: help; flex: 0 0 auto; }
+html.board .tr .hex { grid-row: 1 / 3; width: 30px; height: 30px; display: grid; place-items: center; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: #3a3450; }
+html.board .tr .hex img.pxi { width: 22px; height: 22px; vertical-align: 0; filter: grayscale(.7) brightness(.8); }
+html.board .tr.on .hex img.pxi { filter: none; }
+html.board .tr.t-bronze .hex { background: linear-gradient(#e0965a, #9a5a2a); }
+html.board .tr.t-silver .hex { background: linear-gradient(#eef2ff, #8a94b8); }
+html.board .tr.t-gold .hex { background: linear-gradient(#fff1a8, #d8a020); box-shadow: 0 0 8px rgba(255, 207, 58, .6); }
+html.board .tr .cnt { grid-row: 1 / 3; font-family: var(--f-display); font-size: 17px; font-weight: 700; color: #ffe6a0; min-width: 12px; text-align: center; }
+html.board .tr:not(.on) .cnt { color: var(--bmute); }
+html.board .tr .nm { font-family: var(--f-display); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html.board .tr:not(.on) .nm { color: var(--bmute); font-weight: 500; }
+html.board .tr .tiers { grid-column: 3; display: flex; gap: 6px; font: 600 10px/1 var(--f-display); color: #6a6080; }
+html.board .tr .tiers i { font-style: normal; }
+html.board .tr .tiers i.f { color: #ffe6a0; }
+html.board .tr .nx { grid-column: 3; grid-row: 2; justify-self: end; font-size: 10px; color: var(--bmute); display: none; }
+html.board .tr.combo { cursor: pointer; grid-template-columns: 30px 1fr; }
+html.board .tr.combo .nm { grid-row: 1 / 3; font-size: 12px; white-space: normal; line-height: 1.1; }
+html.board .tr.combo.on { box-shadow: inset 0 0 0 1px var(--btrim), 0 3px 0 rgba(8, 6, 15, .55); }
+html.board .tr.combo.new { animation: bpulse 1.4s ease-in-out infinite; }
+html.board .tr.combo:disabled { cursor: help; }
+html.board .tr:hover { background: var(--bp2); }
+html.board .trsep { font-family: var(--f-display); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--bmute); margin: 6px 0 0 4px; white-space: nowrap; }
+html.board .trnone { font-size: 12px; color: var(--bmute); margin: 0; }
+/* narrow screens: the rail floats over the board as hex badges only, names live in the hover tip */
+html.board:not(.trail-wide) .tr { grid-template-columns: 30px; padding: 3px; position: relative; }
+html.board:not(.trail-wide) .tr .nm, html.board:not(.trail-wide) .tr .tiers, html.board:not(.trail-wide) .trsep, html.board:not(.trail-wide) .trnone { display: none; }
+html.board:not(.trail-wide) .tr .cnt { position: absolute; right: -2px; bottom: -3px; font-size: 11px; min-width: 15px; height: 15px; line-height: 15px; border-radius: 7px; background: var(--bpk); }
+
+/* ----- bottom bar ----- */
+html.board #boardBar { position: fixed; z-index: 12; left: 0; right: 0; bottom: 0; height: var(--barH); display: flex; gap: 10px; align-items: stretch; padding: 8px 12px; border-width: 2px 0 0; border-radius: 0;
+  background: linear-gradient(#1c1634, #100c20); color: var(--bcream); box-shadow: inset 0 1px 0 var(--btrim), 0 -4px 14px rgba(0, 0, 0, .45); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+html.board #boardBar > div { flex: 0 0 auto; display: flex; min-width: 0; }
+html.board #boardBar .cost { display: inline-flex; align-items: center; gap: 2px; font-family: var(--f-display); }
+html.board #boardBar .cost img.px { width: 14px; height: 14px; }
+/* facilities */
+html.board .bb-fac .rail { display: flex; flex-direction: column; gap: 4px; justify-content: center; flex: 0 0 auto; }
+html.board .bb-fac .rail button { flex: 1 1 0; display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 0 9px 0 4px; min-height: 0; border-radius: 7px; border: 2px solid var(--bpk); background: #251e40; color: var(--bcream); font: 500 12px var(--f-display); box-shadow: inset 0 0 0 1px var(--btrim2); position: relative; }
+html.board .bb-fac .rail button img { width: 22px; height: 22px; }
+html.board .bb-fac .rail button:hover:not([disabled]) { background: #332a58; }
+html.board .bb-fac .rail button[aria-pressed="true"] { background: #6a4a14; color: #fff3c8; box-shadow: inset 0 0 0 1px var(--btrim); }
+html.board .bb-fac .rail button[disabled] { opacity: .5; }
+html.board .bb-fac .rail button[data-badge]:not([data-badge=""])::after { content: attr(data-badge); position: absolute; top: -6px; right: -6px; background: #ff5d8f; color: #fff; font: 700 9px/14px var(--f-display); padding: 0 4px; border-radius: 7px; border: 1px solid var(--bpk); }
+/* gold, level, buttons */
+html.board .bb-econ { flex-direction: column; justify-content: space-between; width: 178px; gap: 4px; }
+html.board .bb-gold { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+html.board .bb-gold .coinbox { display: flex; align-items: center; gap: 6px; font: 700 24px/1 var(--f-display); color: #ffe066; text-shadow: 0 2px 0 var(--bpk); }
+html.board .bb-gold .coinbox img { width: 24px; height: 24px; }
+html.board .bb-gold .coinbox.bump { animation: bump .25s; }
+html.board .bb-lvl { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--bmute); line-height: 1.1; }
+html.board .bb-lvl b { font: 700 14px var(--f-display); color: #9fe0ff; }
+html.board .bb-lvl .intr { color: #ffe066; }
+html.board .bb-ebtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+html.board .bbtn { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 4px; align-items: center; padding: 3px 6px; border-radius: 7px; border: 2px solid var(--bpk); background: #2c3a7a; color: #eef; font: 600 11px/1.1 var(--f-display); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 var(--bpk); text-align: left; }
+html.board .bbtn img.pxi { grid-row: 1 / 3; width: 20px; height: 20px; vertical-align: 0; }
+html.board .bbtn.rr { background: #2a5a3a; }
+html.board .bbtn:hover:not(:disabled) { filter: brightness(1.15); }
+html.board .bbtn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 0 var(--bpk); }
+html.board .bbtn:disabled { opacity: .45; cursor: not-allowed; }
+/* shop cards */
+html.board .bb-shop { flex: 1 1 auto !important; gap: 6px; align-items: stretch; justify-content: center; min-width: 380px; transition: opacity .2s; }
+html.board .bb-shop.closed .bs-card { filter: saturate(.55) brightness(.7); }
+html.board .bs-card { position: relative; flex: 1 1 0; min-width: 72px; max-width: 132px; padding: 0; border-radius: 8px; border: 2px solid var(--bpk); overflow: hidden; cursor: pointer; color: #fff; font: inherit;
+  background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--rc) 35%, #2a2448) 0, #1a1530 75%); box-shadow: inset 0 0 0 2px var(--rc), 0 3px 0 var(--bpk); display: block; transition: transform .1s; }
+html.board .bs-card:hover:not(:disabled) { transform: translateY(-3px); box-shadow: inset 0 0 0 2px var(--rc), 0 6px 0 var(--bpk), 0 0 14px color-mix(in srgb, var(--rc) 60%, transparent); }
+html.board .bs-card:disabled { cursor: not-allowed; }
+html.board .bs-card:disabled .port { opacity: .55; }
+html.board .bs-card .port { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); height: calc(100% - 22px); width: auto; aspect-ratio: 1; object-fit: contain; }
+html.board .bs-ic { position: absolute; left: 3px; top: 3px; display: flex; flex-direction: column; gap: 1px; }
+html.board .bs-ic img.pxi { width: 16px; height: 16px; vertical-align: 0; display: block; }
+html.board .bs-ic .elup { display: block; border-radius: 4px; box-shadow: 0 0 0 1px #ffe066, 0 0 6px #ffe066; }
+html.board .bs-own { position: absolute; right: 3px; top: 3px; font: 700 9.5px/1 var(--f-display); background: rgba(8, 6, 15, .8); color: #ffe066; padding: 2px 4px; border-radius: 4px; }
+html.board .bs-own.dim { color: var(--bmute); }
+html.board .bs-card.starup { animation: bstar 1s ease-in-out infinite; }
+@keyframes bstar { 50% { box-shadow: inset 0 0 0 2px #ffe066, 0 3px 0 var(--bpk), 0 0 16px rgba(255, 224, 102, .8); } }
+html.board .bs-foot { position: absolute; left: 0; right: 0; bottom: 0; height: 20px; display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 0 5px; background: color-mix(in srgb, var(--rc) 55%, #120e22); border-top: 1px solid var(--bpk); }
+html.board .bs-foot b { font: 600 11px/1 var(--f-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 var(--bpk); }
+html.board .bs-cost { font: 700 12px/1 var(--f-display); color: #ffe066; text-shadow: 0 1px 0 var(--bpk); }
+html.board .bs-card.sold { display: grid; place-items: center; cursor: default; background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); border-style: dashed; color: #6a6080; font: 500 11px var(--f-display); }
+html.board .bs-lock { align-self: center; flex: 0 0 auto; width: 32px; height: 32px; }
+html.board .bs-lock img.pxi { width: 22px; height: 22px; }
+html.board .bs-lock.on { background: #5a4214; box-shadow: inset 0 0 0 2px var(--btrim); }
+/* bench */
+html.board .bb-bench { flex-direction: column; gap: 3px; justify-content: center; }
+html.board .bb-lab { font-family: var(--f-display); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--bmute); cursor: help; }
+html.board .bb-lab b { color: var(--bcream); font-weight: 600; }
+html.board .btiles { display: flex; gap: 5px; }
+html.board .bt { position: relative; width: 54px; height: 62px; border-radius: 7px; border: 2px solid var(--bpk); background: #241d3e; box-shadow: inset 0 0 0 1px var(--rc, rgba(255,255,255,.1)); cursor: grab; touch-action: none; }
+html.board .bt img.px { position: absolute; inset: 2px 0 auto; margin: auto; width: 50px; height: 50px; object-fit: contain; }
+html.board .bt .stars { position: absolute; left: 3px; bottom: 1px; font-size: 11px; }
+html.board .bt small { position: absolute; right: 3px; bottom: 2px; font: 600 10px/1 var(--f-display); color: var(--bmute); }
+html.board .bt.sel { box-shadow: inset 0 0 0 2px #ffe066, 0 0 10px rgba(255, 224, 102, .5); }
+html.board .bt:hover:not(.empty) { background: #30285a; }
+html.board .bt.empty { background: rgba(255,255,255,.03); border-style: dashed; border-color: rgba(255,255,255,.12); box-shadow: none; cursor: default; }
+/* siege buttons */
+html.board .bb-act { display: flex !important; flex-wrap: wrap; width: 300px; gap: 6px; align-content: center; align-items: center; justify-content: flex-end; margin-left: auto; }
+html.board .bb-act .speed { order: -1; margin-right: auto; box-shadow: 0 2px 0 var(--bpk); border-color: var(--bpk); }
+html.board .bb-act .speed button { padding: 3px 9px; font-size: 12px; background: #251e40; color: var(--bcream); }
+html.board .bb-act .speed button[aria-pressed="true"] { background: #ffcf3a; color: #2a1a00; }
+html.board .bb-act #beginBtn { order: 9; flex: 1 0 100%; font: 700 16px var(--f-display); padding: 8px 16px; border-radius: 8px; min-width: 190px; background: linear-gradient(#8ff0a4, #3fb85a); color: #082510; box-shadow: inset 0 2px 0 rgba(255,255,255,.4), 0 4px 0 var(--bpk); }
+html.board .bb-act #beginBtn:disabled { opacity: 1; background: #251e40; color: var(--bcream); font-size: 13px; box-shadow: inset 0 0 0 1px var(--btrim2); }
+html.board .bb-act #beginBtn kbd { font-size: 10px; }
+html.board .bb-act .btn { font-size: 12px; padding: 4px 9px; border-color: var(--bpk); white-space: nowrap; }
+html.board .bb-act .hammerbtn img.px { width: 14px; height: 14px; }
+html.board .bb-act .repairBtn { flex-direction: row; gap: 6px; padding: 4px 9px; border-color: var(--bpk); }
+html.board .bb-act .pressbtn { flex-direction: row; gap: 4px; }
+html.board .bb-act .pressbtn small { display: none; }
+html.board .bb-act .hammerbtn, html.board .bb-act .powerbtn { font-weight: 600; }
+html.board .bb-act > [hidden] { display: none !important; }
+
+/* ----- the champion card: TFT's unit popup ----- */
+html.board .unitcard { position: fixed; z-index: 14; right: max(8px, calc(100vw - var(--ax) - var(--aw) + 8px)); bottom: calc(var(--barH) + 8px); width: 370px; max-height: calc(100vh - var(--barH) - 70px); overflow-y: auto;
+  border-radius: 12px; background: var(--bp2); color: var(--bcream); display: none; animation: ucin .18s cubic-bezier(.2, .9, .3, 1.1); scrollbar-width: thin; }
+html.board .unitcard.on { display: block; }
+@keyframes ucin { from { transform: translateY(14px); opacity: 0; } }
+html.board .ucx { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; z-index: 2; }
+html.board .ucx img.pxi { width: 18px; height: 18px; }
+html.board .unitcard .inspector { display: flex; flex-direction: column; gap: 8px; background: none; border: 0; padding: 12px; box-shadow: none; }
+html.board .unitcard .inspector .icol { display: flex; flex-direction: column; gap: 8px; }
+html.board .unitcard .inspector .top { padding-right: 26px; }
+html.board .unitcard .inspector .top img { background: radial-gradient(circle at 50% 40%, #4a3a7a, #1a1530); border-color: var(--bpk); }
+html.board .unitcard .inspector h3 { color: #ffe6a0; font-size: 17px; }
+html.board .unitcard .inspector .stats { grid-template-columns: repeat(3, 1fr); }
+html.board .unitcard .inspector .stats > div { background: rgba(255,255,255,.04); border-color: var(--bpk); }
+html.board .unitcard .inspector .stats small { color: var(--bmute); }
+html.board .unitcard .inspector .ability { background: rgba(255,255,255,.04); border-color: var(--bpk); }
+html.board .unitcard .inspector .note { color: var(--bmute); }
+html.board .unitcard .inspector .slots { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ----- team drawer: the full champion view, one click away ----- */
+html.board #roster { display: none; }
+html.board.board-team #roster { display: flex; position: fixed; z-index: 15; left: calc(var(--ax) + 40px); right: max(40px, calc(100vw - var(--ax) - var(--aw) + 40px)); top: 54px; bottom: calc(var(--barH) + 8px); border-radius: 12px; border: 2px solid var(--bpk);
+  background: var(--bp2); box-shadow: inset 0 0 0 1px var(--btrim2), 0 10px 30px rgba(0,0,0,.5); flex-direction: column; backdrop-filter: none; }
+html.board.board-team #roster > header { border: 0; border-bottom: 1px solid var(--btrim2); padding: 8px 14px; }
+html.board.board-team #roster > header .syn, html.board.board-team #statsChart { display: none !important; }
+html.board.board-team #roster .rbody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 14px; max-height: none; flex: 1 1 auto; overflow: hidden; padding: 12px 14px; animation: none; }
+html.board.board-team #roster .rbody > * { max-height: none; overflow-y: auto; min-height: 0; }
+html.board.board-team #roster .team { display: block; background: rgba(0,0,0,.18); border-color: var(--bpk); }
+
+/* ----- odds and ends ----- */
+html.board.board-page .traitrail, html.board.board-page #bTL { display: none; }
+html.board .drawer { top: 8px; bottom: calc(var(--barH) + 8px); z-index: 16; }
+html.board #prepHint { bottom: 8px; font-size: 11.5px; background: rgba(14, 11, 30, .78); border-color: var(--bpk); color: var(--bmute); }
+html.board #toast { bottom: calc(var(--barH) + 14px); }
+html.board #sellZone { top: auto; bottom: 10px; left: 50%; min-width: 420px; height: calc(var(--barH) - 20px); justify-content: center; }
+html.board .arena-tag { top: 64px !important; }
+html.board .arena-tag.l { left: 14%; }
+@media (min-width: 1800px) {
+  html.board .bs-card { max-width: 150px; }
+  html.board .bt { width: 64px; height: 76px; } html.board .bt img.px { width: 60px; height: 60px; }
+  html.board .bb-econ { width: 210px; } html.board .bb-gold .coinbox { font-size: 30px; } html.board .bb-gold .coinbox img { width: 30px; height: 30px; }
+  html.board #bTop { padding: 8px 18px 10px; min-width: 380px; } html.board #bTop .siegeinfo b { font-size: 24px; }
+  html.board .pip { width: 26px; height: 26px; } html.board .pip img.pxi { width: 18px; height: 18px; }
+  html.board .ibtn, html.board #bBtns .btn.ghost.small { width: 44px; height: 44px; } html.board .sface, html.board .sface img.px { width: 38px; height: 38px; }
+  html.board .tr .nm { font-size: 15px; } html.board .tr .hex { width: 36px; height: 36px; } html.board .tr { grid-template-columns: 36px auto 1fr; }
+  html.board .unitcard { width: 420px; }
+}
+@media (max-width: 1250px) {
+  html.board .bb-fac .rail button { font-size: 0; gap: 0; padding: 0 5px; }
+  html.board .bb-econ { width: 150px; }
+  html.board .bt { width: 44px; height: 54px; } html.board .bt img.px { width: 42px; height: 42px; }
+  html.board .bb-act { width: 250px; } html.board .bb-act #beginBtn { min-width: 0; font-size: 14px; padding: 6px 10px; } html.board .bb-act .hammerbtn kbd, html.board .bb-act .powerbtn kbd { display: none; }
+  html.board #recBadge { display: none !important; }
+}
+html.m #mDet .ico img.pxi { width: 20px; height: 20px; vertical-align: middle; }
 
 /* ===== Store demo: road-ahead screen and title note ===== */
 .rahs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 4px 0; }
@@ -6381,6 +6638,171 @@ function boonStats(run, s) {
   if (b.blessing) { s.hp *= 1 + BOON_FX.blessHp; s.atk *= 1 + BOON_FX.blessDmg; s.ap *= 1 + BOON_FX.blessDmg; }
 }
 
+// ===== Hand-made pixel icons (Cam 2026-10-31: "create unique art for each icon instead of emojis") =====
+// Every class, race, element, personality, boon, tactic, combo, tech branch and HUD button gets its own 10x10 map,
+// drawn with the same ink outline as the 16px sprites. pxi(name) returns an <img> tag; pxiURL(name) a data URL.
+const PXI_PAL = {
+  k: '#1a1230', w: '#ffffff', W: '#c9d4ee', s: '#c9d0ea', S: '#8a94b8', d: '#555a80',
+  y: '#ffcf3a', Y: '#fff1a8', o: '#ff8a3a', O: '#ffd0b0', a: '#c86a1a',
+  r: '#ff3d6e', R: '#ff7a9a', m: '#b0204a',
+  c: '#5fd3ff', C: '#bff4ff', u: '#3a64c9', U: '#24408a',
+  g: '#3a9a4a', G: '#7ce05a', l: '#1f6a3a',
+  p: '#a98aff', P: '#d8c8ff', v: '#6a3ab0',
+  b: '#9a6332', B: '#5a3a1a', t: '#e8b07a', T: '#ffd8b0',
+  n: '#ff9fd0', N: '#ffd0ea', e: '#efe6cc', x: '#2a1a4a', z: '#000000',
+};
+const PXI = {
+  // ---- classes ----
+  'cls-guardian': ['.yyyyyyyy.', 'yuuuuuuuuy', 'yuCCuuuuuy', 'yuCuuyyuuy', 'yuuuyyyyuy', 'yuuuuyyuuy', '.yuuuyyuy.', '.yuuuuuuy.', '..yuuuuy..', '...yyyy...'],
+  'cls-berserker': ['.SS....SS.', 'SsSS..SSsS', 'SssS..SssS', '.SSbbbbSS.', '...bbbb...', '...b..b...', '..b....b..', '.b......b.', 'b........b', '..........'],
+  'cls-ranger': ['......bb..', '.....w..b.', '....w....b', '...w.....b', 'rrbbbbbbbS', '...w.....b', '....w....b', '.....w..b.', '......bb..', '..........'],
+  'cls-mage': ['....y.....', '...yYy....', '.yyYwYyy..', '..yYYYy...', '...y.y..pp', '..y...ypPp', '......pPPp', '.....pPp..', '....pp....', '...pp.....'],
+  'cls-cleric': ['...yyyy...', '...yYYy...', '.yyyYYyyy.', 'yYYYwwYYYy', 'yYYYwwYYYy', '.yyyYYyyy.', '...yYYy...', '...yYYy...', '...yYYy...', '...yyyy...'],
+  'cls-rogue': ['........sw', '.......sws', '......sws.', '.....sws..', '..y.sws...', '...yws....', '...byy....', '..bb..y...', '.bb.......', 'vv........'],
+  // ---- races ----
+  'race-human': ['..SSSSSS..', '.SssssssS.', 'SsSSSSSSsS', 'SsTTTTTTsS', 'SsTkTTkTsS', 'SsTTTTTTsS', '.STTttTTS.', '..TTTTTT..', '...uuuu...', '..uuuuuu..'],
+  'race-elf': ['...GGGG...', '..GggggG..', 'T.gTTTTg.T', 'TTTTTTTTTT', '.TTkTTkTT.', '..TTTTTT..', '..TTttTT..', '...TTTT...', '...gGGg...', '..gGGGGg..'],
+  'race-dwarf': ['..SSSSSS..', '.SsSSSSsS.', '.SSSSSSSS.', '.TTkTTkTT.', '.TTTTTTTT.', 'oooTttTooo', 'oOooooooOo', '.oOooooOo.', '..oOooOo..', '...oooo...'],
+  'race-orc': ['..GGGGGG..', '.GGGGGGGG.', 'GGrkGGkrGG', 'GGGGGGGGGG', 'GGGggggGGG', 'GwGkkkkGwG', 'GwGGGGGGwG', '.GGGGGGGG.', '..GGGGGG..', '..........'],
+  'race-skeleton': ['..eeeeee..', '.eeeeeeee.', 'eeeeeeeeee', 'eekkeekkee', 'eekkeekkee', 'eeeeeeeeee', '.eeekkeee.', '..eeeeee..', '..ekekek..', '..eeeeee..'],
+  'race-beast': ['.nn....nn.', 'nNNn..nNNn', 'nNNn..nNNn', '.nn....nn.', '..........', '...nnnn...', '..nNNNNn..', '.nNNNNNNn.', '.nNNNNNNn.', '..nnnnnn..'],
+  'race-toad': ['.GG....GG.', 'GwkG..GkwG', 'GkkGGGGkkG', 'GGGGGGGGGG', 'GGGGGGGGGG', 'GrrrrrrrrG', 'GGGGGGGGGG', '.GYYYYYYG.', '.GYYYYYYG.', '..GG..GG..'],
+  // ---- elements ----
+  'el-fire': ['....r.....', '...rr...r.', '...rrr.rr.', '..rrorrrr.', '.rrooorrr.', '.rroOoorr.', 'rroOYOoorr', 'rroOYYOorr', '.rroYYorr.', '..rrrrrr..'],
+  'el-water': ['....c.....', '....c.....', '...cCc....', '...cCc....', '..cCwCc...', '.cCwCCCc..', '.cCCCCCc..', '.ucCCCcu..', '..uuccuu..', '...uuuu...'],
+  'el-nature': ['......GGG.', '....GGGGG.', '...GGlGGG.', '..GGlGGGG.', '..GlGGGG..', '.GlGGGG...', '.lGGGG....', '.l........', 'l.........', '..........'],
+  'el-ice': ['....C.....', '..C.C.C...', '...CwC....', 'C.cCwCc.C.', '.CCwwwCC..', 'C.cCwCc.C.', '...CwC....', '..C.C.C...', '....C.....', '..........'],
+  'el-lightning': ['....yyyy..', '...yYYy...', '..yYYy....', '.yYYyyyy..', 'yYYYYYYy..', '...yYYy...', '..yYYy....', '.yYy......', 'yYy.......', 'y.........'],
+  'el-dark': ['...vvvv...', '..vxxxpv..', '.vxxxxpPv.', 'vxxxxxpPPv', 'vxxxxpPPPv', 'vxxxxpPPPv', 'vxxxxxpPPv', '.vxxxxxpv.', '..vxxxxv..', '...vvvv...'],
+  'el-light': ['....y.....', '.y..y..y..', '..yYYYy...', '..YYwYY...', 'yyYwwwYyy.', '..YYwYY...', '..yYYYy...', '.y..y..y..', '....y.....', '..........'],
+  'el-void': ['...pppp...', '.pp....p..', 'p..vvv..p.', 'p.v...v.p.', 'p.v.k.v..p', 'p..v..v..p', '.p..vv..p.', '..p....p..', '...pppp...', '..........'],
+  'el-salty': ['..wwwwww..', '.wsssssw..', '.wSsSsSw..', '.wsssssw..', '.WWWWWWW..', '.WwwwwwW..', '.WwwwwwW..', '.WwwwwwW..', '.WWWWWWW..', '..........'],
+  'el-sweet': ['n........n', 'nn..nn..nn', 'nNnnNNnnNn', '.nNNwNNNn.', '.nNwNNNNn.', '.nNNNNNNn.', 'nNnnNNnnNn', 'nn..nn..nn', 'n........n', '..........'],
+  'el-meat': ['......ee..', '.....eeee.', '....beee..', '..rrrbe...', '.rRRRrr...', 'rRRRRRrr..', 'rRmRRRmr..', 'rRRRRRRr..', '.rrRRRr...', '..rrrr....'],
+  'el-treat': ['...rrrr...', '..rrRRrr..', '..rrrrrr..', '.nnnnnnnn.', 'nNwNNNwNNn', 'nnnnnnnnnn', '.ybybybyb.', '.ybybybyb.', '..ybybyb..', '..........'],
+  // ---- personalities ----
+  'tmp-heroic': ['...yyyy...', '..yTTTTy..', '..TkTTkT..', '..TTttTT..', '...TTTT...', 'rr.uuuu.rr', 'rRruuuurRr', '.rRuyyuRr.', '..ruuuur..', '..uu..uu..'],
+  'tmp-cheerful': ['..yyyyyy..', '.yYYYYYYy.', 'yYYkYYkYYy', 'yYYkYYkYYy', 'yYYYYYYYYy', 'yRYkYYkYRy', 'yYYYkkYYYy', '.yYYYYYYy.', '..yyyyyy..', '..........'],
+  'tmp-honorable': ['.uu....rr.', '..uu..rr..', '...urrr...', '....ur....', '...yyyy...', '..yYYYYy..', '..yYwYYy..', '..yYYYYy..', '...yyyy...', '..........'],
+  'tmp-wholesome': ['.bb....bb.', 'bBtbbbbtBb', '.bbtttbbb.', '.bkbbbkbb.', '.bbbttbbb.', '..bbkkbb..', '.bbbttbbb.', 'bbbttttbbb', '.bbbttbbb.', '..bb..bb..'],
+  'tmp-zealous': ['....r.....', '...ror....', '...roor...', '..roYoor..', '.roYYYor..', '.roYwYor..', '.rooYoor..', '..roooor..', '...rrrr...', '..........'],
+  'tmp-wise': ['.bb....bb.', '.bbbbbbbb.', 'bYYbbbbYYb', 'bYkYbbYkYb', 'bYYbyybYYb', '.bbbyybbb.', '.bttbbttb.', '.bttttttb.', '..bbbbbb..', '...y..y...'],
+  'tmp-loyal': ['.BB...BB..', 'BbbB.BbbB.', 'Bbbbbbbbb.', '.bkbbbkbb.', '.bbbbbbbb.', '..bbkkbbr.', '..bbbbrrr.', '...bbbr...', '..........', '..........'],
+  'tmp-optimistic': ['..rrrrrr..', '.rooooooR.', 'royyyyyyor', 'roygggggyo', 'rygcccccgy', 'ygcu..ucgy', 'gcu....ucg', 'cu......uc', 'w........w', 'ww......ww'],
+  'tmp-angry': ['..rrrrrr..', '.rRRRRRRr.', 'rRkRRRRkRr', 'rRRkRRkRRr', 'rRkkRRkkRr', 'rRRRRRRRRr', 'rRRkkkkRRr', '.rRkRRkRr.', '..rrrrrr..', '..........'],
+  'tmp-deranged': ['..pppppp..', '.pPPPPPPp.', 'pPkkPPkkPp', 'pkPkPkPkPp', 'pPkkPPkkPp', 'pPPPPPPPPp', 'pPkkkkkkPp', '.pPkwwkPp.', '..pppGpp..', '......G...'],
+  'tmp-greedy': ['...yyyy...', '....bb....', '...bbbb...', '..btttbb..', '.btttttbb.', 'bttyyyttbb', 'bttyttttbb', 'btttyyttbb', '.bttttytb.', '..bbbbbb..'],
+  'tmp-cowardly': ['..cccccc..', '.cCCCCCCc.', 'cCwkCCwkCc', 'cCwwCCwwCc', 'cCCCCCCCCc', 'cCCCkkCCCc', 'cCCkkkkCCc', '.cCCkkCCc.', '..cccccc..', 'c........c'],
+  'tmp-vain': ['...yyyy...', '..yCCCCy..', '.yCwCCCCy.', '.yCCwCCCy.', '.yCCCCCCy.', '..yCCCCy..', '...yyyy...', '....yy....', '....yy....', '...yyyy...'],
+  'tmp-cruel': ['r........r', 'rr......rr', '.rrrrrrrr.', 'rRRRRRRRRr', 'rRyRRRRyRr', 'rRRRRRRRRr', 'rRwRwRwRRr', '.rRRRRRRr.', '..rrrrrr..', '..........'],
+  'tmp-paranoid': ['..........', '...wwww...', '.wwWWWWww.', 'wWWcuucWWw', 'wWcukkucWw', 'wWWcuucWWw', '.wwWWWWww.', '...wwww...', '..........', '..........'],
+  'tmp-lazy': ['......CCC.', '.......C..', '......CCC.', '..CC......', '...C......', '..CC......', '..........', '.pppppppp.', 'pPPPPPPPPp', 'pppppppppp'],
+  // ---- boons ----
+  'boon-warchest': ['..........', '.bbbbbbbb.', 'bBBBBBBBBb', 'bbbbyybbbb', 'yyyyYYyyyy', 'bbbbyybbbb', 'bBBBBBBBBb', 'bBBBBBBBBb', 'bbbbbbbbbb', '..........'],
+  'boon-parts': ['..S.S.....', '.SSSSS....', 'SSsssSS...', '.Ss.sS.bb.', 'SSsssSSbBb', '.SSSSS.bBb', '..S.S..bBb', '.....bbbBb', '....bBBBb.', '.....bbb..'],
+  'boon-recruit': ['........yy', '.......yYy', '......yYy.', 'b...yyYy..', 'bbyyYYy...', 'yyYYYy....', 'YYYyy.....', '.yy.......', '..........', '..........'],
+  'boon-eagle': ['..bbbb....', '.bwwwwb...', 'bwwkwwwyy.', 'bwwwwwyyy.', '.bwwwwb...', 'bbbbbbbb..', 'BbBbBbBbb.', '.BbBbBbBb.', '..BBBBBB..', '...y..y...'],
+  'boon-haggler': ['..........', '..........', 'uu......rr', 'uuTT..ttrr', 'uuTTTttttr', 'uu.TTTttrr', 'uu..TTt.rr', '..........', '..........', '..........'],
+  'boon-drill': ['b.......b.', '.b.....b..', '..b...b...', 'rrrrrrrrrr', 'rwrwrwrwrw', 'rrwrwrwrwr', 'rwrwrwrwrw', 'rrrrrrrrrr', '.SSSSSSSS.', '..........'],
+  'boon-banker': ['....yy....', '...yYYy...', '..yYYYYy..', '.yyyyyyyy.', '..s.s.s.s.', '..s.s.s.s.', '..s.s.s.s.', '..s.s.s.s.', '.ssssssss.', 'SSSSSSSSSS'],
+  'boon-smith': ['..........', 'SSSSSSSS..', 'SssssssssS', '.SSSSSSSS.', '...SssS...', '...SssS...', '..SSSSSS..', '.SssssssS.', '.SSSSSSSS.', '..........'],
+  'boon-hide': ['SSSSSSSSSS', 'SssSssSssS', 'SsSSSSSSsS', 'SSsdsdsSSS', 'SsSdsdsSsS', 'SSsdsdsSSS', '.SsSSSSsS.', '.SSsssSSS.', '..SSSSSS..', '...SSSS...'],
+  'boon-windfall': ['..y....y..', '.yYy..yYy.', '..y....y..', '...yyyy...', '..yYYYYy..', 'yyyyyyyyyy', 'yYYYYYYYYy', 'yyyyyyyyyy', 'yYYYYYYYYy', 'yyyyyyyyyy'],
+  'boon-hymn': ['..........', 'y.........', 'yy........', 'yYyyyyyyyy', 'yYYYYYYYYy', 'yYyyyyyyyy', 'yy..b.b...', 'y...b.b...', '..........', '..........'],
+  'boon-mend': ['bbbbbbbbbb', 'bobobbobob', 'bbbbbbbbbb', 'boboboboob', 'bbbbbbbbbb', '....SS....', '...SssS...', '....bb....', '....bb....', '....bb....'],
+  'boon-heart': ['.rr....rr.', 'rRRr..rRRr', 'rRwRrrRRRr', 'rRRRRRRRRr', 'rRRRyyRRRr', '.rRRyyRRr.', '..rRRRRr..', '...rRRr...', '....rr....', '..........'],
+  'boon-charter': ['.YYYYYYY..', 'YyyyyyyyY.', '.Y.kkkk.Y.', '.Y......Y.', '.Y.kkk..Y.', '.Y....rrY.', '.Y...rRRr.', 'YyyyyyrRr.', '.YYYYYYrr.', '......r.r.'],
+  'boon-blessing': ['....w.....', '....w..y..', '..wwYww...', '....w.....', '.y..w..p..', '......pPp.', '..y....p..', '.yYy......', '..y...c...', '.....cCc..'],
+  'boon-vault': ['..........', 'y..y..y..y', 'yy.yy.yy.y', 'yyyyyyyyyy', 'yYrYYcYYry', 'yYYYYYYYYy', 'yyyyyyyyyy', '..........', '..........', '..........'],
+  'boon-fortune': ['..rr..rr..', '...rrrr...', 'ppppRRpppp', 'pPPPRRPPPp', 'pPPPRRPPPp', 'ppppRRpppp', '.pPPRRPPp.', '.pPPRRPPp.', '.pPPRRPPp.', '.pppRRppp.'],
+  // ---- horde tactics ----
+  'tac-warband': ['s........s', '.s......s.', '..s....s..', '...s..s...', '....ss....', '....ss....', '...s..s...', '.bbs..sbb.', '.b......b.', 'b........b'],
+  'tac-blitz': ['.r...r....', '..r...r...', '...r...r..', '....r...r.', '.....r...r', '....r...r.', '...r...r..', '..r...r...', '.r...r....', '..........'],
+  'tac-captain': ['.y..y..y..', '.yy.yy.yy.', '.yyyyyyyy.', '.SSSSSSSS.', 'SssssssssS', 'SskkSSkksS', 'SSSSssSSSS', '.SSs..sSS.', '..S....S..', '..........'],
+  'tac-swarm': ['.G.....G..', 'GkG...GkG.', '.G..G..G..', '...GkG....', 'G...G...G.', 'kG.....GkG', 'G..G....G.', '..GkG.....', '...G...G..', '......GkG.'],
+  'tac-shieldwall': ['SSS.SSS.SS', 'SrS.SrS.Sr', 'SrS.SrS.Sr', 'SSS.SSS.SS', '.S...S...S', 'SSS.SSS.SS', 'SrS.SrS.Sr', 'SrS.SrS.Sr', 'SSS.SSS.SS', '.S...S...S'],
+  'tac-airraid': ['..........', 'p........p', 'pp.p..p.pp', 'pPpppppPPp', 'pPPpwpwPPp', '.pPppppPp.', '..p.pp.p..', '....pp....', '..........', '..........'],
+  // ---- element combos ----
+  'cmb-nova': ['....y.....', '.y..y..y..', '..y.y.y...', '...yYy....', 'yyyYwYyyy.', '...yYy....', '..y.y.y...', '.y..y..y..', '....y.....', '..........'],
+  'cmb-rain': ['.....oo...', '....oYYo..', '...oYwYo..', '..roYYo...', '.rroo.....', 'rr........', 'r...r.....', '...rr.....', '..rr......', '..........'],
+  'cmb-wave': ['..........', '..cc......', '.cCCc...c.', 'cC..Cc.cC.', 'c....cCc..', '..cc......', '.cCCc...c.', 'cC..Cc.cC.', 'c....cCc..', '..........'],
+  'cmb-heal': ['...GGGG...', '...GwwG...', '...GwwG...', 'GGGGwwGGGG', 'GwwwwwwwwG', 'GwwwwwwwwG', 'GGGGwwGGGG', '...GwwG...', '...GwwG...', '...GGGG...'],
+  'cmb-shield': ['..cccccc..', '.cCCCCCCc.', 'cCC....CCc', 'cC......Cc', 'cC..uu..Cc', 'cC..uu..Cc', 'cC......Cc', '.cC....Cc.', '..cCCCCc..', '...cccc...'],
+  'cmb-haste': ['..........', '...yyy....', '.....yy...', 'cccccccyy.', '.......yYy', 'cccccccyy.', '.....yy...', '...yyy....', '..........', '..........'],
+  'cmb-rage': ['...rrrr...', '..rRRRRr..', '.rRrRrRRr.', '.rRrRrRRr.', '.rRRRRRRr.', '.rRRRRRr..', '..rRRRr...', '..rRRRr...', '..ruuur...', '..uuuuu...'],
+  'cmb-freeze': ['C...C...C.', '.C..C..C..', '..CCwCC...', '.CCwwwCC..', 'CwwwCwwwC.', '.CCwwwCC..', '..CCwCC...', '.C..C..C..', 'C...C...C.', '..........'],
+  'cmb-gold': ['...yyyy...', '.yyYYYYyy.', '.yYyyyyYy.', 'yYyYYYYyYy', 'yYyYyyyyYy', 'yYyYYYyyYy', 'yYyyyYyyYy', '.yYYYYyYy.', '.yyYYYYyy.', '...yyyy...'],
+  'cmb-shred': ['S......S..', 'SsS..SsS..', '.SsSSsS...', '..SssS....', '...SS.....', '..b..b....', '.bBb.bBb..', '.bBb.bBb..', '..b...b...', '..........'],
+  'cmb-vortex': ['...pppp...', '.pp....p..', 'p..ppp..p.', 'p.p...p.p.', 'p.p.P..p.p', 'p..p..p..p', '.p..pp..p.', '..p.....p.', '...ppppp..', '..........'],
+  'cmb-critter': ['..........', '...b..b...', '..bbbbbb..', '.bbkbbkbb.', '.bbbbbbbb.', '.bbbnnbbb.', '..bbbbbb..', '...bttb...', '..bb..bb..', '..........'],
+  'cmb-execute': ['......SSS.', '.....SssS.', '....SssS..', '...SssS...', '..bSsS....', '.bbbS.....', '.bBb......', 'bBb.......', 'Bb........', '..........'],
+  'cmb-beam': ['..........', '..........', 'yyyyyyyyyy', 'YYYYYYYYYY', 'wwwwwwwwww', 'YYYYYYYYYY', 'yyyyyyyyyy', '..........', '..........', '..........'],
+  'cmb-bolts': ['...yyyy...', '..yYYy....', '.yYyy.....', 'yYYYYYy...', '...yYy.yyy', '..yYy.yYy.', '.yy..yYyy.', '....yYYYYy', '.......yy.', '......y...'],
+  'cmb-roots': ['....G.....', '...GgG....', '....g.....', '...bgb....', '..b.b.b...', '.b..b..b..', 'b..b.b..b.', '..b...b...', '.b.....b..', 'b.......b.'],
+  'cmb-salt': ['....w.....', '...wWw..w.', '....w..wWw', '.w.....w..', 'wWw.......', '.w...w....', '....wWw...', '.....w.w..', '..w...wWw.', '.wWw...w..'],
+  'cmb-candy': ['..nnnn....', '.nNwNNn...', 'nNnnnnNn..', 'nNnNNnNn..', 'nNnNnnNn..', '.nNnnNn...', '..nnnn....', '....w.....', '....w.....', '....w.....'],
+  'cmb-ham': ['.....ee...', '....eeee..', '...beee...', '.rrrb.....', 'rRRRrr....', 'rRwRRRr...', 'rRRRRRr...', '.rRRRr....', '..rrr.....', '..........'],
+  'cmb-pinata': ['......ss..', '.....s....', '..rrrryy..', '.rRRryYYy.', 'rRRryYYyc.', '.rrcccyc..', '..cCCcc...', '..c..c....', '..c..c....', '..........'],
+  // ---- tech branches ----
+  'tech-stone': ['SSSSSSSSSS', 'SssSSssssS', 'SSSSSSSSSS', 'SsssssSssS', 'SSSSSSSSSS', 'SssSssssSS', 'SSSSSSSSSS', 'SsssssSssS', 'SSSSSSSSSS', '..........'],
+  'tech-gear': ['...SSSS...', '.S.SssS.S.', '.SSssssSS.', 'SSss..ssSS', 'Sss....ssS', 'Sss....ssS', 'SSss..ssSS', '.SSssssSS.', '.S.SssS.S.', '...SSSS...'],
+  'tech-flask': ['...SSS....', '....w.....', '....w.....', '...wCw....', '..wGGGw...', '.wGGwGGw..', 'wGGGGGGGw.', 'wGlGGGlGw.', '.wwwwwww..', '..........'],
+  'tech-bag': ['...bbbb...', '....yy....', '...bbbb...', '..bBBBBb..', '.bBByyBBb.', 'bBByYYyBBb', 'bBBByyBBBb', 'bBBBBBBBBb', '.bBBBBBBb.', '..bbbbbb..'],
+  'tech-key': ['.yyy......', 'yYYYy.....', 'yY.Yy.....', 'yYYYy.....', '.yyYyyyyyy', '....yyyyYy', '.......y.y', '.......y..', '..........', '..........'],
+  // ---- HUD and buttons ----
+  'ui-sound': ['......y...', '.....yYy..', '.....y.Yy.', '.....y..y.', '.....y....', '..yyyy....', '.yYYYy....', '.yYYYy....', '..yyy.....', '..........'],
+  'ui-mute': ['r.....y..r', '.r...yYyr.', '..r..y.r..', '.....yr...', '....ry....', '..yrry....', '.yrYYy....', '.rYYYy....', 'r.yyy.....', '..........'],
+  'ui-full': ['ccc....ccc', 'c........c', 'c........c', '..........', '..........', '..........', '..........', 'c........c', 'c........c', 'ccc....ccc'],
+  'ui-exitfull': ['..c....c..', '..c....c..', 'ccc....ccc', '..........', '..........', '..........', '..........', 'ccc....ccc', '..c....c..', '..c....c..'],
+  'ui-menu': ['..........', '.YYYYYYYY.', '.yyyyyyyy.', '..........', '.YYYYYYYY.', '.yyyyyyyy.', '..........', '.YYYYYYYY.', '.yyyyyyyy.', '..........'],
+  'ui-lock': ['...SSSS...', '..S....S..', '..S....S..', '.yyyyyyyy.', '.yYYYYYYy.', '.yYYkkYYy.', '.yYYkkYYy.', '.yYYYYYYy.', '.yyyyyyyy.', '..........'],
+  'ui-unlock': ['...SSSS...', '..S....S..', '..S.......', '.yyyyyyyy.', '.yYYYYYYy.', '.yYYkkYYy.', '.yYYkkYYy.', '.yYYYYYYy.', '.yyyyyyyy.', '..........'],
+  'ui-repair': ['..SSSS....', '.SssssS...', '.SSSSSS...', '...bb.....', '...bb.....', '...bb.oo..', '...bbo.o..', '...bb.oo..', '...bb.....', '...bb.....'],
+  'ui-flag': ['b.........', 'byyyyyy...', 'byYYYYyyy.', 'byYrrYYYy.', 'byYrrYYy..', 'byYYYyyy..', 'byyyy.....', 'b.........', 'b.........', 'bb........'],
+  'ui-check': ['..........', '........G.', '.......GG.', '......GG..', 'G....GG...', 'GG..GG....', '.GGGG.....', '..GG......', '..........', '..........'],
+  'ui-skull': ['..wwwwww..', '.wwwwwwww.', 'wwkkwwkkww', 'wwkkwwkkww', 'wwwwkkwwww', '.wwwwwwww.', '..wkwkww..', '..wwwwww..', '..........', '..........'],
+  'ui-back': ['..........', '...c......', '..cc......', '.cCcccccc.', 'cCCCCCCCc.', '.cCcccccc.', '..cc......', '...c......', '..........', '..........'],
+  'ui-recall': ['..cccc....', '.c....c...', 'c......c..', 'c.......c.', 'c.......c.', '.......c..', '..c...c...', '.ccccc....', '..c.......', '..........'],
+  'ui-jump': ['....c.....', '....c.....', '....c.....', '....c.....', '.c..c..c..', '..c.c.c...', '...ccc....', '....c.....', '.yyyyyyy..', '..........'],
+  'ui-reroll': ['..yyyyy...', '.y.....y..', 'y.......y.', 'y......yyy', 'y.......y.', '..........', '.y.....y..', 'yyy....y..', '.y.....y..', '..yyyyy...'],
+  'ui-team': ['..........', '..TT..TT..', '.TTTTTTTT.', '..TT..TT..', '.uuuuuuuu.', 'uuuuuuuuuu', 'uu.uuuu.uu', '...uuuu...', '...u..u...', '..........'],
+  'ui-scout': ['..........', '..SS..SS..', '.SccSSccS.', 'ScCwccCwcS', 'SccccSsccS', '.SccS.ScS.', '..SS...SS.', '..........', '..........', '..........'],
+  'ui-stats': ['..........', '........G.', '........G.', '.....r..G.', '.....r..G.', '..y..r..G.', '..y..r..G.', '..y..r..G.', 'SSSSSSSSSS', '..........'],
+  'ui-up': ['..........', '....y.....', '...yYy....', '..yYYYy...', '.yYYYYYy..', '...yYy....', '...yYy....', '...yYy....', '..........', '..........'],
+  'ui-down': ['..........', '...yYy....', '...yYy....', '...yYy....', '.yYYYYYy..', '..yYYYy...', '...yYy....', '....y.....', '..........', '..........'],
+  'ui-play': ['..........', '..G.......', '..GG......', '..GwG.....', '..GwwG....', '..GwwwG...', '..GwwG....', '..GwG.....', '..GG......', '..G.......'],
+  'ui-close': ['..........', '.r......r.', '..r....r..', '...r..r...', '....rr....', '....rr....', '...r..r...', '..r....r..', '.r......r.', '..........'],
+  'ui-star': ['....y.....', '....y.....', '...yYy....', 'yyyYYYyyy.', '.yYYwYYy..', '..yYYYy...', '..yYyYy...', '.yYy.yYy..', '.yy...yy..', '..........'],
+  'ui-dust': ['..........', '...SS.....', '..SsSS.S..', '.SssssSsS.', 'SsssssssS.', '.SssSssS..', '..SS..S...', '..........', '..........', '..........'],
+  'ui-daze': ['....y.....', '...yYy....', '..yy.yy...', 'y.......y.', 'Yy.....yY.', 'y.......y.', '..yy.yy...', '...yYy....', '....y.....', '..........'],
+  'ui-dot': ['..........', '..........', '...wwww...', '..wWWWWw..', '..wWWWWw..', '..wWWWWw..', '..wWWWWw..', '...wwww...', '..........', '..........'],
+};
+const PXI_URL = {};
+function pxiCanvas(name, px = 2) {
+  const rows = PXI[name] || PXI['ui-dot'], N = 12;
+  const c = document.createElement('canvas'); c.width = c.height = N * px; const ctx = c.getContext('2d');
+  const g = new PixGrid(N, N);
+  rows.forEach((r, y) => [...r].slice(0, 10).forEach((ch, x) => { if (PXI_PAL[ch]) g.set(x + 1, y + 1, PXI_PAL[ch], true); }));
+  g.finish();
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const col = g.get(x, y); if (col) { ctx.fillStyle = col; ctx.fillRect(x * px, y * px, px, px); } }
+  return c;
+}
+function pxiURL(name, px = 2) { const k = name + '@' + px; return PXI_URL[k] || (PXI_URL[k] = pxiCanvas(name, px).toDataURL()); }
+// an inline icon that sits on the text line; cls adds sizing hooks (pxi-lg, pxi-xl)
+function pxi(name, cls = '', alt = '') { return `<img class="px pxi ${cls}" src="${pxiURL(name, 3)}" alt="${alt}" draggable="false">`; }
+// the data tables keep an `icon` field for their HTML. In the browser it becomes the pixel icon (the emoji stays for Node tools).
+(function pxiWire() {
+  if (typeof document === 'undefined') return;
+  const wire = (table, prefix, key = k => k) => { for (const k in table) { const nm = prefix + key(k); if (!PXI[nm]) continue; Object.defineProperty(table[k], 'icon', { get: () => pxi(nm), configurable: true, enumerable: true }); Object.defineProperty(table[k], 'iconName', { value: nm, configurable: true }); } };
+  wire(CLASSES, 'cls-'); wire(TEMPERS, 'tmp-'); wire(TACTICS, 'tac-');
+  if (typeof BOONS !== 'undefined') wire(BOONS, 'boon-');
+  for (const k in EL_ICON) EL_ICON[k] = pxi('el-' + k);
+  for (const k in RACE_ICON) RACE_ICON[k] = pxi('race-' + k);
+  const st = document.documentElement.style; st.setProperty('--pxi-dust', `url(${pxiURL('ui-dust', 3)})`); st.setProperty('--pxi-daze', `url(${pxiURL('ui-daze', 3)})`); st.setProperty('--pxi-coin', `url(${iconURL('coin', 3)})`);
+})();
+// plain text version of a table entry's name for places that set textContent
+const pxiText = T => T.name;
+
 // ===== Story chapters =====
 // Each horde has a short storyline told through encounters between its sieges. Choices move the boss's mood:
 // kind choices raise run.mood, rude ones lower it. The chapter before the boss turns that mood into a boss modifier.
@@ -9868,11 +10290,11 @@ const pips = (n, at) => { const top = at[at.length - 1]; let s = ''; for (let i 
 function draftFit(run, o) {
   const d = HERO_BY_ID[o.id], { c, r } = teamCounts(run), out = [];
   for (const [kind, key, T, n0] of [['cls', d.cls, CLASSES[d.cls], c[d.cls] || 0], ['race', d.race, RACES[d.race], r[d.race] || 0]]) {
-    const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${T.name}` : T.name;
-    if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${esc(label)}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
-    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
-    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${esc(label)} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
-    else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
+    const n = n0 + 1, lvl = T.at.indexOf(n), label = kind === 'cls' ? `${T.icon} ${esc(T.name)}` : esc(T.name);
+    if (lvl >= 0) out.push({ score: 3 + lvl, html: `<div class="fit up" data-tip="syn:${key}"><b>Unlocks ${label}</b>${pips(n, T.at)}<small>${esc(T.desc(lvl))}</small></div>` });
+    else if (n < T.at[0]) out.push({ score: n0 ? 1 : 0, html: `<div class="fit" data-tip="syn:${key}"><b>${label} ${n}/${T.at[0]}</b>${pips(n, T.at)}<small>${T.at[0] - n} more ${T.at[0] - n === 1 ? 'switches on' : 'switch on'}: ${esc(T.desc(0))}</small></div>` });
+    else if (n < T.at[T.at.length - 1]) { const nx = T.at.find(v => v > n); out.push({ score: 1, html: `<div class="fit" data-tip="syn:${key}"><b>${label} ${n}/${nx}</b>${pips(n, T.at)}<small>${nx - n} more for: ${esc(T.desc(T.at.indexOf(nx)))}</small></div>` }); }
+    else out.push({ score: 0, html: `<div class="fit dim"><b>${label} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
     if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(heroShortName(HERO_BY_ID[mate.id].name))}</b><small>${esc(T.pdesc)}</small></div>` }); }
@@ -9899,8 +10321,8 @@ function keepStripHTML(run) {
 // classes and races you are one champion away from: cheap targeted searches
 function draftFocusOptions(run) {
   const { c, r } = teamCounts(run), out = [];
-  for (const [k, n] of Object.entries(c)) if (CLASSES[k].at.includes(n + 1)) out.push({ kind: 'cls', key: k, label: `${CLASSES[k].icon} ${CLASSES[k].name}` });
-  for (const [k, n] of Object.entries(r)) if (RACES[k].at.includes(n + 1)) out.push({ kind: 'race', key: k, label: RACES[k].name });
+  for (const [k, n] of Object.entries(c)) if (CLASSES[k].at.includes(n + 1)) out.push({ kind: 'cls', key: k, label: `${CLASSES[k].icon} ${CLASSES[k].name}`, name: CLASSES[k].name });
+  for (const [k, n] of Object.entries(r)) if (RACES[k].at.includes(n + 1)) out.push({ kind: 'race', key: k, label: RACES[k].name, name: RACES[k].name });
   return out.slice(0, 4);
 }
 
@@ -9960,7 +10382,8 @@ const STAT_SRC = {
   melee: { name: 'Melee foes', col: '#ff8a8a' }, ranged: { name: 'Ranged foes', col: '#ffb07a' }, boss: { name: 'The boss', col: '#ff3d6e' }, poison: { name: 'Poison and burns', col: '#9be05a' }, other: { name: 'Traps and boss moves', col: '#c9a8ff' }, shield: { name: 'Blocked by shields (not counted)', col: '#9ff6ff' },
   stun: { name: 'Stuns and freezes', col: '#bfeeff' }, taunt: { name: 'Taunts', col: '#ffd84a' }, slow: { name: 'Slows (half credit)', col: '#8ab8ff' },
 };
-const COMBO_GLYPH = { nova: '✹', rain: '☄', wave: '≋', heal: '✚', shield: '⛨', haste: '➹', rage: '✊', freeze: '❄', gold: '◉', shred: '✂', vortex: '◎', critter: '❧', execute: '☠', beam: '═', bolts: 'ϟ', roots: '❦', salt: '✧', candy: '✿', ham: '♨', pinata: '★' };
+// pixel icons per combo kind (src/pxicons.js); unknown kinds fall back to the nova burst
+const COMBO_GLYPH = new Proxy({}, { get: (o, k) => typeof k === 'string' ? pxi(PXI['cmb-' + k] ? 'cmb-' + k : 'cmb-nova') : undefined });
 const DSRC_ORDER = ['auto', 'ability', 'item', 'element', 'bonus', 'summon'], HSRC_ORDER = ['ability', 'auto', 'lifesteal', 'item', 'element'], TSRC_ORDER = ['melee', 'ranged', 'boss', 'poison', 'other'];
 function aliveText(t) { let i = 0; return String(t).split(' ').map(w => `<span class="wd">${[...w].map(c => `<span class="ch" style="--i:${i++}">${esc(c)}</span>`).join('')}</span>`).join(' '); }
 function aliveWords(t) { return String(t).split(' ').map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(' '); }
@@ -9993,7 +10416,7 @@ function voiceFlag(run, h) {
   if (!run.voice || run.voice.uid !== h.uid) return '';
   const boss = bossFor(run.siege), dread = BOSS_DREAD[boss] || [], scared = dreadedBy(boss, h);
   const tip = `The keep's voice|${heroDisplayName(h)} answers the bosses before every siege. ${ENEMIES[boss].name} dreads ${dread.map(t => TEMPERS[t].name).join(' and ')} legends: a voice with one of those tempers loses their nerve and starts the boss siege stunned.${scared ? ` ${heroDisplayName(h)} is ${TEMPERS[heroTemper(h)].name}.` : ''} You can hand the banner to another legend once per horde.`;
-  return `<span class="vflag ${scared ? 'dread' : ''}" data-tip="txt:${esc(tip)}">⚑</span>`;
+  return `<span class="vflag ${scared ? 'dread' : ''}" data-tip="txt:${esc(tip)}">${pxi('ui-flag')}</span>`;
 }
 const UI = {
   pendingGold: 0, shownGold: 0, page: null, techSel: null, recipeSel: null,
@@ -10008,7 +10431,7 @@ const UI = {
     $('rosterToggle').onclick = () => UI.setRoster(!$('roster').classList.contains('collapsed'));
     $('rosterPull').onclick = () => UI.setRoster(!$('roster').classList.contains('collapsed'));
     $('intelTab').onclick = () => UI.setIntel($('intel').classList.contains('closed'));
-    $('fsBtn').onclick = () => UI.fullscreen();
+    $('fsBtn').onclick = () => UI.fullscreen(); UI.fsLabel(); $('repairBtn').querySelector('b').innerHTML = pxi('ui-repair') + ' Repair';
     let iv = null; try { iv = localStorage.getItem('sol.intel'); } catch (e) {}
     UI.setIntel(iv ? iv === 'open' : innerWidth >= 1400, true);
     addEventListener('resize', () => UI.layout()); document.addEventListener('fullscreenchange', () => { UI.layout(); UI.fsLabel(); });
@@ -10121,7 +10544,7 @@ const UI = {
       if (B && !B.done) { const cd = B.cpow.cd, max = castlePowerCooldown(run); pb.disabled = cd > 0; $('powerCd').style.transform = `scaleX(${Math.max(0, cd / max)})`; } else { pb.disabled = true; $('powerCd').style.transform = 'scaleX(0)'; }
       pb.classList.toggle('armed', G.armed === 'power'); }
     const pr = $('pressBtn'); pr.hidden = G.phase !== 'prep' || !canPress(run);
-    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? '⚑ Press <small>harder · gold · loot every 4th</small>' : '⚑ Hold <small>tap to press</small>'; }
+    if (!pr.hidden) { const on = !!run.press; pr.setAttribute('aria-pressed', String(on)); pr.classList.toggle('on', on); pr.innerHTML = on ? pxi('ui-flag') + ' Press <small>harder · gold · loot every 4th</small>' : pxi('ui-flag') + ' Hold <small>tap to press</small>'; }
     const bb = $('beginBtn');
     if (G.phase === 'prep') { bb.disabled = false; bb.innerHTML = `Begin siege <kbd>Space</kbd>`; }
     else if (B && B.done) { bb.disabled = true; bb.textContent = B.done === 'victory' ? 'Siege held' : (run.breaches || 0) >= BREACH.max ? 'The keep fell' : 'Walls breached'; }
@@ -10188,7 +10611,7 @@ const UI = {
     if (!req) { UI.toast('Fullscreen is not available here. Try your browser\'s fullscreen key (F11).', true); return; }
     try { const p = req.call(el); if (p && p.catch) p.catch(() => UI.toast('The browser blocked fullscreen. Try F11, or open the game in its own tab.', true)); } catch (e) { UI.toast('The browser blocked fullscreen. Try F11.', true); }
   },
-  fsLabel() { $('fsBtn').textContent = document.fullscreenElement ? '⛶ Exit fullscreen' : '⛶ Fullscreen'; },
+  fsLabel() { const on = !!document.fullscreenElement; $('fsBtn').innerHTML = pxi(on ? 'ui-exitfull' : 'ui-full') + `<span>${on ? 'Exit fullscreen' : 'Fullscreen'}</span>`; $('fsBtn').dataset.tip = `txt:${on ? 'Exit fullscreen' : 'Fullscreen'}|F toggles it.`; },
 
   // ----- battle stats: four small bars per champion, hover for where it came from -----
   renderStats() {
@@ -10302,11 +10725,11 @@ const UI = {
       h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${el ? ELEMENTS[el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} aria-label="${esc(d.name)}, ${R.name}, ${cost} gold">
         <span class="shead"><span class="srar">${R.name}</span><span class="sprice">${COST(cost)}</span></span>${tag}
         <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(heroShortName(d.name))}</b>
-        <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || '●', ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
+        <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || pxi('ui-dot'), ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
         <small class="spool">${left} left</small></button>`;
     });
     h += `</div><div class="row shopctl"><button class="btn small" data-act="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'}>New shop ${COST(rc)}</button>
-      <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? '🔒 Locked' : '🔓 Lock shop'}</button>
+      <button class="btn small ${run.shopLock ? 'primary' : 'ghost'}" data-act="shoplock" aria-pressed="${!!run.shopLock}">${run.shopLock ? pxi('ui-lock') + ' Locked' : pxi('ui-unlock') + ' Lock shop'}</button>
       <button class="btn small" data-act="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot (up to ${GUILD_LV.max}) and deals rarer legends in the shop.">${gc == null ? `Guild level ${GUILD_LV.max} (max)` : `Guild level ${guildLevel(run) + 1} ${COST(gc)}`}</button>
       <span class="note">Interest next siege: <b>+${intr}</b> (1 per ${SHOP.interestPer} gold banked, up to ${SHOP.interestMax}). Cards left here when the siege starts may defect to the horde.</span></div>`;
     h += `<div class="group-title">Your champions · ${fieldCount(run)}/${fieldCap(run)} on the field · ${run.roster.length - fieldCount(run)}/${BENCH_SLOTS} on the bench</div><p class="note">Bench champions don't fight. Drag one onto a field champion to swap them. Three copies of a legend make it 2★, nine make it 3★ (+60% and +150% power). Races and classes change how champions fight at 4 and 6 on the field. Sell a legend to get their copies' gold back (a starred legend loses 1): drag them onto the Sell box at the top of the field, or use Sell on the champion's card. Their items go back to the Armory. Legend Summons after the bosses at 35 and 40 bring a Legendary and then a God legend.</p>`;
@@ -10380,9 +10803,9 @@ const UI = {
       const open = key in UI.hallOpen ? UI.hallOpen[key] : (ready.length > 0 || fresh > 0);
       const tags = `${fresh ? `<i class="newb">${fresh} NEW</i>` : ''}${ready.length ? `<span class="rdy ${afford ? 'ok' : ''}">${ready.length} ready</span>` : ''}`;
       return `<details class="hbranch" data-br="${key}" ${open ? 'open' : ''}><summary><span class="bi">${icon}</span><b>${title}</b>${tags}<span class="prog"><i style="width:${100 * built.length / Math.max(1, ids.length)}%"></i></span><small>${built.length}/${ids.length}</small><span class="car">▾</span></summary>
-        ${built.length ? `<div class="tbuilt">${built.map(k => `<span class="chip ok" data-tip="txt:${esc(TECH[k].name)}|${esc(TECH[k].desc)}">✓ ${esc(TECH[k].name)}</span>`).join('')}</div>` : ''}
+        ${built.length ? `<div class="tbuilt">${built.map(k => `<span class="chip ok" data-tip="txt:${esc(TECH[k].name)}|${esc(TECH[k].desc)}">${pxi('ui-check')} ${esc(TECH[k].name)}</span>`).join('')}</div>` : ''}
         <div class="tlist">${rest.map(row).join('') || '<p class="note">Every tech in this branch is built.</p>'}</div></details>`; };
-    const icons = ['🧱', '⚙️', '⚗️', '💰'];
+    const icons = [pxi('tech-stone'), pxi('tech-gear'), pxi('tech-flask'), pxi('tech-bag')];
     const totalReady = Object.keys(TECH).filter(k => techState(run, k) === 'open'), canBuy = totalReady.filter(k => run.gold >= TECH[k].cost).length;
     const open = run.castleOpen || [];
     const castleRow = open.length > 1 ? `<div class="card castlesw"><span class="eyebrow">Castle element</span><p class="note">Six champions of one element woke these castles. The keep can take on any of them between sieges.</p><div class="row">${open.map(e => `<button class="btn small ${run.castleEl === e ? 'primary' : ''}" data-act="castleel" data-arg="${e}" style="--ec:${ELEMENTS[e].col}">${esc(ELEMENTS[e].name)} · ${esc(CASTLE_POWERS[e].name)}</button>`).join('')}</div></div>` : '';
@@ -10391,7 +10814,7 @@ const UI = {
       const ids = Object.keys(TECH).filter(k => TECH[k].b === b && !TECH[k].secret).sort((x, y) => TECH[x].t - TECH[y].t);
       h += branch('b' + b, TECH_BRANCHES[b], icons[b], ids);
     }
-    h += branch('sec', 'Secrets', '🗝️', Object.keys(TECH).filter(k => TECH[k].secret));
+    h += branch('sec', 'Secrets', pxi('tech-key'), Object.keys(TECH).filter(k => TECH[k].secret));
     const rc = repairCost(run);
     h += `<div class="card row between"><div><h4>Hire masons</h4><p class="note" style="margin:0">Repair 20% of the castle.</p></div><button class="btn small" data-act="repair" ${run.gold < rc || run.castle.hp >= run.castle.max ? 'disabled' : ''}>${COST(rc)}</button></div>`;
     return h;
@@ -10489,13 +10912,13 @@ const UI = {
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
       ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroShortName(heroDisplayName(h)))} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroShortName(heroDisplayName(x)))} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
-      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
+      ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ${pxi('ui-recall')} <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
-        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ⤵</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
+        return u && u.alive && u.rafter ? `<div class="row"><button class="btn small primary" data-iact="jump" title="Leap down and fight on the field for the rest of this siege">Jump to the front ${pxi('ui-jump')}</button>${back}</div>` : back ? `<div class="row">${back}</div>` : u && h.place && h.place.type === 'rafter' && !u.rafter ? '<p class="note">Fighting on the field this siege. Back on the rafters next siege.</p>' : ''; })()}
       ${G.phase === 'prep' ? `<div class="row"><button class="btn small" data-iact="items">Items</button>
         ${h.place ? `<button class="btn small" data-iact="bench" ${run.finale ? 'disabled' : ''}>To the bench</button>` : fieldFull(run, h) ? '' : `<button class="btn small" data-iact="place">Place on the field</button>`}
         ${ascendBtn(run, h, 'iact')}
-        ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ⚑</button>` : ''}
+        ${run.voice && run.voice.uid !== h.uid && !h.vault ? `<button class="btn small" data-iact="voice" ${run.voiceSwap === factionIndex(run.siege) ? 'disabled title="The banner can change hands once per horde."' : `title="Hand the banner to ${esc(heroDisplayName(h))}: they answer the bosses from now on. Once per horde."`}>Make voice ${pxi('ui-flag')}</button>` : ''}
         ${run.roster.length > 1 ? `<button class="btn small danger" data-iact="sell" title="Sell this champion: the gold their copies cost comes back, and their items go back to the Armory. You can also drag a champion onto the Sell box.">${UI.sellArm === h.uid ? 'Click again to sell' : `Sell for ${COST(sellValue(h))}`}</button>` : ''}</div>` : ''}</div>`;
     if (el._html === html) return; el._html = html; el.innerHTML = html;
     el.querySelectorAll('[data-iact]').forEach(b => b.onclick = () => G.act('h-' + b.dataset.iact, h.uid));
@@ -10515,7 +10938,7 @@ const UI = {
         ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(heroShortName(d.name))}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${shopOdds(run).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each guild level opens rarer legends.</span>
-      <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
+      <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.name)}|New cards, and at least one of them is a ${esc(f.name)}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
       <button class="btn small" id="draftReroll" ${G.run.gold < rerollCost ? 'disabled' : ''}>New cards ${rerollCost ? COST(rerollCost) : '(free once)'}</button></span></div>`;
     return h;
   },
@@ -10614,7 +11037,7 @@ const UI = {
       <p class="lede">A bot plays every siege before the one you pick, so your champions, items, tech and gold look like a real run there. It never loses on the way. Playtest runs earn no diamonds or achievements.</p>
       <div class="pt">
         <div class="ptrow"><b>Start at siege <span id="ptSiegeV"></span></b><input type="range" id="ptSiege" min="1" max="${FINAL_SIEGE}" value="${P.siege}"><span id="ptSiegeInfo" class="muted"></span>
-          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ☠' : ''}</button>`).join('')}</div></div>
+          <div class="ptjumps">${jumps.map(j => `<button class="btn small" data-ptsiege="${j}">${j}${isBossSiege(j) ? ' ' + pxi('ui-skull') : ''}</button>`).join('')}</div></div>
         <div class="ptrow"><b>Castle</b><div class="ptcastles">${els.map(([e, n, url]) => `<button class="ptc ${(P.el || '') === e ? 'on' : ''}" data-ptel="${e}" ${e ? `style="--ec:${ELEMENTS[e].col}"` : ''}>${url ? `<img class="px" src="${url}" alt="">` : '<span class="ptq">?</span>'}<small>${esc(n)}</small></button>`).join('')}</div>
           <small class="muted">"Run picks" leaves it to the run: six champions of one element wake that castle. Picking one gives you that castle from the start.</small></div>
         <div class="ptsel"><label>Field hazard<select id="ptHz"><option value="">None</option>${Object.entries(HAZARDS).map(([k, z]) => `<option value="${k}" ${P.hz === k ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}</select></label>
@@ -12060,8 +12483,8 @@ function showTalk(run, done, x = {}) {
   const enc = x.enc, encKey = enc && (enc.portrait && enc.portrait !== 'e:' ? enc.portrait : 'npc:' + enc.id), encWho = enc && (encKey === 'e:' + bossId ? 'boss' : 'visitor');
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
-  const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
-  const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTag(h)} personality picks the words.`;
+  const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`, heroTagText = h => TEMPERS[heroTemper(h)].name;
+  const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTagText(h)} personality picks the words.`;
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '') + (sc.gloat ? ' gloat' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
@@ -12151,7 +12574,7 @@ function showTalk(run, done, x = {}) {
     const target = w === 'fallen' ? 'hero' : w; if (focusOn !== target) { pan(target); await wait(820); }
     bub.className = 'tk-bub ' + (w === 'boss' ? 'from-boss' : 'from-hero') + (w === 'boss' && bossId === 'colossus' ? ' robot' : '') + (w === 'fallen' ? ' ghostly' : '');
     placeBubble(w); bub.hidden = false; btxt.textContent = '';
-    who.textContent = w === 'boss' ? E.name : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTag(cur); };
+    who.textContent = w === 'boss' ? E.name : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTagText(cur); };
   const beats = (enc ? [{ who: 'enc' }, { who: 'encpick' }] : []).concat(sc.beats);
   let busy = false;
   const encDone = () => { encLeft = false; if (card) card.classList.add('out'); };
@@ -13816,7 +14239,7 @@ function docUp(e) {
   if (d.active) {
     if (sell) sellNow(d.h);
     else if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
-    else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
+    else { const r = (typeof BOARD !== 'undefined' && BOARD.on && !BOARD.team ? $('boardBar') : $('roster')).getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid], .bt[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
       // field champion dropped on a bench card: they trade places
       if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }
       else if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
@@ -13915,7 +14338,7 @@ function metaLedgerHTML() {
   } else {
     const groups = [...new Set(ACHIEVEMENTS.map(a => a.group))];
     for (const g of groups) { h += `<div class="group-title">${esc(g)}</div><div class="achgrid">`;
-      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
+      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? pxi('ui-check') + ' ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
       h += `</div>`; }
     h += `<p class="note">Every run starts equal: no upgrades carry over. Achievements are trophies, checked when a run ends.</p>`;
   }
@@ -13995,14 +14418,14 @@ function wire() {
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
   $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
   $('soundBtn').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(); };
-  $('menuBtn').onclick = () => showTitle();
+  $('menuBtn').onclick = () => showTitle(); $('menuBtn').innerHTML = pxi('ui-menu') + '<span>Keep menu</span>'; $('menuBtn').dataset.tip = 'txt:Keep menu|Title screen, the Keep Ledger and how to play.';
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input,textarea,select')) return;
     if ((e.key === 'n' || e.key === 'N') && $('title').hidden && !TOWER.on) { e.preventDefault(); NOTES.open(); return; }
     if (!$('modal').hidden || !$('title').hidden || TOWER.on) return;
     if (e.code === 'Space' && G.phase === 'prep') { e.preventDefault(); SFX.init(); beginSiege(); }
     else if (e.key === 'f' || e.key === 'F') UI.fullscreen();
-    else if (e.key === 'c' || e.key === 'C') UI.setRoster(!$('roster').classList.contains('collapsed'));
+    else if (e.key === 'c' || e.key === 'C') { if (typeof BOARD !== 'undefined' && BOARD.on) BOARD.setTeam(!BOARD.team); else UI.setRoster(!$('roster').classList.contains('collapsed')); }
     else if (e.key === 's' || e.key === 'S') UI.setIntel($('intel').classList.contains('closed'));
     else if (e.key === '1') { G.speed = 1; UI.hud(); } else if (e.key === '2') { G.speed = 2; UI.hud(); } else if (e.key === '4') { G.speed = 4; UI.hud(); }
     else if ((e.key === 'r' || e.key === 'R') && G.B && G.phase === 'siege' && G.selected) G.act('h-recall', G.selected);
@@ -14017,7 +14440,7 @@ function wire() {
 // Sound button: a small panel with music and effects volume (music.js plays the theme)
 const AUDIO = { fx: 1 };
 function setFxVol(v) { AUDIO.fx = v; SFX.on = v > 0; if (SFX.master) SFX.master.gain.value = 0.32 * v; }
-function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
+function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.innerHTML = off ? pxi('ui-mute') + '<span>Muted</span>' : pxi('ui-sound') + '<span>Sound</span>'; b.dataset.tip = 'txt:' + (off ? 'Muted' : 'Sound') + '|Music and effects volume'; b.setAttribute('aria-pressed', String(!off)); }
 function loadAudioPrefs() {
   try { const t = localStorage.getItem('manatorium.talk'); if (['all', 'boss', 'off'].includes(t)) TALK_PREF.mode = t; } catch (e) { }
   try { const m = localStorage.getItem('manatorium.music'), f = localStorage.getItem('manatorium.fxvol');
@@ -14099,7 +14522,7 @@ const MOB = {
     // a probe that reports the notch and home-bar insets
     const pr = document.createElement('div'); pr.id = 'safeProbe'; document.body.appendChild(pr); MOB.probe = pr;
     // phone-only controls: the "more" menu, the details toggle and the details panel wrapper
-    const more = document.createElement('button'); more.id = 'mMore'; more.className = 'btn small'; more.setAttribute('aria-label', 'More options'); more.setAttribute('aria-expanded', 'false'); more.textContent = '☰';
+    const more = document.createElement('button'); more.id = 'mMore'; more.className = 'btn small'; more.setAttribute('aria-label', 'More options'); more.setAttribute('aria-expanded', 'false'); more.innerHTML = pxi('ui-menu');
     document.querySelector('.hud').appendChild(more);
     const menu = document.createElement('div'); menu.id = 'mMenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
     menu.innerHTML = '<button class="btn small" id="mIntel">Scouts &amp; stats</button>';
@@ -14108,9 +14531,9 @@ const MOB = {
     document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== more) MOB.menu(false); });
     menu.addEventListener('click', e => { if (e.target.closest('button') && e.target.id !== 'soundBtn') setTimeout(() => MOB.menu(false), 0); });
     $('mIntel').onclick = () => { MOB.details(false); UI.setIntel($('intel').classList.contains('closed'), true); };
-    const det = document.createElement('button'); det.id = 'mDet'; det.className = 'mdet'; det.setAttribute('aria-expanded', 'false'); det.innerHTML = '<span class="ico">☰</span><span>Details</span>';
+    const det = document.createElement('button'); det.id = 'mDet'; det.className = 'mdet'; det.setAttribute('aria-expanded', 'false'); det.innerHTML = `<span class="ico">${pxi('ui-team')}</span><span>Details</span>`;
     det.onclick = () => MOB.details(!MOB.det);
-    document.querySelector('.hud .rail').appendChild(det);
+    document.querySelector('.rail').appendChild(det);
     const detX = document.createElement('button'); detX.id = 'mDetX'; detX.className = 'btn small'; detX.textContent = 'Done ▼';
     detX.onclick = () => MOB.details(false);
     document.querySelector('#roster > header').appendChild(detX);
@@ -14282,6 +14705,198 @@ const mobEv = e => (G.drag && G.drag.active && e.pointerType !== 'mouse') ? { cl
   UI.init = function () { const r = init0.apply(UI, arguments); MOB.init(); return r; };
   UI.layout = function () { MOB.sync(); return MOB.on ? MOB.layout() : layout0.call(UI); };
 }
+
+// ===== Board-first desktop layout (Cam 2026-10-31: "a brand new UI that shows off the board and characters more, built around the board like TFT") =====
+// The arena fills the screen. Thin plates float over its edges: the siege tracker on top, team traits down the left,
+// scouts on the top right, and one bottom bar that holds the facilities, gold, the shop, the bench and the siege buttons.
+// Big panels (the champion drawer, scout report, facilities) stay one click away instead of always open.
+// Desktop only: phone layouts (html.m, src/mobile.js) keep their own arrangement. Loaded after mobile.js.
+const BOARD = {
+  on: false, card: null, team: false, intel: false, homes: new Map(), keys: {},
+  wanted() { return !MOB.wanted() && innerWidth >= 900; },
+  build() {
+    if ($('boardBar')) return;
+    const mk = (id, cls, html = '') => { const d = document.createElement('div'); d.id = id; if (cls) d.className = cls; d.innerHTML = html; return d; };
+    const app = $('app');
+    app.appendChild(mk('bTop', 'bplate btop'));
+    app.appendChild(mk('bTL', 'btl'));
+    app.appendChild(mk('bTR', 'btr', `<div id="scoutRow" class="scoutrow" role="button" tabindex="0" aria-label="Scout report"></div><div class="bbtns" id="bBtns">
+      <button class="ibtn" id="bIntelBtn" aria-pressed="false" data-tip="txt:Scout report|Who is coming, the horde's attack plan and its tricks. (S)">${pxi('ui-scout')}</button>
+      <button class="ibtn" id="bTeamBtn" aria-pressed="false" data-tip="txt:Team and battle stats|Every champion, team bonuses spelled out, element combos and the battle chart. (C)">${pxi('ui-team')}</button></div>`));
+    app.appendChild(mk('traitRail', 'traitrail'));
+    app.appendChild(mk('boardBar', 'boardbar', `<div class="bb-fac" id="bFac"></div>
+      <div class="bb-econ" id="bEcon"><div class="bb-gold" id="bGold"></div><div class="bb-lvl" id="bLvl"></div><div class="bb-ebtns" id="bEBtns"></div></div>
+      <div class="bb-shop" id="bShop"></div>
+      <div class="bb-bench" id="bBench"></div>
+      <div class="bb-act" id="bAct"></div>`));
+    app.appendChild(mk('unitCard', 'unitcard', `<button class="ibtn ucx" id="unitX" aria-label="Close">${pxi('ui-close')}</button><div id="unitBody"></div>`));
+    $('unitX').onclick = () => { BOARD.card = null; BOARD.render(); };
+    $('bIntelBtn').onclick = () => BOARD.setIntel(!BOARD.intel);
+    $('scoutRow').onclick = () => BOARD.setIntel(!BOARD.intel);
+    $('bTeamBtn').onclick = () => BOARD.setTeam(!BOARD.team);
+    // the bar hands its clicks to the same actions the Guild page uses
+    $('boardBar').addEventListener('click', e => { const b = e.target.closest('[data-bact]'); if (!b || b.disabled) return; SFX.init(); G.act(b.dataset.bact, b.dataset.arg); });
+    $('traitRail').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { G.act(b.dataset.act, b.dataset.arg); return; } const t = e.target.closest('[data-tip]'); if (t) { e.stopPropagation(); const r = t.getBoundingClientRect(); UI.tipShow(t, r.right + 8, r.top + r.height / 2); } });
+    $('rosterToggle').addEventListener('click', e => { if (!BOARD.on) return; e.stopImmediatePropagation(); BOARD.setTeam(false); }, true);
+    $('bBench').addEventListener('pointerdown', e => { const t = e.target.closest('[data-uid]'); if (t) G.cardDown(e, t.dataset.uid); });
+  },
+  // move the shared HUD pieces into the board plates; unmount puts every one back exactly where it was
+  move(el, into, before) { if (!el) return; if (!BOARD.homes.has(el)) { const mark = document.createComment('home'); el.parentNode.insertBefore(mark, el); BOARD.homes.set(el, mark); } before ? into.insertBefore(el, before) : into.appendChild(el); },
+  mount() {
+    BOARD.build(); if (BOARD.on) return; BOARD.on = true;
+    document.documentElement.classList.add('board');
+    const q = s => document.querySelector(s);
+    BOARD.move(q('.hud .siegeinfo'), $('bTop')); BOARD.move(q('.hud .castlebar'), $('bTop'));
+    BOARD.move($('scoreBox'), $('bTL'));
+    for (const id of ['recBadge', 'soundBtn', 'fsBtn', 'menuBtn']) BOARD.move($(id), $('bBtns'));
+    BOARD.move(q('.hud .rail'), $('bFac'));
+    BOARD.move($('goldBox'), $('bGold'));
+    BOARD.move(q('.hud .controls .speed'), $('bAct'));
+    for (const id of ['repairBtn', 'pressBtn', 'hammerBtn', 'powerBtn', 'beginBtn']) BOARD.move($(id), $('bAct'));
+    BOARD.move($('inspector'), $('unitBody'));
+    BOARD.keys = {}; BOARD.setTeam(BOARD.team, true); BOARD.setIntel(BOARD.intel, true);
+  },
+  unmount() {
+    if (!BOARD.on) return; BOARD.on = false;
+    document.documentElement.classList.remove('board', 'board-team');
+    for (const [el, mark] of BOARD.homes) { mark.parentNode && mark.parentNode.insertBefore(el, mark); mark.remove(); }
+    BOARD.homes.clear();
+    for (const k of ['--barH', '--trailW']) document.documentElement.style.removeProperty(k);
+    $('roster').classList.remove('bteam'); $('intel').classList.remove('bopen');
+  },
+  setTeam(open, quiet) {
+    BOARD.team = open; document.documentElement.classList.toggle('board-team', open && BOARD.on);
+    const b = $('bTeamBtn'); if (b) b.setAttribute('aria-pressed', String(open));
+    if (open) { BOARD.setIntel(false, true); UI.setRoster(false); }
+    if (!quiet) SFX.play('click');
+  },
+  setIntel(open, quiet) {
+    BOARD.intel = open; $('intel').classList.toggle('bopen', open && BOARD.on);
+    if (BOARD.on) UI.setIntel(open, true);
+    const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open));
+    if (open && BOARD.team) BOARD.setTeam(false, true);
+    if (!quiet) SFX.play('click');
+  },
+  // arena: as wide as the screen allows above the bar; spare width on the left becomes the trait column
+  layout() {
+    const st = document.documentElement.style, big = innerWidth >= 1800 && innerHeight >= 1000;
+    const barH = big ? 138 : innerHeight < 760 ? 98 : 116;
+    const availH = innerHeight - barH; let w = innerWidth, h = w * 9 / 16; if (h > availH) { h = availH; w = h * 16 / 9; }
+    const free = innerWidth - w, wide = free >= 170;
+    const ax = wide ? free : free / 2;
+    st.setProperty('--aw', w + 'px'); st.setProperty('--ah', h + 'px'); st.setProperty('--ax', ax + 'px'); st.setProperty('--ay', Math.max(0, (availH - h) / 2) + 'px');
+    st.setProperty('--barH', barH + 'px'); st.setProperty('--hudH', '0px'); st.setProperty('--rosH', barH + 'px'); st.setProperty('--trailW', (wide ? free : 0) + 'px');
+    document.documentElement.classList.toggle('trail-wide', wide);
+    if (typeof R !== 'undefined' && R.cv && typeof resizeRender === 'function') resizeRender();
+  },
+  render() {
+    if (!BOARD.on || !G.run) return;
+    const run = G.run;
+    BOARD.renderTop(run); BOARD.renderTraits(run); BOARD.renderScouts(run); BOARD.renderEcon(run); BOARD.renderShop(run); BOARD.renderBench(run);
+    const show = !!G.selected && BOARD.card === G.selected && !!run.roster.find(x => x.uid === G.selected) && $('title').hidden && !BOARD.team;
+    $('unitCard').classList.toggle('on', show);
+  },
+  set(id, html) { if (BOARD.keys[id] === html) return false; BOARD.keys[id] = html; $(id).innerHTML = html; return true; },
+  // ---- top: siege tracker with this horde's five sieges as pips ----
+  renderTop(run) {
+    const s = run.siege, within = (s - 1) % 5, first = s - within; let p = '';
+    for (let i = 0; i < 5; i++) { const n = first + i, boss = isBossSiege(n), cls = i < within ? 'done' : i === within ? 'now' : 'next';
+      p += `<i class="pip ${cls} ${boss ? 'boss' : ''}" data-tip="txt:Siege ${n}|${esc(UI.siegeBlurb(n))}">${boss ? pxi('ui-skull') : i < within ? pxi('ui-check') : ''}</i>`; }
+    let pe = $('hordePips'); if (!pe) { pe = document.createElement('div'); pe.id = 'hordePips'; pe.className = 'pips5'; $('bTop').insertBefore(pe, $('bTop').children[1] || null); }
+    if (pe._k !== p) { pe._k = p; pe.innerHTML = p; }
+  },
+  // ---- left: TFT-style trait tracker (live ones first, tier pips, hover for the full text) ----
+  renderTraits(run) {
+    const { race, cls } = synergyCounts(run), act = activeSynergies(run), rows = [];
+    const tierCls = t => t < 0 ? 't-off' : ['t-bronze', 't-silver', 't-gold'][Math.min(2, t)] || 't-gold';
+    const row = (key, def, n, icon, tip) => { const t = act[key] ?? -1, next = def.at.find(v => v > n);
+      rows.push({ on: t >= 0, t, n, html: `<div class="tr ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="${tip}" aria-label="${esc(def.name)} ${n}"><span class="hex">${icon}</span><b class="cnt">${n}</b><span class="nm">${esc(def.name)}</span><span class="tiers">${def.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span>${t < 0 ? `<small class="nx">${n}/${def.at[0]}</small>` : next ? '' : '<small class="nx mx">max</small>'}</div>` }); };
+    for (const k in RACES) if (race[k]) row(k, RACES[k], race[k], pxi('race-' + k), 'syn:' + k);
+    for (const k in CLASSES) if (cls[k]) row(k, CLASSES[k], cls[k], pxi('cls-' + k), 'syn:' + k);
+    rows.sort((a, b) => (b.on - a.on) || (b.t - a.t) || (b.n - a.n));
+    let h = rows.map(r => r.html).join('');
+    const fe = stackElements(run), els = EL_KEYS.filter(e => fe[e]).sort((a, b) => fe[b] - fe[a]);
+    if (els.length) { h += `<div class="trsep">Elements</div>`; for (const e of els) { const n = fe[e], t = elTier(n), E = ELEMENTS[e];
+      h += `<div class="tr el ${t >= 0 ? 'on' : ''} ${tierCls(t)}" data-tip="els:${e}" style="--ec:${E.col}"><span class="hex">${pxi('el-' + e)}</span><b class="cnt">${n}</b><span class="nm">${esc(E.name)}</span><span class="tiers">${EL_STACK.at.map(v => `<i class="${n >= v ? 'f' : ''}">${v}</i>`).join('')}</span></div>`; } }
+    const tc = temperCounts(run), tps = Object.keys(tc).filter(k => tc[k] >= 2);
+    if (tps.length) { h += `<div class="trsep">Pairs</div>`; for (const k of tps) { const T = TEMPERS[k]; h += `<div class="tr on t-silver tmp ${T.side}" data-tip="tmp:${k}"><span class="hex">${pxi('tmp-' + k)}</span><b class="cnt">${tc[k]}</b><span class="nm">${esc(T.name)}</span></div>`; } }
+    const all = possibleCombos(run), on = new Set(activeCombos(run).map(c => c.key));
+    if (all.length) { h += `<div class="trsep">Combos ${on.size}/${comboSlots(run)}</div>`;
+      for (const c of all) h += `<button class="tr combo ${on.has(c.key) ? 'on t-gold' : 't-off'} ${c.unpicked ? 'new' : ''}" data-act="combo" data-arg="${c.key}" data-tip="combo:${c.key}" style="--ec:${ELEMENTS[c.a].col};--ec2:${ELEMENTS[c.b].col}" ${G.phase !== 'prep' ? 'disabled' : ''}><span class="hex">${pxi('cmb-' + c.kind)}</span><span class="nm">${esc(c.name)}</span></button>`; }
+    if (!h) h = `<p class="trnone">Two champions of the same race or class switch on a bonus.</p>`;
+    BOARD.set('traitRail', h);
+  },
+  // ---- top right: the horde as a row of faces; the full report opens on click ----
+  renderScouts(run) {
+    const B = G.B, s = run.siege, F = FACTIONS[factionIndex(s)], within = (s - 1) % 5;
+    let ids, counts = null;
+    if (B && G.phase === 'siege') { counts = {}; for (const q of B.queue) if (!q.turncoat) counts[q.id] = (counts[q.id] || 0) + 1; for (const e of B.enemies) if (e.alive && !e.turncoat) counts[e.id] = (counts[e.id] || 0) + 1; ids = Object.keys(counts); }
+    else { ids = F.pool.slice(0, Math.min(F.pool.length, 2 + within)); if (within >= 2 && s > 5) ids.push(F.elite); if (isBossSiege(s)) ids.push(bossFor(s)); if (run.mods.chickens) ids.unshift('chicken'); if (run.mods.honked) ids.unshift('goose'); }
+    const tag = d => d.boss ? (d.boss === 'big' ? 'Boss' : 'Mini-boss') : d.elite ? 'Elite, may drop an item' : d.kind === 'flyer' ? 'Flies over the line' : d.kind === 'ranged' ? 'Ranged' : d.kind === 'healer' ? 'Heals the horde' : d.split ? 'Splits when slain' : d.spd > 35 ? 'Fast' : 'Melee';
+    let h = `<span class="srlab">${counts ? 'Still coming' : esc(F.name)}</span>`;
+    for (const id of ids) { const d = ENEMIES[id]; if (!d) continue; h += `<span class="sface ${d.boss ? 'boss' : d.elite ? 'elite' : ''}" data-tip="txt:${esc(d.name)}|${esc(tag(d))}"><img class="px" src="${portrait('e:' + id)}" alt="">${counts ? `<b>${counts[id]}</b>` : ''}</span>`; }
+    const tc = run.tactic && TACTICS[run.tactic]; if (tc && !counts) h += `<span class="sface tac" data-tip="txt:Horde tactic: ${esc(tc.name)}|${esc(tc.desc)}">${pxi('tac-' + run.tactic)}</span>`;
+    BOARD.set('scoutRow', h);
+  },
+  // ---- bottom left: gold, guild level, level up and reroll (TFT's buy XP and refresh) ----
+  renderEcon(run) {
+    const prep = G.phase === 'prep', gc = guildCost(run), rc = shopRerollCost(run), intr = interestFor(run.gold, run);
+    BOARD.set('bLvl', `<b data-tip="txt:Guild level ${guildLevel(run)}|Each guild level adds a field slot and deals rarer legends in the shop.">Lv ${guildLevel(run)}</b><small>${fieldCount(run)}/${fieldCap(run)} on the field</small><small class="intr" data-tip="txt:Interest|1 gold per ${SHOP.interestPer} banked, paid after the siege.">+${intr} interest</small>`);
+    BOARD.set('bEBtns', `<button class="bbtn lvup" data-bact="guildlevel" ${prep && gc != null && run.gold >= gc ? '' : 'disabled'} data-tip="txt:Level up the guild|One more champion on the field and rarer shop odds.">${pxi('ui-up')}<span>${gc == null ? 'Max level' : 'Level up'}</span>${gc == null ? '' : COST(gc)}</button>
+      <button class="bbtn rr" data-bact="shopreroll" ${prep && run.gold >= rc ? '' : 'disabled'} data-tip="txt:New shop|Deal five fresh legends.">${pxi('ui-reroll')}<span>Reroll</span>${COST(rc)}</button>`);
+  },
+  // ---- bottom middle: the shop, always in reach while you plan ----
+  renderShop(run) {
+    const prep = G.phase === 'prep'; if (!run.shop) rollShop(run, G.meta);
+    const fe0 = stackElements(run), full = run.roster.length >= rosterCap(run);
+    let h = '';
+    run.shop.forEach((c, i) => {
+      if (!c) { h += `<div class="bs-card sold"><span>Sold</span></div>`; return; }
+      const d = HERO_BY_ID[c.id], Rr = RARITY[d.rar], cost = shopCost(c.id), own = run.roster.find(x => x.id === c.id), el = own ? own.el : c.el;
+      const up = own && copiesToNext(own) === 1, elUp = !own && el && EL_STACK.at.includes((fe0[el] || 0) + 1);
+      const tip = `txt:${esc(d.name)}|${esc(Rr.name)} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}${el ? ', ' + esc(ELEMENTS[el].name) : ''}. Signature: ${esc(d.aName)}.${own ? ` You own ${own.copies || 1} ${(own.copies || 1) === 1 ? 'copy' : 'copies'} (${copiesToNext(own)} more for ${heroStar(own) + 1} stars).` : ''}`;
+      h += `<button class="bs-card r${d.rar} ${own ? 'own' : ''} ${up ? 'starup' : ''}" data-bact="shopbuy" data-arg="${i}" style="--rc:${Rr.col};--rc2:${Rr.col2}" ${prep && run.gold >= cost ? '' : 'disabled'} data-tip="${tip}" aria-label="${esc(d.name)}, ${Rr.name}, ${cost} gold">
+        <img class="px port" src="${portrait('h:' + c.id, 'idle0')}" alt="" draggable="false">
+        <span class="bs-ic">${pxi('cls-' + d.cls)}${pxi('race-' + d.race)}${el ? `<span class="${elUp ? 'elup' : ''}">${pxi('el-' + el)}</span>` : ''}</span>
+        ${own ? `<span class="bs-own">${up ? `${heroStar(own) + 1}★ next` : `${heroStar(own)}★ owned`}</span>` : full ? '<span class="bs-own dim">Keep full</span>' : ''}
+        <span class="bs-foot"><b>${esc(heroShortName(d.name))}</b><span class="bs-cost">${COST(cost)}</span></span></button>`;
+    });
+    h += `<button class="ibtn bs-lock ${run.shopLock ? 'on' : ''}" data-bact="shoplock" aria-pressed="${!!run.shopLock}" data-tip="txt:${run.shopLock ? 'Shop locked' : 'Lock the shop'}|${run.shopLock ? 'These five stay for the next siege.' : 'Keep these five for the next siege instead of a fresh deal.'}">${pxi(run.shopLock ? 'ui-lock' : 'ui-unlock')}</button>`;
+    BOARD.set('bShop', h);
+    $('bShop').classList.toggle('closed', !prep);
+  },
+  // ---- bottom right: the bench, five slots; drag a champion up onto the board ----
+  renderBench(run) {
+    const bench = run.roster.filter(x => !(x.place || x.vault || x.fled));
+    let h = `<span class="bb-lab" data-tip="txt:Bench|Bench champions don't fight. Drag one onto the field, or onto a field champion to swap. Drag a field champion down here to bench them.">Bench <b>${bench.length}/${BENCH_SLOTS}</b></span><div class="btiles">`;
+    for (const x of bench) { const st = heroStar(x), Rr = RARITY[x.rarity || 0];
+      h += `<div class="bt ${G.selected === x.uid ? 'sel' : ''}" data-uid="${x.uid}" tabindex="0" role="button" style="--rc:${Rr.col}" aria-label="${esc(heroDisplayName(x))}, level ${x.level}" data-tip="txt:${esc(heroDisplayName(x))}|Level ${x.level} · ${esc(RACES[HERO_BY_ID[x.id].race].name)} ${esc(CLASSES[HERO_BY_ID[x.id].cls].name)}. Drag onto the field to fight."><img class="px" src="${portrait(heroSpriteKey(x))}" alt="" draggable="false"><span class="stars s${st}">${'★'.repeat(st)}</span><small>${x.level}</small></div>`; }
+    for (let i = bench.length; i < BENCH_SLOTS; i++) h += `<div class="bt empty" aria-hidden="true"></div>`;
+    BOARD.set('bBench', h + '</div>');
+  },
+};
+
+// ----- wiring: wrap the shared UI so the board plates follow every refresh, and swap layouts with the phone code -----
+(function boardWire() {
+  const layout0 = UI.layout, refresh0 = UI.refresh, hud0 = UI.hud, select0 = G.select, roster0 = UI.renderRoster, setIntel0 = UI.setIntel;
+  UI.layout = function () {
+    if (!BOARD.wanted()) BOARD.unmount();
+    const r = layout0.apply(UI, arguments);
+    if (!MOB.on && innerWidth >= 900) { BOARD.mount(); BOARD.layout(); BOARD.render(); }
+    return r;
+  };
+  UI.refresh = function () { const r = refresh0.apply(UI, arguments); BOARD.render(); return r; };
+  UI.hud = function () { const r = hud0.apply(UI, arguments); if (BOARD.on && G.run) { BOARD.renderTop(G.run); BOARD.renderEcon(G.run); BOARD.renderShop(G.run); } return r; };
+  UI.renderRoster = function () { const r = roster0.apply(UI, arguments); if (BOARD.on) { BOARD.renderBench(G.run); BOARD.renderTraits(G.run); BOARD.render(); } return r; };
+  const openPage0 = UI.openPage;
+  UI.openPage = function (p) { const r = openPage0.apply(UI, arguments); document.documentElement.classList.toggle('board-page', !!UI.page); if (UI.page && BOARD.team) BOARD.setTeam(false, true); return r; };
+  G.select = function (uid) { BOARD.card = uid; return select0.apply(G, arguments); };
+  // the S key and the old intel tab open the board's scout panel
+  UI.setIntel = function (open, quiet) { const r = setIntel0.apply(UI, arguments); if (BOARD.on && BOARD.intel !== open) { BOARD.intel = open; $('intel').classList.toggle('bopen', open); const b = $('bIntelBtn'); if (b) b.setAttribute('aria-pressed', String(open)); } return r; };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && BOARD.on) { if (BOARD.team) BOARD.setTeam(false); else if (BOARD.intel) BOARD.setIntel(false); else if (BOARD.card) { BOARD.card = null; BOARD.render(); } } }, true);
+  // clicking empty board closes the champion card
+  document.addEventListener('pointerdown', e => { if (!BOARD.on || e.target.id !== 'arena') return; setTimeout(() => { if (!G.drag) { const p = toLogical(e); if (G.phase === 'prep' && !heroAtPoint(p)) { BOARD.card = null; BOARD.render(); } } }, 0); });
+})();
 
 // ===== Store demo: the app plays the first three hordes free, then one purchase unlocks the rest =====
 // The limit only applies in the native app (or with ?demo on the web). The purchase itself lives in app/native.js

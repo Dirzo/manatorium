@@ -505,7 +505,7 @@ function docUp(e) {
   if (d.active) {
     if (sell) sellNow(d.h);
     else if (p.inside) { const s = slotAt(p); if (slotOk(d.h, s)) { placeHero(d.h, s); UI.coachDone('place'); } else if (s && s.type === 'rafter') UI.toast('Only ranged heroes can stand on the rafters.', true); }
-    else { const r = $('roster').getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
+    else { const r = (typeof BOARD !== 'undefined' && BOARD.on && !BOARD.team ? $('boardBar') : $('roster')).getBoundingClientRect(), card = document.elementFromPoint(e.clientX, e.clientY), cu = card && card.closest && card.closest('.hcard[data-uid], .bt[data-uid]'), other = cu && G.run.roster.find(x => x.uid === cu.dataset.uid);
       // field champion dropped on a bench card: they trade places
       if (other && other !== d.h && d.h.place && !other.place && !other.vault && !other.fled) { swapBench(other, d.h); }
       else if (e.clientY >= r.top && e.clientY <= r.bottom && d.h.place) { d.h.place = null; SFX.play('click'); } }
@@ -604,7 +604,7 @@ function metaLedgerHTML() {
   } else {
     const groups = [...new Set(ACHIEVEMENTS.map(a => a.group))];
     for (const g of groups) { h += `<div class="group-title">${esc(g)}</div><div class="achgrid">`;
-      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? '✓ ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
+      for (const a of ACHIEVEMENTS.filter(x => x.group === g)) { const got = !!M0.ach[a.id]; h += `<div class="ach ${got ? 'got' : ''}"><b>${got ? pxi('ui-check') + ' ' : ''}${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`; }
       h += `</div>`; }
     h += `<p class="note">Every run starts equal: no upgrades carry over. Achievements are trophies, checked when a run ends.</p>`;
   }
@@ -684,14 +684,14 @@ function wire() {
   $('powerBtn').onclick = () => { armPower(); UI.coachDone('power'); };
   $('repairBtn').onclick = () => { SFX.init(); G.act('repair'); };
   $('soundBtn').onclick = e => { e.stopPropagation(); SFX.init(); audioPanel(); };
-  $('menuBtn').onclick = () => showTitle();
+  $('menuBtn').onclick = () => showTitle(); $('menuBtn').innerHTML = pxi('ui-menu') + '<span>Keep menu</span>'; $('menuBtn').dataset.tip = 'txt:Keep menu|Title screen, the Keep Ledger and how to play.';
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input,textarea,select')) return;
     if ((e.key === 'n' || e.key === 'N') && $('title').hidden && !TOWER.on) { e.preventDefault(); NOTES.open(); return; }
     if (!$('modal').hidden || !$('title').hidden || TOWER.on) return;
     if (e.code === 'Space' && G.phase === 'prep') { e.preventDefault(); SFX.init(); beginSiege(); }
     else if (e.key === 'f' || e.key === 'F') UI.fullscreen();
-    else if (e.key === 'c' || e.key === 'C') UI.setRoster(!$('roster').classList.contains('collapsed'));
+    else if (e.key === 'c' || e.key === 'C') { if (typeof BOARD !== 'undefined' && BOARD.on) BOARD.setTeam(!BOARD.team); else UI.setRoster(!$('roster').classList.contains('collapsed')); }
     else if (e.key === 's' || e.key === 'S') UI.setIntel($('intel').classList.contains('closed'));
     else if (e.key === '1') { G.speed = 1; UI.hud(); } else if (e.key === '2') { G.speed = 2; UI.hud(); } else if (e.key === '4') { G.speed = 4; UI.hud(); }
     else if ((e.key === 'r' || e.key === 'R') && G.B && G.phase === 'siege' && G.selected) G.act('h-recall', G.selected);
@@ -706,7 +706,7 @@ function wire() {
 // Sound button: a small panel with music and effects volume (music.js plays the theme)
 const AUDIO = { fx: 1 };
 function setFxVol(v) { AUDIO.fx = v; SFX.on = v > 0; if (SFX.master) SFX.master.gain.value = 0.32 * v; }
-function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.textContent = off ? '♪ Muted' : '♪ Sound'; b.setAttribute('aria-pressed', String(!off)); }
+function soundLabel() { const b = $('soundBtn'), off = !SFX.on && (!MUSIC_ON || MUSIC.vol <= 0); b.innerHTML = off ? pxi('ui-mute') + '<span>Muted</span>' : pxi('ui-sound') + '<span>Sound</span>'; b.dataset.tip = 'txt:' + (off ? 'Muted' : 'Sound') + '|Music and effects volume'; b.setAttribute('aria-pressed', String(!off)); }
 function loadAudioPrefs() {
   try { const t = localStorage.getItem('manatorium.talk'); if (['all', 'boss', 'off'].includes(t)) TALK_PREF.mode = t; } catch (e) { }
   try { const m = localStorage.getItem('manatorium.music'), f = localStorage.getItem('manatorium.fxvol');

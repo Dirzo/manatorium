@@ -571,8 +571,8 @@ function showTalk(run, done, x = {}) {
   const enc = x.enc, encKey = enc && (enc.portrait && enc.portrait !== 'e:' ? enc.portrait : 'npc:' + enc.id), encWho = enc && (encKey === 'e:' + bossId ? 'boss' : 'visitor');
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
-  const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`;
-  const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTag(h)} personality picks the words.`;
+  const heroName = h => heroDisplayName(h), heroTag = h => `${TEMPERS[heroTemper(h)].icon} ${TEMPERS[heroTemper(h)].name}`, heroTagText = h => TEMPERS[heroTemper(h)].name;
+  const tempHint = h => `${talkVoiceFirst(heroName(h))}'s ${heroTagText(h)} personality picks the words.`;
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '') + (sc.gloat ? ' gloat' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
@@ -662,7 +662,7 @@ function showTalk(run, done, x = {}) {
     const target = w === 'fallen' ? 'hero' : w; if (focusOn !== target) { pan(target); await wait(820); }
     bub.className = 'tk-bub ' + (w === 'boss' ? 'from-boss' : 'from-hero') + (w === 'boss' && bossId === 'colossus' ? ' robot' : '') + (w === 'fallen' ? ' ghostly' : '');
     placeBubble(w); bub.hidden = false; btxt.textContent = '';
-    who.textContent = w === 'boss' ? E.name : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTag(cur); };
+    who.textContent = w === 'boss' ? E.name : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTagText(cur); };
   const beats = (enc ? [{ who: 'enc' }, { who: 'encpick' }] : []).concat(sc.beats);
   let busy = false;
   const encDone = () => { encLeft = false; if (card) card.classList.add('out'); };
