@@ -114,7 +114,7 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 @keyframes railReady { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 0 4px rgba(255, 207, 58, 0.55); } }
 @media (prefers-reduced-motion: reduce) { .rail button.ready { animation: none; box-shadow: 0 3px 0 var(--ink), 0 0 0 3px rgba(255, 207, 58, 0.55); } }
 .rail .hint { font-size: 11px; color: var(--muted); text-align: center; padding: 4px; }
-.arena-wrap { flex: 0 1 auto; width: min(100%, max(560px, calc((100vh - 300px) * 16 / 9))); min-width: 0; position: relative; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; box-shadow: 0 5px 0 var(--ink); background: #74d35a; }
+.arena-wrap { flex: 0 1 auto; width: min(100%, max(560px, calc((100vh - 300px) * 16 / 9))); min-width: 0; position: relative; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; box-shadow: 0 5px 0 var(--ink); background: #151030; }
 #arena { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; }
 #arena.armed { cursor: crosshair; }
 .arena-tag { position: absolute; top: 8px; font-family: var(--f-display); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); pointer-events: none; }

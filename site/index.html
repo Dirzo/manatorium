@@ -124,7 +124,7 @@ kbd { font-family: var(--f-display); font-size: 10px; border: 1px solid currentC
 @keyframes railReady { 50% { box-shadow: 0 3px 0 var(--ink), 0 0 0 4px rgba(255, 207, 58, 0.55); } }
 @media (prefers-reduced-motion: reduce) { .rail button.ready { animation: none; box-shadow: 0 3px 0 var(--ink), 0 0 0 3px rgba(255, 207, 58, 0.55); } }
 .rail .hint { font-size: 11px; color: var(--muted); text-align: center; padding: 4px; }
-.arena-wrap { flex: 0 1 auto; width: min(100%, max(560px, calc((100vh - 300px) * 16 / 9))); min-width: 0; position: relative; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; box-shadow: 0 5px 0 var(--ink); background: #74d35a; }
+.arena-wrap { flex: 0 1 auto; width: min(100%, max(560px, calc((100vh - 300px) * 16 / 9))); min-width: 0; position: relative; border: 3px solid var(--ink); border-radius: 6px; overflow: hidden; box-shadow: 0 5px 0 var(--ink); background: #151030; }
 #arena { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; }
 #arena.armed { cursor: crosshair; }
 .arena-tag { position: absolute; top: 8px; font-family: var(--f-display); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); pointer-events: none; }
@@ -8300,7 +8300,10 @@ function initRender(canvas) {
 }
 function resizeRender() {
   const r = R.cv.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
-  R.k = Math.max(1, Math.ceil(r.width * dpr / W)); R.cv.width = W * R.k; R.cv.height = H * R.k;
+  const k = Math.max(1, Math.ceil(r.width * dpr / W)); if (k === R.k && R.cv.width === W * k) return;
+  R.k = k; R.cv.width = W * k; R.cv.height = H * k;
+  // resizing wipes the canvas; put the last frame back at once so a paused game (title, menus) never shows a bare field
+  if (R.lo && R.painted) { R.ctx.imageSmoothingEnabled = false; R.ctx.drawImage(R.lo, 0, 0, W * k, H * k); }
 }
 
 function buildBackground(fi, el) {
@@ -8756,6 +8759,7 @@ function renderFrame(V, dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#161d3a'; ctx.fillRect(0, 0, R.cv.width, R.cv.height);
   const sh = FXS.shake > 0.2 ? FXS.shake : 0; const ox = Math.round(rand(-sh, sh)) * k, oy = Math.round(rand(-sh, sh)) * k;
   ctx.drawImage(R.lo, ox, oy, W * k, H * k);
+  R.painted = true;
   // beams + bolts at hi-res for smoothness
   for (const b of FXS.beams) { const a = 1 - b.t / b.life; ctx.globalAlpha = a; ctx.strokeStyle = b.color; ctx.lineWidth = b.w * k * (0.5 + a * 0.5); ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(b.x1 * k + ox, b.y1 * k + oy); ctx.lineTo(b.x2 * k + ox, b.y2 * k + oy); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, b.w * k * 0.35 * a); ctx.stroke(); }
   for (const b of FXS.bolts) { ctx.globalAlpha = 1 - b.t / b.life; ctx.strokeStyle = b.color; ctx.lineWidth = k * 1.2; ctx.beginPath(); for (let i = 0; i < b.pts.length - 1; i++) { const p = b.pts[i], q = b.pts[i + 1]; ctx.moveTo(p.x * k + ox, p.y * k + oy); for (let j = 1; j <= 4; j++) { const f = j / 4; ctx.lineTo((p.x + (q.x - p.x) * f + (j < 4 ? rand(-4, 4) : 0)) * k + ox, (p.y + (q.y - p.y) * f + (j < 4 ? rand(-4, 4) : 0)) * k + oy); } } ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = k * 0.5; ctx.stroke(); }
