@@ -213,8 +213,9 @@ function growWeapon(g, ws, ax, ay, draw) {
 }
 // where a sprite frame lands when its 20x20 body is drawn fs pixels tall with its feet at (cx, by), as in drawUnit
 function frameBox(img, cx, by, fs) {
-  if (img.width !== STAR_PAD.w || img.height !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
-  const k = fs / 20, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  const hd = img.hd || 1, iw = img.width / hd, ih = img.height / hd;
+  if (iw !== STAR_PAD.w || ih !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
+  const k = fs / 20, w = Math.round(iw * k), h = Math.round(ih * k);
   return { x: cx - w / 2, y: by + 1 - fs - Math.round(STAR_PAD.t * k), w, h };
 }
 
@@ -452,7 +453,8 @@ function buildAllSprites() {
 function ensureSprite(key) {
   if (SPR[key]) return SPR[key];
   // 'h:<id>', 'h:<id>:<element>', either with '~<star>' (2 or 3) and optionally '@<weapon scale>' for the star-up show
-  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?$/.exec(key); if (!m) return null;
+  // a '|<temper>' suffix builds the hi-detail champion (hdart.js) wearing that temper's face
+  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?(?:\|([a-z]+))?$/.exec(key); if (!m) return null;
   const d = HERO_BY_ID[m[1]], E = m[2] && ELEMENTS[m[2]]; if (!d || (m[2] && !E)) return null;
   let spec = d.spr;
   if (E) { const dark = c => shade(c, -0.35);
@@ -460,6 +462,7 @@ function ensureSprite(key) {
     if (d.spr.cape) spec.cape = E.col2;
     if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
   if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
+  if (m[5] && typeof buildSpriteHD === 'function' && (spec.gen || 'humanoid') === 'humanoid') return buildSpriteHD(key, spec, m[5]);
   return buildSprite(key, spec, false);
 }
 

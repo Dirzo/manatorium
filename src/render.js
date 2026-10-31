@@ -22,7 +22,7 @@ function drawStars(g, u, t) {
 const TINTS = new WeakMap();
 function tintFrame(img, col) {
   let m = TINTS.get(img); if (!m) TINTS.set(img, m = {}); if (m[col]) return m[col];
-  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.hd = img.hd; const x = c.getContext('2d');
   x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
   return (m[col] = c);
 }
@@ -30,13 +30,13 @@ function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(
 
 function initRender(canvas) {
   R.cv = canvas; R.ctx = canvas.getContext('2d');
-  R.lo = document.createElement('canvas'); R.lo.width = W; R.lo.height = H; R.lctx = R.lo.getContext('2d');
+  R.lo = document.createElement('canvas'); R.lo.width = W * HDK; R.lo.height = H * HDK; R.lctx = R.lo.getContext('2d'); R.lctx.setTransform(HDK, 0, 0, HDK, 0, 0); // the field is painted at double detail (hdart.js)
   for (let i = 0; i < 7; i++) R.clouds.push({ x: rand(0, W), y: rand(6, 50), w: randi(18, 40), s: rand(3, 8) });
   resizeRender();
 }
 function resizeRender() {
   const r = R.cv.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
-  const k = Math.max(1, Math.ceil(r.width * dpr / W)); if (k === R.k && R.cv.width === W * k) return;
+  const k = Math.max(1, Math.ceil(r.width * dpr / (W * HDK))) * HDK; if (k === R.k && R.cv.width === W * k) return;
   R.k = k; R.cv.width = W * k; R.cv.height = H * k;
   // resizing wipes the canvas; put the last frame back at once so a paused game (title, menus) never shows a bare field
   if (R.lo && R.painted) { R.ctx.imageSmoothingEnabled = false; R.ctx.drawImage(R.lo, 0, 0, W * k, H * k); }
@@ -161,12 +161,12 @@ function unitFrame(u, t) {
 // a red-flushed copy of a sprite frame, made once and cached
 function redFrame(S, fr) {
   S.red = S.red || {}; if (S.red[fr]) return S.red[fr];
-  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d');
+  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; c.hd = src.hd; const x = c.getContext('2d');
   x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,40,40,0.55)'; x.fillRect(0, 0, c.width, c.height);
   return (S.red[fr] = c);
 }
 function drawUnit(g, u, t, opts = {}) {
-  const S = SPR[u.key] || ensureSprite(u.key); if (!S) return;
+  const key = hdUnitKey(u), S = SPR[key] || ensureSprite(key) || SPR[u.key] || ensureSprite(u.key); if (!S) return;
   const sc = (S.scale || u.scale || 1) * (u.vscale || 1), size = Math.round(20 * sc);
   const fr = opts.frame || unitFrame(u, t);
   const nativeFace = u.nativeFace || (u.side === 'enemy' ? -1 : 1);
@@ -403,15 +403,14 @@ function renderFrame(V, dt) {
   const fi = factionIndex(run.siege);
   const hall = run.finale === 'ready';
   const bgKey = hall ? 'hall' : fi + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(fi, run.castleEl);
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(fi, run.castleEl), run.castleEl);
   g.imageSmoothingEnabled = false;
-  g.drawImage(R.bg[bgKey], 0, 0);
+  g.drawImage(R.bg[bgKey], 0, 0, W, H);
   if (hall) drawHallLive(g, t, B);
   else if (typeof drawSceneLive === 'function') drawSceneLive(g, run.castleEl, t);
   // clouds
   if (!hall) for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
-    g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#ac9298' : '#ffffff'; g.fillRect(Math.round(c.x), Math.round(c.y), c.w, 4); g.fillRect(Math.round(c.x + 4), Math.round(c.y - 3), c.w - 10, 3); g.fillRect(Math.round(c.x + c.w * 0.4), Math.round(c.y - 5), c.w * 0.35, 2);
-    g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#7d707f' : '#e4ecff'; g.fillRect(Math.round(c.x + 2), Math.round(c.y + 4), c.w - 4, 1); }
+    const dk = ['fire','dark','void','lightning'].includes(run.castleEl); hdCloud(g, c.x, c.y + 4, c.w, dk ? '#ac9298' : '#ffffff', dk ? '#7d707f' : '#cdd8f4'); }
   // castle
   if (!hall) { const cv = buildCastle(run); g.drawImage(cv, 0, 0); drawCastleLive(g, t); if (typeof drawCastleAlive === 'function') drawCastleAlive(g, run, t, cv); }
   if (!hall && run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
