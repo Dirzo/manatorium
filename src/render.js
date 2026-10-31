@@ -444,6 +444,12 @@ function renderFrame(V, dt) {
   if (B) units = [...B.heroes.filter(h => h.alive || (h.deadT != null && !h.temp)), ...B.enemies];
   else units = V.prepUnits;
   units.sort((a, b) => (a.flying ? a.y + 30 : a.y) - (b.flying ? b.y + 30 : b.y));
+  // trait highlight (board.js): hovering or tapping a trait rings every fielded champion who carries it
+  if (!B && typeof BOARD !== 'undefined' && BOARD.on && BOARD.hlTok) { const on = Math.floor(t * 4) % 2;
+    for (const u of units) if (u.inst && BOARD.heroToks(run, u.inst).includes(BOARD.hlTok)) { const x = Math.round(u.x), y = Math.round(u.y);
+      g.strokeStyle = OUTLINE; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y, 11, 5.5, 0, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = on ? '#ffe066' : '#fff6c8'; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y, 11, 5.5, 0, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = OUTLINE; g.fillRect(x - 3, y - 31 - on, 7, 5); g.fillStyle = '#ffe066'; g.fillRect(x - 2, y - 30 - on, 5, 1); g.fillRect(x - 1, y - 29 - on, 3, 1); g.fillRect(x, y - 28 - on, 1, 1); } }
   // rafter units are drawn after the castle and before ground units sorted
   for (const u of units) {
     if (u.alive === false) { // tombstone
