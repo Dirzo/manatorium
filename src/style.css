@@ -519,6 +519,11 @@ h1, h2, h3, h4 { font-weight: 600; letter-spacing: 0; }
 .achlist { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .ach em .cost, .achlist em .cost { display: inline-flex; align-items: center; gap: 2px; } .ach em { display: flex; align-items: center; white-space: nowrap; color: var(--sky); }
 .coinbox[hidden] { display: none !important; }
+.sheet.intro { max-width: 520px; } .sheet.intro .cost img { width: 14px; height: 14px; vertical-align: -2px; }
+.iitem { display: flex; gap: 12px; align-items: center; } .iitem img { width: 48px; height: 48px; flex: none; }
+.irecs { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 4px; }
+.irec { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.05); }
+.irec img { width: 24px; height: 24px; flex: none; } .irec > span { opacity: 0.6; } .irec div { display: flex; flex-direction: column; margin-left: 4px; } .irec small { opacity: 0.8; }
 .nag { margin: 4px 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 /* intel split: scout report scrolls, battle stats sit at the bottom */
 .intel .intelmain { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }

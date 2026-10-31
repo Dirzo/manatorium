@@ -401,6 +401,7 @@ function finishSiege(run, meta, B) {
     run.castle.hp = Math.max(run.castle.hp, Math.round(run.castle.max * BREACH.rebuild)); }
   run.lastStats = rep.heroes.map(h => ({ uid: h.uid, id: h.id, alive: h.alive, dmg: h.dmg, heal: h.heal, taken: h.taken, ccT: h.ccT, cc: h.cc, dsrc: h.dsrc, hsrc: h.hsrc, tsrc: h.tsrc }));
   for (const h of rep.heroes) run.stats.dmgByHero[h.id] = (run.stats.dmgByHero[h.id] || 0) + h.dmg;
+  if (B.done === 'victory') for (; B.carry > 0; B.carry--) B.drops.push(pick(COMP_KEYS)); // the carrier slipped away: its component turns up after the siege
   for (const key of B.drops) run.stash.push(makeItem([key]));
   if (run.tech.mimic && s % 3 === 0) { const key = pick(COMP_KEYS); run.stash.push(makeItem([key])); rep.mimic = key; }
   run.stats.kills += B.kills; run.stats.gold += rep.gold;

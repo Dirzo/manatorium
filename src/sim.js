@@ -370,6 +370,7 @@ function startBattle(run, meta) {
   for (const w of warbandFighters(run)) B.queue.push({ t: rand(4, 16), id: F0.elite, turncoat: w.id, wstar: warbandStar(w), defected: w.defected === run.siege, route: B.plan ? B.plan.elite : undefined });
   B.queue.sort((a, b) => a.t - b.t); B.defectors = B.queue.filter(q => q.turncoat).map(q => q.turncoat);
   B.totalSpawn = B.queue.length; B.goldRef = waveGoldRef(B.queue); B.coinAcc = 0; B.goldStart = run.gold;
+  B.carry = COMP_DROP_AT(run.siege) && run.finale !== 'ready' ? 1 : 0; B.carryAt = Math.max(3, Math.round(B.totalSpawn * rand(0.25, 0.5))); // the component carrier
   B.hz = HAZARDS[run.mods.hz] ? run.mods.hz : null; B.hzK = B.hz && HAZARDS[B.hz].kind; B.hzT = 2; B.hzPatches = [];
   const cp = (1 + (run.tech.resonance ? 0.3 : 0)) * (1 + 0.15 * (meta.ranks.banners || 0));
   B.combos = activeCombos(run).map((c, i) => Object.assign(c, { t: -1.5 * i, every: 9 * (run.tech.prism ? 0.77 : 1), power: cp }));
@@ -591,6 +592,7 @@ function killUnit(B, u, src) {
   else if (u.captain) drops = Math.random() < ITEM_DROP.captain ? 1 : 0;
   else if (u.def.elite && Math.random() < ITEM_DROP.elite) drops = 1;
   else if (u.id === 'goose') drops = 1;
+  if (B.carry > 0 && !u.boss && B.kills >= B.carryAt) { B.carry--; drops++; }
   for (let i = 0; i < drops; i++) { const key = Math.random() < ITEM_DROP.shard ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
   if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }

@@ -895,6 +895,9 @@ function rollTemper() { return TEMPER_KEYS[Math.floor(Math.random() * TEMPER_KEY
 // (a finished item after a big boss, components after a mini-boss), components for every fourth press and for taunting a big boss,
 // and the odd drop from ITEM_DROP.
 const LOOT_AFTER = s => s % 5 === 0;
+// components arrive early, the TFT way (Cam 2026-10-31): one foe in each of the first three sieges carries a component,
+// so the first fused item is ready by siege 2, then one in every third regular siege up to siege 21 (bosses carry the late game)
+const COMP_DROP_AT = s => s <= 3 || (s <= 21 && s % 3 === 0 && s % 5 !== 0);
 const ITEM_DROP = { elite: 0.01, captain: 0.08, miniBoss: 0, bigBoss: 1, shard: 0.02 };
 // Guild level (Cam 2026-10-24, TFT style): one level sets both how many legends fight and which rarities the shop deals.
 // A run starts at level 3 (three on the field) and buys its way up to level 12; there is no other field cap.
