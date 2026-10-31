@@ -521,6 +521,22 @@ function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
   ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
   const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
+  // hi-detail humanoids (hdart.js) open the mouth they were drawn with, at its own spot, and the talking gap covers it
+  const hm = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null;
+  if (hm) {
+    const frames = [0, 1, 2].map(gap => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
+      g.drawImage(src, 0, 0); if (!gap) return c;
+      const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128, fill = hexToRgb(hm.fill);
+      for (let y = hm.y; y < hm.y + hm.h; y++) for (let x = hm.x0; x <= hm.x1; x++) {
+        if (!op(x, y) || !hm.ok(d.data, (y * W + x) * 4)) continue;
+        const k = y - hm.y, open = k < gap * 2, edge = x === hm.x0 || x === hm.x1, tongue = gap === 2 && k >= 2 && Math.abs(x - (hm.x0 + hm.x1) / 2) < 1.5;
+        d.data.set(open && !(edge && k === 0) ? (tongue ? [255, 106, 138, 255] : [42, 10, 30, 255]) : [...fill, 255], (y * W + x) * 4);
+      }
+      g.putImageData(d, 0, 0); return c;
+    });
+    return (JAW_CACHE[key] = frames);
+  }
   const frames = [0, 1, 2].map(gap => {
     const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
     g.drawImage(src, 0, 0); if (!gap) return c;

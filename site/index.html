@@ -3764,7 +3764,7 @@ function hdWipeFace(g, s, by) {
 function hdPaintFace(g, s, by, temper) {
   const H = HD_HEADS[s.head]; if (!H) return;
   if (H.skull) return hdSkullFace(g, s, by, temper);
-  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = F.fx || [], dy = by * HDK;
+  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = HD_NOFX ? [] : F.fx || [], dy = by * HDK;
   const skin = s.skin, snout = s.snout || shade(skin, 0.4), belly = s.belly || shade(skin, 0.4), hair = s.hair || shade(skin, -0.4);
   // the face only lands on bare skin (or a dwarf's beard), so helms, hoods and fringes keep covering it
   const okBase = new Set([skin, snout, belly, shade(skin, -0.2)]);
@@ -3800,12 +3800,13 @@ function hdPaintFace(g, s, by, temper) {
   if (fx.includes('blush')) { put(ex1 + 2, k, '#ff9aa8'); put(ex1 + 3, k, '#ff9aa8'); put(ex0 - 1, k, '#ffb3bf'); }
   if (fx.includes('flush')) { put(ex1 + 2, k, '#ff6a6a'); put(ex1 + 3, k, '#ff6a6a'); put(ex0, k, '#ff8a8a'); }
   if (fx.includes('pale')) { for (let x = ex0; x <= ex1 + 3; x++) if (can(x, ey - 4) && raw(x, ey - 4) === skin) put(x, ey - 4, mix(skin, '#bfe6ff', 0.45)); }
-  if (fx.includes('vein')) { const vx = ex1 + 2, vy = ey - 5; for (const [a, b] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) g.set(vx + a, vy + b, '#ff3d6e', true); }
+  if (fx.includes('vein')) { const vx = ex1 + 2, vy = ey - 5; for (const [a, b] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) { const c = raw(vx + a, vy + b); if (c && c !== OUTLINE) g.set(vx + a, vy + b, '#ff3d6e', true); } }
   if (fx.includes('sweat')) { const sx = ex1 + 4, sy = ey - 3; g.set(sx, sy, '#bff4ff', true); g.set(sx, sy + 1, '#7fd8ff', true); g.set(sx - 1, sy + 1, '#ffffff', true); g.set(sx, sy + 2, '#5fb8f0', true); }
   if (fx.includes('shine')) { put(ex1 + 3, ey - 1, '#ffffff'); }
 }
 
 // the full fine-grid frame for one champion look and temper
+let HD_NOFX = false;
 function hdHumanoid(spec, frame, temper) {
   const fin = PixGrid.prototype.finish; let g;
   PixGrid.prototype.finish = function () { return this; };
@@ -3814,7 +3815,7 @@ function hdHumanoid(spec, frame, temper) {
   hdWipeFace(g, spec, by);
   const G = hdScale2x(g);
   // a blade held up by the face (Fenn's dagger next to his snout) gets an ink edge so it never melts into the skin
-  const metals = new Set([spec.metal || '#dfe6f5', '#dfe6f5', '#ffffff']), faceC = new Set([spec.skin, spec.snout || shade(spec.skin, 0.4)]), Wd = G.w;
+  const faceC = new Set([spec.skin, spec.snout || shade(spec.skin, 0.4)]), metals = new Set([spec.metal || '#dfe6f5', '#dfe6f5', '#ffffff'].filter(c => !faceC.has(c))), Wd = G.w;
   const edge = [];
   for (let i = 0; i < G.p.length; i++) { if (!metals.has(G.p[i])) continue; const x = i % Wd;
     if ([i - 1, i + 1, i - Wd, i + Wd].some(j => j >= 0 && j < G.p.length && Math.abs((j % Wd) - x) <= 1 && faceC.has(G.p[j]))) edge.push(i); }
@@ -3970,7 +3971,7 @@ const SKULL_JAW = {
   o:       ['..###..', '.#####.', '..###..'],
 };
 function hdSkullFace(g, s, by, temper) {
-  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = F.fx || [], dy = by * HDK, bone = s.skin, ridge = shade(bone, -0.32);
+  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = HD_NOFX ? [] : F.fx || [], dy = by * HDK, bone = s.skin, ridge = shade(bone, -0.32);
   const glow = F.pupil || s.eye || '#ff5d8f', kinds = Array.isArray(F.eyes) ? F.eyes : [F.eyes, F.eyes];
   const can = (x, y) => { const c = g.raw(x + g.ox, y + g.oy); return c === bone || c === OUTLINE || c === shade(bone, -0.25); };
   const put = (x, y, c) => { if (can(x, y)) g.set(x, y, c, true); };
@@ -4003,13 +4004,30 @@ function hdGenericFrame(key, spec, frame) {
   const gen = GENS[spec.gen || 'humanoid'];
   if (gen === genHumanoid && HD_HEADS[spec.head]) {
     const id = key.replace(/^[a-z]+:/, ''), hero = key.startsWith('h:'), tp = hero ? 'honorable' : FOE_FACES[Math.floor(hash(id.length * 7, id.charCodeAt(0) * 13 + id.charCodeAt(id.length - 1)) * FOE_FACES.length)];
-    return hdHumanoid(spec, frame, tp);
+    // foes keep the expression but skip the floating extras (vein, sweat drop), which read as stray specks on them
+    HD_NOFX = !hero; try { return hdHumanoid(spec, frame, tp); } finally { HD_NOFX = false; }
   }
   const fin = PixGrid.prototype.finish; let g;
   PixGrid.prototype.finish = function () { return this; };
   try { g = gen(spec, frame); } finally { PixGrid.prototype.finish = fin; }
   const G = hdScale2x(g), roles = new Map([['#dfe6f5', 'metal'], ['#c8c8d8', 'metal'], ['#e8e8f0', 'metal']]);
   return hdFinish(G, { base: G.p.slice(), roles });
+}
+
+// where a hi-detail face's mouth sits on a built frame, for the talking jaw in talk.js:
+// { x0, x1, y, h } in canvas pixels, the colour that fills the closed part, and ok(data, i) for pixels that belong to the face
+function hdMouthBox(key, img) {
+  const m = /^([eh]):([a-z]+)/.exec(key); if (!m) return null;
+  const spec = m[1] === 'e' ? ENEMIES[m[2]] && ENEMIES[m[2]].spr : HERO_BY_ID[m[2]] && HERO_BY_ID[m[2]].spr;
+  if (!spec || (spec.gen || 'humanoid') !== 'humanoid') return null;
+  const H = HD_HEADS[spec.head]; if (!H) return null;
+  const D = img.hd || 1, pad = img.width / D === STAR_PAD.w, ox = pad ? STAR_PAD.l * D : 0, oy = pad ? STAR_PAD.t * D : 0;
+  const half = H.toad ? 4 : H.skull ? 3 : 2, [mx, my] = H.m;
+  const fill = H.skull ? spec.skin : H.beard ? (spec.hair || shade(spec.skin, -0.4)) : spec.head === 'beast' ? (spec.snout || shade(spec.skin, 0.4)) : H.toad ? (spec.belly || shade(spec.skin, 0.4)) : spec.skin;
+  // never punch through a tusk, helm or weapon: only pixels close to the face's own colours change
+  const near = [spec.skin, spec.snout, spec.belly, spec.hair, OUTLINE, '#ffffff', '#4a1430', '#ff6a7a', '#9fe6ff'].filter(Boolean).map(hexToRgb);
+  const ok = (d, i) => { const r = d[i], g = d[i + 1], b = d[i + 2]; return near.some(([R, G, B]) => Math.abs(r - R) + Math.abs(g - G) + Math.abs(b - B) < 190); };
+  return { x0: ox + mx - half, x1: ox + mx + half, y: oy + my, h: 4, fill: shade(fill, -0.05), ok };
 }
 
 // Unique 12x12 icons for every finished item. Letters map to ITEM_PAL (falls back to ICON_PAL); '.' is transparent.
@@ -13059,6 +13077,22 @@ function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
   ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
   const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
+  // hi-detail humanoids (hdart.js) open the mouth they were drawn with, at its own spot, and the talking gap covers it
+  const hm = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null;
+  if (hm) {
+    const frames = [0, 1, 2].map(gap => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
+      g.drawImage(src, 0, 0); if (!gap) return c;
+      const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128, fill = hexToRgb(hm.fill);
+      for (let y = hm.y; y < hm.y + hm.h; y++) for (let x = hm.x0; x <= hm.x1; x++) {
+        if (!op(x, y) || !hm.ok(d.data, (y * W + x) * 4)) continue;
+        const k = y - hm.y, open = k < gap * 2, edge = x === hm.x0 || x === hm.x1, tongue = gap === 2 && k >= 2 && Math.abs(x - (hm.x0 + hm.x1) / 2) < 1.5;
+        d.data.set(open && !(edge && k === 0) ? (tongue ? [255, 106, 138, 255] : [42, 10, 30, 255]) : [...fill, 255], (y * W + x) * 4);
+      }
+      g.putImageData(d, 0, 0); return c;
+    });
+    return (JAW_CACHE[key] = frames);
+  }
   const frames = [0, 1, 2].map(gap => {
     const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
     g.drawImage(src, 0, 0); if (!gap) return c;
