@@ -1421,6 +1421,40 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 @keyframes suOut { to { opacity: 0; transform: scale(1.04); } }
 .note.starforged { color: #ffd94a; }
 
+/* ----- siege score and best-score board (Cam 2026-10-31) ----- */
+.purse .scorebox { flex-direction: column; align-items: flex-end; gap: 0; line-height: 1; color: #bfe7ff; }
+.purse .scorebox small { font-family: var(--f-body, inherit); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.siegescore { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 10px; padding: 8px 10px; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 var(--ink); }
+.siegescore > small { text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-size: 11px; }
+.siegescore > b { font-family: var(--f-display); font-size: 24px; color: #bfe7ff; }
+.siegescore.lost > b { color: var(--rose); }
+.siegescore .parts { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 200px; }
+.siegescore .sp { display: inline-flex; flex-direction: column; align-items: center; min-width: 48px; padding: 2px 6px; border: 2px solid var(--ink); border-radius: 4px; background: var(--panel); font-family: var(--f-display); font-size: 15px; line-height: 1.1; }
+.siegescore .sp small { font-family: var(--f-body, inherit); font-size: 10px; color: var(--muted); }
+.siegescore .sp.full { color: var(--mint); }
+.siegescore .sp.none { color: var(--muted); }
+.siegescore .sp.mul { color: var(--gold); }
+.siegescore .runtot { margin-left: auto; color: var(--muted); font-size: 13px; }
+.siegescore .runtot b { font-family: var(--f-display); font-size: 18px; color: var(--text); }
+.scorecard { margin: 6px 0 12px; padding: 10px 12px; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 var(--ink); }
+.scorecard .scoretop { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.scorecard .scoretop small { text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.scorecard .scoretop b { font-family: var(--f-display); font-size: 32px; color: #bfe7ff; }
+.scorecard .newbest { color: var(--gold); font-family: var(--f-display); animation: bump .5s 2; }
+.scorecard .rank { color: var(--muted); }
+.scoreboard { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; max-height: 190px; overflow: auto; }
+.scoreboard li { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 8px; align-items: baseline; padding: 2px 6px; border-radius: 3px; }
+.scoreboard li:nth-child(odd) { background: rgba(255,255,255,.04); }
+.scoreboard li.me { background: rgba(255, 207, 58, .16); outline: 1px solid var(--gold); }
+.scoreboard li span { color: var(--muted); }
+.scoreboard li b { font-family: var(--f-display); }
+.scoreboard li small { color: var(--muted); }
+/* ----- Boons ----- */
+.lcard.boon { border-color: var(--bc); background: linear-gradient(170deg, color-mix(in srgb, var(--bc) 22%, var(--panel-2)), var(--panel-2) 60%); }
+.lcard.boon .bicon { font-size: 40px; line-height: 1.1; filter: drop-shadow(2px 2px 0 var(--ink)); }
+.lcard.boon.b-prism { box-shadow: 0 4px 0 var(--ink), 0 0 0 2px #8fd7ff, 0 0 18px rgba(255, 159, 255, .45); }
+.loot.boons { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
 #mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
@@ -1608,6 +1642,7 @@ html.native #tPlaytest, html.native #recBadge { display: none !important; }
     <button class="repairBtn" id="repairBtn" hidden><b>&#128296; Repair</b><span id="repairSub">+20%</span></button>
     <div class="purse">
       <div class="coinbox" id="goldBox" title="Gold"><img class="px" id="goldIcon" alt=""><span id="gold" class="num">0</span></div>
+      <div class="coinbox scorebox" id="scoreBox" title="Run score: every siege you hold adds to it"><small>Score</small><span id="score" class="num">0</span></div>
       <div class="coinbox" title="Diamonds, kept between runs" hidden><img class="px" id="diaIcon" alt=""><span id="diamonds" class="num">0</span></div>
     </div>
     <div class="controls">
@@ -1998,7 +2033,7 @@ const VAULT_LORE = {
 }; // ten hordes of five sieges; the Eternal Goose waits at the end
 
 // ===== Progression =====
-const VERSION = 'phase3.6';
+const VERSION = 'phase3.7';
 function xpNeed(lv) { return Math.round(26 * Math.pow(lv, 1.45)); }
 const SIG_LEVEL = 5, ELEMENT_LEVEL = 7, CASTLE_SIEGE = 15;
 const STAT_KEYS = ['ad', 'ap', 'def'];
@@ -2238,13 +2273,13 @@ function techOpensAt(id) { const T = TECH[id]; return T.secret ? 1 : TECH_LATE_T
 const TECH_BRANCHES = ['Stonework', 'Engineering', 'Alchemy', 'Logistics'];
 // tech forks (Cam 2026-10-23): tiers 2 and 3 of each branch split into two paths; building into one path seals the other for the run
 const TECH = {
-  walls1:   { name: 'Thick Walls',        b: 0, t: 1, cost: 3,   req: [],                 desc: '+25% castle max HP, repaired now.' },
-  fountain: { name: 'Healing Fountain',   fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 6,   req: ['walls1'],         desc: 'Repair 10% castle HP after every siege.' },
+  walls1:   { name: 'Murder Holes',       b: 0, t: 1, cost: 3,   req: [],                 desc: 'Foes that hit the wall take 30% of that damage back.' },
+  fountain: { name: 'Tar Pots',           fork: 'b0', path: 'Fortress', b: 0, t: 2, cost: 6,   req: ['walls1'],         desc: 'Foes that hit the wall get tarred: 40% slower for 2s.' },
   rafters1: { name: 'Rafters',            fork: 'b0', path: 'Rafters', b: 0, t: 2, cost: 7,   req: ['walls1'],         desc: 'A rafter slot on the wall. Ranged heroes there can shoot across the whole field and are hard to reach. Their shots leave a gold streak.' },
-  walls2:   { name: 'Granite Facing',     fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 15,  req: ['fountain'],       desc: '+35% castle max HP, repaired now.' },
+  walls2:   { name: 'Boiling Oil',        fork: 'b0', path: 'Fortress', b: 0, t: 3, cost: 15,  req: ['fountain'],       desc: 'Every hit on the wall spills boiling oil: foes around the attacker take half that damage.' },
   rafters2: { name: 'More Rafters',       fork: 'b0', path: 'Rafters', b: 0, t: 3, cost: 16,  req: ['rafters1'],       desc: 'Two more rafter slots.' },
   sally:    { name: 'Sally Port',         b: 0, t: 1, cost: 5,   req: [],                 desc: 'A side door for the wounded: one more call-back per siege.' },
-  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 32,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take damage back. +30% castle HP.' },
+  bastion:  { name: 'Spiked Bastion',     b: 0, t: 4, cost: 32,  any: true, req: ['walls2', 'rafters2'], desc: 'Foes hitting the wall take 80% of that damage back.' },
   ballista1:{ name: 'Ballista',           b: 1, t: 1, cost: 4,   req: [],                 desc: 'A ballista on the wall shoots the nearest foe.' },
   ballista2:{ name: 'Repeating Ballista', fork: 'b1', path: 'Ballista', b: 1, t: 2, cost: 10,  req: ['ballista1'],      desc: 'Ballista reloads 30% faster.' },
   pulleys:  { name: 'Sky Hammer Pulleys', fork: 'b1', path: 'Sky Hammer', b: 1, t: 2, cost: 8,   req: ['ballista1'],      desc: 'Sky Hammer cooldown −6s and +30% damage.' },
@@ -2439,11 +2474,11 @@ const ENCOUNTERS = [
   { id: 'rentdue', title: 'The Rent Is Due', text: 'A goblin in a tiny waistcoat slides an invoice under the gate. It says the field outside your castle is a rental. Late fees are itemized on a second invoice.',
     opts: [{ label: 'Pay the rent', fx: 'pay:3,xpAll:35', sub: 'Spend 3 gold. The goblins throw your heroes a housewarming party.' }, { label: 'Refuse to pay', fx: 'gold:3,hz:rocks', sub: 'The invoice envelope had 3 gold in it. Collections arrives next siege with a catapult.' }] },
   { id: 'leakyditch', title: 'The Ditch Is Leaking', text: 'The goblin ditch by your walls sprang a leak. Water is pooling across the field and a frog has declared it a sovereign nation.',
-    opts: [{ label: 'Let it flood', fx: 'hz:flood,xpAll:20', sub: 'Foes wade through it next siege: slowed and soaked. Mind your melee heroes, they wade too.' }, { label: 'Patch it', fx: 'pay:2,heal:25', sub: 'Spend 2 gold. The masons patch the ditch and your walls on the way back.' }] },
+    opts: [{ label: 'Let it flood', fx: 'hz:flood,xpAll:20', sub: 'Foes wade through it next siege: slowed and soaked. Mind your melee heroes, they wade too.' }, { label: 'Fill it in', fx: 'pay:2,mod:fewer', sub: 'Spend 2 gold. The masons fill the ditch, so the next horde is smaller.' }] },
   { id: 'mudseason', title: 'Mud Season', text: 'It rained for three days. The field is now soup. A pig is having the best week of its life.',
     opts: [{ label: 'Charge pig rides', fx: 'gold:4,hz:mud', sub: 'Big money. Next siege everyone on foot slogs 25% slower, heroes too.' }, { label: 'Lay down planks', fx: 'pay:2,xpAll:30', sub: 'Spend 2 gold. Your heroes learn carpentry.' }] },
   { id: 'dragoncold', title: 'A Dragon With a Cold', text: 'A dragon is camped beside the field with a terrible cold. Every sneeze sets something on fire. It apologizes after each one.',
-    opts: [{ label: 'Bring it soup', fx: 'xpAll:25,heal:15', sub: 'It sneezes gratefully onto nothing important.' }, { label: 'Sell tickets', fx: 'gold:6,hz:embers', sub: 'Crowds love it. Next siege burning patches fall on the field and burn anyone in them.' }] },
+    opts: [{ label: 'Bring it soup', fx: 'xpAll:25', sub: 'It sneezes gratefully onto nothing important. Heroes +25 XP.' }, { label: 'Sell tickets', fx: 'gold:6,hz:embers', sub: 'Crowds love it. Next siege burning patches fall on the field and burn anyone in them.' }] },
   { id: 'windmill', title: "The Wizard's Windmill", text: 'A wizard bolted a windmill to your tower. It runs backwards and makes weather. He will not say why.',
     opts: [{ label: 'Switch it on', fx: 'hz:gale,xpOne:80', sub: 'Gale next siege: foes march 20% faster, your heroes attack 20% faster. A hero clings on for 80 XP.' }, { label: 'Sell it for parts', fx: 'gold:4', sub: 'The wizard is offended but takes the money.' }] },
   { id: 'fogman', title: 'Fog Machine Salesman', text: '"It is the future of siege warfare." He pulls a lever. Nobody can see him anymore. He keeps talking.',
@@ -2451,7 +2486,7 @@ const ENCOUNTERS = [
   { id: 'goldrush', title: 'Gold in the Field', text: 'Prospectors struck gold right where the horde likes to march. So did the horde. Everyone is digging.',
     opts: [{ label: 'Let them dig', fx: 'hz:goldrush', sub: 'Next siege foes carry 50% more gold, but all that digging made them 20% tougher.' }, { label: 'Claim it first', fx: 'gold:4', sub: 'You stake the claim. Modest but safe.' }] },
   { id: 'snowday', title: 'A Wizard Sneezed Snow', text: 'It is midsummer. There are four feet of snow on the field. The wizard says "bless me" to himself and leaves.',
-    opts: [{ label: 'Build snow forts', fx: 'hz:snow,heal:20', sub: 'Next siege everyone on foot slogs 25% slower. The snow packs your wall cracks too.' }, { label: 'Sell snowcones', fx: 'gold:4', sub: 'In midsummer, the queue goes twice round the keep.' }] },
+    opts: [{ label: 'Build snow forts', fx: 'hz:snow', sub: 'Next siege everyone on foot slogs 25% slower.' }, { label: 'Sell snowcones', fx: 'gold:4', sub: 'In midsummer, the queue goes twice round the keep.' }] },
   { id: 'gobwedding', title: 'You Are Invited to a Goblin Wedding', text: 'Grubnose\'s cousin is getting married between sieges. The invitation is written in mud. Plus-ones welcome. Weapons mandatory.',
     opts: [{ label: 'Attend and dance', fx: 'xpAll:40,hz:mud', sub: 'Your heroes dance badly but sincerely. The dance floor was the field. It is mud now.' }, { label: 'Object to the marriage', fx: 'duel', sub: 'Your best hero fights the groom. Probably wins.' }] },
   { id: 'gobmom', title: "Grubnose's Mom", text: 'A tiny goblin grandmother is knocking on the gate with a casserole. "Have you seen my boy? Big crown. Smells like feet."',
@@ -2473,7 +2508,7 @@ const ENCOUNTERS = [
   { id: 'trenchcoat', title: 'Three Kobolds in a Trench Coat', text: '"Hello. I am a normal human consultant. I would like to improve your castle." One of the kobolds sneezes.',
     opts: [{ label: 'Hire the consultant', fx: 'xpAll:35,hz:fog', sub: 'They teach your heroes some tricks. Their smoke machine fogs the next siege.' }, { label: 'Pull off the coat', fx: 'gold:4', sub: 'They scatter, leaving the consulting fee behind.' }] },
   { id: 'cheese', title: 'The Cheese Wheel of Destiny', text: 'An enormous wheel of cheese is rolling toward the keep. It has been rolling for three days. It is still accelerating.',
-    opts: [{ label: 'Catch it with engineering', fx: 'secret:cheese', sub: "Discovers the Cheese Trebuchet" }, { label: 'Eat it', fx: 'heal:30,xpAll:20', sub: 'Repair 30% castle. Heroes +20 XP. Everyone is sleepy.' }] },
+    opts: [{ label: 'Catch it with engineering', fx: 'secret:cheese', sub: "Discovers the Cheese Trebuchet" }, { label: 'Eat it', fx: 'xpAll:30', sub: 'Heroes +30 XP. Everyone is sleepy.' }] },
   { id: 'mimic', title: 'The Mimic Wants a Hug', text: 'A treasure chest with a long tongue is looking at you with enormous eyes.',
     opts: [{ label: 'Hug it', fx: 'secret:mimic,comp:any', sub: 'It loves you. Discovers the Mimic Pantry and spits out a component.' }, { label: 'Hug it, but nervously', fx: 'item:any', sub: 'It respects the caution and gives you a finished item' }] },
   { id: 'chicken', title: 'A Very Confident Chicken', text: 'A chicken has challenged your strongest champion to a duel. It is doing warm-up stretches.',
@@ -2485,21 +2520,19 @@ const ENCOUNTERS = [
   { id: 'trebuchet', title: 'Package Delivered by Mistake', text: 'A crate addressed to "The Other Castle" arrived. It contains one humming crystal splinter and a feather. A goose feather.',
     opts: [{ label: 'Keep it', fx: 'comp:shard', sub: 'A Stray Shard. It combines into elemental crests.' }, { label: 'Send it on', fx: 'gold:6', sub: '+6 gold. The courier pays a finder\'s fee.' }] },
   { id: 'intern', title: 'The Necromancy Intern', text: '"I was told to raise the dead but I raised dinner." The roast chicken is walking around. It seems happy.',
-    opts: [{ label: 'Give them a job', fx: 'secret:intern', sub: 'Discovers the Necromancy Intern' }, { label: 'Eat the walking dinner', fx: 'xpAll:25,heal:15', sub: 'Heroes +25 XP and the castle is repaired 15%' }] },
+    opts: [{ label: 'Give them a job', fx: 'secret:intern', sub: 'Discovers the Necromancy Intern' }, { label: 'Eat the walking dinner', fx: 'xpAll:30', sub: 'Heroes +30 XP. Nobody asks what was in it.' }] },
   { id: 'bard', title: 'A Bard at the Gate', text: 'Their song about your last siege is wildly exaggerated. In this version, your castle can fly.',
     opts: [{ label: 'Build them a stage', fx: 'secret:bard', sub: 'Discovers the Bard Tower' }, { label: 'Let them sing once', fx: 'mod:inspire,hz:gale', sub: 'Heroes +25% attack. The song is so loud it whips up a gale next siege.' }] },
   { id: 'pigeons', title: 'Pigeons With Opinions', text: 'Forty pigeons have landed on the walls and are all looking at you. One has a tiny scroll.',
     opts: [{ label: 'Read the scroll', fx: 'secret:pigeon', sub: 'Discovers Pigeon Post (one more champion to pick from in the Guild Hall)' }, { label: 'Feed the pigeons', fx: 'xpAll:20,gold:2', sub: 'They leave gold on the walls in thanks. Heroes +20 XP.' }] },
   { id: 'hottub', title: 'Hot Spring Under the Keep', text: 'The dwarves dug too deep. They found a hot spring. The dwarves are now refusing to leave the hot spring.',
-    opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,heal:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
+    opts: [{ label: 'Build a hot tub', fx: 'secret:hottub', sub: 'Discovers the Hero Hot Tub' }, { label: 'Pipe it onto the field', fx: 'hz:flood,xpAll:15', sub: 'A warm river crosses the field next siege. Foes wading in are slowed and soaked.' }] },
   { id: 'alchemist', title: 'Free Sample Day', text: 'The alchemist is offering free samples. All the potions are bubbling. One is screaming quietly.',
     opts: [{ label: 'Drink the screaming one', fx: 'gamble', sub: '55%: a random hero gains a huge pile of XP. 45%: they turn tiny for a siege.' }, { label: 'Drink the calm one', fx: 'mod:tonic', sub: 'Heroes start the next siege at full mana' }] },
   { id: 'mushroom', title: 'A Suspicious Mushroom', text: 'It is red with white dots and smells faintly of ambition.',
     opts: [{ label: 'Feed it to a hero', fx: 'mod:giant', sub: 'Heroes are GIANT next siege: +40% HP and bigger' }, { label: 'Feed it to the horde', fx: 'mod:tiny', sub: 'The next horde is tiny. Weaker, but very fast.' }] },
   { id: 'dragon', title: "A Dragon's Garage Sale", text: 'Everything must go. The dragon is downsizing to a smaller cave. Prices are negotiable, and so is the fire.',
-    opts: [{ label: 'Buy the mystery box (4g)', fx: 'pay:4,item:any', sub: 'Costs 4 gold. A finished item.' }, { label: 'Haggle aggressively', fx: 'haggle', sub: '50%: two free components. 50%: the castle gets singed.' }] },
-  { id: 'masons', title: 'Traveling Masons', text: 'A crew of masons offers a quick patch-up. They are already eating your bread.',
-    opts: [{ label: 'Quick patch', fx: 'heal:35', sub: 'Repair 35% castle HP' }, { label: 'Proper job (5g)', fx: 'maxhp', sub: '+15% castle max HP, costs 5 gold' }] },
+    opts: [{ label: 'Buy the mystery box (4g)', fx: 'pay:4,item:any', sub: 'Costs 4 gold. A finished item.' }, { label: 'Haggle aggressively', fx: 'haggle', sub: '50%: two free components. 50%: the dragon singes your purse (−3 gold).' }] },
   // ---- boon cards: every choice is good. Gold, XP for everyone, or reforge an item ----
   { id: 'merchant', boon: true, title: 'A Grateful Merchant', text: 'Your heroes saved her caravan from the horde last siege. She insists on paying you back, and she has options.' },
   { id: 'smith', boon: true, title: 'The Wandering Smith', text: 'A smith with a portable anvil and enormous forearms is passing through. "Coin, a lesson, or a bit of hammering. Pick one."' },
@@ -2576,7 +2609,7 @@ const ROSTER_CAP = GUILD_LV.max;
 // the bench holds BENCH_SLOTS more who don't fight: copies waiting to star up, or a swap for the next horde
 const BENCH_SLOTS = 5;
 function guildLevel(run) { return Math.min(GUILD_LV.max, run.glv || GUILD_LV.start); }
-function fieldCap(run) { return guildLevel(run); }
+function fieldCap(run) { return guildLevel(run) + (run.boons && run.boons.heart ? 1 : 0); }
 function rosterCap(run) { return fieldCap(run) + BENCH_SLOTS; }
 function guildCost(run) { const l = guildLevel(run); return l >= GUILD_LV.max ? null : GUILD_LV.cost[l - GUILD_LV.start]; }
 function buyGuild(run) { const c = guildCost(run); if (c == null) return { err: 'The guild is as big as it gets.' }; if (run.gold < c) return { err: `Guild level ${guildLevel(run) + 1} costs ${c} gold.` }; run.gold -= c; run.glv = guildLevel(run) + 1; return { ok: true }; }
@@ -3831,7 +3864,9 @@ const BAL = { huntMelee: 130, huntRanged: 70, foeAtk: 2.0, foeHp: 3.4, hpBase: 1
 // HORDE_DIFF scales each horde (five sieges)
 // retuned 2026-10-23 for the TFT shop with no meta progression; 2026-10-24 foeHp 2.4->3.0, foeAtk 1.6->1.8 for breaches, race/class thresholds and guild ranks (bots win ~1 run in 6)
 // 2026-10-24 (later): retuned per horde for guild levels 3-12, rare items and boss warbands (GUILD_LV.pace, WARBAND); bots ~1 run in 7
-const HORDE_DIFF = [1.431, 0.909, 0.681, 0.644, 0.365, 0.405, 0.24, 0.085, 0.201, 0.024];
+// 2026-10-31 (TFT single-player audit): bots won 97-99% of sieges until a wall at the siege 40 boss. Hordes 2-7 (sieges 6-35)
+// are tougher so the first crack comes around siege 20, and the Brass Colossus (siege 40) is softer (BOSS_TOUGH)
+const HORDE_DIFF = [1.431, 1.15, 1.3, 1.22, 0.66, 0.7, 0.3, 0.085, 0.201, 0.024];
 function hordeDiff(s) { return HORDE_DIFF[Math.min(HORDE_DIFF.length - 1, Math.floor((s - 1) / 5))]; }
 // foeAtk/foeHp ramp in over the first sieges so any starter still clears siege 1
 function foeRamp(s, k) { return 1 + (k - 1) * Math.min(1, (s - 1) / 6); }
@@ -3850,7 +3885,7 @@ const PRESS = { budget: 1.35, elites: 1, gold: 2 };
 function canPress(run) { return run.siege >= 2 && !isBossSiege(run.siege) && run.siege < FINAL_SIEGE && !run.finale; }
 function pressOn(run) { return !!run.press && canPress(run); }
 function bossFor(s) { return FACTIONS[factionIndex(s)].boss; }
-const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.9, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
+const BOSS_TOUGH = { grubnose: 0.8, gloop: 0.8, wyrm: 1, ringmaster: 1.05, sporebaron: 1.05, matriarch: 1.1, trashpaw: 1.1, colossus: 0.5, pinchbeard: 1.15, goosegod: 0.55, shardgoose: 1.1 };
 const BOSS_NATIVE = { grubnose: 5, gloop: 10, wyrm: 15, ringmaster: 20, matriarch: 25, colossus: 30 };
 
 // ----- hex field and the horde's attack plan (Cam 2026-10-24: no more lanes) -----
@@ -3943,7 +3978,10 @@ function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
 // 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
 function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
-function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${d.name.split(' ')[0]} ${ELEMENTS[h.el].title}` : d.name; }
+// an element title replaces the epithet: 'Brann the Blazing'. A name that starts with 'The' keeps its last word instead
+// ('The Great Toadmother' -> 'Toadmother the Radiant', never 'The the Radiant')
+function heroShortName(name) { const w = name.split(' '); return /^the$/i.test(w[0]) && w.length > 1 ? w[w.length - 1] : w[0]; }
+function heroDisplayName(h) { const d = HERO_BY_ID[h.id]; return h.el ? `${heroShortName(d.name)} ${ELEMENTS[h.el].title}` : d.name; }
 function heroItems(run, h) { return h.items.map(u => run.stash.find(x => x.uid === u)).filter(Boolean); }
 function heroElements(run, h) { const out = h.el ? [h.el] : []; for (const it of heroItems(run, h)) for (const e of [it.el, it.sub && it.sub.el]) if (e && !out.includes(e)) out.push(e); return out; }
 // flat power bonuses that used to be +1 rolls: mustache, Aether Engine, Heart of the Twelve (+3)
@@ -4107,6 +4145,7 @@ function heroStats(h, run, meta, syn) {
   s.dodge = Math.min(0.6, s.dodge); s.crit = Math.min(1, s.crit);
   if (run.mods.giant) { s.hp *= 1.4; s.scale *= 1.4; }
   if (run.mods.shrunk === h.uid) { s.hp *= 0.7; s.atk *= 0.85; s.scale *= 0.6; }
+  if (typeof boonStats === 'function') boonStats(run, s); // Boons (state.js)
   s.hp = Math.round(s.hp); s.atk = Math.round(s.atk);
   // ability power as a number, so signatures can show and scale with it (st.ap stays the multiplier)
   s.apv = Math.round(CLASS_AP[d.cls] * tm * lm * gm * 1.1 * s.ap);
@@ -4255,7 +4294,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
   // a legend you left in the shop, fighting for the horde (beat them and their copy goes back to the pool)
   if (tc) { u.turncoat = tc.id; u.wstar = ws; u.key = 'h:' + tc.id; u.nativeFace = 1; u.scale = 1.1;
-    u.name = (opts.defected ? 'Turncoat ' : bossShort(bossFor(s)) + '\'s ') + tc.name.split(' ')[0] + (ws > 1 ? ' ' + '★'.repeat(ws) : '');
+    u.name = (opts.defected ? 'Turncoat ' : bossShort(bossFor(s)) + '\'s ') + heroShortName(tc.name) + (ws > 1 ? ' ' + '★'.repeat(ws) : '');
     if (CLASS_BASE[tc.cls].range > 40) { u.range = Math.min(110, CLASS_BASE[tc.cls].range); u.proj = tc.cls === 'mage' || tc.cls === 'cleric' ? 'spark' : 'arrow'; }
     FX.text(u.x - 20, u.y - 22, opts.defected ? 'TURNCOAT' : 'WARBAND', '#c58cff', true, true); }
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
@@ -4472,7 +4511,11 @@ function damageCastle(B, dmg, src) {
   dmg *= traitCastleMul(B);
   B.castle.hp -= dmg; B.castleHitT = 0.15; if (src) src.siegeT = B.t;
   if (Math.random() < 0.35) FX.dmg({ x: CASTLE_X - 6 + rand(-8, 4), y: rand(120, 200), z: 0, uid: 'castle' }, dmg, 'taken');
-  if (src && src.alive && src.range <= 40 && B.run.tech.bastion) dealDamage(B, null, src, dmg * 0.8, { quiet: true });
+  // Stonework techs fight back instead of adding wall HP (Cam 2026-10-31): Murder Holes / Spiked Bastion reflect, Tar Pots slow, Boiling Oil splashes
+  const T = B.run.tech;
+  if (src && src.alive && src.range <= 40 && (T.bastion || T.walls1)) dealDamage(B, null, src, dmg * (T.bastion ? 0.8 : 0.3), { quiet: true });
+  if (src && src.alive && T.fountain && !src.boss) { src.slowT = Math.max(src.slowT || 0, 2); src.slowAmt = Math.max(src.slowAmt || 0, 0.4); }
+  if (src && T.walls2) { for (const e of B.enemies) if (e.alive && e !== src && dist(e, src) < 26) dealDamage(B, null, e, dmg * 0.5, { quiet: true }); if (Math.random() < 0.3) FX.particles(src.x, src.y - 8, 5, ['#ffd27a', '#ff9a3a', '#5a3a1a'], { spread: 12 }); }
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 
@@ -5826,10 +5869,11 @@ Object.assign(ABILITIES, ULT_KIT);
 let uidN = 1;
 const nuid = () => 'u' + (uidN++) + Math.random().toString(36).slice(2, 5);
 
-function newMeta() { return { diamonds: 0, ranks: {}, best: 0, runs: 0, totalFloors: 0, seen: {} }; }
+function newMeta() { return { diamonds: 0, ranks: {}, best: 0, runs: 0, totalFloors: 0, seen: {}, scores: [], bestScore: 0 }; }
 
 function rafterSlots(run) { return run.tech.rafters1 ? (run.tech.rafters2 ? 3 : 1) : 0; }
-function castleMaxFor(run, meta) { return Math.round(1000 * (1 + 0.15 * (meta.ranks.masonry || 0)) * (run.tech.walls1 ? 1.25 : 1) * (run.tech.walls2 ? 1.35 : 1) * (run.tech.bastion ? 1.3 : 1) * (run.mods.maxhp || 1) * (run.maxhpMul || 1) * castleGrowth(run)); }
+// base 1300 since the Stonework techs stopped adding wall HP (Cam 2026-10-31)
+function castleMaxFor(run, meta) { return Math.round(1300 * (1 + 0.15 * (meta.ranks.masonry || 0)) * (run.mods.maxhp || 1) * (run.maxhpMul || 1) * castleGrowth(run)); }
 // every boss slain makes the keep bigger: +30% max HP each, compounding
 function castleGrowth(run) { return Math.pow(1.3, castleTier(run)); }
 function castleTier(run) { return run.stats && run.stats.bosses ? run.stats.bosses.length : 0; }
@@ -5930,12 +5974,12 @@ function rollShop(run, meta) {
   if (boosted && run.pressDraft > 0) run.pressDraft--;
   return out;
 }
-function shopRerollCost(run) { return SHOP.reroll; }
-function rerollShop(run, meta) { const c = shopRerollCost(run); if (run.gold < c) return { err: `A new shop costs ${c} gold.` }; run.gold -= c; run.shopRerolls = (run.shopRerolls || 0) + 1; rollShop(run, meta); return { ok: true }; }
+function shopRerollCost(run) { return run.boons && run.boons.haggler && run.freeRr !== run.siege ? 0 : SHOP.reroll; }
+function rerollShop(run, meta) { const c = shopRerollCost(run); if (run.gold < c) return { err: `A new shop costs ${c} gold.` }; run.gold -= c; if (c === 0) run.freeRr = run.siege; run.shopRerolls = (run.shopRerolls || 0) + 1; rollShop(run, meta); return { ok: true }; }
 // buying a copy of a legend you already have adds to their copies (and maybe a star); otherwise they join, if there is room
 function buyShopCard(run, i) {
   const c = run.shop && run.shop[i]; if (!c) return { err: 'That card is gone.' };
-  const cost = shopCost(c.id); if (run.gold < cost) return { err: `${HERO_BY_ID[c.id].name.split(' ')[0]} costs ${cost} gold. You have ${run.gold}.` };
+  const cost = shopCost(c.id); if (run.gold < cost) return { err: `${heroShortName(HERO_BY_ID[c.id].name)} costs ${cost} gold. You have ${run.gold}.` };
   if (poolLeft(run, c.id) <= 0) { run.shop[i] = null; return { err: 'The horde got there first.' }; }
   const own = run.roster.find(h => h.id === c.id);
   if (own) { const s0 = heroStar(own); run.gold -= cost; own.copies = (own.copies || 1) + 1; poolTake(run, c.id, 1); run.shop[i] = null; return { ok: true, h: own, merged: true, starUp: heroStar(own) > s0 }; }
@@ -5980,7 +6024,7 @@ function warbandFighters(run) {
   const fresh = W.filter(w => w.defected === run.siege), rest = W.filter(w => !fresh.includes(w)).sort((a, b) => val(b) - val(a));
   return fresh.concat(rest.slice(0, Math.max(0, WARBAND.field(run.siege) - fresh.length)));
 }
-function interestFor(gold) { return Math.min(SHOP.interestMax, Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
+function interestFor(gold, run) { return Math.min(SHOP.interestMax + (run && run.boons && run.boons.banker ? BOON_FX.bankerCap : 0), Math.floor(Math.max(0, gold) / SHOP.interestPer)); }
 
 function summonTier(s) { return s === 35 ? 4 : s === 40 ? 5 : 0; }
 function summonOptions(run, tier) {
@@ -6083,7 +6127,7 @@ function unequipItem(run, it) { const h = run.roster.find(x => x.uid === it.hold
 // give an item to a hero; two components on one hero fuse into a finished item
 function giveItem(run, it, h) {
   if (it.holder === h.uid) return { ok: true };
-  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries a super item. One each.` };
+  if (it.sup && heroItems(run, h).some(x => x.sup && x !== it)) return { err: `${heroShortName(HERO_BY_ID[h.id].name)} already carries a super item. One each.` };
   if (it.parts.length === 1) {
     const partner = heroItems(run, h).find(x => x.parts.length === 1);
     if (partner) {
@@ -6096,7 +6140,7 @@ function giveItem(run, it, h) {
       return { fused };
     }
   }
-  if (h.items.length >= ITEM_SLOTS) return { err: `${HERO_BY_ID[h.id].name.split(' ')[0]} already carries ${ITEM_SLOTS} items.` };
+  if (h.items.length >= ITEM_SLOTS) return { err: `${heroShortName(HERO_BY_ID[h.id].name)} already carries ${ITEM_SLOTS} items.` };
   unequipItem(run, it); h.items.push(it.uid); it.holder = h.uid; return { ok: true };
 }
 const UNFORGE_COST = 3;
@@ -6117,7 +6161,7 @@ function forgeSuper(run, a, b) {
   if (!a || !b || a === b || a.sup || b.sup || a.parts.length < 2 || b.parts.length < 2) return { err: 'Pick two different finished items.' };
   if (run.gold < SUPER_COST) return { err: `Forging costs ${SUPER_COST} gold.` };
   const holder = run.roster.find(h => h.uid === a.holder) || run.roster.find(h => h.uid === b.holder);
-  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${HERO_BY_ID[holder.id].name.split(' ')[0]} already carries a super item. One each.` };
+  if (holder && heroItems(run, holder).some(x => x.sup)) return { err: `${heroShortName(HERO_BY_ID[holder.id].name)} already carries a super item. One each.` };
   run.gold -= SUPER_COST; unequipItem(run, a); unequipItem(run, b);
   run.stash = run.stash.filter(x => x !== a && x !== b);
   const it = makeItem(a.parts, a.el); it.sub = { parts: b.parts.slice(), el: b.el || null }; it.sup = superKind(a, b);
@@ -6146,7 +6190,6 @@ function buyTech(run, meta, id) {
   if (st === 'locked') return { err: `Needs ${techNeeds(run, id)} first.` };
   if (run.gold < T.cost) return { err: `You need ${T.cost - run.gold} more gold.` };
   run.gold -= T.cost; run.tech[id] = 1; run.stats.techs.push({ s: run.siege, id });
-  if (['walls1', 'walls2', 'bastion'].includes(id)) { const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); run.castle.hp = Math.min(run.castle.max, run.castle.hp + (run.castle.max - old)); }
   if (id === 'rafters1' || id === 'rafters2') { const ranged = run.roster.filter(h => isRangedHero(h.id) && h.place && h.place.type === 'grid'); for (let i = 0; i < rafterSlots(run); i++) if (rafterFree(run, i)) { const h = ranged.shift(); if (h) h.place = { type: 'rafter', i }; } }
   return { ok: true };
 }
@@ -6190,7 +6233,7 @@ function resolveEncounter(run, meta, fxs) {
       case 'mustache': { const c = run.roster.filter(h => !h.mustache); const h = pick(c.length ? c : run.roster); if (h) { h.mustache = true; out.push(`${heroDisplayName(h)} now has a magnificent mustache. +5% attack, ability power and HP.`); } break; }
       case 'duel': { const h = run.roster.slice().sort((a, b) => b.level - a.level)[0]; if (!h) break; if (Math.random() < 0.7) { const v = Math.round(70 * (1 + 0.1 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} wins after a tense 40 minutes. +${v} XP. The chicken demands a rematch.`); } else { const l = addXP(h, Math.round(30 * (1 + 0.1 * run.siege))); if (l) levels.push([h, l]); out.push(`The chicken wins. ${heroDisplayName(h)} is humbled, but learns something. +${Math.round(30 * (1 + 0.1 * run.siege))} XP.`); } break; }
       case 'gamble': { const h = pick(run.roster); if (!h) break; if (Math.random() < 0.55) { const v = Math.round(160 * (1 + 0.12 * run.siege)); const l = addXP(h, v); if (l) levels.push([h, l]); out.push(`${heroDisplayName(h)} glows, hiccups, and gains ${v} XP.`); } else { run.mods.shrunk = h.uid; out.push(`${heroDisplayName(h)} is now four inches tall for the next siege. They are furious.`); } break; }
-      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon admires your nerve. Two free components.'); } else { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.max(1, run.castle.hp - a); out.push(`The dragon sneezes. The castle loses ${a} HP and smells like toast.`); } break;
+      case 'haggle': if (Math.random() < 0.5) { run.stash.push(makeItem([pick(COMP_KEYS)]), makeItem([pick(COMP_KEYS)])); out.push('The dragon admires your nerve. Two free components.'); } else { const a = Math.min(3, run.gold); run.gold -= a; out.push(`The dragon sneezes on your purse. ${a ? `${a} gold melts` : 'It was empty anyway'} and it smells like toast.`); } break;
     }
   }
   const modText = { fewer: 'The next siege will be smaller.', curse: 'The next horde is angry about taxes.', chickens: 'Chickens. So many chickens. They are coming next siege.', partyhats: 'The next horde is wearing party hats.', giant: 'Your heroes will be ENORMOUS next siege.', tiny: 'The next horde will be tiny and zoomy.', inspire: 'Heroes +25% attack next siege.', tonic: 'Heroes start the next siege at full mana.', honked: 'The goose will be at the next siege.' };
@@ -6199,14 +6242,41 @@ function resolveEncounter(run, meta, fxs) {
   return { out, levels };
 }
 
+// ----- siege score (Cam 2026-10-31, TFT Tocker's Trials style): every held siege scores how well it was held -----
+// walls kept, champions standing, speed against par and the boss slain, times a multiplier that grows with the siege.
+// A lost siege scores nothing. Winning the finale adds a bonus, plus more for every crack the keep never took.
+const SCORE = { walls: 100, standing: 100, speed: 100, boss: 200, kill: 0.5, killCap: 300, sMul: 0.06, press: 1.25, parBase: 25, parS: 0.9, win: 3000, crackLeft: 750, board: 10 };
+function scorePar(s) { return SCORE.parBase + SCORE.parS * s; }
+function siegeScore(run, B) {
+  const s = run.siege;
+  if (B.done !== 'victory') return { total: 0, lost: true };
+  const walls = Math.round(SCORE.walls * clamp(run.castle.hp / Math.max(1, B.castleStart), 0, 1));
+  const hs = B.heroes.filter(u => !u.temp), standing = hs.length ? Math.round(SCORE.standing * hs.filter(u => u.alive || u.recalled).length / hs.length) : 0;
+  const par = scorePar(s), speed = Math.round(SCORE.speed * clamp((par * 1.6 - B.t) / (par * 0.8), 0, 1));
+  const boss = B.bossKilled ? SCORE.boss : 0, kills = Math.round(SCORE.kill * Math.min(SCORE.killCap, B.kills || 0));
+  const mul = (1 + SCORE.sMul * (s - 1)) * (pressOn(run) ? SCORE.press : 1);
+  return { walls, standing, speed, boss, kills, mul: +mul.toFixed(2), pressed: pressOn(run), par: Math.round(par), total: Math.round((walls + standing + speed + boss + kills) * mul) };
+}
+// the run's final score: what the sieges earned, plus the finale bonus for a win
+function runScore(run) { return (run.score || 0) + (run.won ? SCORE.win + SCORE.crackLeft * Math.max(0, BREACH.max - (run.breaches || 0)) : 0); }
+// the best-score board: the top SCORE.board runs, kept between runs (playtests never count)
+function recordScore(run, meta) {
+  if (run.playtest || run.scoreRecorded) return null; run.scoreRecorded = true;
+  const e = { score: runScore(run), siege: Math.min(run.siege, FINAL_SIEGE), won: !!run.won, at: Date.now() };
+  const b = (meta.scores || []).concat([e]).sort((a, b) => b.score - a.score).slice(0, SCORE.board);
+  meta.scores = b; meta.bestScore = Math.max(meta.bestScore || 0, e.score);
+  return { entry: e, rank: b.indexOf(e) + 1 };
+}
+
 // ----- siege end bookkeeping -----
 function finishSiege(run, meta, B) {
+  const score = siegeScore(run, B); run.score = (run.score || 0) + score.total;
   // TFT-style income: interest on what you banked, then the siege's pay
-  const s = run.siege, interest = interestFor(run.gold), bounty = SHOP.base + interest;
+  const s = run.siege, interest = interestFor(run.gold, run), bounty = SHOP.base + interest;
   run.gold += bounty;
   const xpMul = 1 + (run.tech.drill ? 0.15 : 0) + (run.tech.college ? 0.25 : 0);
   const survive = BAL.xpSurvive + BAL.xpSurviveS * s;
-  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, interest, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
+  const rep = { siege: s, faction: FACTIONS[factionIndex(s)].name, gold: B.goldEarned + bounty, bounty, interest, kills: B.kills, castleLost: Math.round(B.castleStart - run.castle.hp), time: Math.round(B.t), drops: B.drops.slice(), score, runScore: run.score, heroes: [], bossFled: B.bossFled || null, fled: B.fled || 0 };
   for (const u of B.heroes.filter(h => !h.temp)) {
     const h = u.inst; const fromLv = h.level, fromXp = h.xp;
     // a champion called back keeps what they learned, but misses the reward for holding the line
@@ -6235,7 +6305,6 @@ function finishSiege(run, meta, B) {
   if (B.bossKilled) { run.stats.bosses.push({ siege: s, kind: B.bossKilled });
     const old = run.castle.max; run.castle.max = castleMaxFor(run, meta); const grow = run.castle.max - old, fix = Math.round(run.castle.max * 0.25);
     run.castle.hp = Math.min(run.castle.max, run.castle.hp + grow + fix); rep.castleGrow = { from: old, to: run.castle.max, trophy: FACTIONS[factionIndex(s)].name }; }
-  if (run.tech.fountain) { const a = Math.round(run.castle.max * 0.1); run.castle.hp = Math.min(run.castle.max, run.castle.hp + a); rep.repaired = a; }
   run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a better roll on the next shop, and every fourth press a loot pick
   if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; rep.press = { gold: g, loot: A2.pressed % 4 === 0 }; }
@@ -6251,6 +6320,66 @@ function finishSiege(run, meta, B) {
 
 // diamonds only come from achievements (see achievements.js), never from playing a run
 function diamondsForRun(run) { return 0; }
+
+
+// ----- Boons (Cam 2026-10-31): three run-shaping picks at set sieges, like TFT's augments -----
+// After siege 3 a Silver pick, after siege 10 a Gold pick, after siege 20 a Prismatic pick. Each offers three of its tier.
+const BOON_AT = { 3: 'silver', 10: 'gold', 20: 'prism' };
+const BOON_TIERS = { silver: { name: 'Silver Boon', col: '#cfd8ff' }, gold: { name: 'Gold Boon', col: '#ffcf3a' }, prism: { name: 'Prismatic Boon', col: '#ff9fff' } };
+const BOON_FX = { bankerCap: 3, drillAs: 0.15, hideHp: 0.25, eagleCrit: 0.15, hymnDmg: 0.2, blessHp: 0.3, blessDmg: 0.3 };
+const BOONS = {
+  warchest:  { t: 'silver', icon: '💰', name: 'War Chest',        desc: '+10 gold now.' },
+  parts:     { t: 'silver', icon: '🧰', name: 'Spare Parts',      desc: 'Two random item components.' },
+  recruit:   { t: 'silver', icon: '📯', name: 'Recruiting Drive', desc: 'One free guild level: one more champion on the field and better shop odds.' },
+  eagle:     { t: 'silver', icon: '🦅', name: 'Eagle Eyes',       desc: 'All champions get +15% critical strike chance.' },
+  haggler:   { t: 'silver', icon: '🤝', name: 'Haggler',          desc: 'Your first shop reroll every siege is free.' },
+  drill:     { t: 'silver', icon: '🥁', name: 'Drill Sergeant',   desc: 'All champions attack 15% faster.' },
+  banker:    { t: 'gold',   icon: '🏦', name: 'Royal Banker',     desc: 'Interest can reach 8 gold a siege instead of 5.' },
+  smith:     { t: 'gold',   icon: '⚒️', name: 'Master Smith',     desc: 'A random finished item and a component.' },
+  hide:      { t: 'gold',   icon: '🛡️', name: 'Iron Hide',        desc: 'All champions get 25% more HP.' },
+  windfall:  { t: 'gold',   icon: '🪙', name: 'Windfall',         desc: '+22 gold now.' },
+  hymn:      { t: 'gold',   icon: '🎺', name: 'Battle Hymn',      desc: 'All champions deal 20% more damage.' },
+  mend:      { t: 'gold',   icon: '🪨', name: 'Stonemasons',      desc: 'Mend one crack in the keep.' },
+  heart:     { t: 'prism',  icon: '💖', name: 'Heart of the Keep', desc: 'One more champion on the field, on top of your guild level.' },
+  charter:   { t: 'prism',  icon: '📜', name: 'Golden Charter',   desc: 'Two free guild levels.' },
+  blessing:  { t: 'prism',  icon: '✨', name: 'Legend\'s Blessing', desc: 'All champions get 30% more HP and deal 30% more damage.' },
+  vault:     { t: 'prism',  icon: '👑', name: 'Treasure Vault',   desc: 'Two random finished items.' },
+  fortune:   { t: 'prism',  icon: '🎁', name: 'Fortune',          desc: '+45 gold now.' },
+};
+function boonDue(s) { return BOON_AT[s] || null; }
+function boonOptions(run, tier) {
+  const ks = Object.keys(BOONS).filter(k => BOONS[k].t === tier && !(run.boons || {})[k]
+    && !(k === 'recruit' && guildCost(run) == null) && !(k === 'charter' && guildLevel(run) > GUILD_LV.max - 2) && !(k === 'mend' && !run.breaches));
+  const out = []; while (out.length < 3 && ks.length) out.push(ks.splice(Math.floor(Math.random() * ks.length), 1)[0]);
+  return out;
+}
+// applies a boon; returns a line for the toast
+function takeBoon(run, meta, k) {
+  const B = BOONS[k]; if (!B) return ''; run.boons = Object.assign({}, run.boons, { [k]: true }); run.boonLog = [...(run.boonLog || []), { k, s: run.siege - 1 }];
+  const finished = () => { let it; do { it = randomFinished(); } while (it.parts.includes('shard')); run.stash.push(it); return it; };
+  switch (k) {
+    case 'warchest': run.gold += 10; return '+10 gold.';
+    case 'windfall': run.gold += 22; return '+22 gold.';
+    case 'fortune': run.gold += 45; return '+45 gold.';
+    case 'parts': for (let i = 0; i < 2; i++) run.stash.push(makeItem([pick(COMP_KEYS)])); return 'Two components are waiting in the Armory.';
+    case 'smith': { const it = finished(); run.stash.push(makeItem([pick(COMP_KEYS)])); return `${itemName(it)} and a component are waiting in the Armory.`; }
+    case 'vault': { const a = finished(), b = finished(); return `${itemName(a)} and ${itemName(b)} are waiting in the Armory.`; }
+    case 'recruit': run.glv = Math.min(GUILD_LV.max, guildLevel(run) + 1); return `Guild level ${guildLevel(run)}.`;
+    case 'charter': run.glv = Math.min(GUILD_LV.max, guildLevel(run) + 2); return `Guild level ${guildLevel(run)}.`;
+    case 'mend': run.breaches = Math.max(0, (run.breaches || 0) - 1); return `The masons mend a crack. ${BREACH.max - run.breaches} more and the keep falls.`;
+    case 'heart': return `${fieldCap(run)} champions can take the field.`;
+    default: return B.desc;
+  }
+}
+// boons that change champions in battle (heroStats in sim.js calls this)
+function boonStats(run, s) {
+  const b = run.boons; if (!b) return;
+  if (b.drill) s.as *= 1 + BOON_FX.drillAs;
+  if (b.eagle) s.crit += BOON_FX.eagleCrit;
+  if (b.hide) s.hp *= 1 + BOON_FX.hideHp;
+  if (b.hymn) s.atk *= 1 + BOON_FX.hymnDmg, s.ap *= 1 + BOON_FX.hymnDmg;
+  if (b.blessing) { s.hp *= 1 + BOON_FX.blessHp; s.atk *= 1 + BOON_FX.blessDmg; s.ap *= 1 + BOON_FX.blessDmg; }
+}
 
 // ===== Story chapters =====
 // Each horde has a short storyline told through encounters between its sieges. Choices move the boss's mood:
@@ -6294,7 +6423,7 @@ const STORY = [
         { label: 'Argue they split themselves', fx: 'mood:-1,gold:2,hz:slime', sub: 'Legally you are right. Emotionally, less so. She slimes the field: everyone on foot moves 25% slower next siege.' }] },
     { p: 3, title: 'Slimelet Daycare', portrait: 'e:slime',
       text: 'A lost slimelet is stuck to your gate, crying. The crying is mostly more slime. It keeps saying "mama" in a voice like a drain.',
-      opts: [{ label: 'Carry it back to the bog', fx: 'mood:1,heal:10', sub: 'Mother Gloop watches from the reeds. She saw that.' },
+      opts: [{ label: 'Carry it back to the bog', fx: 'mood:1', sub: 'Mother Gloop watches from the reeds. She saw that.' },
         { label: 'Keep it as a pet', fx: 'mood:-1,xpAll:30', sub: 'It eats a sword. Your heroes name it. Its mother files a second complaint.' }] },
     bossDeal('gloop', 'Mother Gloop Rises',
       'The bog is boiling. Mother Gloop has counted every popped slimelet and she is coming to collect, one hero at a time.',
@@ -6348,7 +6477,7 @@ const STORY = [
         { label: 'Laugh at the pinecones', fx: 'mood:-1,gold:3', sub: 'You keep the pinecones anyway. They turn out to be worth something.' }] },
     { p: 3, title: 'The Mold Situation', portrait: 'e:shroom',
       text: 'Something fuzzy is growing in the pantry. It is wearing a tiny name tag that says "Baron\'s Ambassador". It would like to be left alone to grow.',
-      opts: [{ label: 'Give it a nice dark shelf', fx: 'mood:1,heal:10', sub: 'The ambassador thrives. The bread does not.' },
+      opts: [{ label: 'Give it a nice dark shelf', fx: 'mood:1', sub: 'The ambassador thrives. The bread does not.' },
         { label: 'Scrub the pantry', fx: 'mood:-1,xpAll:30,hz:fog', sub: 'Your heroes scrub all night. The spores drift onto the field: thick fog next siege cuts ranged attacks by 30%.' }] },
     bossDeal('sporebaron', 'The Baron Takes Root',
       'The Spore Baron has declared your castle "condemned and delicious". His spores darken the sky.',
@@ -6356,13 +6485,13 @@ const STORY = [
       'The Spore Baron marches on the castle, leaving a trail of tiny mushrooms behind him.'),
     { p: 0, title: 'Mushroom Season', portrait: 'e:shroom',
       text: 'With the Baron gone, the courtyard is covered in courteous mushrooms. They ask whether they can stay.',
-      opts: [{ label: 'Start a mushroom garden', fx: 'heal:25,xpAll:20', sub: 'The cook is thrilled.' }, { label: 'Sell them at market', fx: 'gold:6', sub: 'Gourmet. Apparently.' }] },
+      opts: [{ label: 'Start a mushroom garden', fx: 'xpAll:25', sub: 'The cook is thrilled. Heroes +25 XP.' }, { label: 'Sell them at market', fx: 'gold:6', sub: 'Gourmet. Apparently.' }] },
   ],
   // ---- Frostfang Clans: the Yeti Matriarch runs the HOA ----
   [
     { p: 1, title: 'The Homeowners Association', portrait: 'e:matriarch',
       text: 'The Yeti Matriarch is president of the Frostfang HOA. Your castle is in violation: towers too tall, banners too pink, moat too moaty.',
-      opts: [{ label: 'Repaint the banners beige', fx: 'pay:2,mood:1,heal:10', sub: 'Spend 2 gold. It is hideous. She is delighted.' },
+      opts: [{ label: 'Repaint the banners beige', fx: 'pay:2,mood:1', sub: 'Spend 2 gold. It is hideous. She is delighted.' },
         { label: 'Add MORE pink', fx: 'mood:-1,xpAll:25', sub: 'Your heroes love the new look. The HOA schedules a meeting about it.' }] },
     { p: 3, title: 'Snow Removal', portrait: 'e:yeti',
       text: 'Who shovels the path between the castle and the clans? The Matriarch says you do. There is a form.',
@@ -6410,13 +6539,13 @@ const STORY = [
       'The Colossus wakes. Gears the size of houses begin to turn.'),
     { p: 0, title: 'Scrap and Salvage', portrait: 'e:cog',
       text: 'The Colossus is a heap of brass in your field. A small cog sits on top, waiting to be told what happens now.',
-      opts: [{ label: 'Rebuild it as a statue', fx: 'heal:30,xpAll:30', sub: 'The castle gets a large brass friend who hums.' }, { label: 'Sell the scrap', fx: 'gold:8', sub: 'There was a fortune in its chest the whole time.' }] },
+      opts: [{ label: 'Rebuild it as a statue', fx: 'xpAll:30', sub: 'The castle gets a large brass friend who hums.' }, { label: 'Sell the scrap', fx: 'gold:8', sub: 'There was a fortune in its chest the whole time.' }] },
   ],
   // ---- Crab Corsairs: Captain Pinchbeard claims your moat ----
   [
     { p: 1, title: 'Parking Violation', portrait: 'e:pinchbeard',
       text: 'A pirate ship is parked in your moat. Captain Pinchbeard insists the moat is "international waters" and has started charging your masons a toll to cross it.',
-      opts: [{ label: 'Pay the toll', fx: 'pay:2,mood:1,heal:10', sub: 'Spend 2 gold. He gives you a receipt with a skull on it.' },
+      opts: [{ label: 'Pay the toll', fx: 'pay:2,mood:1', sub: 'Spend 2 gold. He gives you a receipt with a skull on it.' },
         { label: 'Issue him a ticket', fx: 'mood:-1,gold:4,hz:flood', sub: 'He pays, furious, then opens the moat locks out of spite. The field floods next siege.' }] },
     { p: 3, title: 'Shanty Night', portrait: 'e:deckhand',
       text: 'The corsairs are singing sea shanties outside the walls at three in the morning. The crabs keep perfect time with their claws.',
@@ -6435,7 +6564,7 @@ const STORY = [
     { p: 1, title: 'Honk in the Night', portrait: 'e:goose',
       text: 'Remember the goose from the moat? It is gone. In its place is a single feather and a note written in mud: "HONK." Your scouts report a white crown moving at the head of a vast flock.',
       opts: [{ label: 'Leave out bread', fx: 'mood:1,xpAll:30', sub: 'The bread is gone by morning. Something is watching.' },
-        { label: 'Double the guard', fx: 'mood:-1,heal:15', sub: 'The guards are terrified. The walls are patched.' }] },
+        { label: 'Double the guard', fx: 'mood:-1,mod:fewer', sub: 'The guards are terrified. Fewer foes get organised next siege.' }] },
     { p: 2, title: 'The Chickens Unionize', portrait: 'e:chicken',
       text: 'The chickens of the Feathered Host have walked off the front line. Their spokeschicken demands better feed, shorter sieges and "respect for the comb".',
       opts: [{ label: 'Offer them asylum', fx: 'mood:-1,mod:fewer', sub: 'Half the chickens defect. The goose is livid.' },
@@ -9571,6 +9700,9 @@ function botPress(run, style, log) {
   run.press = style === 'chaos' ? Math.random() < 0.3 : !!last && last.deaths === 0 && last.castle >= 70 && run.castle.hp >= run.castle.max * 0.6 && !isBossSiege(run.siege + 1);
 }
 // one full run. opts: { dt, maxSiege, onSiege }
+// boons: chaos picks at random; the others favour board size and combat power, then gold
+const BOT_BOON = { heart: 9, blessing: 8, charter: 7, vault: 6, fortune: 5, hymn: 6, hide: 5, smith: 4, banker: 4, mend: 3, windfall: 3, recruit: 5, drill: 4, parts: 3, eagle: 3, warchest: 2, haggler: 2 };
+function botBoon(run, style, os) { if (style === 'chaos') return pick(os); if (run.breaches && os.includes('mend')) return 'mend'; return os.slice().sort((a, b) => (BOT_BOON[b] || 0) - (BOT_BOON[a] || 0))[0]; }
 function botPlayRun(style, meta, opts = {}) {
   const dt = opts.dt || 1 / 30, maxSiege = Math.min(opts.maxSiege || FINAL_SIEGE, FINAL_SIEGE);
   const run = newRun(meta); const log = [];
@@ -9604,6 +9736,7 @@ function botPlayRun(style, meta, opts = {}) {
     const tier = summonTier(rep.siege); if (tier) { const os = summonOptions(run, tier); if (os.length) { const o = os.sort((a, b) => botScoreOpt(style, b) - botScoreOpt(style, a))[0];
       if (run.roster.length >= rosterCap(run)) swapHero(run, run.roster.slice().sort((a, b) => (a.rarity || 0) * 50 + a.level - (b.rarity || 0) * 50 - b.level)[0], o);
       else { const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); } } }
+    { const bt = boonDue(rep.siege); if (bt) { const os = boonOptions(run, bt); if (os.length) takeBoon(run, meta, botBoon(run, style, os)); } }
     run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; } const enc = drawEncounter(run); resolveEncounter(run, meta, pick(enc.opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
     if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null;
   }
@@ -9646,6 +9779,7 @@ function playtestStep(P) {
   for (const h of run.roster) if (needsElement(h)) h.el = botElement(run, style, h, elementOptions(run, meta, h));
   if (!run.roster.length) draft();
   checkCastleUnlock(run);
+  { const bt = boonDue(rep.siege); if (bt) { const os = boonOptions(run, bt); if (os.length) takeBoon(run, meta, botBoon(run, style, os)); } }
   run.post = []; const st = storyChapter(run); if (st) { if (st.p === 1) run.mood = 0; run.storySeen = [...(run.storySeen || []), st.id]; }
   resolveEncounter(run, meta, pick(drawEncounter(run).opts).fx); if (run.pendingReforge) { run.pendingReforge = false; const l = reforgeable(run); if (l.length) reforgeItem(run, pick(l)); }
   if (run.post.includes('draft') && run.roster.length < rosterCap(run)) draft(); run.post = []; run.recruitFrom = null; run.mods = {};
@@ -9701,7 +9835,7 @@ function statTipHTML(st) {
 function synTipHTML(k) {
   const run = G.run, isRace = !!RACES[k], D = RACES[k] || CLASSES[k]; if (!D) return '';
   const { race, cls } = synergyCounts(run), n = (isRace ? race : cls)[k] || 0, t = activeSynergies(run)[k];
-  const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroDisplayName(h).split(' ')[0]));
+  const who = placedHeroes(run).filter(h => (isRace ? HERO_BY_ID[h.id].race : HERO_BY_ID[h.id].cls) === k).map(h => esc(heroShortName(heroDisplayName(h))));
   const tiers = D.at.map((v, i) => `<div class="ttier ${t === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(D.desc(i).replace(/^[^:]+: /, ''))}</span></div>`).join('');
   return `<b style="color:${isRace ? D.color : 'var(--sky)'}">${isRace ? '' : D.icon + ' '}${esc(D.name)} <small class="note">${esc((D.desc(0).match(/^([^:]+):/) || [])[1] || '')}</small></b>${tiers}<p class="note">${n} placed${who.length ? ': ' + who.join(', ') : ''}.</p>`;
 }
@@ -9741,7 +9875,7 @@ function draftFit(run, o) {
     else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
-    if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(HERO_BY_ID[mate.id].name.split(' ')[0])}</b><small>${esc(T.pdesc)}</small></div>` }); }
+    if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(heroShortName(HERO_BY_ID[mate.id].name))}</b><small>${esc(T.pdesc)}</small></div>` }); }
   return { score: out.reduce((a, f) => a + f.score, 0), html: out.map(f => f.html).join('') };
 }
 // your keep at a glance: every champion you own, then class and race progress
@@ -9756,7 +9890,7 @@ function keepStripHTML(run) {
   if (!run.roster.length) return '';
   const { c, r } = teamCounts(run);
   const heroes = run.roster.map(h => { const d = HERO_BY_ID[h.id], els = heroElements(run, h);
-    return `<div class="kh" data-tip="txt:${esc(heroDisplayName(h))}|Level ${h.level} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}"><img class="px" src="${portrait(heroSpriteKey(h), 'idle0')}" alt=""><span class="kn">${esc(d.name.split(' ')[0])}</span><span class="km">${CLASSES[d.cls].icon}${els.map(e => `<i class="eld" style="background:${ELEMENTS[e].col}"></i>`).join('')}<small>Lv ${h.level}</small></span></div>`; }).join('');
+    return `<div class="kh" data-tip="txt:${esc(heroDisplayName(h))}|Level ${h.level} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}"><img class="px" src="${portrait(heroSpriteKey(h), 'idle0')}" alt=""><span class="kn">${esc(heroShortName(d.name))}</span><span class="km">${CLASSES[d.cls].icon}${els.map(e => `<i class="eld" style="background:${ELEMENTS[e].col}"></i>`).join('')}<small>Lv ${h.level}</small></span></div>`; }).join('');
   const prog = (obj, defs, kind) => Object.keys(defs).filter(k => obj[k]).sort((a, b) => obj[b] - obj[a]).map(k => { const T = defs[k], n = obj[k], on = n >= T.at[0];
     return `<span class="kp ${on ? 'on' : ''}" data-tip="syn:${k}">${kind === 'cls' ? T.icon + ' ' : ''}${esc(T.name)} ${pips(n, T.at)}</span>`; }).join('');
   return `<div class="keepstrip"><div class="kst"><span class="eyebrow">Your champions · ${run.roster.length}/${rosterCap(run)}</span><div class="khs">${heroes}</div></div>
@@ -9963,6 +10097,7 @@ const UI = {
       rb.hidden = !hurt || G.phase !== 'prep'; rb.disabled = shown < rc; rb.classList.toggle('urgent', c.hp < c.max * 0.5 && shown >= rc);
       $('repairSub').textContent = `+${Math.round(Math.min(c.max * 0.2, c.max - c.hp))} HP · ${rc}g`; rb.title = shown < rc ? `Masons charge ${rc} gold. You have ${shown}.` : 'Masons repair 20% of the castle.'; }
     $('diamonds').textContent = G.meta.diamonds;
+    { const sc = $('score'); if (sc) sc.textContent = fmt(run.score || 0); }
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
     const sub = $('siegeSub');
@@ -10100,11 +10235,11 @@ const UI = {
       if (b === 'ccT') return `<b>${esc(nm)}: crowd control ${(r.ccT || 0).toFixed(1)}s</b>${list(r.cc, ['stun', 'taunt', 'slow'], r.ccT, 's')}<p class="note">Seconds foes spent stunned, frozen or taunted by this champion. Slows count at half.</p>`;
     }
     if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (stackElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
-      const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
+      const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroShortName(heroDisplayName(h)))) : [];
       const I = STYLE_INFO[a];
       return `<b>${E.name}: ${I.style} <small>${I.role} · ${n} on the field</small></b><p>${esc(I.how)}</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${elTier(n) === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(I.tiers[i])}${i === 2 ? ` The ${E.name} castle wakes.` : ''}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
     if (kind === 'help' && a === 'els') return `<b>Element styles</b><p>Every element is a way of fighting. Two, four or six champions with the same element (crests count) make that style stronger and add a twist. Six on the field wake that element's castle.</p>`;
-    if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
+    if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroShortName(heroDisplayName(h)))) : [];
       return `<b>${T.icon} ${T.name} <small>${T.side === 'good' ? 'good-guy energy' : 'bad-guy energy'}</small></b><p><span style="color:var(--mint)">▲ ${esc(T.up)}</span><br><span style="color:var(--rose)">▼ ${esc(T.down)}</span></p><div class="ttier ${n >= 2 ? 'on' : ''}"><b>2</b><span><i>${esc(T.pair)}:</i> ${esc(T.pdesc)}</span></div><p class="note">${n >= 2 ? 'Pair active: ' + who.join(' + ') : n === 1 ? `Place a second ${T.name} champion to unlock the pair bonus. Now: ${who[0]}.` : `Two ${T.name} champions on the field unlock the pair bonus.`}</p>`; }
     if (kind === 'cls') return clsTipHTML(a);
     if (kind === 'el') return elTipHTML(a);
@@ -10166,7 +10301,7 @@ const UI = {
       const ic = (cls, glyph, label, tip, style = '') => `<span class="sic ${cls}" data-tip="${tip}" style="${style}"><i>${glyph}</i><em>${esc(label)}</em></span>`;
       h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${el ? ELEMENTS[el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} aria-label="${esc(d.name)}, ${R.name}, ${cost} gold">
         <span class="shead"><span class="srar">${R.name}</span><span class="sprice">${COST(cost)}</span></span>${tag}
-        <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(d.name.split(' ')[0])}</b>
+        <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(heroShortName(d.name))}</b>
         <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || '●', ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
         <small class="spool">${left} left</small></button>`;
     });
@@ -10182,14 +10317,14 @@ const UI = {
         <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div><div class="copies"><b>${hr.copies || 1}</b><small>${nx ? `${nx} more for ★${star + 1}` : 'max stars'}</small></div></div>`;
     }
     h += `<div class="group-title">Champion codex</div><div class="codex">`;
-    for (const d of HEROES.slice().sort((a, b) => a.rar - b.rar)) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${RARITY[d.rar].name}, ${shopCost(d.id)} gold · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span style="color:${RARITY[d.rar].col}">${esc(d.name.split(' ')[0])}</span></div>`; }
+    for (const d of HEROES.slice().sort((a, b) => a.rar - b.rar)) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${RARITY[d.rar].name}, ${shopCost(d.id)} gold · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span style="color:${RARITY[d.rar].col}">${esc(heroShortName(d.name))}</span></div>`; }
     return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20. Each legend has one rarity, and it sets their price: Common 1 gold up to God 6. Each boss you beat makes rarer cards turn up in the shop.</p>`;
   },
   armoryHTML(run) {
     let sel = run.roster.find(h => h.uid === G.selected);
     if (!sel && run.roster.length) { sel = run.roster[0]; G.selected = sel.uid; }
     let h = `<div class="eyebrow">1. Pick a champion</div><div class="hpick">${run.roster.map(r => { const n = heroItems(run, r).length;
-      return `<button class="hp ${sel === r ? 'on' : ''}" data-act="pickhero" data-arg="${r.uid}" title="${esc(heroDisplayName(r))}"><img class="px" src="${portrait(heroSpriteKey(r))}" alt=""><span>${esc(HERO_BY_ID[r.id].name.split(' ')[0])}</span><i class="pips">${Array.from({ length: ITEM_SLOTS }, (_, k) => `<b class="${k < n ? 'on' : ''}"></b>`).join('')}</i></button>`; }).join('')}</div>`;
+      return `<button class="hp ${sel === r ? 'on' : ''}" data-act="pickhero" data-arg="${r.uid}" title="${esc(heroDisplayName(r))}"><img class="px" src="${portrait(heroSpriteKey(r))}" alt=""><span>${esc(heroShortName(HERO_BY_ID[r.id].name))}</span><i class="pips">${Array.from({ length: ITEM_SLOTS }, (_, k) => `<b class="${k < n ? 'on' : ''}"></b>`).join('')}</i></button>`; }).join('')}</div>`;
     if (sel) h += `<div class="eyebrow">2. Their item slots</div>`;
     if (sel) {
       const its = heroItems(run, sel);
@@ -10201,7 +10336,7 @@ const UI = {
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
     h += UI.superAnvilHTML(run);
-    h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
+    h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(heroShortName(HERO_BY_ID[sel.id].name))}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here yet. A foe in each of the first three sieges carries a component, then one every third siege, and bosses leave bigger loot.</div>`;
     for (const it of loose) {
       const fuse = sel && it.parts.length === 1 && heroItems(run, sel).find(x => x.parts.length === 1);
@@ -10225,7 +10360,7 @@ const UI = {
     let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
     if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
     h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
-      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(heroShortName(HERO_BY_ID[ho.id].name)) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
     if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
       h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
     else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
@@ -10345,14 +10480,14 @@ const UI = {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, G.meta);
     const its = heroItems(run, h);
     const sf = st.starRank ? `<p class="note starforged">★★★ Starforged: +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power and a quicker first cast${h.level < SIG_LEVEL ? ', unlocked early' : ''}.</p>` : `<p class="note">At ★★★ the signature is starforged: +1 rank and +${Math.round((STARFORGED.mul - 1) * 100)}% power.</p>`;
-    const sig = !st.sigOn ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
+    const sig = !st.sigOn ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(heroShortName(d.name))} only uses basic attacks.</p></div>`
       : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) - (st.starRank || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - (st.starRank || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p>${sf}</div>`;
     const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))} ${starBadge(h, true)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
       <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
       <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
-      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroDisplayName(h).split(' ')[0])} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroDisplayName(x).split(' ')[0])} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
+      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroShortName(heroDisplayName(h)))} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroShortName(heroDisplayName(x)))} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
       ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
@@ -10377,7 +10512,7 @@ const UI = {
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(d.name.split(' ')[0])}</span></button>`; });
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(heroShortName(d.name))}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${shopOdds(run).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each guild level opens rarer legends.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
@@ -10399,19 +10534,26 @@ const UI = {
   },
   makeRoomHTML(o) {
     const run = G.run, d = HERO_BY_ID[o.id];
-    let h = `<span class="eyebrow">Your keep is full</span><h2>Who makes room for ${esc(d.name)}?</h2><p class="lede">The one you pick heads home with a little gold. Their items go back to the Armory. ${esc(d.name.split(' ')[0])} takes their spot and joins at their level (or higher).</p><div class="room">`;
+    let h = `<span class="eyebrow">Your keep is full</span><h2>Who makes room for ${esc(d.name)}?</h2><p class="lede">The one you pick heads home with a little gold. Their items go back to the Armory. ${esc(heroShortName(d.name))} takes their spot and joins at their level (or higher).</p><div class="room">`;
     for (const hr of run.roster.slice().sort((a, b) => (a.rarity || 0) - (b.rarity || 0) || a.level - b.level)) {
       const hd = HERO_BY_ID[hr.id];
       h += `<button class="rcard rar-card r${hr.rarity || 0}" data-out="${hr.uid}" style="--rc:${RARITY[hr.rarity || 0].col}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><b>${esc(heroDisplayName(hr))}</b>${rarityBadge(hr.rarity)}<span>Level ${hr.level} · ${esc(CLASSES[hd.cls] ? CLASSES[hd.cls].name : hd.cls)}</span><small>Heads home with +${sellValue(hr)} gold</small></button>`;
     }
     return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small" id="roomBack">Back to the cards</button></div>`;
   },
+  boonHTML(pb) {
+    const T = BOON_TIERS[pb.tier], next = Object.entries(BOON_AT).find(([at]) => +at > G.run.siege - 1);
+    let h = `<span class="eyebrow">${esc(T.name)}</span><h2 class="sp">Choose a boon</h2><p class="lede">A boon lasts the whole run. ${next ? `The next one comes after siege ${next[0]}.` : 'This is the last one this run.'}</p><div class="loot boons">`;
+    pb.opts.forEach((k, i) => { const B = BOONS[k]; h += `<button class="lcard boon b-${pb.tier}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--bc:${T.col}"><span class="bicon">${B.icon}</span><b>${esc(B.name)}</b><span>${esc(B.desc)}</span></button>`; });
+    const had = (G.run.boonLog || []).map(x => BOONS[x.k]).filter(Boolean);
+    return h + `</div>${had.length ? `<p class="note">Your boons: ${had.map(B => `${B.icon} ${esc(B.name)}`).join(' · ')}</p>` : ''}`;
+  },
   lootHTML(opts, cost) {
     const boss = opts[0] && opts[0].parts.length === 2;
     let h = `<span class="eyebrow">Spoils of the siege</span><h2${boss ? ' class="sp hoard"' : ''}>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
     // components you already hold, and what each offered component would make with them
     const run = G.run, owned = run.stash.filter(it => it.parts.length === 1), keys = [...new Set(owned.map(it => it.parts[0]))];
-    const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroDisplayName(hr).split(' ')[0] : 'in the Armory'; };
+    const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroShortName(heroDisplayName(hr)) : 'in the Armory'; };
     const fin = (a, b) => { const F = FINISHED[itemKey(a, b)]; return F ? (F[1] === 'crest' ? ['Elemental Crest', 'Gives the hero a second element.'] : [F[0], F[2]]) : null; };
     opts.forEach((o, i) => { const it = { parts: o.parts, el: null };
       const builds = !boss && o.parts.length === 1 ? keys.map(k => { const f = fin(o.parts[0], k); return f ? `<div class="bld" data-tip="txt:${esc(f[0])}|${esc(f[1])}"><img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt=""><span>+ ${esc(COMPONENTS[k].name)}</span><b>${esc(f[0])}</b></div>` : ''; }).join('') : '';
@@ -10426,7 +10568,7 @@ const UI = {
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
-        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
+        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(heroShortName(HERO_BY_ID[hr.id].name))} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
   },
   comboFormHTML(key, kinds) {
@@ -10446,6 +10588,7 @@ const UI = {
     const br = rep.breach;
     let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} ${br ? 'lost' : 'held'}</h2>`;
     if (br) h += `<div class="breach"><b>The keep cracks${br.n > 1 ? ' twice' : ''}</b><span class="cracks big">${Array.from({ length: br.max }, (_, i) => `<i class="${i < br.total ? 'on' : ''}"></i>`).join('')}</span><small>${br.max - br.total} more and the keep falls. The masons patched the walls back to half, and every legend is back for the next siege.${br.boss ? ' The boss was still standing, so it cost two cracks.' : ''}</small></div>`;
+    h += siegeScoreHTML(rep);
     h += `<div class="tiles"><div class="tile"><small>Gold</small><span style="color:var(--gold)">+${fmt(rep.gold)}</span></div><div class="tile"><small>Foes slain</small><span>${rep.kills}</span></div><div class="tile"><small>Castle damage</small><span style="color:${rep.castleLost > 0 ? 'var(--rose)' : 'var(--mint)'}">${fmt(Math.max(0, rep.castleLost))}</span></div>${rep.drops.length ? `<div class="tile"><small>Item drops</small><span>${rep.drops.map(k => `<img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt="${esc(COMPONENTS[k].name)}" style="width:20px;height:20px">`).join('')}</span></div>` : ''}${rep.castleGrow ? `<div class="tile grow"><small>Keep grows</small><span style="color:var(--gold)">${fmt(rep.castleGrow.from)} → ${fmt(rep.castleGrow.to)}</span></div>` : ''}${rep.bossFled ? `<div class="tile"><small>Boss got away</small><span style="color:var(--rose)">${esc(rep.bossFled)}</span></div>` : ''}${rep.fled ? `<div class="tile"><small>Broke through</small><span style="color:var(--rose)">${rep.fled}</span></div>` : ''}${rep.repaired ? `<div class="tile"><small>Fountain</small><span style="color:var(--mint)">+${fmt(rep.repaired)}</span></div>` : ''}</div>`;
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
@@ -10509,6 +10652,14 @@ const UI = {
     const n = UI.coachQ.shift(); if (n) setTimeout(() => UI.coach(n.key, n.el, n.text), 200);
   },
 };
+
+// the siege's score line on the report: what each part earned and the run total (SCORE in state.js)
+function siegeScoreHTML(rep) {
+  const sc = rep.score; if (!sc) return '';
+  if (sc.lost) return `<div class="siegescore lost"><small>Siege score</small><b class="num">0</b><span class="parts">A lost siege scores nothing.</span><span class="runtot">Run <b class="num">${fmt(rep.runScore || 0)}</b></span></div>`;
+  const part = (k, v, max, tip) => `<span class="sp ${v >= max ? 'full' : v ? '' : 'none'}" title="${tip}"><small>${k}</small>${v}</span>`;
+  return `<div class="siegescore"><small>Siege score</small><b class="num">+${fmt(sc.total)}</b><span class="parts">${part('Walls', sc.walls, SCORE.walls, 'Castle HP kept this siege')}${part('Standing', sc.standing, SCORE.standing, 'Champions still standing (or called back)')}${part('Speed', sc.speed, SCORE.speed, `Full marks under ${Math.round(sc.par * 0.8)}s, none past ${Math.round(sc.par * 1.6)}s`)}${sc.boss ? part('Boss', sc.boss, SCORE.boss, 'The boss was slain') : ''}${part('Kills', sc.kills, SCORE.kill * SCORE.killCap, 'Half a point a foe')}<span class="sp mul" title="Later sieges${sc.pressed ? ' and pressing the attack' : ''} multiply the score"><small>×</small>${sc.mul}</span></span><span class="runtot">Run <b class="num">${fmt(rep.runScore || 0)}</b></span></div>`;
+}
 
 // ===== Star-up show (Cam 2026-10-24) =====
 // When copies merge a legend into 2★ or 3★: the copies fly in and fuse, a flash, the legend comes back recoloured
@@ -10908,12 +11059,13 @@ function startTower() {
   const pt = !!run.playtest; // playtest runs earn nothing and set no records
   const ach = pt ? [] : grantAchievements(run, G.meta), achDia = ach.reduce((a, x) => a + x.dia, 0);
   const earned = diamondsForRun(run) + achDia;
+  const scoreRec = recordScore(run, G.meta), finalScore = runScore(run);
   const prevBest = G.meta.best; if (!pt) { G.meta.diamonds += earned - achDia; G.meta.best = Math.max(G.meta.best, N); G.meta.totalFloors = (G.meta.totalFloors || 0) + N; }
   G.hasRun = false;
   const mvpId = Object.entries(run.stats.dmgByHero).sort((a, b) => b[1] - a[1])[0];
   const climber = mvpId ? mvpId[0] : (run.roster[0] && run.roster[0].id) || 'brann';
   const bosses = run.stats.bosses;
-  Object.assign(TOWER, { ach, on: true, t: 0, N, placed: 0, nextT: 1.2, drops: [], parts: [], texts: [], camY: 0, shake: 0, phase: 'intro', climber, climbK: 0, earned, prevBest, bosses,
+  Object.assign(TOWER, { ach, scoreRec, finalScore, won: !!run.won, breaches: run.breaches || 0, on: true, t: 0, N, placed: 0, nextT: 1.2, drops: [], parts: [], texts: [], camY: 0, shake: 0, phase: 'intro', climber, climbK: 0, earned, prevBest, bosses,
     stars: Array.from({ length: 140 }, () => ({ x: Math.random() * TW, y: Math.random(), s: Math.random() < 0.2 ? 2 : 1 })), fireworks: [], panelShown: false,
     stats: { kills: run.stats.kills, gold: run.stats.gold, mvp: climber, mvpDmg: mvpId ? mvpId[1] : 0 } });
   save();
@@ -11070,6 +11222,7 @@ function showTowerPanel() {
   $('towerPanel').innerHTML = `<div class="sheet" style="animation:sheetIn .4s">
     <h2>${G.run && G.run.won ? 'Victory! The Eternal Goose is defeated' : `${T.N} ${T.N === 1 ? 'floor' : 'floors'} tall`}</h2>
     <p class="lede">${T.N > T.prevBest && T.N > 0 ? `Your highest keep yet, beating ${T.prevBest}.` : `Your record is ${G.meta.best} floors.`}</p>
+    ${scoreBoardHTML(T)}
     <div class="tiles"><div class="tile"><small>Bosses slain</small><span>${T.bosses.length}</span></div><div class="tile"><small>Foes slain</small><span>${fmt(T.stats.kills)}</span></div><div class="tile"><small>Gold earned</small><span style="color:var(--gold)">${fmt(T.stats.gold)}</span></div></div>
     ${T.ach.length ? `<div class="achlist"><span class="eyebrow">New achievements</span>${T.ach.map(a => `<div class="ach got"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div>`).join('')}</div>` : `<p class="note">No new achievements this run. There are ${ACHIEVEMENTS.filter(a => !G.meta.ach[a.id]).length} left to find in the Keep Ledger.</p>`}
     ${mvp ? `<p class="note">Hero of the run: <b style="color:var(--gold)">${esc(mvp.name)}</b> with ${fmt(T.stats.mvpDmg)} damage.</p>` : ''}
@@ -11077,6 +11230,15 @@ function showTowerPanel() {
   let n = 0; const tick = () => { n = Math.min(T.earned, n + Math.max(1, Math.ceil(T.earned / 20))); const el = $('diaCount'); if (el) el.textContent = '+' + n; if (n < T.earned) setTimeout(tick, 50); }; tick();
   $('twLedger').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.run = newRun(G.meta); G.hasRun = false; G.phase = 'title'; G.B = null; rebuildPrepUnits(); save(); showTitle(); };
   $('twAgain').onclick = () => { TOWER.on = false; $('tower').hidden = true; G.paused = false; startRun(true); };
+}
+
+// the run's score and the best-score board (SCORE in state.js)
+function scoreBoardHTML(T) {
+  const b = G.meta.scores || [], rk = T.scoreRec && T.scoreRec.rank, bonus = T.won ? SCORE.win + SCORE.crackLeft * Math.max(0, BREACH.max - T.breaches) : 0;
+  const when = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+  return `<div class="scorecard"><div class="scoretop"><small>Score</small><b class="num">${fmt(T.finalScore)}</b>${rk === 1 && b.length > 1 ? '<span class="newbest">New best!</span>' : rk ? `<span class="rank">#${rk} on your board</span>` : ''}</div>
+    ${bonus ? `<small class="note">Includes ${fmt(SCORE.win)} for beating the Goose${T.breaches < BREACH.max ? ` and ${fmt(bonus - SCORE.win)} for ${BREACH.max - T.breaches} uncracked ${BREACH.max - T.breaches === 1 ? 'wall' : 'walls'}` : ''}.</small>` : ''}
+    ${b.length ? `<ol class="scoreboard">${b.map((e, i) => `<li class="${T.scoreRec && T.scoreRec.entry === e ? 'me' : ''}"><span>${i + 1}</span><b class="num">${fmt(e.score)}</b><small>${e.won ? 'Goose beaten' : 'Siege ' + e.siege}</small><small>${when(e.at)}</small></li>`).join('')}</ol>` : ''}</div>`;
 }
 
 // ===== Boss lairs (Cam 2026-10-22) =====
@@ -13121,7 +13283,7 @@ function introItems(run, key) {
     'Open the Armory', () => { UI.setRoster(true); UI.openPage('armory'); }, key);
 }
 function introFuse(run, key) {
-  const p = fusePair(run), name = HERO_BY_ID[p.h.id].name.split(' ')[0], [n] = finInfo(p.has.parts[0], p.loose.parts[0]);
+  const p = fusePair(run), name = heroShortName(HERO_BY_ID[p.h.id].name), [n] = finInfo(p.has.parts[0], p.loose.parts[0]);
   introCard('Combining', `Fuse your first item`,
     `<p class="lede">${esc(name)} holds the ${esc(COMPONENTS[p.has.parts[0]].name)}. Hand them the ${esc(COMPONENTS[p.loose.parts[0]].name)} and the two fuse into <b>${esc(n)}</b>.</p>
     <div class="irecs">${recipeRow(p.has.parts[0], p.loose.parts[0])}</div>
@@ -13226,7 +13388,7 @@ function showDraft() {
       if (!run.pendingDraft) return; // a double tap after the pick
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
-      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
     }));
@@ -13259,7 +13421,7 @@ function showSummon() {
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
-      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
     }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
@@ -13317,6 +13479,7 @@ function endSiege() {
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
+    if (boonDue(rep.siege)) run.post.push('boon'); // Boons: a run-shaping pick after sieges 3, 10 and 20
     run.post.push('encounter');
     run.lastRep = rep; save();
     setTimeout(() => showReport(rep), 900);
@@ -13334,7 +13497,7 @@ function endSiege() {
     const left = br.max - br.total;
     UI.banner('The walls are breached!', `The keep cracks${br.n > 1 ? ' twice' : ''}. ${left} more and it falls.`);
     // a lost finale is fought again; otherwise the run moves on to the next siege
-    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = ['encounter'];
+    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = boonDue(rep.siege) ? ['boon', 'encounter'] : ['encounter'];
     run.lastRep = rep; save();
     setTimeout(() => showGloat(rep, () => showReport(rep)), 1800);
     UI.hud();
@@ -13367,7 +13530,22 @@ function nextPost() {
   if (step === 'castle') return showCastle();
   if (step === 'encounter') return showEncounter();
   if (step === 'summon') return showSummon();
+  if (step === 'boon') return showBoon();
   nextPost();
+}
+
+// Boons (state.js BOONS): three cards of the siege's tier, pick one. The offer is kept so a reload shows the same three
+function showBoon() {
+  const run = G.run, tier = boonDue(run.siege - 1) || 'silver'; G.phase = 'boon';
+  if (!run.pendingBoon) run.pendingBoon = { tier, opts: boonOptions(run, tier) };
+  if (!run.pendingBoon.opts.length) { run.pendingBoon = null; return nextPost(); }
+  save(); SFX.play('sig');
+  UI.modal(UI.boonHTML(run.pendingBoon), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const k = run.pendingBoon.opts[+b.dataset.pick], T = BOON_TIERS[run.pendingBoon.tier]; run.pendingBoon = null;
+    const line = takeBoon(run, G.meta, k); SFX.play('draft'); UI.closeModal();
+    UI.banner(BOONS[k].name, `${T.name} · ${line}`, { col: T.col }); FX.flash(T.col, 0.3); TEL.event('boon', { k, s: run.siege - 1 });
+    changed(); nextPost();
+  }), 'wide');
 }
 
 function showLoot(kind) {
@@ -13514,7 +13692,7 @@ G.act = function (act, arg) {
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
     case 'herald': { if (G.phase !== 'prep') return; SFX.play('click'); showHerald(() => { UI.openPage('guild'); }); return; }
     case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
-      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
+      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);
       UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
       if (r.starUp) { FX.flash(STAR_COL[heroStar(r.h) - 1], 0.35); STARUP.show(r.h, heroStar(r.h) - 1, heroStar(r.h)); }
@@ -13544,7 +13722,7 @@ G.act = function (act, arg) {
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
       setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
-    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or raise the guild level in the Guild Hall.` : 'No free spot on the field.', true); break;
+    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroShortName(heroDisplayName(hero))} in for someone, or raise the guild level in the Guild Hall.` : 'No free spot on the field.', true); break;
     case 'swapin': { if (G.phase !== 'prep') return; const [a, b] = String(arg).split(':'), x = run.roster.find(h => h.uid === a), y = run.roster.find(h => h.uid === b); if (x && y) { swapBench(x, y); G.selected = x.uid; } break; }
   }
   changed();
@@ -13565,7 +13743,7 @@ function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
-  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or raise the guild level in the Guild Hall.`, true); return; }
+  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroShortName(heroDisplayName(h))} onto a champion to swap them, or raise the guild level in the Guild Hall.`, true); return; }
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
@@ -13578,7 +13756,7 @@ function swapBench(benched, onField) {
   benched.place = spot.type === 'rafter' && !isRangedHero(benched.id) ? null : spot;
   if (!benched.place) { onField.place = null; autoPlace(G.run, benched); } else onField.place = null;
   SFX.play('click'); const p = benched.place && (benched.place.type === 'rafter' ? rafterPosition(G.run, benched.place.i) : cellPos(benched.place.c, benched.place.r)); if (p) FX.puff(p.x, p.y, 0.6);
-  UI.toast(`${heroDisplayName(benched).split(' ')[0]} takes the field. ${heroDisplayName(onField).split(' ')[0]} sits on the bench.`);
+  UI.toast(`${heroShortName(heroDisplayName(benched))} takes the field. ${heroShortName(heroDisplayName(onField))} sits on the bench.`);
 }
 function heroAtPoint(p) { for (const u of G.prepUnits.slice().reverse()) if (u.inst && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2) return u.inst; return null; }
 
@@ -13599,7 +13777,7 @@ function sellNow(h) {
 function sellZone(d, e) {
   const z = $('sellZone'), on = !!(d && d.active && G.phase === 'prep' && G.run.roster.length > 1);
   z.hidden = !on; if (!on) return false;
-  z.querySelector('span').textContent = `${heroDisplayName(d.h).split(' ')[0]} for ${sellValue(d.h)} gold`;
+  z.querySelector('span').textContent = `${heroShortName(heroDisplayName(d.h))} for ${sellValue(d.h)} gold`;
   const r = z.getBoundingClientRect(), hot = e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 8 && e.clientY <= r.bottom + 8;
   z.classList.toggle('hot', hot); return hot;
 }
@@ -13680,7 +13858,7 @@ function showTitle() {
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
         <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
         <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
-      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span>${G.meta.bestScore ? `<span>Best score <b>${fmt(G.meta.bestScore)}</b></span>` : ''}<span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
     </div>
     <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
     <div class="wrap">
@@ -13691,6 +13869,7 @@ function showTitle() {
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
+      <div><b>Score and boons</b>Every siege you hold scores points for walls kept, champions standing, speed and the boss slain, and later sieges count for more. A lost siege scores nothing. After sieges 3, 10 and 20 you pick a Silver, Gold and Prismatic boon that lasts the run. Your ten best scores are kept on the tower.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;
@@ -13792,7 +13971,7 @@ function titleEnter() { MUSIC.start(); const t = $('title'); t.classList.remove(
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
-  if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot' && run.post[0] !== 'lootc') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
+  if (run.pendingDraft || run.pendingSummon || run.pendingBoon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot' && run.post[0] !== 'lootc') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); if (run.pendingBoon && run.post[0] !== 'boon') run.post.unshift('boon'); return nextPost(); }
   if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
   // a reload during the boss talk plays it again (run.talked is set when the scene ends)

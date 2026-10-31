@@ -77,7 +77,7 @@ function showDraft() {
       if (!run.pendingDraft) return; // a double tap after the pick
       const o = run.pendingDraft[+b.dataset.pick];
       // a full keep: pick who heads home to make room, or go back to the cards
-      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showDraft, (h, old, g) => { run.pendingDraft = null; run.recruitFrom = null; picked(o, h, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); });
       run.pendingDraft = null; run.recruitFrom = null;
       picked(o, addDraftedHero(run, o), kind === 'starter' ? 'joins the keep' : 'answers the call');
     }));
@@ -110,7 +110,7 @@ function showSummon() {
   UI.modal(UI.draftHTML(P.opts, 'summon', 0), s => {
     s.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => touchPick(s, b, e, () => {
       const o = P.opts[+b.dataset.pick];
-      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`));
+      if (run.roster.length >= rosterCap(run)) return showMakeRoom(o, showSummon, (h, old) => done(h, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`));
       const h = addDraftedHero(run, o); h.level = Math.max(h.level, teamLevel(run)); done(h, `answers the summons at level ${h.level}`);
     }));
     const sk = s.querySelector('#summonSkip'); if (sk) sk.onclick = () => { const g = summonSkipGold(run); run.gold += g; run.pendingSummon = null; UI.closeModal(); UI.toast(`The legends bow out. +${g} gold.`); changed(); nextPost(); };
@@ -168,6 +168,7 @@ function endSiege() {
     // every legend fell: one free recruit so the keep is never empty
     if (!run.roster.length) run.post.push('draft');
     const st = summonTier(rep.siege); if (st) { const opts = summonOptions(run, st); if (opts.length) { run.pendingSummon = { tier: st, opts }; run.post.push('summon'); } }
+    if (boonDue(rep.siege)) run.post.push('boon'); // Boons: a run-shaping pick after sieges 3, 10 and 20
     run.post.push('encounter');
     run.lastRep = rep; save();
     setTimeout(() => showReport(rep), 900);
@@ -185,7 +186,7 @@ function endSiege() {
     const left = br.max - br.total;
     UI.banner('The walls are breached!', `The keep cracks${br.n > 1 ? ' twice' : ''}. ${left} more and it falls.`);
     // a lost finale is fought again; otherwise the run moves on to the next siege
-    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = ['encounter'];
+    if (finale || rep.siege >= FINAL_SIEGE) { startFinale(run); run.post = []; } else run.post = boonDue(rep.siege) ? ['boon', 'encounter'] : ['encounter'];
     run.lastRep = rep; save();
     setTimeout(() => showGloat(rep, () => showReport(rep)), 1800);
     UI.hud();
@@ -218,7 +219,22 @@ function nextPost() {
   if (step === 'castle') return showCastle();
   if (step === 'encounter') return showEncounter();
   if (step === 'summon') return showSummon();
+  if (step === 'boon') return showBoon();
   nextPost();
+}
+
+// Boons (state.js BOONS): three cards of the siege's tier, pick one. The offer is kept so a reload shows the same three
+function showBoon() {
+  const run = G.run, tier = boonDue(run.siege - 1) || 'silver'; G.phase = 'boon';
+  if (!run.pendingBoon) run.pendingBoon = { tier, opts: boonOptions(run, tier) };
+  if (!run.pendingBoon.opts.length) { run.pendingBoon = null; return nextPost(); }
+  save(); SFX.play('sig');
+  UI.modal(UI.boonHTML(run.pendingBoon), s => s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const k = run.pendingBoon.opts[+b.dataset.pick], T = BOON_TIERS[run.pendingBoon.tier]; run.pendingBoon = null;
+    const line = takeBoon(run, G.meta, k); SFX.play('draft'); UI.closeModal();
+    UI.banner(BOONS[k].name, `${T.name} · ${line}`, { col: T.col }); FX.flash(T.col, 0.3); TEL.event('boon', { k, s: run.siege - 1 });
+    changed(); nextPost();
+  }), 'wide');
 }
 
 function showLoot(kind) {
@@ -365,7 +381,7 @@ G.act = function (act, arg) {
       UI.forge({ super: true, inputs: ins, out: itemIconURL(r.it, 4), name: itemName(r.it), sub: r.holder ? `for ${heroDisplayName(r.holder)}` : 'Added to the stash' }); TEL.event('superforge', { sup: r.it.sup, a: r.it.parts, b: r.it.sub.parts }); break; }
     case 'herald': { if (G.phase !== 'prep') return; SFX.play('click'); showHerald(() => { UI.openPage('guild'); }); return; }
     case 'shopbuy': { if (G.phase !== 'prep') return; const i = +arg; r = buyShopCard(run, i);
-      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${HERO_BY_ID[old.id].name.split(' ')[0]}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
+      if (r.full) { const card = r.card, cost = r.cost; return showMakeRoom(card, () => { UI.closeModal(); UI.openPage('guild'); }, (h, old, g) => { run.gold -= cost; run.shop[i] = null; UI.closeModal(); G.selected = h.uid; SFX.play('draft'); UI.banner(HERO_BY_ID[h.id].name, `takes ${heroShortName(HERO_BY_ID[old.id].name)}'s place`, heroBanner(h)); UI.toast(`${heroDisplayName(old)} heads home. +${g} gold, items back in the Armory.`); TEL.event('shopbuy', { id: h.id, swap: old.id }); changed(); UI.openPage('guild'); }); }
       if (r.err) return UI.toast(r.err, true);
       UI.coachDone('draft-ready'); G.selected = r.h.uid; TEL.event('shopbuy', { id: r.h.id, merged: !!r.merged, star: heroStar(r.h) });
       if (r.starUp) { FX.flash(STAR_COL[heroStar(r.h) - 1], 0.35); STARUP.show(r.h, heroStar(r.h) - 1, heroStar(r.h)); }
@@ -395,7 +411,7 @@ G.act = function (act, arg) {
       SFX.play('level'); FX.flash(RARITY[hr.rarity].col, 0.35); UI.banner(heroDisplayName(hr), `ascends from ${from} to ${RARITY[hr.rarity].name}`, heroBanner(hr)); TEL.event('ascend', { id: hr.id, to: hr.rarity }); break; }
     case 'h-voice': { if (G.phase !== 'prep' || hero.vault) return; const fi = factionIndex(run.siege); if (run.voiceSwap === fi) return UI.toast('The banner already changed hands this horde.', true);
       setVoice(run, hero); run.voiceSwap = fi; SFX.play('draft'); UI.toast(`${heroDisplayName(hero)} now speaks for the keep.`); TEL.event('voice', { id: hero.id, s: run.siege }); break; }
-    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroDisplayName(hero).split(' ')[0]} in for someone, or raise the guild level in the Guild Hall.` : 'No free spot on the field.', true); break;
+    case 'h-place': autoPlace(run, hero); if (!hero.place) UI.toast(fieldFull(run, hero) ? `The field is full (${fieldCap(run)}/${fieldCap(run)}). Swap ${heroShortName(heroDisplayName(hero))} in for someone, or raise the guild level in the Guild Hall.` : 'No free spot on the field.', true); break;
     case 'swapin': { if (G.phase !== 'prep') return; const [a, b] = String(arg).split(':'), x = run.roster.find(h => h.uid === a), y = run.roster.find(h => h.uid === b); if (x && y) { swapBench(x, y); G.selected = x.uid; } break; }
   }
   changed();
@@ -416,7 +432,7 @@ function placeHero(h, s) {
   if (h.vault) { UI.toast(`${heroDisplayName(h)} is stuck in the goose's nest.`, true); return; }
   if (h.fled) { UI.toast(`${heroDisplayName(h)} is sitting this boss siege out.`, true); return; }
   const occ = occupant(s, h);
-  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroDisplayName(h).split(' ')[0]} onto a champion to swap them, or raise the guild level in the Guild Hall.`, true); return; }
+  if (!occ && !h.place && fieldFull(G.run, h)) { UI.toast(`The field is full (${fieldCap(G.run)}/${fieldCap(G.run)}). Drop ${heroShortName(heroDisplayName(h))} onto a champion to swap them, or raise the guild level in the Guild Hall.`, true); return; }
   if (occ) { if (h.place && slotOk(occ, h.place)) occ.place = h.place; else occ.place = null; }
   h.place = s.type === 'grid' ? { type: 'grid', c: s.c, r: s.r } : { type: 'rafter', i: s.i };
   SFX.play('click');
@@ -429,7 +445,7 @@ function swapBench(benched, onField) {
   benched.place = spot.type === 'rafter' && !isRangedHero(benched.id) ? null : spot;
   if (!benched.place) { onField.place = null; autoPlace(G.run, benched); } else onField.place = null;
   SFX.play('click'); const p = benched.place && (benched.place.type === 'rafter' ? rafterPosition(G.run, benched.place.i) : cellPos(benched.place.c, benched.place.r)); if (p) FX.puff(p.x, p.y, 0.6);
-  UI.toast(`${heroDisplayName(benched).split(' ')[0]} takes the field. ${heroDisplayName(onField).split(' ')[0]} sits on the bench.`);
+  UI.toast(`${heroShortName(heroDisplayName(benched))} takes the field. ${heroShortName(heroDisplayName(onField))} sits on the bench.`);
 }
 function heroAtPoint(p) { for (const u of G.prepUnits.slice().reverse()) if (u.inst && Math.abs(p.x - u.x) <= 8 && p.y >= u.y - 19 && p.y <= u.y + 2) return u.inst; return null; }
 
@@ -450,7 +466,7 @@ function sellNow(h) {
 function sellZone(d, e) {
   const z = $('sellZone'), on = !!(d && d.active && G.phase === 'prep' && G.run.roster.length > 1);
   z.hidden = !on; if (!on) return false;
-  z.querySelector('span').textContent = `${heroDisplayName(d.h).split(' ')[0]} for ${sellValue(d.h)} gold`;
+  z.querySelector('span').textContent = `${heroShortName(heroDisplayName(d.h))} for ${sellValue(d.h)} gold`;
   const r = z.getBoundingClientRect(), hot = e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 8 && e.clientY <= r.bottom + 8;
   z.classList.toggle('hot', hot); return hot;
 }
@@ -531,7 +547,7 @@ function showTitle() {
       <div class="cta">${has ? `<button class="btn go" id="tContinue">Continue · Siege ${G.run.siege}</button>` : ''}
         <button class="btn ${has ? '' : 'primary go'}" id="tNew">${has ? 'Abandon and start a new run' : 'Begin a new run'}</button>
         <button class="btn ghost" id="tPlaytest">Playtest menu</button></div>
-      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span><span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
+      <div class="records"><span>Highest keep <b>${G.meta.best} floors</b></span>${G.meta.bestScore ? `<span>Best score <b>${fmt(G.meta.bestScore)}</b></span>` : ''}<span>Runs <b>${G.meta.runs}</b></span><span>Build <b>${VERSION}</b></span></div>
     </div>
     <button class="scrollcue" id="tDown">Keep Ledger and how to play ▾</button></section>
     <div class="wrap">
@@ -542,6 +558,7 @@ function showTitle() {
       <div><b>Fifty sieges, ten hordes</b>Every horde has a boss and a story. At the end of it all waits the Eternal Goose. Every run starts from scratch: no upgrades carry over, so each climb is won with that run's shop, gold and choices.</div>
       <div><b>Recruit legends</b>Start with 1 legend at level 1, then buy more in the Guild Hall shop. Each legend has one rarity, and it is their price: Common 1 gold up to God 6. Three copies of a legend make it 2-star, nine make it 3-star. Raise the guild level (3 to 12) to field more legends and see rarer cards. Each horde's boss recruits from the same pool, and its warband fights for the horde.</div>
       <div><b>Earn everything</b>Every siege pays 5 gold, kills drop a few more, and banked gold earns interest (1 per 10, up to 5). A legend who falls earns nothing that siege but is back for the next one. If the horde gets in, the keep cracks: three cracks and it falls.</div>
+      <div><b>Score and boons</b>Every siege you hold scores points for walls kept, champions standing, speed and the boss slain, and later sieges count for more. A lost siege scores nothing. After sieges 3, 10 and 20 you pick a Silver, Gold and Prismatic boon that lasts the run. Your ten best scores are kept on the tower.</div>
       <div><b>Signatures and elements</b>Signatures unlock at level 5 and grow every level. Every legend arrives with an element. Two, four or six of one element power it up, and mixed elements form combos.</div>
       <div><b>Grow the keep</b>Fuse components into items in the Armory, pick a path in each branch of the Artificers' tech tree, and field six champions of one element to wake that element's castle.</div>
     </div></div>`;
@@ -643,7 +660,7 @@ function titleEnter() { MUSIC.start(); const t = $('title'); t.classList.remove(
 function resumeRun() {
   const run = G.run;
   if (run.lastRep) return showReport(run.lastRep);
-  if (run.pendingDraft || run.pendingSummon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot' && run.post[0] !== 'lootc') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); return nextPost(); }
+  if (run.pendingDraft || run.pendingSummon || run.pendingBoon || (run.post && run.post.length) || run.roster.some(needsElement)) { if (run.pendingDraft && run.post[0] !== 'draft') run.post.unshift('draft'); if (run.pendingLoot && run.post[0] !== 'loot' && run.post[0] !== 'lootc') run.post.unshift('loot'); if (run.pendingCastle && run.post[0] !== 'castle') run.post.unshift('castle'); if (run.pendingSummon && !run.post.includes('summon')) run.post.unshift('summon'); if (run.pendingBoon && run.post[0] !== 'boon') run.post.unshift('boon'); return nextPost(); }
   if (vaultDue(run)) return showVault();
   G.phase = 'prep'; changed();
   // a reload during the boss talk plays it again (run.talked is set when the scene ends)

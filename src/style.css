@@ -1410,3 +1410,37 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 @keyframes suIn { from { opacity: 0; } }
 @keyframes suOut { to { opacity: 0; transform: scale(1.04); } }
 .note.starforged { color: #ffd94a; }
+
+/* ----- siege score and best-score board (Cam 2026-10-31) ----- */
+.purse .scorebox { flex-direction: column; align-items: flex-end; gap: 0; line-height: 1; color: #bfe7ff; }
+.purse .scorebox small { font-family: var(--f-body, inherit); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.siegescore { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 10px; padding: 8px 10px; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 var(--ink); }
+.siegescore > small { text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-size: 11px; }
+.siegescore > b { font-family: var(--f-display); font-size: 24px; color: #bfe7ff; }
+.siegescore.lost > b { color: var(--rose); }
+.siegescore .parts { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 200px; }
+.siegescore .sp { display: inline-flex; flex-direction: column; align-items: center; min-width: 48px; padding: 2px 6px; border: 2px solid var(--ink); border-radius: 4px; background: var(--panel); font-family: var(--f-display); font-size: 15px; line-height: 1.1; }
+.siegescore .sp small { font-family: var(--f-body, inherit); font-size: 10px; color: var(--muted); }
+.siegescore .sp.full { color: var(--mint); }
+.siegescore .sp.none { color: var(--muted); }
+.siegescore .sp.mul { color: var(--gold); }
+.siegescore .runtot { margin-left: auto; color: var(--muted); font-size: 13px; }
+.siegescore .runtot b { font-family: var(--f-display); font-size: 18px; color: var(--text); }
+.scorecard { margin: 6px 0 12px; padding: 10px 12px; background: var(--panel-2); border: 2px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 var(--ink); }
+.scorecard .scoretop { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.scorecard .scoretop small { text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.scorecard .scoretop b { font-family: var(--f-display); font-size: 32px; color: #bfe7ff; }
+.scorecard .newbest { color: var(--gold); font-family: var(--f-display); animation: bump .5s 2; }
+.scorecard .rank { color: var(--muted); }
+.scoreboard { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; max-height: 190px; overflow: auto; }
+.scoreboard li { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 8px; align-items: baseline; padding: 2px 6px; border-radius: 3px; }
+.scoreboard li:nth-child(odd) { background: rgba(255,255,255,.04); }
+.scoreboard li.me { background: rgba(255, 207, 58, .16); outline: 1px solid var(--gold); }
+.scoreboard li span { color: var(--muted); }
+.scoreboard li b { font-family: var(--f-display); }
+.scoreboard li small { color: var(--muted); }
+/* ----- Boons ----- */
+.lcard.boon { border-color: var(--bc); background: linear-gradient(170deg, color-mix(in srgb, var(--bc) 22%, var(--panel-2)), var(--panel-2) 60%); }
+.lcard.boon .bicon { font-size: 40px; line-height: 1.1; filter: drop-shadow(2px 2px 0 var(--ink)); }
+.lcard.boon.b-prism { box-shadow: 0 4px 0 var(--ink), 0 0 0 2px #8fd7ff, 0 0 18px rgba(255, 159, 255, .45); }
+.loot.boons { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }

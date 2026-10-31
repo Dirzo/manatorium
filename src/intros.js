@@ -47,7 +47,7 @@ function introItems(run, key) {
     'Open the Armory', () => { UI.setRoster(true); UI.openPage('armory'); }, key);
 }
 function introFuse(run, key) {
-  const p = fusePair(run), name = HERO_BY_ID[p.h.id].name.split(' ')[0], [n] = finInfo(p.has.parts[0], p.loose.parts[0]);
+  const p = fusePair(run), name = heroShortName(HERO_BY_ID[p.h.id].name), [n] = finInfo(p.has.parts[0], p.loose.parts[0]);
   introCard('Combining', `Fuse your first item`,
     `<p class="lede">${esc(name)} holds the ${esc(COMPONENTS[p.has.parts[0]].name)}. Hand them the ${esc(COMPONENTS[p.loose.parts[0]].name)} and the two fuse into <b>${esc(n)}</b>.</p>
     <div class="irecs">${recipeRow(p.has.parts[0], p.loose.parts[0])}</div>

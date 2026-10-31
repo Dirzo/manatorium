@@ -28,7 +28,7 @@ function draftFit(run, o) {
     else out.push({ score: 0, html: `<div class="fit dim"><b>${esc(label)} full</b>${pips(Math.min(n, T.at[T.at.length - 1]), T.at)}</div>` });
   }
   if (o.temper) { const mate = run.roster.find(h => heroTemper(h) === o.temper), T = TEMPERS[o.temper];
-    if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(HERO_BY_ID[mate.id].name.split(' ')[0])}</b><small>${esc(T.pdesc)}</small></div>` }); }
+    if (mate && T.pdesc) out.push({ score: 2, html: `<div class="fit up tmpfit" data-tip="tmp:${o.temper}"><b>${T.icon} Pairs with ${esc(heroShortName(HERO_BY_ID[mate.id].name))}</b><small>${esc(T.pdesc)}</small></div>` }); }
   return { score: out.reduce((a, f) => a + f.score, 0), html: out.map(f => f.html).join('') };
 }
 // your keep at a glance: every champion you own, then class and race progress
@@ -43,7 +43,7 @@ function keepStripHTML(run) {
   if (!run.roster.length) return '';
   const { c, r } = teamCounts(run);
   const heroes = run.roster.map(h => { const d = HERO_BY_ID[h.id], els = heroElements(run, h);
-    return `<div class="kh" data-tip="txt:${esc(heroDisplayName(h))}|Level ${h.level} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}"><img class="px" src="${portrait(heroSpriteKey(h), 'idle0')}" alt=""><span class="kn">${esc(d.name.split(' ')[0])}</span><span class="km">${CLASSES[d.cls].icon}${els.map(e => `<i class="eld" style="background:${ELEMENTS[e].col}"></i>`).join('')}<small>Lv ${h.level}</small></span></div>`; }).join('');
+    return `<div class="kh" data-tip="txt:${esc(heroDisplayName(h))}|Level ${h.level} ${esc(RACES[d.race].name)} ${esc(CLASSES[d.cls].name)}"><img class="px" src="${portrait(heroSpriteKey(h), 'idle0')}" alt=""><span class="kn">${esc(heroShortName(d.name))}</span><span class="km">${CLASSES[d.cls].icon}${els.map(e => `<i class="eld" style="background:${ELEMENTS[e].col}"></i>`).join('')}<small>Lv ${h.level}</small></span></div>`; }).join('');
   const prog = (obj, defs, kind) => Object.keys(defs).filter(k => obj[k]).sort((a, b) => obj[b] - obj[a]).map(k => { const T = defs[k], n = obj[k], on = n >= T.at[0];
     return `<span class="kp ${on ? 'on' : ''}" data-tip="syn:${k}">${kind === 'cls' ? T.icon + ' ' : ''}${esc(T.name)} ${pips(n, T.at)}</span>`; }).join('');
   return `<div class="keepstrip"><div class="kst"><span class="eyebrow">Your champions · ${run.roster.length}/${rosterCap(run)}</span><div class="khs">${heroes}</div></div>
@@ -250,6 +250,7 @@ const UI = {
       rb.hidden = !hurt || G.phase !== 'prep'; rb.disabled = shown < rc; rb.classList.toggle('urgent', c.hp < c.max * 0.5 && shown >= rc);
       $('repairSub').textContent = `+${Math.round(Math.min(c.max * 0.2, c.max - c.hp))} HP · ${rc}g`; rb.title = shown < rc ? `Masons charge ${rc} gold. You have ${shown}.` : 'Masons repair 20% of the castle.'; }
     $('diamonds').textContent = G.meta.diamonds;
+    { const sc = $('score'); if (sc) sc.textContent = fmt(run.score || 0); }
     const s = run.siege, F = FACTIONS[factionIndex(s)];
     $('siegeName').textContent = `Siege ${s}`;
     const sub = $('siegeSub');
@@ -387,11 +388,11 @@ const UI = {
       if (b === 'ccT') return `<b>${esc(nm)}: crowd control ${(r.ccT || 0).toFixed(1)}s</b>${list(r.cc, ['stun', 'taunt', 'slow'], r.ccT, 's')}<p class="note">Seconds foes spent stunned, frozen or taunted by this champion. Slows count at half.</p>`;
     }
     if (kind === 'els') { const E = ELEMENTS[a], n = G.run ? (stackElements(G.run)[a] || 0) : 0, stat = { ad: 'attack', ap: 'ability power', def: 'HP' }[E.style];
-      const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
+      const who = G.run ? placedHeroes(G.run).filter(h => heroElements(G.run, h).includes(a)).map(h => esc(heroShortName(heroDisplayName(h)))) : [];
       const I = STYLE_INFO[a];
       return `<b>${E.name}: ${I.style} <small>${I.role} · ${n} on the field</small></b><p>${esc(I.how)}</p>${EL_STACK.at.map((v, i) => `<div class="ttier ${elTier(n) === i ? 'on' : n >= v ? 'past' : ''}"><b>${v}</b><span>${esc(I.tiers[i])}${i === 2 ? ` The ${E.name} castle wakes.` : ''}</span></div>`).join('')}${G.run && G.run.castleEl === a && n ? `<p class="note">+1 from your castle (counts for stacks, not combos).</p>` : ''}<p class="note">${who.length ? who.join(', ') : 'Nobody yet'}</p>`; }
     if (kind === 'help' && a === 'els') return `<b>Element styles</b><p>Every element is a way of fighting. Two, four or six champions with the same element (crests count) make that style stronger and add a twist. Six on the field wake that element's castle.</p>`;
-    if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroDisplayName(h).split(' ')[0])) : [];
+    if (kind === 'tmp') { const T = TEMPERS[a], n = G.run ? (temperCounts(G.run)[a] || 0) : 0, who = G.run ? placedHeroes(G.run).filter(h => heroTemper(h) === a).map(h => esc(heroShortName(heroDisplayName(h)))) : [];
       return `<b>${T.icon} ${T.name} <small>${T.side === 'good' ? 'good-guy energy' : 'bad-guy energy'}</small></b><p><span style="color:var(--mint)">▲ ${esc(T.up)}</span><br><span style="color:var(--rose)">▼ ${esc(T.down)}</span></p><div class="ttier ${n >= 2 ? 'on' : ''}"><b>2</b><span><i>${esc(T.pair)}:</i> ${esc(T.pdesc)}</span></div><p class="note">${n >= 2 ? 'Pair active: ' + who.join(' + ') : n === 1 ? `Place a second ${T.name} champion to unlock the pair bonus. Now: ${who[0]}.` : `Two ${T.name} champions on the field unlock the pair bonus.`}</p>`; }
     if (kind === 'cls') return clsTipHTML(a);
     if (kind === 'el') return elTipHTML(a);
@@ -453,7 +454,7 @@ const UI = {
       const ic = (cls, glyph, label, tip, style = '') => `<span class="sic ${cls}" data-tip="${tip}" style="${style}"><i>${glyph}</i><em>${esc(label)}</em></span>`;
       h += `<button class="scard r${d.rar} ${own ? 'own' : ''} ${up ? 'tierup' : ''}" data-act="shopbuy" data-arg="${i}" style="--rc:${R.col};--rc2:${R.col2};--ec:${el ? ELEMENTS[el].col : R.col}" ${prep && run.gold >= cost ? '' : 'disabled'} aria-label="${esc(d.name)}, ${R.name}, ${cost} gold">
         <span class="shead"><span class="srar">${R.name}</span><span class="sprice">${COST(cost)}</span></span>${tag}
-        <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(d.name.split(' ')[0])}</b>
+        <img class="px" src="${portrait('h:' + c.id, 'idle0')}" alt=""><b>${esc(heroShortName(d.name))}</b>
         <span class="sicons">${el ? ic('el' + (up ? ' up' : ''), EL_ICON[el] || '●', ELEMENTS[el].name, up ? 'txt:' + esc(ELEMENTS[el].name) + ' ' + ((fe0[el] || 0) + 1) + '|' + esc(STYLE_INFO[el].style) + ' up a tier' : 'el:' + el, `--ec:${ELEMENTS[el].col}`) : ''}${ic('cls', CLASSES[d.cls].icon, CLASSES[d.cls].name, 'cls:' + d.cls)}${ic('race', RACE_ICON[d.race] || '•', RACES[d.race].name, 'txt:' + esc(RACES[d.race].name) + '|' + esc(RACES[d.race].desc(0)))}${T ? ic('tmp ' + T.side, T.icon, T.name, 'tmp:' + tmp) : ''}</span>
         <small class="spool">${left} left</small></button>`;
     });
@@ -469,14 +470,14 @@ const UI = {
         <p>Level ${hr.level} · ${Math.floor(hr.xp)} / ${xpNeed(hr.level)} XP · ${esc(ms)}</p>${xpBar(hr)}${statTrio(st)}</div><div class="copies"><b>${hr.copies || 1}</b><small>${nx ? `${nx} more for ★${star + 1}` : 'max stars'}</small></div></div>`;
     }
     h += `<div class="group-title">Champion codex</div><div class="codex">`;
-    for (const d of HEROES.slice().sort((a, b) => a.rar - b.rar)) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${RARITY[d.rar].name}, ${shopCost(d.id)} gold · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span style="color:${RARITY[d.rar].col}">${esc(d.name.split(' ')[0])}</span></div>`; }
+    for (const d of HEROES.slice().sort((a, b) => a.rar - b.rar)) { const own = run.roster.some(x => x.id === d.id); h += `<div class="cx ${own ? 'own' : ''}" title="${esc(d.name)} · ${RARITY[d.rar].name}, ${shopCost(d.id)} gold · ${esc(d.aName)}: ${esc(d.aDesc)}"><img class="px" src="${portrait('h:' + d.id)}" alt=""><span style="color:${RARITY[d.rar].col}">${esc(heroShortName(d.name))}</span></div>`; }
     return h + `</div><p class="note">Signatures unlock at level ${SIG_LEVEL} and grow every level, with a new rank at levels 8, 12, 16 and 20. Each legend has one rarity, and it sets their price: Common 1 gold up to God 6. Each boss you beat makes rarer cards turn up in the shop.</p>`;
   },
   armoryHTML(run) {
     let sel = run.roster.find(h => h.uid === G.selected);
     if (!sel && run.roster.length) { sel = run.roster[0]; G.selected = sel.uid; }
     let h = `<div class="eyebrow">1. Pick a champion</div><div class="hpick">${run.roster.map(r => { const n = heroItems(run, r).length;
-      return `<button class="hp ${sel === r ? 'on' : ''}" data-act="pickhero" data-arg="${r.uid}" title="${esc(heroDisplayName(r))}"><img class="px" src="${portrait(heroSpriteKey(r))}" alt=""><span>${esc(HERO_BY_ID[r.id].name.split(' ')[0])}</span><i class="pips">${Array.from({ length: ITEM_SLOTS }, (_, k) => `<b class="${k < n ? 'on' : ''}"></b>`).join('')}</i></button>`; }).join('')}</div>`;
+      return `<button class="hp ${sel === r ? 'on' : ''}" data-act="pickhero" data-arg="${r.uid}" title="${esc(heroDisplayName(r))}"><img class="px" src="${portrait(heroSpriteKey(r))}" alt=""><span>${esc(heroShortName(HERO_BY_ID[r.id].name))}</span><i class="pips">${Array.from({ length: ITEM_SLOTS }, (_, k) => `<b class="${k < n ? 'on' : ''}"></b>`).join('')}</i></button>`; }).join('')}</div>`;
     if (sel) h += `<div class="eyebrow">2. Their item slots</div>`;
     if (sel) {
       const its = heroItems(run, sel);
@@ -488,7 +489,7 @@ const UI = {
     } else h += `<div class="note">Select a hero in the roster below to hand out items.</div>`;
     const loose = run.stash.filter(it => !it.holder), held = run.stash.filter(it => it.holder);
     h += UI.superAnvilHTML(run);
-    h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(HERO_BY_ID[sel.id].name.split(' ')[0])}` : ''}</div>`;
+    h += `<div class="group-title">3. Items in the stash${sel ? ` · tap Give to equip ${esc(heroShortName(HERO_BY_ID[sel.id].name))}` : ''}</div>`;
     if (!loose.length) h += `<div class="note">Nothing here yet. A foe in each of the first three sieges carries a component, then one every third siege, and bosses leave bigger loot.</div>`;
     for (const it of loose) {
       const fuse = sel && it.parts.length === 1 && heroItems(run, sel).find(x => x.parts.length === 1);
@@ -512,7 +513,7 @@ const UI = {
     let h = `<div class="superanvil"><h4>Super Anvil</h4><p class="note">Pick two finished items. They forge into one super item with both powers, plus a bonus from the part they share most. It takes one slot. Each champion can carry one. ${COST(SUPER_COST)}</p>`;
     if (fin.length < 2) return h + `<p class="note">You need two finished items to forge.</p></div>`;
     h += `<div class="sa-items">${fin.map(it => { const ho = run.roster.find(x => x.uid === it.holder);
-      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(HERO_BY_ID[ho.id].name.split(' ')[0]) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
+      return `<button class="sa-it ${UI.saSel.includes(it.uid) ? 'on' : ''}" data-act="sa-pick" data-arg="${it.uid}" data-tip="txt:${esc(itemName(it))}|${esc(itemDesc(it))}"><img class="px" src="${itemIconURL(it)}" alt=""><span>${esc(itemName(it))}<small>${ho ? esc(heroShortName(HERO_BY_ID[ho.id].name)) : 'Stash'}</small></span></button>`; }).join('')}</div>`;
     if (UI.saSel.length === 2) { const [a, b] = UI.saSel.map(u => run.stash.find(x => x.uid === u)), k = superKind(a, b), prev = { parts: a.parts, el: a.el, sub: { parts: b.parts, el: b.el }, sup: k };
       h += `<div class="sa-prev"><img class="px" src="${itemIconURL(prev)}" alt=""><div><b style="color:#e2c4ff">${esc(SUPERS[k][0])}</b><p>${esc(SUPERS[k][1])}</p></div><button class="btn primary" data-act="sa-forge">Forge ${COST(SUPER_COST)}</button></div>`; }
     else h += `<p class="note">${UI.saSel.length ? 'Pick one more.' : 'Pick the first item.'}</p>`;
@@ -632,14 +633,14 @@ const UI = {
     const d = HERO_BY_ID[h.id], st = heroStats(h, run, G.meta);
     const its = heroItems(run, h);
     const sf = st.starRank ? `<p class="note starforged">★★★ Starforged: +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power and a quicker first cast${h.level < SIG_LEVEL ? ', unlocked early' : ''}.</p>` : `<p class="note">At ★★★ the signature is starforged: +1 rank and +${Math.round((STARFORGED.mul - 1) * 100)}% power.</p>`;
-    const sig = !st.sigOn ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(d.name.split(' ')[0])} only uses basic attacks.</p></div>`
+    const sig = !st.sigOn ? `<div class="ability locked"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Unlocks at Lv ${SIG_LEVEL}</span><p>${abilityText(st.ability, st.aDesc, st)}</p><p class="note">Until then ${esc(heroShortName(d.name))} only uses basic attacks.</p></div>`
       : `<div class="ability"><b data-tip="ab:${st.ability}" class="tipped">${esc(st.aName)}</b> <span class="chip">Rank ${st.rank} · ${Math.round(st.sigMul * 100)}% power</span><p>${abilityText(st.ability, st.aDesc, st)}</p>${st.echo ? `<p class="note" style="color:${RARITY[st.rarity].col}">Echoes for ${Math.round(st.echo * 100)}% power.</p>` : ''}<p class="note">${st.rank - (st.rarity || 0) - (st.starRank || 0) < 5 ? `Next rank at level ${[8, 12, 16, 20][st.rank - (st.rarity || 0) - (st.starRank || 0) - 1]}: more targets, bigger area.` : 'Maximum rank.'} Power grows every level.</p>${sf}</div>`;
     const html = `<div class="icol"><div class="top"><img class="px" src="${portrait(heroSpriteKey(h), 'atk')}" alt=""><div><h3>${esc(heroDisplayName(h))} ${starBadge(h, true)}</h3><div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${elChip(h.el)}${temperChip(heroTemper(h), h.place && (temperCounts(run)[heroTemper(h)] || 0) >= 2)}<span class="chip">Level ${h.level}</span>${rarityBadge(h.rarity)}</div>${xpBar(h)}<small class="note">${Math.floor(h.xp)} / ${xpNeed(h.level)} XP · earned from kills and surviving</small></div></div>
       <div class="stats"><div><small>HP</small><span>${fmt(st.hp)}</span></div><div><small>Attack damage</small><span>${fmt(st.atk)}</span></div><div><small>Ability power</small><span>${fmt(st.apv)}</span></div>
       <div><small>Speed</small><span>${st.as.toFixed(2)}/s</span></div><div><small>Armor</small><span>${Math.round(st.armor)}</span></div><div><small>Crit</small><span>${Math.round(st.crit * 100)}%</span></div></div>
       </div><div class="icol">${sig}
       ${h.el ? `<div class="ability el" style="--ec:${ELEMENTS[h.el].col}"><b data-tip="el:${h.el}" class="tipped">${ELEMENTS[h.el].name}</b> <span class="chip">${STYLE_NAME[ELEMENTS[h.el].style]}</span><p>${esc(ELEMENTS[h.el].desc)}</p></div>` : h.level >= ELEMENT_LEVEL ? '' : `<p class="note">Picks an element at level ${ELEMENT_LEVEL}.</p>`}
-      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroDisplayName(h).split(' ')[0])} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroDisplayName(x).split(' ')[0])} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
+      ${G.phase === 'prep' && !h.place && !h.vault && !h.fled && fieldFull(run, h) ? `<div class="swapin"><small>The field is full. Swap ${esc(heroShortName(heroDisplayName(h)))} in for:</small><div class="row">${placedHeroes(run).map(x => `<button class="btn small" data-act="swapin" data-arg="${h.uid}:${x.uid}" title="${esc(heroDisplayName(x))} goes to the bench"><img class="px" src="${portrait(heroSpriteKey(x))}" alt="">${esc(heroShortName(heroDisplayName(x)))} ${starBadge(x)}</button>`).join('')}</div></div>` : ''}
       <div class="slots">${Array.from({ length: ITEM_SLOTS }, (_, i) => its[i] ? `<span class="slot"><img class="px" src="${itemIconURL(its[i], 2)}" alt="">${esc(itemName(its[i]))}</span>` : `<span class="slot">Empty</span>`).join('')}</div>
       ${(() => { const u = G.phase === 'siege' && G.B && G.B.heroes.find(x => x.inst === h); const back = u && u.alive && !G.B.done ? (recallsLeft(G.B) > 0 ? `<button class="btn small" data-iact="recall" title="Pull this champion into the keep. They can't fall this siege, but they're out of the fight and skip the reward for holding the line. (R)">Call back ↩ <span class="dim">${recallsLeft(G.B)} left</span></button>` : '<span class="note">No call-backs left this siege.</span>') : '';
         if (u && u.recalled) return '<p class="note">Called back to the keep. Safe this siege.</p>';
@@ -664,7 +665,7 @@ const UI = {
     opts.forEach((o, i) => { const d = HERO_BY_ID[o.id], rr = o.rarity || 0, Rr = RARITY[rr], pv = heroStats({ uid: 'draft' + i, id: o.id, rarity: rr, level: kind === 'summon' ? teamLevel(run) : joinLevel(run), xp: 0, items: [], temper: o.temper, el: null, place: null }, run, G.meta);
       h += `<button class="dcard rar-card r${rr} ${i === best && fits[i].score >= 3 ? 'bestfit' : ''}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--rc:${Rr.col};--rc2:${Rr.col2}">${i === best && fits[i].score >= 3 ? '<span class="bfb">Best fit</span>' : ''}<div class="dport"><img class="px" src="${portrait('h:' + o.id, 'idle0')}" alt="" style="transform:scale(${raritySize(rr)})">${rarityBadge(rr)}</div>
         <h3>${esc(d.name)}</h3>${d.fixed ? `<p class="rfixed" style="color:${RARITY[d.fixed].col}">Only ever ${RARITY[d.fixed].name}</p>` : ''}<div class="chips">${raceChip(d.race)}${clsChip(d.cls)}${o.temper ? temperChip(o.temper, G.run.roster.some(h => heroTemper(h) === o.temper)) : ''}</div><p class="role">${esc(CLASS_ROLE[d.cls] || '')}</p><div class="fits">${fits[i].html}</div>${statTrio(pv)}${rr ? `<p class="rperk">${esc(RARITY_PERKS[rr])}</p>` : ''}
-        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(d.name.split(' ')[0])}</span></button>`; });
+        ${(() => { const sp = G.meta.spec && G.meta.spec[d.cls], alt = sp && sp.rank && sp.path === 'b' ? SPECS[d.cls].b : null; return `<p><b data-tip="ab:${alt ? alt.ability : d.ability}" class="tipped">${esc(alt ? alt.name : d.aName)}</b> <small>(signature, Lv ${SIG_LEVEL}${alt ? ', class spec' : ''})</small><br>${abilityText(alt ? alt.ability : d.ability, alt ? SPEC_ADESC[alt.ability] : d.aDesc, null)}</p>`; })()}<span class="armbar">Tap again to draft ${esc(heroShortName(d.name))}</span></button>`; });
     if (kind === 'summon') return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="summonSkip">Turn them away ${COST(summonSkipGold(run))}</button></div>`;
     h += `</div><div class="row between"><span class="note">${run.roster.length >= rosterCap(run) ? `Your keep is full: whoever you pick, you choose a champion to send home. ` : ''}Odds now: ${shopOdds(run).map((v, i) => v ? `${RARITY[i].name} ${v}%` : '').filter(Boolean).join(' · ')}. Each guild level opens rarer legends.</span>
       <span class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${draftFocusOptions(G.run).map(f => `<button class="btn small ghost" data-focus="${f.kind}:${f.key}" ${G.run.gold < rerollCost ? 'disabled' : ''} data-tip="txt:Search for a ${esc(f.label.replace(/^[^ ]+ /, ''))}|New cards, and at least one of them is a ${esc(f.label.replace(/^[^ ]+ /, ''))}. Same price as new cards.">Find ${f.label} ${rerollCost ? COST(rerollCost) : ''}</button>`).join('')}
@@ -686,19 +687,26 @@ const UI = {
   },
   makeRoomHTML(o) {
     const run = G.run, d = HERO_BY_ID[o.id];
-    let h = `<span class="eyebrow">Your keep is full</span><h2>Who makes room for ${esc(d.name)}?</h2><p class="lede">The one you pick heads home with a little gold. Their items go back to the Armory. ${esc(d.name.split(' ')[0])} takes their spot and joins at their level (or higher).</p><div class="room">`;
+    let h = `<span class="eyebrow">Your keep is full</span><h2>Who makes room for ${esc(d.name)}?</h2><p class="lede">The one you pick heads home with a little gold. Their items go back to the Armory. ${esc(heroShortName(d.name))} takes their spot and joins at their level (or higher).</p><div class="room">`;
     for (const hr of run.roster.slice().sort((a, b) => (a.rarity || 0) - (b.rarity || 0) || a.level - b.level)) {
       const hd = HERO_BY_ID[hr.id];
       h += `<button class="rcard rar-card r${hr.rarity || 0}" data-out="${hr.uid}" style="--rc:${RARITY[hr.rarity || 0].col}"><img class="px" src="${portrait(heroSpriteKey(hr))}" alt=""><b>${esc(heroDisplayName(hr))}</b>${rarityBadge(hr.rarity)}<span>Level ${hr.level} · ${esc(CLASSES[hd.cls] ? CLASSES[hd.cls].name : hd.cls)}</span><small>Heads home with +${sellValue(hr)} gold</small></button>`;
     }
     return h + `</div><div class="row" style="justify-content:flex-end"><button class="btn small" id="roomBack">Back to the cards</button></div>`;
   },
+  boonHTML(pb) {
+    const T = BOON_TIERS[pb.tier], next = Object.entries(BOON_AT).find(([at]) => +at > G.run.siege - 1);
+    let h = `<span class="eyebrow">${esc(T.name)}</span><h2 class="sp">Choose a boon</h2><p class="lede">A boon lasts the whole run. ${next ? `The next one comes after siege ${next[0]}.` : 'This is the last one this run.'}</p><div class="loot boons">`;
+    pb.opts.forEach((k, i) => { const B = BOONS[k]; h += `<button class="lcard boon b-${pb.tier}" data-pick="${i}" style="animation-delay:${i * 0.08}s;--bc:${T.col}"><span class="bicon">${B.icon}</span><b>${esc(B.name)}</b><span>${esc(B.desc)}</span></button>`; });
+    const had = (G.run.boonLog || []).map(x => BOONS[x.k]).filter(Boolean);
+    return h + `</div>${had.length ? `<p class="note">Your boons: ${had.map(B => `${B.icon} ${esc(B.name)}`).join(' · ')}</p>` : ''}`;
+  },
   lootHTML(opts, cost) {
     const boss = opts[0] && opts[0].parts.length === 2;
     let h = `<span class="eyebrow">Spoils of the siege</span><h2${boss ? ' class="sp hoard"' : ''}>${boss ? 'The boss dropped its hoard' : 'Pick a component'}</h2><p class="lede">${boss ? 'Choose one finished item.' : 'Two components on one hero fuse into a finished item. Check the recipe book in the Armory.'}</p><div class="loot">`;
     // components you already hold, and what each offered component would make with them
     const run = G.run, owned = run.stash.filter(it => it.parts.length === 1), keys = [...new Set(owned.map(it => it.parts[0]))];
-    const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroDisplayName(hr).split(' ')[0] : 'in the Armory'; };
+    const holderName = it => { const hr = it.holder && run.roster.find(x => x.uid === it.holder); return hr ? 'on ' + heroShortName(heroDisplayName(hr)) : 'in the Armory'; };
     const fin = (a, b) => { const F = FINISHED[itemKey(a, b)]; return F ? (F[1] === 'crest' ? ['Elemental Crest', 'Gives the hero a second element.'] : [F[0], F[2]]) : null; };
     opts.forEach((o, i) => { const it = { parts: o.parts, el: null };
       const builds = !boss && o.parts.length === 1 ? keys.map(k => { const f = fin(o.parts[0], k); return f ? `<div class="bld" data-tip="txt:${esc(f[0])}|${esc(f[1])}"><img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt=""><span>+ ${esc(COMPONENTS[k].name)}</span><b>${esc(f[0])}</b></div>` : ''; }).join('') : '';
@@ -713,7 +721,7 @@ const UI = {
     opts.forEach((e, i) => { const E = ELEMENTS[e], p = 1.04;
       const combos = [...new Set(G.run.roster.filter(x => x !== hr).flatMap(x => heroElements(G.run, x)))].filter(x => x !== e).map(x => comboKey(e, x)).filter(k => COMBOS[k]).map(k => { const I = comboFormInfo(k, (G.run.comboForm || {})[k]); return [I.name]; });
       h += `<button class="ecard" data-pick="${i}" data-tip="el:${e}" style="--ec:${E.col};--ec2:${E.col2};animation-delay:${i * 0.09}s"><div class="eorb"><img class="px" src="${portrait('h:' + hr.id + ':' + e, 'idle0')}" alt=""></div><h3>${E.name}</h3>${styleChip(E.style)}<p>${esc(E.desc)}</p>
-        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(HERO_BY_ID[hr.id].name.split(' ')[0])} ${esc(E.title)}</em></button>`; });
+        <small>Power ${Math.round(p * 100)}%, boosts ${STAT_NAME[E.style]}</small>${combos.length ? `<small class="cmb">Combos: ${combos.map(c => esc(c[0])).join(', ')}</small>` : ''}<em>${esc(heroShortName(HERO_BY_ID[hr.id].name))} ${esc(E.title)}</em></button>`; });
     return h + `</div>`;
   },
   comboFormHTML(key, kinds) {
@@ -733,6 +741,7 @@ const UI = {
     const br = rep.breach;
     let h = `<span class="eyebrow">${esc(rep.faction)}</span><h2>Siege ${rep.siege} ${br ? 'lost' : 'held'}</h2>`;
     if (br) h += `<div class="breach"><b>The keep cracks${br.n > 1 ? ' twice' : ''}</b><span class="cracks big">${Array.from({ length: br.max }, (_, i) => `<i class="${i < br.total ? 'on' : ''}"></i>`).join('')}</span><small>${br.max - br.total} more and the keep falls. The masons patched the walls back to half, and every legend is back for the next siege.${br.boss ? ' The boss was still standing, so it cost two cracks.' : ''}</small></div>`;
+    h += siegeScoreHTML(rep);
     h += `<div class="tiles"><div class="tile"><small>Gold</small><span style="color:var(--gold)">+${fmt(rep.gold)}</span></div><div class="tile"><small>Foes slain</small><span>${rep.kills}</span></div><div class="tile"><small>Castle damage</small><span style="color:${rep.castleLost > 0 ? 'var(--rose)' : 'var(--mint)'}">${fmt(Math.max(0, rep.castleLost))}</span></div>${rep.drops.length ? `<div class="tile"><small>Item drops</small><span>${rep.drops.map(k => `<img class="px" src="${iconURL(COMPONENTS[k].glyph, 2)}" alt="${esc(COMPONENTS[k].name)}" style="width:20px;height:20px">`).join('')}</span></div>` : ''}${rep.castleGrow ? `<div class="tile grow"><small>Keep grows</small><span style="color:var(--gold)">${fmt(rep.castleGrow.from)} → ${fmt(rep.castleGrow.to)}</span></div>` : ''}${rep.bossFled ? `<div class="tile"><small>Boss got away</small><span style="color:var(--rose)">${esc(rep.bossFled)}</span></div>` : ''}${rep.fled ? `<div class="tile"><small>Broke through</small><span style="color:var(--rose)">${rep.fled}</span></div>` : ''}${rep.repaired ? `<div class="tile"><small>Fountain</small><span style="color:var(--mint)">+${fmt(rep.repaired)}</span></div>` : ''}</div>`;
     h += `<div class="eyebrow">Experience</div><div class="xprep">`;
     for (const hr of rep.heroes) { const inst = G.run.roster.find(x => x.uid === hr.uid);
@@ -796,3 +805,11 @@ const UI = {
     const n = UI.coachQ.shift(); if (n) setTimeout(() => UI.coach(n.key, n.el, n.text), 200);
   },
 };
+
+// the siege's score line on the report: what each part earned and the run total (SCORE in state.js)
+function siegeScoreHTML(rep) {
+  const sc = rep.score; if (!sc) return '';
+  if (sc.lost) return `<div class="siegescore lost"><small>Siege score</small><b class="num">0</b><span class="parts">A lost siege scores nothing.</span><span class="runtot">Run <b class="num">${fmt(rep.runScore || 0)}</b></span></div>`;
+  const part = (k, v, max, tip) => `<span class="sp ${v >= max ? 'full' : v ? '' : 'none'}" title="${tip}"><small>${k}</small>${v}</span>`;
+  return `<div class="siegescore"><small>Siege score</small><b class="num">+${fmt(sc.total)}</b><span class="parts">${part('Walls', sc.walls, SCORE.walls, 'Castle HP kept this siege')}${part('Standing', sc.standing, SCORE.standing, 'Champions still standing (or called back)')}${part('Speed', sc.speed, SCORE.speed, `Full marks under ${Math.round(sc.par * 0.8)}s, none past ${Math.round(sc.par * 1.6)}s`)}${sc.boss ? part('Boss', sc.boss, SCORE.boss, 'The boss was slain') : ''}${part('Kills', sc.kills, SCORE.kill * SCORE.killCap, 'Half a point a foe')}<span class="sp mul" title="Later sieges${sc.pressed ? ' and pressing the attack' : ''} multiply the score"><small>×</small>${sc.mul}</span></span><span class="runtot">Run <b class="num">${fmt(rep.runScore || 0)}</b></span></div>`;
+}
