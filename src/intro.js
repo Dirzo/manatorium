@@ -144,7 +144,7 @@ function startIntro(done) {
     // speech pops in screen space so the text stays crisp
     ctx.textAlign = 'center'; ctx.lineJoin = 'round';
     for (const p of INTRO.pops) { const a = Math.min(1, 3 * (1 - p.t / 1.1)), sc = p.t < 0.1 ? 1.5 - p.t * 5 : 1, size = (p.big ? 15 : 10) * k / 2.4 * sc * 1.4;
-      ctx.globalAlpha = a; ctx.font = `700 ${size}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = '#1a1230'; ctx.lineWidth = size * 0.22;
+      ctx.globalAlpha = a; ctx.font = `700 ${size}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = '#1a1230'; ctx.lineWidth = size * 0.22;
       const x = (p.x - sx) * k, y = oy + (p.y - sy - p.t * 10) * k; ctx.strokeText(p.s, x, y); ctx.fillStyle = p.col; ctx.fillText(p.s, x, y); }
     ctx.globalAlpha = 1;
     requestAnimationFrame(frame);

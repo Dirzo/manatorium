@@ -12,9 +12,9 @@
   --rose: #ff5d8f;
   --sky: #5fd3ff;
   --violet: #a98aff;
-  --f-display: "Fredoka", "Atkinson Hyperlegible", "Segoe UI", sans-serif;
-  --f-logo: "Pixelify Sans", "Courier New", monospace;
-  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-display: "Cinzel", "Fredoka", "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+  --f-logo: "Cinzel", "Pixelify Sans", "Courier New", monospace;
+  --f-body: "Cinzel", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -1125,7 +1125,7 @@ h2.hoard { color: var(--gold); }
 
 /* banners */
 #banner .in { position: relative; display: inline-flex; align-items: center; gap: 16px; }
-#banner .bt { text-align: center; }
+#banner .bnt { text-align: center; }
 #banner .bspr { width: 76px; height: 76px; image-rendering: pixelated; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; filter: drop-shadow(0 3px 0 rgba(0,0,0,.4)); }
 @keyframes bsprIn { from { transform: translateY(40px) scale(.2) rotate(-30deg); opacity: 0; } }
 #banner h2.alive .ch { animation: chIn .5s cubic-bezier(.2,.9,.3,1.6) backwards, chBob 1.5s ease-in-out infinite; animation-delay: calc(var(--i) * 40ms), calc(var(--i) * 80ms + 600ms); }
@@ -1451,3 +1451,20 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .loadcard i { font-style: normal; animation: loaddot 1.2s steps(1) infinite; }
 .loadcard i:nth-child(2) { animation-delay: .2s; } .loadcard i:nth-child(3) { animation-delay: .4s; }
 @keyframes loaddot { 0%, 100% { opacity: .15; } 30%, 70% { opacity: 1; } }
+
+/* champion arrival banner as dark wordart (Cam 2026-10-31): no box, ribbon or medallion; just the hopping champion and the name.
+   Letters are a deep ink gradient with a thin rarity-tinted rim and a pale halo so they read on grass, sky and stone. */
+#banner .k-hero { animation-duration: 3.4s; --bc2: color-mix(in srgb, var(--bc, var(--gold)) 45%, #0c0720); background: none; border: 0; box-shadow: none; padding: 0; gap: 10px; }
+#banner .k-hero .bspr { width: 80px; height: 80px; filter: drop-shadow(0 0 3px rgba(255,255,255,.85)) drop-shadow(0 4px 0 rgba(0,0,0,.35)); }
+#banner .k-hero .bnt { display: flex; flex-direction: column; align-items: center; }
+#banner .k-hero h2 { font: 900 clamp(32px, 3.6vw, 54px)/1.05 var(--f-display); letter-spacing: .03em; text-shadow: none; color: #1a1030;
+  transform: rotate(-3deg) skewX(-8deg); white-space: nowrap;
+  filter: drop-shadow(1.5px 0 0 var(--bc, var(--gold))) drop-shadow(-1.5px 0 0 var(--bc, var(--gold))) drop-shadow(0 1.5px 0 var(--bc, var(--gold))) drop-shadow(0 -1.5px 0 var(--bc, var(--gold)))
+          drop-shadow(0 0 2px rgba(255,248,225,.95)) drop-shadow(0 0 8px rgba(255,248,225,.55)) drop-shadow(0 4px 2px rgba(0,0,0,.35)); }
+#banner .k-hero h2 .ch { background: linear-gradient(180deg, #4a3a78 0%, #1d1238 48%, #0a0616 52%, var(--bc2) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+#banner .k-hero p { margin-top: 2px; font: 800 13px/1.4 var(--f-display); letter-spacing: .24em; text-transform: uppercase; color: #1a1030;
+  text-shadow: 0 0 2px #fff8e1, 0 0 2px #fff8e1, 0 0 6px rgba(255,248,225,.8); }
+#banner .k-hero .bspr.live { width: 160px; height: 136px; image-rendering: pixelated; margin: -10px -14px 0 0; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; }
+html.m #banner .k-hero .bspr { width: 56px; height: 56px; }
+html.m #banner .k-hero .bspr.live { width: 100px; height: 85px; }

@@ -147,15 +147,15 @@ function drawTower() {
   const ctx = T.ctx, sc = T.cv.width / TW; ctx.imageSmoothingEnabled = false; ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(T.lo, 0, 0, TW, LH, 0, 0, T.cv.width, LH * sc);
   ctx.textAlign = 'center'; ctx.lineJoin = 'round';
-  ctx.font = `600 ${6 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`;
+  ctx.font = `600 ${6 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`;
   for (const l of T.labels) { const px = (l.x + sh) * sc, py = l.y * sc; ctx.fillStyle = 'rgba(15,20,48,0.65)'; ctx.fillRect(px - 9 * sc, py - 5 * sc, 18 * sc, 10 * sc); ctx.fillStyle = l.boss ? '#ffcf3a' : '#ffffff'; ctx.fillText(String(l.i + 1), px, py + 2.2 * sc); }
-  for (const x of T.texts) { const a = 1 - x.t / 0.9, s = (x.big ? 14 : 10) * sc * (x.t < 0.08 ? 1.5 : 1); ctx.globalAlpha = a; ctx.font = `700 ${s / 1}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 2; const px = x.x * sc, py = toS(x.y) * sc - x.t * 20 * sc; ctx.strokeText(x.s, px, py); ctx.fillStyle = x.big ? '#ffcf3a' : '#ffffff'; ctx.fillText(x.s, px, py); }
+  for (const x of T.texts) { const a = 1 - x.t / 0.9, s = (x.big ? 14 : 10) * sc * (x.t < 0.08 ? 1.5 : 1); ctx.globalAlpha = a; ctx.font = `700 ${s / 1}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 2; const px = x.x * sc, py = toS(x.y) * sc - x.t * 20 * sc; ctx.strokeText(x.s, px, py); ctx.fillStyle = x.big ? '#ffcf3a' : '#ffffff'; ctx.fillText(x.s, px, py); }
   ctx.globalAlpha = 1;
   // counter
   const shown = T.phase === 'intro' ? 0 : T.placed;
-  ctx.font = `700 ${18 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 3; ctx.fillStyle = '#ffcf3a';
+  ctx.font = `700 ${18 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.strokeStyle = OUTLINE; ctx.lineWidth = sc * 3; ctx.fillStyle = '#ffcf3a';
   ctx.strokeText(`${shown} ${shown === 1 ? 'FLOOR' : 'FLOORS'}`, T.cv.width / 2, 26 * sc); ctx.fillText(`${shown} ${shown === 1 ? 'FLOOR' : 'FLOORS'}`, T.cv.width / 2, 26 * sc);
-  ctx.font = `500 ${7 * sc}px "Fredoka", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.lineWidth = sc * 2;
+  ctx.font = `500 ${7 * sc}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.fillStyle = '#ffffff'; ctx.lineWidth = sc * 2;
   const sub = T.phase === 'intro' ? 'The keep has fallen. Now it rises.' : T.phase === 'stack' ? 'One floor for every siege you held' : T.phase === 'climb' ? `${HERO_BY_ID[T.climber] ? HERO_BY_ID[T.climber].name : 'Your hero'} climbs to the top` : (T.N > T.prevBest && T.N > 0 ? 'A new record!' : 'The view from the top');
   ctx.strokeText(sub, T.cv.width / 2, 38 * sc); ctx.fillText(sub, T.cv.width / 2, 38 * sc);
 }
