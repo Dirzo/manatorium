@@ -4776,7 +4776,7 @@ function heroZoneOk(B, u, e) {
   return Math.hypot(e.x - u.hx, e.y - u.hy) <= guardRadius() + reach;
 }
 function leashHero(B, u) {
-  if (u.rafter || !B.leash || B.overtime || u.hx == null) return;
+  if (u.rafter || u.chasing || !B.leash || B.overtime || u.hx == null) return;
   const dx = u.x - u.hx, dy = u.y - u.hy, d = Math.hypot(dx, dy), R = guardRadius(); if (d > R) { u.x = u.hx + dx / d * R; u.y = u.hy + dy / d * R; }
 }
 
@@ -5781,9 +5781,9 @@ function separate(list) {
   }
 }
 
-function chaseTarget(B, u, groundOnly) {
+function chaseTarget(B, u, groundOnly, anywhere) {
   let best = null, bs = Infinity;
-  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb)) || (u.side === 'hero' && !heroZoneOk(B, u, e))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
+  for (const e of B.enemies) { if (!e.alive || e.x > W - 4 || (groundOnly && (e.flying || e.onRafter || e.climb)) || (u.side === 'hero' && !anywhere && !heroZoneOk(B, u, e))) continue; const sc = dist(e, u) + 0.6 * (e.x - CASTLE_X); if (sc < bs) { bs = sc; best = e; } }
   return best;
 }
 function moveToward(u, tx, ty, spd, dt) {
@@ -5869,9 +5869,14 @@ function stepHero(B, u, dt) {
       // nothing in the hero's zone: chase whatever is left, leakers nearest the castle first
       if (!u.target && !u.rafter) u.target = chaseTarget(B, u, !ranged);
     }
+    // still nothing near home (Cam 2026-11-01 "champions are not really attacking"): rather than stand idle while the
+    // horde fights elsewhere, the champion leaves its two-hex circle and goes after the nearest foe. Every retarget looks
+    // inside the circle first again, and with the field clear the champion walks back to its hex.
+    u.chasing = false;
+    if (!held && !u.target && !u.rafter && !u.noMove && !u.healing) { u.target = chaseTarget(B, u, !ranged, true); u.chasing = !!u.target; }
   }
-  // a foe that walked out of the champion's two-hex circle is let go; the champion heads back to its hex
-  if (u.target && u.target.side === 'enemy' && u.target.alive && !heroZoneOk(B, u, u.target)) u.target = null;
+  // a foe that walked out of the champion's two-hex circle is let go (unless the champion went out hunting it); the champion heads back to its hex
+  if (u.target && u.target.side === 'enemy' && u.target.alive && !u.chasing && !heroZoneOk(B, u, u.target)) u.target = null;
   const t = u.target;
   if (t && t.alive) {
     const d = dist(u, t), reach = (u.healing ? u.st.range * 1.2 : u.st.range) + (t.scale > 1 ? 8 * t.scale : 0) + (t.flying ? 8 : 0);
