@@ -128,7 +128,9 @@ function activeSynergies(run) {
 function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
 // 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
-function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
+function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : '') + (!plain && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? '|' + h.temper : ''); }
+// the hi-detail look with the temper's face, for scenes that take a plain key (talk, star-up)
+function heroFaceKey(key, h) { return h && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? key + '|' + h.temper : key; }
 // an element title replaces the epithet: 'Brann the Blazing'. A name that starts with 'The' keeps its last word instead
 // ('The Great Toadmother' -> 'Toadmother the Radiant', never 'The the Radiant')
 function heroShortName(name) { const w = name.split(' '); return /^the$/i.test(w[0]) && w.length > 1 ? w[w.length - 1] : w[0]; }

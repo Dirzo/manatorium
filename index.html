@@ -3272,8 +3272,9 @@ function growWeapon(g, ws, ax, ay, draw) {
 }
 // where a sprite frame lands when its 20x20 body is drawn fs pixels tall with its feet at (cx, by), as in drawUnit
 function frameBox(img, cx, by, fs) {
-  if (img.width !== STAR_PAD.w || img.height !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
-  const k = fs / 20, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  const hd = img.hd || 1, iw = img.width / hd, ih = img.height / hd;
+  if (iw !== STAR_PAD.w || ih !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
+  const k = fs / 20, w = Math.round(iw * k), h = Math.round(ih * k);
   return { x: cx - w / 2, y: by + 1 - fs - Math.round(STAR_PAD.t * k), w, h };
 }
 
@@ -3493,7 +3494,10 @@ const SPR = {};   // key -> { frames: {name: canvas}, white: {name: canvas}, sca
 function buildSprite(key, spec, flip, scale = 1) {
   const gen = GENS[spec.gen || 'humanoid'];
   const out = { frames: {}, white: {}, scale };
-  for (const f of FRAMES) { const g = gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); }
+  // hi-detail art (hdart.js): every unit is rebuilt at the fine grid so foes match the champions
+  const hd = typeof hdGenericFrame === 'function' && HD_ON;
+  for (const f of FRAMES) { const g = hd ? hdGenericFrame(key, spec, f) : gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); if (hd) out.frames[f].hd = out.white[f].hd = HDK; }
+  if (hd) out.hd = HDK;
   SPR[key] = out; return out;
 }
 
@@ -3511,7 +3515,8 @@ function buildAllSprites() {
 function ensureSprite(key) {
   if (SPR[key]) return SPR[key];
   // 'h:<id>', 'h:<id>:<element>', either with '~<star>' (2 or 3) and optionally '@<weapon scale>' for the star-up show
-  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?$/.exec(key); if (!m) return null;
+  // a '|<temper>' suffix builds the hi-detail champion (hdart.js) wearing that temper's face
+  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?(?:\|([a-z]+))?$/.exec(key); if (!m) return null;
   const d = HERO_BY_ID[m[1]], E = m[2] && ELEMENTS[m[2]]; if (!d || (m[2] && !E)) return null;
   let spec = d.spr;
   if (E) { const dark = c => shade(c, -0.35);
@@ -3519,6 +3524,7 @@ function ensureSprite(key) {
     if (d.spr.cape) spec.cape = E.col2;
     if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
   if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
+  if (m[5] && typeof buildSpriteHD === 'function' && (spec.gen || 'humanoid') === 'humanoid') return buildSpriteHD(key, spec, m[5]);
   return buildSprite(key, spec, false);
 }
 
@@ -3600,8 +3606,428 @@ function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
   const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
   // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
-  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
-  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
+  // hi-detail frames (s.hd) are cropped in grid units and drawn with whole screen pixels per fine pixel
+  const D = s.hd || 1, [sx, sy, sw, sh] = s.width / D === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width / D, s.height / D], fp = Math.max(1, Math.ceil(px / D));
+  c.width = sw * D * fp; c.height = sh * D * fp; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx * D, sy * D, sw * D, sh * D, 0, 0, c.width, c.height); return c.toDataURL();
+}
+
+// ===== Hi-detail champion art (Cam 2026-10-31: "32 bit character upgrades ... a different facial expression for the character trait they rolled")
+// Every champion frame is still designed on the 20x20 grid in sprites.js, then rebuilt here at double resolution:
+// the body is smoothed with Scale2x, re-lit with a two-tone ramp and a fine 1px outline, and a hand-drawn face that
+// matches the champion's temper (TEMPERS in data.js) is painted on at the finer grid.
+const HDK = 2;
+
+// Scale2x (EPX): doubles a grid and rounds its stair-steps into smooth diagonals
+function hdScale2x(g) {
+  const W = g.w, H = g.h, o = new PixGrid(W * 2, H * 2, g.ox * 2, g.oy * 2), at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? null : g.p[y * W + x]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const P = at(x, y), A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1), fl = g.flat.has(y * W + x);
+    const q = [C === A && C !== D && A !== B ? A : P, A === B && A !== C && B !== D ? B : P, D === C && D !== B && C !== A ? C : P, B === D && B !== A && D !== C ? D : P];
+    q.forEach((c, i) => { const X = x * 2 + (i & 1), Y = y * 2 + (i >> 1), j = Y * o.w + X; o.p[j] = c; if (c && fl) o.flat.add(j); });
+  }
+  return o;
+}
+
+// two-tone lighting (top lit, back and underside in shade) + a crisp 1px outline at the fine grid
+function hdFinish(g, opt = {}) {
+  const W = g.w, H = g.h, src = opt.base || g.p, out = g.p.slice(), base = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? null : src[y * W + x]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, c = src[i]; if (!c || g.flat.has(i)) continue; out[i] = c;
+    const up = base(x, y - 1) !== c, up2 = base(x, y - 2) !== c, lf = base(x - 1, y) !== c, lf2 = base(x - 2, y) !== c, dn = base(x, y + 1) !== c, rt = base(x + 1, y) !== c;
+    let f = 0;
+    if (up) f = rt ? 0.34 : 0.2; else if (up2) f = 0.08;
+    if (lf) f = Math.min(f, 0) - 0.26; else if (lf2) f -= 0.12;
+    if (dn && f > -0.2) f -= 0.16;
+    // inner contour: a darker seam where two parts meet (arm on torso, belt on tunic), so shapes read at a glance
+    if (opt.seams !== false) { const r = base(x + 1, y), d = base(x, y + 1); if ((r && r !== c && hdLum(r) > hdLum(c) + 40) || (d && d !== c && hdLum(d) > hdLum(c) + 40 && !dn)) f = Math.min(f, -0.3); }
+    const role = opt.roles && opt.roles.get(c);
+    // soft volume: the lower part of every shape falls into shade through a checker dither
+    if (!up && !dn && !lf) {
+      let t0 = y, t1 = y; while (base(x, t0 - 1) === c) t0--; while (base(x, t1 + 1) === c) t1++;
+      const len = t1 - t0 + 1, k = (y - t0) / Math.max(1, len - 1);
+      if (len >= 7 && role !== 'skin') { if (k > 0.8) f -= 0.1; else if (k > 0.62 && (x + y) % 2) f -= 0.1; }
+    }
+    // rim light on the front (right) edge
+    if (rt && !up && !lf && f > -0.1) f += 0.12;
+    // materials: metal gets a hard specular glint, hair gets strands
+    if (role === 'metal' && up && !lf) f = 0.55;
+    if (role === 'metal' && !up && !lf && !dn && base(x - 1, y - 1) !== c && base(x + 1, y) === c) f = 0.4;
+    if (role === 'hair' && !up && !lf && !dn && (x * 3 + (y >> 1)) % 4 === 0) f = Math.min(f, 0) - 0.16;
+    if (f) out[i] = shade(c, f);
+  }
+  const o = out.slice(), has = (x, y) => x >= 0 && y >= 0 && x < W && y < H && out[y * W + x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (out[y * W + x]) continue;
+    const l = has(x - 1, y), r = has(x + 1, y), u = has(x, y - 1), d = has(x, y + 1);
+    if (l || r || u || d) {
+      // selective outline: the lit top edge gets a coloured rim, everything else the deep ink
+      const n = d && !l && !r && !u ? out[(y + 1) * W + x] : null;
+      o[y * W + x] = n ? mix(OUTLINE, n, 0.3) : OUTLINE;
+    }
+  }
+  g.p = o; return g;
+}
+function hdLum(c) { const [r, gg, b] = hexToRgb(c); return 0.3 * r + 0.59 * gg + 0.11 * b; }
+
+// ===== faces =====
+// eye boxes are 3x3 on the fine grid; L lid line, W eye white, P pupil, H highlight, '.' leaves the skin
+const HD_EYES = {
+  open:    ['LLL', 'WPP', 'WPP'],
+  bright:  ['LLL', 'WPH', 'WPP'],
+  big:     ['LLL', 'PPH', 'PPP', '.L.'],
+  wide:    ['LLL', 'WWW', 'WPW', '.L.'],
+  happy:   ['...', '.L.', 'L.L'],
+  soft:    ['...', 'LLL', 'WPP'],
+  half:    ['LLL', 'LLL', 'WPP'],
+  narrow:  ['...', 'LLL', 'WPP'],
+  sparkle: ['LLL', 'PHP', 'PPH'],
+  closed:  ['...', '...', 'LLL'],
+  smug:    ['...', 'L..', '.LL'],
+  side:    ['LLL', 'WWP', 'WWP'],
+  droop:   ['...', '...', 'LLL', 'WPP'],
+};
+// brows: [back eye, front eye], drawn over the 3 columns above each eye; the inner end is the right of the back eye
+const HD_BROWS = {
+  none:    [[], []],
+  flat:    [['BBB'], ['BBB']],
+  up:      [['BBB', '...'], ['BBB', '...']],
+  firm:    [['BB.', '..B'], ['B..', '.BB']],
+  angry:   [['B..', '.B.', '..B'], ['..B', '.B.', 'B..']],
+  worried: [['..B', 'BB.'], ['B..', '.BB']],
+  raise:   [['...', 'BBB'], ['BBB', '...']],
+  sly:     [['...', 'BBB'], ['.BB', 'B..']],
+};
+// mouths, centred on the mouth anchor; M lip line, D mouth dark, T teeth, R tongue, Q drool
+const HD_MOUTHS = {
+  smile:    ['M...M', '.MMM.'],
+  grin:     ['DDDDD', 'DTTTD', '.DRD.'],
+  flat:     ['.MMM.'],
+  smirk:    ['....M', '.MMM.'],
+  shout:    ['.DDD.', 'DTTTD', 'DRRRD', '.DDD.'],
+  teeth:    ['MMMMM', 'TMTMT', 'MMMMM'],
+  wobble:   ['.M.M.', 'M.M.M'],
+  crooked:  ['M....', '.MDDT', '..DD.'],
+  evil:     ['M...M', 'MTTTM', '.MMM.'],
+  drool:    ['.MMM.', '...Q.', '...Q.'],
+  frown:    ['.MMM.', 'M...M'],
+  o:        ['.D.', 'DRD', '.D.'],
+};
+// one expression per temperament (data.js TEMPERS)
+const TEMPER_FACE = {
+  heroic:     { eyes: 'bright', brow: 'firm', mouth: 'smile', fx: ['shine'] },
+  cheerful:   { eyes: 'happy', brow: 'up', mouth: 'grin', fx: ['blush'] },
+  honorable:  { eyes: 'open', brow: 'flat', mouth: 'flat' },
+  wholesome:  { eyes: 'soft', brow: 'up', mouth: 'smile', fx: ['blush'] },
+  zealous:    { eyes: 'wide', brow: 'angry', mouth: 'shout' },
+  wise:       { eyes: 'half', brow: 'raise', mouth: 'smirk' },
+  loyal:      { eyes: 'big', brow: 'worried', mouth: 'smile' },
+  optimistic: { eyes: 'sparkle', brow: 'up', mouth: 'grin', fx: ['blush'] },
+  angry:      { eyes: 'narrow', brow: 'angry', mouth: 'teeth', fx: ['vein', 'flush'] },
+  deranged:   { eyes: ['wide', 'narrow'], brow: 'raise', mouth: 'crooked', fx: ['sweat'] },
+  greedy:     { eyes: 'narrow', brow: 'sly', mouth: 'smirk', pupil: '#ffcf3a' },
+  cowardly:   { eyes: 'wide', brow: 'worried', mouth: 'wobble', fx: ['sweat', 'pale'] },
+  vain:       { eyes: 'smug', brow: 'raise', mouth: 'smirk', fx: ['lash', 'blush'] },
+  cruel:      { eyes: 'narrow', brow: 'angry', mouth: 'evil', pupil: '#ff3d6e' },
+  paranoid:   { eyes: 'side', brow: 'worried', mouth: 'flat', fx: ['bags', 'sweat'] },
+  lazy:       { eyes: 'droop', brow: 'none', mouth: 'drool', fx: ['bags'] },
+};
+
+// where the face sits on the 20-grid for each head shape, and which pixels of the old 1px face to wipe first
+// e: [backEyeX, frontEyeX, eyeY] (fine grid, top-left of the 3x3 box), m: [mouthX, mouthY], k: cheek y
+const HD_HEADS = {
+  human:    { e: [19, 23, 12], m: [23, 18], k: 16, wipe: [[10, 6], [10, 7], [12, 6], [12, 7], [13, 8], [11, 9]] },
+  elf:      { e: [19, 23, 12], m: [23, 18], k: 16, wipe: [[10, 6], [10, 7], [12, 6], [12, 7], [13, 8], [11, 9]] },
+  dwarf:    { e: [19, 23, 12], m: [23, 18], k: 16, wipe: [[10, 6], [10, 7], [12, 6], [12, 7], [13, 8], [11, 9]], beard: true },
+  orc:      { e: [19, 23, 12], m: [23, 18], k: 16, wipe: [[10, 6], [10, 7], [12, 6], [12, 7], [11, 9], [9, 5], [10, 5], [11, 5], [12, 5], [13, 5]] },
+  beast:    { e: [19, 23, 11], m: [28, 19], k: 15, wipe: [[10, 6], [10, 7], [12, 6], [11, 9]] },
+  goblin:   { e: [17, 21, 14], m: [21, 20], k: 18, wipe: [[9, 7], [11, 7], [9, 8], [11, 8], [9, 10], [10, 10], [11, 10]] },
+  skeleton: { e: [16, 22, 10], m: [21, 18], k: 15, skull: true, wipe: [[8, 5], [9, 5], [11, 5], [12, 5], [8, 6], [9, 6], [11, 6], [12, 6], [10, 7], [8, 9], [9, 9], [10, 9], [11, 9], [12, 9]] },
+  toad:     { e: [15, 25, 4], m: [24, 16], k: 14, toad: true, wipe: [[8, 3], [13, 3], [8, 8], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8], [5, 7]] },
+};
+
+// puts the old tiny face back to bare skin, so the fine face can be painted in its place
+function hdWipeFace(g, s, by) {
+  const H = HD_HEADS[s.head]; if (!H) return;
+  for (const [x, y] of H.wipe) {
+    const c = g.get(x, y + by); if (!c) continue;
+    let to = s.skin;
+    if (H.skull) to = s.skin;
+    if (H.toad) to = y === 3 ? '#ffffff' : y === 8 && x <= 13 ? (s.belly || shade(s.skin, 0.4)) : s.skin;
+    if (s.head === 'dwarf' && y >= 8) continue; // under the beard
+    if (c === to) continue;
+    // only wipe face colours: never a hat brim, hood or beard that happens to sit there
+    const face = H.skull || c === OUTLINE || c === (s.eye || OUTLINE) || c === '#ff9aa8' || c === '#ffde3a' || c === '#ffffff' || c === '#ff5d8f' || c === s.eye || c === shade(s.skin, -0.3) || c === shade(s.skin, -0.35) || c === shade(s.skin, -0.45) || c === shade(s.skin, -0.5);
+    if (face) g.set(x, y + by, to, H.skull || H.toad);
+  }
+}
+
+function hdPaintFace(g, s, by, temper) {
+  const H = HD_HEADS[s.head]; if (!H) return;
+  if (H.skull) return hdSkullFace(g, s, by, temper);
+  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = HD_NOFX ? [] : F.fx || [], dy = by * HDK;
+  const skin = s.skin, snout = s.snout || shade(skin, 0.4), belly = s.belly || shade(skin, 0.4), hair = s.hair || shade(skin, -0.4);
+  // the face only lands on bare skin (or a dwarf's beard), so helms, hoods and fringes keep covering it
+  const okBase = new Set([skin, snout, belly, shade(skin, -0.2)]);
+  if (H.beard) okBase.add(hair);
+  if (H.skull) { okBase.add(OUTLINE); okBase.add(shade(skin, -0.25)); }
+  if (H.toad) { okBase.add('#ffffff'); }
+  const raw = (x, y) => g.raw(x + g.ox, y + g.oy);
+  const can = (x, y) => { const c = raw(x, y); return c && okBase.has(c); };
+  const put = (x, y, c, force) => { if (force || can(x, y)) g.set(x, y, c, true); };
+  const ink = H.skull ? OUTLINE : mix(OUTLINE, skin, 0.18);
+  const browC = H.skull ? shade(skin, -0.45) : s.head === 'toad' || s.head === 'goblin' || s.head === 'orc' || s.head === 'beast' ? shade(skin, -0.5) : shade(hair, hdLum(hair) > 140 ? -0.5 : -0.25);
+  const pupil = F.pupil || (H.skull ? s.eye || '#ff5d8f' : s.eye && s.eye !== OUTLINE ? s.eye : '#2a1840');
+  const white = H.skull ? OUTLINE : '#fffaf0';
+  const [ex0, ex1, ey0] = H.e, ey = ey0 + dy, kinds = Array.isArray(F.eyes) ? F.eyes : [F.eyes, F.eyes];
+  // skulls keep their dark sockets: the "white" is the socket and the glow is the pupil
+  const eyeCol = ch => ch === 'L' ? ink : ch === 'W' ? white : ch === 'P' ? pupil : ch === 'H' ? '#ffffff' : null;
+  [ex0, ex1].forEach((ex, side) => {
+    const pat = HD_EYES[kinds[side]] || HD_EYES.open;
+    pat.forEach((row, r) => [...row].forEach((ch, c) => { const col = eyeCol(ch); if (col) put(ex + c, ey + r - (pat.length > 3 && kinds[side] !== 'droop' ? 1 : 0), col); }));
+    if (fx.includes('lash')) { put(ex + (side ? 3 : -1), ey - 1, ink); put(ex + (side ? 3 : -1), ey, ink); }
+    if (fx.includes('bags')) { put(ex, ey + 3, shade(skin, -0.28)); put(ex + 1, ey + 3, shade(skin, -0.28)); put(ex + 2, ey + 3, shade(skin, -0.2)); }
+    // brows sit right on top of the eye (its first drawn row), and angled brows dip their inner tip onto the lid
+    const br = (HD_BROWS[F.brow] || HD_BROWS.flat)[side], top = ey + pat.findIndex(row => /[^.]/.test(row)) - (pat.length > 3 && kinds[side] !== 'droop' ? 1 : 0);
+    const low = F.brow === 'angry' || F.brow === 'firm' || F.brow === 'sly' ? top : top - 1;
+    br.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === 'B') put(ex + c, low - (br.length - 1) + r, browC); }));
+  });
+  // mouth
+  const M0 = HD_MOUTHS[F.mouth] || HD_MOUTHS.flat, M = H.toad ? M0.map(r => { const m = r.length >> 1; return r.slice(0, m) + r[m].repeat(4) + r.slice(m); }) : M0, [mx0, my0] = H.m, mx = mx0 - Math.floor(M[0].length / 2), my = my0 + dy;
+  const mCol = { M: H.skull ? OUTLINE : shade(H.beard ? hair : s.head === 'beast' ? snout : skin, -0.55), D: '#4a1430', T: H.skull ? skin : '#ffffff', R: '#ff6a7a', Q: '#9fe6ff' };
+  M.forEach((row, r) => [...row].forEach((ch, c) => { if (mCol[ch]) put(mx + c, my + r, mCol[ch]); }));
+  // little extras
+  const k = H.k + dy;
+  if (fx.includes('blush')) { put(ex1 + 2, k, '#ff9aa8'); put(ex1 + 3, k, '#ff9aa8'); put(ex0 - 1, k, '#ffb3bf'); }
+  if (fx.includes('flush')) { put(ex1 + 2, k, '#ff6a6a'); put(ex1 + 3, k, '#ff6a6a'); put(ex0, k, '#ff8a8a'); }
+  if (fx.includes('pale')) { for (let x = ex0; x <= ex1 + 3; x++) if (can(x, ey - 4) && raw(x, ey - 4) === skin) put(x, ey - 4, mix(skin, '#bfe6ff', 0.45)); }
+  if (fx.includes('vein')) { const vx = ex1 + 2, vy = ey - 5; for (const [a, b] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) { const c = raw(vx + a, vy + b); if (c && c !== OUTLINE) g.set(vx + a, vy + b, '#ff3d6e', true); } }
+  if (fx.includes('sweat')) { const sx = ex1 + 4, sy = ey - 3; g.set(sx, sy, '#bff4ff', true); g.set(sx, sy + 1, '#7fd8ff', true); g.set(sx - 1, sy + 1, '#ffffff', true); g.set(sx, sy + 2, '#5fb8f0', true); }
+  if (fx.includes('shine')) { put(ex1 + 3, ey - 1, '#ffffff'); }
+}
+
+// the full fine-grid frame for one champion look and temper
+let HD_NOFX = false;
+function hdHumanoid(spec, frame, temper) {
+  const fin = PixGrid.prototype.finish; let g;
+  PixGrid.prototype.finish = function () { return this; };
+  try { g = genHumanoid(spec, frame); } finally { PixGrid.prototype.finish = fin; }
+  const by = frame === 'idle1' ? 1 : 0;
+  hdWipeFace(g, spec, by);
+  const G = hdScale2x(g);
+  // a blade held up by the face (Fenn's dagger next to his snout) gets an ink edge so it never melts into the skin
+  const faceC = new Set([spec.skin, spec.snout || shade(spec.skin, 0.4)]), metals = new Set([spec.metal || '#dfe6f5', '#dfe6f5', '#ffffff'].filter(c => !faceC.has(c))), Wd = G.w;
+  const edge = [];
+  for (let i = 0; i < G.p.length; i++) { if (!metals.has(G.p[i])) continue; const x = i % Wd;
+    if ([i - 1, i + 1, i - Wd, i + Wd].some(j => j >= 0 && j < G.p.length && Math.abs((j % Wd) - x) <= 1 && faceC.has(G.p[j]))) edge.push(i); }
+  for (const i of edge) G.p[i] = OUTLINE;
+  const base = G.p.slice();
+  hdPaintFace(G, spec, by, temper);
+  const roles = new Map([[spec.skin, 'skin']]); if (spec.snout) roles.set(spec.snout, 'skin'); if (spec.belly) roles.set(spec.belly, 'skin');
+  if (spec.hair) roles.set(spec.hair, 'hair');
+  for (const m of [spec.metal || '#dfe6f5', '#dfe6f5', '#cfd6e6', '#d8dde8', '#e8eefc']) roles.set(m, 'metal');
+  if (spec.hat === 'helm') roles.set(spec.metal && spec.weapon !== 'shield' ? spec.metal : shade(spec.armor, 0.15), 'metal');
+  return hdFinish(G, { base, roles });
+}
+
+// every frame of one hi-detail champion; canvases carry .hd so frameBox / drawIdleUnit draw them at the usual size
+function buildSpriteHD(key, spec, temper) {
+  const out = { frames: {}, white: {}, scale: 1, hd: HDK };
+  for (const f of FRAMES) { const g = hdHumanoid(spec, f, temper), c = g.toCanvas(false), w = g.toCanvas(false, true); c.hd = w.hd = HDK; out.frames[f] = c; out.white[f] = w; }
+  SPR[key] = out; return out;
+}
+// the field shows a champion in hi-detail with the face of the temper they rolled
+const HD_ON = true;
+function hdUnitKey(u) {
+  if (!HD_ON || !u.key || !u.key.startsWith('h:') || u.key.includes('@') || u.key.includes('|')) return u.key;
+  const tp = u.inst && u.inst.temper; return tp ? u.key + '|' + tp : u.key;
+}
+
+// ===== background polish: the field painting is rebuilt at double detail =====
+// smooth dithered sky, sunlit rims on the hills, a living grass texture with blades and flowers, warm light and a soft vignette
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+function hdNoise(x, y, s, seed) { // smooth value noise, 0..1
+  const fx = x / s, fy = y / s, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, sm = t => t * t * (3 - 2 * t);
+  const h = (a, b) => hash(a * 13 + seed, b * 7 + seed * 3);
+  const a = h(x0, y0), b = h(x0 + 1, y0), c = h(x0, y0 + 1), d = h(x0 + 1, y0 + 1), u = sm(tx), v = sm(ty);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function hdPolishBackground(src, el) {
+  const K = HDK, c = document.createElement('canvas'); c.width = src.width * K; c.height = src.height * K;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(src, 0, 0, c.width, c.height);
+  const CW = c.width, CH = c.height, im = g.getImageData(0, 0, CW, CH), d = im.data, so = src.getContext('2d').getImageData(0, 0, src.width, src.height).data;
+  const hex = (r, gg, b) => (r << 16) | (gg << 8) | b, at = (x, y) => { const j = (y * CW + x) * 4; return hex(d[j], d[j + 1], d[j + 2]); };
+  const put = (x, y, rgb) => { const j = (y * CW + x) * 4; d[j] = rgb[0]; d[j + 1] = rgb[1]; d[j + 2] = rgb[2]; };
+  const lerp3 = (A, B, t) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+  const tint = (rgb, f) => f < 0 ? rgb.map(v => v * (1 + f)) : rgb.map(v => v + (255 - v) * f);
+  const SKY_Y = 92 * K, scene = typeof ELEMENT_SCENES !== 'undefined' && ELEMENT_SCENES[el];
+  // 1) sky: the hard bands become a dithered gradient (only bare-sky pixels, so sun, hills and clouds stay)
+  const bandCol = []; for (let y = 0; y < 92; y++) { const j = y * src.width * 4; bandCol.push([so[j], so[j + 1], so[j + 2]]); }
+  const bands = []; bandCol.forEach((col, y) => { const L = bands[bands.length - 1]; if (!L || hex(...L.col) !== hex(...col)) bands.push({ col, y0: y, y1: y }); else L.y1 = y; });
+  for (let Y = 0; Y < SKY_Y; Y++) {
+    const y = Y / K, bi = bands.findIndex(b => y >= b.y0 && y <= b.y1 + 0.99); if (bi < 0) continue;
+    const B0 = bands[bi], B1 = bands[bi + 1], f = B1 ? (y - B0.y0) / (B0.y1 - B0.y0 + 1) : 0, ref = hex(...B0.col);
+    for (let X = 0; X < CW; X++) if (at(X, Y) === ref) {
+      // a soft continuous blend plus ordered dither between the two neighbours
+      const smooth = B1 ? lerp3(B0.col, B1.col, f * 0.5) : B0.col, pick = B1 && BAYER4[(Y % 4) * 4 + (X % 4)] < f * 0.5 ? B1.col : smooth;
+      put(X, Y, pick.map(Math.round));
+    }
+  }
+  // 2) hills and anything standing on the skyline: a sunlit rim on the top edge
+  const rim = new Array(CW).fill(-1);
+  for (let X = 0; X < CW; X++) {
+    let wasSky = true;
+    for (let Y = 2; Y < SKY_Y + 4; Y++) {
+      const j = (Y * CW + X) * 4, isSky = bands.some(b => Math.abs(d[j] - b.col[0]) + Math.abs(d[j + 1] - b.col[1]) + Math.abs(d[j + 2] - b.col[2]) < 30);
+      if (wasSky && !isSky && Y > 40) { put(X, Y, tint([d[j], d[j + 1], d[j + 2]], 0.28)); if (rim[X] < 0) rim[X] = Y; }
+      wasSky = isSky;
+    }
+  }
+  // 3) ground: bare ground colour gets mottled light, grass blades and the odd flower
+  // the ground colour is whatever covers most of the field (scenes repaint it), and anything close to it counts as open ground
+  const cnt = new Map(); for (let Y = SKY_Y + 8; Y < CH; Y += 3) for (let X = 0; X < CW; X += 3) { const v = at(X, Y); cnt.set(v, (cnt.get(v) || 0) + 1); }
+  const gref = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0][0], gc = [(gref >> 16) & 255, (gref >> 8) & 255, gref & 255];
+  const isG = (X, Y) => { const j = (Y * CW + X) * 4; return Math.abs(d[j] - gc[0]) + Math.abs(d[j + 1] - gc[1]) + Math.abs(d[j + 2] - gc[2]) < 40; };
+  const lush = !scene || ['nature', 'light', 'water', 'sweet', 'treat'].includes(el);
+  const flowers = ['#ffffff', '#ffe680', '#ff9ac8', '#bfe6ff'];
+  for (let Y = SKY_Y; Y < CH; Y++) for (let X = 0; X < CW; X++) {
+    if (!isG(X, Y)) continue;
+    const j0 = (Y * CW + X) * 4, gc0 = gc; let gcx = [d[j0], d[j0 + 1], d[j0 + 2]];
+    const n = hdNoise(X, Y, 46, 3) * 0.7 + hdNoise(X, Y, 13, 9) * 0.3, th = BAYER4[(Y % 4) * 4 + (X % 4)];
+    let col = gcx;
+    if (n > 0.56) col = tint(gcx, n - th * 0.2 > 0.58 ? 0.14 : 0.07); else if (n < 0.44) col = tint(gcx, n + th * 0.2 < 0.42 ? -0.12 : -0.06);
+    // a touch more colour, so the field reads bright and lively
+    put(X, Y, col.map(Math.round));
+  }
+  for (let i = 0; i < CW * (CH - SKY_Y) / 60; i++) {
+    const X = Math.floor(hash(i, 101) * CW), Y = SKY_Y + 6 + Math.floor(hash(i, 103) * (CH - SKY_Y - 7)); if (!isG(X, Y) || !isG(X, Y - 2)) continue;
+    const r = hash(i, 107), base = [d[(Y * CW + X) * 4], d[(Y * CW + X) * 4 + 1], d[(Y * CW + X) * 4 + 2]];
+    if (lush && r < 0.035) { const fc = hexToRgb(flowers[i % 4]); put(X, Y, fc); put(X, Y + 1, tint(gc, -0.3)); }
+    else { const tall = r < 0.4 ? 3 : 2; for (let k = 0; k < tall; k++) if (Y - k > SKY_Y) put(X + (k === tall - 1 && r > 0.7 ? 1 : 0), Y - k, tint(base, k === tall - 1 ? 0.22 : -0.2)); }
+  }
+  // a gentle colour grade over the whole painting: livelier colour and a little more contrast
+  for (let j = 0; j < d.length; j += 4) { const av = (d[j] + d[j + 1] + d[j + 2]) / 3;
+    for (let q = 0; q < 3; q++) d[j + q] = Math.max(0, Math.min(255, (av + (d[j + q] - av) * 1.2 - 128) * 1.06 + 131)); }
+  g.putImageData(im, 0, 0);
+  // 4) light: warm sun glow from the top right, cooler shade toward the bottom corners
+  const dark = ['dark', 'void'].includes(el);
+  if (!dark) { const L = g.createRadialGradient(410 * K, 26 * K, 6 * K, 410 * K, 26 * K, 300 * K); L.addColorStop(0, 'rgba(255,236,170,0.32)'); L.addColorStop(0.4, 'rgba(255,226,150,0.10)'); L.addColorStop(1, 'rgba(255,226,150,0)');
+    g.globalCompositeOperation = 'soft-light'; g.fillStyle = L; g.fillRect(0, 0, CW, CH); }
+  g.globalCompositeOperation = 'source-over';
+  const V = g.createRadialGradient(CW * 0.55, CH * 0.45, CH * 0.35, CW * 0.55, CH * 0.45, CW * 0.75); V.addColorStop(0, 'rgba(20,12,40,0)'); V.addColorStop(1, dark ? 'rgba(8,4,20,0.3)' : 'rgba(26,18,60,0.14)');
+  g.fillStyle = V; g.fillRect(0, 0, CW, CH);
+  // a thin bright haze where the land meets the sky
+  const Hz = g.createLinearGradient(0, SKY_Y - 10 * K, 0, SKY_Y + 6 * K); Hz.addColorStop(0, 'rgba(255,255,255,0)'); Hz.addColorStop(0.6, dark ? 'rgba(160,120,255,0.10)' : 'rgba(255,250,230,0.16)'); Hz.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = Hz; g.fillRect(0, SKY_Y - 10 * K, CW, 16 * K);
+  return c;
+}
+
+// fluffy shaded clouds at the fine grid (cached per width and palette); drawn in game units at (x, y) = left, base line
+const HD_CLOUDS = {};
+function hdCloud(g, x, y, w, col, under) {
+  const key = w + col + under; let c = HD_CLOUDS[key];
+  if (!c) {
+    const K = HDK, Wf = (w + 6) * K, Hf = 14 * K; c = HD_CLOUDS[key] = document.createElement('canvas'); c.width = Wf; c.height = Hf;
+    const x2 = c.getContext('2d'), puffs = [[0.22, 0.62, 0.2], [0.45, 0.42, 0.3], [0.7, 0.55, 0.22], [0.86, 0.72, 0.13], [0.1, 0.78, 0.11]];
+    const inside = (X, Y) => puffs.some(([px, py, pr]) => { const r = pr * w * K * 0.6, cx = 3 * K + px * w * K, cy = py * Hf; return (X - cx) ** 2 + ((Y - cy) * 1.5) ** 2 < r * r; }) && Y < Hf - 2;
+    const lit = shade(col, 0.5), mid = col, low = under;
+    for (let Y = 0; Y < Hf; Y++) for (let X = 0; X < Wf; X++) { if (!inside(X, Y)) continue;
+      const top = !inside(X, Y - 2), bot = !inside(X, Y + 3) || Y > Hf * 0.72, th = BAYER4[(Y % 4) * 4 + (X % 4)];
+      x2.fillStyle = top ? lit : bot ? low : Y > Hf * 0.6 && th < 0.5 ? low : mid; x2.fillRect(X, Y, 1, 1); }
+  }
+  g.drawImage(c, Math.round(x) - 3, Math.round(y) - 10, c.width / HDK, c.height / HDK);
+}
+
+// skulls have no skin to move, so the expression lives in the shape of the sockets, the glow inside them and the jaw
+// socket masks are 5x5 ('#' dark socket, 'g' glow, 'w' glint, '.' bone); back socket listed, the front one is mirrored
+const SKULL_EYES = {
+  open:    ['.###.', '#####', '##gw#', '##gg#', '.###.'],
+  bright:  ['.###.', '#####', '##gw#', '##gg#', '.###.'],
+  big:     ['.###.', '#ggw#', '#ggg#', '#ggg#', '.###.'],
+  wide:    ['.###.', '#####', '##g##', '#####', '.###.'],
+  happy:   ['.###.', '#ggg#', '#g#g#', '.....', '.....'],
+  soft:    ['.....', '.###.', '##gg#', '##gg#', '.###.'],
+  half:    ['.....', '.....', '#####', '##gg#', '.###.'],
+  narrow:  ['.....', '.....', '#####', '#ggg#', '.###.'],
+  sparkle: ['.###.', '#gwg#', '#ggg#', '##g##', '.###.'],
+  closed:  ['.....', '.....', '.....', '#####', '.###.'],
+  smug:    ['.....', '.....', '.....', '#ggg#', '.###.'],
+  side:    ['.###.', '#####', '###gg', '###gg', '.###.'],
+  droop:   ['.....', '.....', '.....', '#ggg#', '.###.'],
+};
+// brow ridges cut bone into the socket: 'angry' slopes down to the middle, 'worried' slopes up
+const SKULL_CUT = { angry: [[3, 0], [4, 0], [4, 1]], firm: [[4, 0]], sly: [[3, 0], [4, 0]], worried: [[0, 0], [1, 0], [0, 1]], raise: [] };
+const SKULL_JAW = {
+  smile:   ['#.....#', '.#####.', '..###..'],
+  grin:    ['#######', '#t#t#t#', '.#####.'],
+  flat:    ['.#####.', '.t#t#t.'],
+  smirk:   ['......#', '.#####.', '.t#t#..'],
+  shout:   ['.#####.', '#t#t#t#', '#######', '.#####.'],
+  teeth:   ['#######', 't#t#t#t', '#######'],
+  wobble:  ['.#.#.#.', '#.#.#.#'],
+  crooked: ['#......', '.##t#t#', '...##..'],
+  evil:    ['#.....#', '##t#t##', '.#####.'],
+  drool:   ['.#####.', '.t#t#t.', '....q..', '....q..'],
+  frown:   ['..###..', '.#####.', '#.....#'],
+  o:       ['..###..', '.#####.', '..###..'],
+};
+function hdSkullFace(g, s, by, temper) {
+  const F = TEMPER_FACE[temper] || TEMPER_FACE.honorable, fx = HD_NOFX ? [] : F.fx || [], dy = by * HDK, bone = s.skin, ridge = shade(bone, -0.32);
+  const glow = F.pupil || s.eye || '#ff5d8f', kinds = Array.isArray(F.eyes) ? F.eyes : [F.eyes, F.eyes];
+  const can = (x, y) => { const c = g.raw(x + g.ox, y + g.oy); return c === bone || c === OUTLINE || c === shade(bone, -0.25); };
+  const put = (x, y, c) => { if (can(x, y)) g.set(x, y, c, true); };
+  const col = ch => ch === '#' ? OUTLINE : ch === 'g' ? glow : ch === 'w' ? '#ffffff' : ch === 't' ? bone : ch === 'q' ? '#9fe6ff' : null;
+  // sockets: back one at x 15, front at x 21 (mirrored, so its glow looks forward)
+  [[15, false], [21, true]].forEach(([x0, mir], side) => {
+    const M = SKULL_EYES[kinds[side]] || SKULL_EYES.open, y0 = 9 + dy;
+    M.forEach((row, r) => [...row].forEach((ch, c) => { const cc = col(ch); if (cc) put(x0 + (mir ? c : 4 - c), y0 + r, cc); }));
+    // ridge over the socket, cut in at the brow's angle
+    for (const [cx, cy] of SKULL_CUT[F.brow] || []) put(x0 + (mir ? 4 - cx : cx), y0 + cy, bone);
+    if (F.brow === 'angry' || F.brow === 'firm' || F.brow === 'sly') for (let i = 0; i < 4; i++) put(x0 + (mir ? 4 - i : i) , y0 - 1 + Math.floor(i / 2), ridge);
+    else if (F.brow === 'worried') for (let i = 0; i < 4; i++) put(x0 + (mir ? i : 4 - i), y0 - 1 + Math.floor(i / 2), ridge);
+    else if (F.brow !== 'none') for (let i = 0; i < 5; i++) put(x0 + i, y0 - (F.brow === 'up' || (F.brow === 'raise' && side) ? 2 : 1), ridge);
+  });
+  // nose: a small dark heart
+  const ny = 15 + dy; put(20, ny, OUTLINE); put(21, ny, OUTLINE); put(20, ny + 1, OUTLINE); put(21, ny + 1, shade(bone, -0.45));
+  // jaw
+  const J = SKULL_JAW[F.mouth] || SKULL_JAW.flat, jx = 17, jy = 18 + dy;
+  J.forEach((row, r) => [...row].forEach((ch, c) => { const cc = col(ch); if (cc) put(jx + c, jy + r, cc); }));
+  if (fx.includes('vein')) for (const [a, b] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) g.set(25 + a, 4 + dy + b, '#ff3d6e', true);
+  if (fx.includes('sweat')) { g.set(27, 8 + dy, '#bff4ff', true); g.set(27, 9 + dy, '#7fd8ff', true); g.set(27, 10 + dy, '#5fb8f0', true); }
+  if (fx.includes('blush')) { put(25, 16 + dy, '#ff9aa8'); put(26, 16 + dy, '#ff9aa8'); put(14, 16 + dy, '#ffb3bf'); }
+  if (fx.includes('flush')) { put(25, 16 + dy, '#ff6a6a'); put(26, 16 + dy, '#ff6a6a'); }
+}
+
+// any unit (foes, bosses, summons, champions without a temper) at the fine grid. Humanoid foes get a face too:
+// each kind of foe always wears the same mean look, picked from its id
+const FOE_FACES = ['angry', 'cruel', 'deranged', 'greedy', 'zealous', 'paranoid'];
+function hdGenericFrame(key, spec, frame) {
+  const gen = GENS[spec.gen || 'humanoid'];
+  if (gen === genHumanoid && HD_HEADS[spec.head]) {
+    const id = key.replace(/^[a-z]+:/, ''), hero = key.startsWith('h:'), tp = hero ? 'honorable' : FOE_FACES[Math.floor(hash(id.length * 7, id.charCodeAt(0) * 13 + id.charCodeAt(id.length - 1)) * FOE_FACES.length)];
+    // foes keep the expression but skip the floating extras (vein, sweat drop), which read as stray specks on them
+    HD_NOFX = !hero; try { return hdHumanoid(spec, frame, tp); } finally { HD_NOFX = false; }
+  }
+  const fin = PixGrid.prototype.finish; let g;
+  PixGrid.prototype.finish = function () { return this; };
+  try { g = gen(spec, frame); } finally { PixGrid.prototype.finish = fin; }
+  const G = hdScale2x(g), roles = new Map([['#dfe6f5', 'metal'], ['#c8c8d8', 'metal'], ['#e8e8f0', 'metal']]);
+  return hdFinish(G, { base: G.p.slice(), roles });
+}
+
+// where a hi-detail face's mouth sits on a built frame, for the talking jaw in talk.js:
+// { x0, x1, y, h } in canvas pixels, the colour that fills the closed part, and ok(data, i) for pixels that belong to the face
+function hdMouthBox(key, img) {
+  const m = /^([eh]):([a-z]+)/.exec(key); if (!m) return null;
+  const spec = m[1] === 'e' ? ENEMIES[m[2]] && ENEMIES[m[2]].spr : HERO_BY_ID[m[2]] && HERO_BY_ID[m[2]].spr;
+  if (!spec || (spec.gen || 'humanoid') !== 'humanoid') return null;
+  const H = HD_HEADS[spec.head]; if (!H) return null;
+  const D = img.hd || 1, pad = img.width / D === STAR_PAD.w, ox = pad ? STAR_PAD.l * D : 0, oy = pad ? STAR_PAD.t * D : 0;
+  const half = H.toad ? 4 : H.skull ? 3 : 2, [mx, my] = H.m;
+  const fill = H.skull ? spec.skin : H.beard ? (spec.hair || shade(spec.skin, -0.4)) : spec.head === 'beast' ? (spec.snout || shade(spec.skin, 0.4)) : H.toad ? (spec.belly || shade(spec.skin, 0.4)) : spec.skin;
+  // never punch through a tusk, helm or weapon: only pixels close to the face's own colours change
+  const near = [spec.skin, spec.snout, spec.belly, spec.hair, OUTLINE, '#ffffff', '#4a1430', '#ff6a7a', '#9fe6ff'].filter(Boolean).map(hexToRgb);
+  const ok = (d, i) => { const r = d[i], g = d[i + 1], b = d[i + 2]; return near.some(([R, G, B]) => Math.abs(r - R) + Math.abs(g - G) + Math.abs(b - B) < 190); };
+  return { x0: ox + mx - half, x1: ox + mx + half, y: oy + my, h: 4, fill: shade(fill, -0.05), ok };
 }
 
 // Unique 12x12 icons for every finished item. Letters map to ITEM_PAL (falls back to ICON_PAL); '.' is transparent.
@@ -4415,7 +4841,9 @@ function activeSynergies(run) {
 function heroLevelMul(lv) { return Math.pow(BAL.lvlGrow, lv - 1); }
 function sigRank(lv) { return lv < SIG_LEVEL ? 0 : 1 + [8, 12, 16, 20].filter(x => lv >= x).length; }
 // 2★ and 3★ legends get their own recoloured sprite with a bigger weapon (sprites.js starSpec); plain skips that
-function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : ''); }
+function heroSpriteKey(h, plain) { const s = plain || typeof heroStar !== 'function' ? 1 : heroStar(h); return (h.el ? 'h:' + h.id + ':' + h.el : 'h:' + h.id) + (s > 1 ? '~' + s : '') + (!plain && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? '|' + h.temper : ''); }
+// the hi-detail look with the temper's face, for scenes that take a plain key (talk, star-up)
+function heroFaceKey(key, h) { return h && h.temper && typeof HD_ON !== 'undefined' && HD_ON ? key + '|' + h.temper : key; }
 // an element title replaces the epithet: 'Brann the Blazing'. A name that starts with 'The' keeps its last word instead
 // ('The Great Toadmother' -> 'Toadmother the Radiant', never 'The the Radiant')
 function heroShortName(name) { const w = name.split(' '); return /^the$/i.test(w[0]) && w.length > 1 ? w[w.length - 1] : w[0]; }
@@ -8467,7 +8895,7 @@ function drawStars(g, u, t) {
 const TINTS = new WeakMap();
 function tintFrame(img, col) {
   let m = TINTS.get(img); if (!m) TINTS.set(img, m = {}); if (m[col]) return m[col];
-  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.hd = img.hd; const x = c.getContext('2d');
   x.drawImage(img, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
   return (m[col] = c);
 }
@@ -8475,13 +8903,13 @@ function mix(a, b, t) { const A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(
 
 function initRender(canvas) {
   R.cv = canvas; R.ctx = canvas.getContext('2d');
-  R.lo = document.createElement('canvas'); R.lo.width = W; R.lo.height = H; R.lctx = R.lo.getContext('2d');
+  R.lo = document.createElement('canvas'); R.lo.width = W * HDK; R.lo.height = H * HDK; R.lctx = R.lo.getContext('2d'); R.lctx.setTransform(HDK, 0, 0, HDK, 0, 0); // the field is painted at double detail (hdart.js)
   for (let i = 0; i < 7; i++) R.clouds.push({ x: rand(0, W), y: rand(6, 50), w: randi(18, 40), s: rand(3, 8) });
   resizeRender();
 }
 function resizeRender() {
   const r = R.cv.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
-  const k = Math.max(1, Math.ceil(r.width * dpr / W)); if (k === R.k && R.cv.width === W * k) return;
+  const k = Math.max(1, Math.ceil(r.width * dpr / (W * HDK))) * HDK; if (k === R.k && R.cv.width === W * k) return;
   R.k = k; R.cv.width = W * k; R.cv.height = H * k;
   // resizing wipes the canvas; put the last frame back at once so a paused game (title, menus) never shows a bare field
   if (R.lo && R.painted) { R.ctx.imageSmoothingEnabled = false; R.ctx.drawImage(R.lo, 0, 0, W * k, H * k); }
@@ -8606,12 +9034,12 @@ function unitFrame(u, t) {
 // a red-flushed copy of a sprite frame, made once and cached
 function redFrame(S, fr) {
   S.red = S.red || {}; if (S.red[fr]) return S.red[fr];
-  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d');
+  const src = S.frames[fr], c = document.createElement('canvas'); c.width = src.width; c.height = src.height; c.hd = src.hd; const x = c.getContext('2d');
   x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(255,40,40,0.55)'; x.fillRect(0, 0, c.width, c.height);
   return (S.red[fr] = c);
 }
 function drawUnit(g, u, t, opts = {}) {
-  const S = SPR[u.key] || ensureSprite(u.key); if (!S) return;
+  const key = hdUnitKey(u), S = SPR[key] || ensureSprite(key) || SPR[u.key] || ensureSprite(u.key); if (!S) return;
   const sc = (S.scale || u.scale || 1) * (u.vscale || 1), size = Math.round(20 * sc);
   const fr = opts.frame || unitFrame(u, t);
   const nativeFace = u.nativeFace || (u.side === 'enemy' ? -1 : 1);
@@ -8848,15 +9276,14 @@ function renderFrame(V, dt) {
   const fi = factionIndex(run.siege);
   const hall = run.finale === 'ready';
   const bgKey = hall ? 'hall' : fi + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(fi, run.castleEl);
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(fi, run.castleEl), run.castleEl);
   g.imageSmoothingEnabled = false;
-  g.drawImage(R.bg[bgKey], 0, 0);
+  g.drawImage(R.bg[bgKey], 0, 0, W, H);
   if (hall) drawHallLive(g, t, B);
   else if (typeof drawSceneLive === 'function') drawSceneLive(g, run.castleEl, t);
   // clouds
   if (!hall) for (const c of R.clouds) { c.x += c.s * dt; if (c.x > W + 40) { c.x = -c.w - 10; c.y = rand(6, 50); }
-    g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#ac9298' : '#ffffff'; g.fillRect(Math.round(c.x), Math.round(c.y), c.w, 4); g.fillRect(Math.round(c.x + 4), Math.round(c.y - 3), c.w - 10, 3); g.fillRect(Math.round(c.x + c.w * 0.4), Math.round(c.y - 5), c.w * 0.35, 2);
-    g.fillStyle = ['fire','dark','void','lightning'].includes(run.castleEl) ? '#7d707f' : '#e4ecff'; g.fillRect(Math.round(c.x + 2), Math.round(c.y + 4), c.w - 4, 1); }
+    const dk = ['fire','dark','void','lightning'].includes(run.castleEl); hdCloud(g, c.x, c.y + 4, c.w, dk ? '#ac9298' : '#ffffff', dk ? '#7d707f' : '#cdd8f4'); }
   // castle
   if (!hall) { const cv = buildCastle(run); g.drawImage(cv, 0, 0); drawCastleLive(g, t); if (typeof drawCastleAlive === 'function') drawCastleAlive(g, run, t, cv); }
   if (!hall && run.castleEl && Math.random() < dt * 14) { const E = ELEMENTS[run.castleEl]; FXS.parts.push({ x: rand(4, 96), y: rand(10, 80), vx: rand(-6, 6), vy: run.castleEl === 'ice' || run.castleEl === 'sweet' ? rand(8, 20) : rand(-20, -6), life: rand(0.8, 1.6), t: 0, color: Math.random() < 0.5 ? E.col : E.col2, size: Math.random() < 0.3 ? 2 : 1, grav: 0 }); }
@@ -9264,13 +9691,14 @@ function drawIdleUnit(g, img, x, y, fs, flip, I) {
   g.globalAlpha = base * (p.a != null ? p.a : 1);
   const w = Math.round(fs * (p.sx || 1)), h = Math.round(fs * (p.sy || 1));
   // starred legends have a padded frame (sprites.js STAR_PAD): L, T are the pad left of and above the 20x20 body
-  const pad = img.width === STAR_PAD.w && img.height === STAR_PAD.h, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0, IW = img.width, IH = img.height;
+  // hi-detail frames (hdart.js) carry img.hd source pixels per grid pixel
+  const D = img.hd || 1, IW = img.width / D, IH = img.height / D, pad = IW === STAR_PAD.w && IH === STAR_PAD.h, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0;
   const pl = Math.round(L * w / 20), pt = Math.round(T * h / 20), fw = Math.round(IW * w / 20), fh = Math.round(IH * h / 20);
   if (hx || hy) { // the head (rows above cut, left of the weapon column hc) moves on its own
     const cut = p.cut || 11, hc = p.hc || 14, ch = Math.round(cut * h / 20), cw = Math.round(hc * w / 20);
-    g.drawImage(img, 0, T + cut, IW, IH - T - cut, -w / 2 - pl, -h + ch, fw, fh - pt - ch);
-    g.drawImage(img, L + hc, 0, IW - L - hc, T + cut, -w / 2 + cw, -h - pt, fw - pl - cw, pt + ch);
-    g.drawImage(img, 0, 0, L + hc, T + cut, -w / 2 - pl + Math.round(hx * s), -h - pt + Math.round(hy * s), pl + cw, pt + ch); }
+    g.drawImage(img, 0, (T + cut) * D, IW * D, (IH - T - cut) * D, -w / 2 - pl, -h + ch, fw, fh - pt - ch);
+    g.drawImage(img, (L + hc) * D, 0, (IW - L - hc) * D, (T + cut) * D, -w / 2 + cw, -h - pt, fw - pl - cw, pt + ch);
+    g.drawImage(img, 0, 0, (L + hc) * D, (T + cut) * D, -w / 2 - pl + Math.round(hx * s), -h - pt + Math.round(hy * s), pl + cw, pt + ch); }
   else g.drawImage(img, -w / 2 - pl, -h - pt, fw, fh);
   P.fade = g.globalAlpha;
   if (def.front) { def.front(P, k, t); }
@@ -10687,7 +11115,7 @@ const UI = {
       g.clearRect(0, 0, cv.width, cv.height);
       const x = cv.width / 2, y = cv.height - 6, ks = (t - act) / d, strike = ks >= 1 && ks < 1 + 0.35 / d;
       const fr = strike ? 'atk' : Math.floor(t * 2.5) % 2 ? 'idle1' : 'idle0', img = F[fr] || F.idle0;
-      if (strike) { const pad = img.width === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width * S, img.height * S); }
+      if (strike) { const D = img.hd || 1, pad = img.width / D === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width / D * S, img.height / D * S); }
       else drawIdleUnit(g, img, x, y, fs, false, { def, k: ks >= 0 && ks < 1 ? ks : -1, t: t * sp, by: fr === 'idle1' ? 1 : 0 });
       if (t < 4.5) requestAnimationFrame(step);
     };
@@ -11310,9 +11738,9 @@ const STARUP = {
   next() {
     const job = this.queue.shift(); if (!job) { this.cur = null; return; }
     const { h, s0, s1 } = job, d = HERO_BY_ID[h.id], col = STAR_COL[s1 - 1], quiet = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const base = heroSpriteKey(h, true), oldKey = s0 > 1 ? base + '~' + s0 : base, newKey = base + '~' + s1;
+    const base = heroSpriteKey(h, true), face = k => heroFaceKey(k, h), oldKey = face(s0 > 1 ? base + '~' + s0 : base), newKey = face(base + '~' + s1);
     const ws0 = s0 > 1 ? STAR_LOOK[s0 - 1].ws : 1, ws1 = STAR_LOOK[s1 - 1].ws;
-    const grow = [0, 1, 2, 3, 4].map(i => { const k = newKey + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2); ensureSprite(k); return k; });
+    const grow = [0, 1, 2, 3, 4].map(i => { const k = face(base + '~' + s1 + '@' + (ws0 + (ws1 - ws0) * i / 4).toFixed(2)); ensureSprite(k); return k; });
     ensureSprite(oldKey); ensureSprite(newKey);
     const st = heroStats(h, G.run, G.meta), sig = s1 >= 3 ? `<p class="su-sig">Starforged signature: <b>${esc(st.aName || d.aName)}</b> +1 rank, +${Math.round((STARFORGED.mul - 1) * 100)}% power</p>` : '';
     const el = document.createElement('div'); el.className = `starup s${s1}`; el.style.setProperty('--sc', col);
@@ -11829,7 +12257,7 @@ function drawTower() {
   if (T.phase === 'climb' || T.phase === 'flag') {
     const c = T.phase === 'flag' ? { x: cx - 8, y: towerTopWorld() - 24, dir: 1 } : climberWorld();
     const S = SPR['h:' + T.climber]; if (S) { const fr = T.phase === 'flag' ? (Math.floor(T.t * 3) % 2 ? 'atk' : 'idle0') : (Math.floor(T.t * 10) % 2 ? 'walk0' : 'walk1'); const sy = toS(c.y);
-      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); g.drawImage(S.frames[fr], -10, Math.round(sy) - 19); } else g.drawImage(S.frames[fr], Math.round(c.x) - 10, Math.round(sy) - 19); g.restore(); }
+      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, -10, Math.round(sy) - 19, im.width / D, im.height / D); } else { const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, Math.round(c.x) - 10, Math.round(sy) - 19, im.width / D, im.height / D); } g.restore(); }
   }
   // particles + texts
   for (const p of T.parts) { g.globalAlpha = 1 - p.t / p.life; g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(toS(p.y)), 1, 1); }
@@ -12647,15 +13075,31 @@ const JAW_CACHE = {};
 // pixels kept at both corners and a tongue in the middle of the wide frame.
 function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
-  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height;
-  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = JAW[id] || JAW.hero;
+  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
+  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
+  // hi-detail humanoids (hdart.js) open the mouth they were drawn with, at its own spot, and the talking gap covers it
+  const hm = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null;
+  if (hm) {
+    const frames = [0, 1, 2].map(gap => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
+      g.drawImage(src, 0, 0); if (!gap) return c;
+      const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128, fill = hexToRgb(hm.fill);
+      for (let y = hm.y; y < hm.y + hm.h; y++) for (let x = hm.x0; x <= hm.x1; x++) {
+        if (!op(x, y) || !hm.ok(d.data, (y * W + x) * 4)) continue;
+        const k = y - hm.y, open = k < gap * 2, edge = x === hm.x0 || x === hm.x1, tongue = gap === 2 && k >= 2 && Math.abs(x - (hm.x0 + hm.x1) / 2) < 1.5;
+        d.data.set(open && !(edge && k === 0) ? (tongue ? [255, 106, 138, 255] : [42, 10, 30, 255]) : [...fill, 255], (y * W + x) * 4);
+      }
+      g.putImageData(d, 0, 0); return c;
+    });
+    return (JAW_CACHE[key] = frames);
+  }
   const frames = [0, 1, 2].map(gap => {
-    const c = document.createElement('canvas'); c.width = W; c.height = H + 2; const g = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
     g.drawImage(src, 0, 0); if (!gap) return c;
     const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128;
-    for (let k = 0; k < gap; k++) for (let x = x0 + 1; x < x1; x++) {
+    for (let k = 0; k < gap * D; k++) for (let x = x0 + D; x < x1; x++) {
       const y = jy + k; if (!op(x, y)) continue;
-      const i = (y * W + x) * 4, tongue = gap === 2 && k === 1 && Math.abs(x - (x0 + x1) / 2) < 1.5;
+      const i = (y * W + x) * 4, tongue = gap === 2 && k >= D && Math.abs(x - (x0 + x1) / 2) < 1.5 * D;
       d.data.set(tongue ? [255, 106, 138, 255] : [42, 10, 30, 255], i);
     }
     g.putImageData(d, 0, 0); return c;
@@ -12716,7 +13160,7 @@ function showTalk(run, done, x = {}) {
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h, true); A.hero.className = 'tk-a tk-hero';
+  const setHero = h => { cur = h; keys.hero = heroFaceKey(heroSpriteKey(h, true), h); A.hero.className = 'tk-a tk-hero';
     const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
     tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
     tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
@@ -12746,7 +13190,7 @@ function showTalk(run, done, x = {}) {
   // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
   const fcv = el.querySelector('.tk-field'), fg = fcv.getContext('2d'); fg.imageSmoothingEnabled = false;
   const bgKey = hall ? 'hall' : sc.f + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(sc.f, run.castleEl);
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(sc.f, run.castleEl), run.castleEl);
   const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
   const camp = hall ? [] : campSpots.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
   const mouth = { hero: 0, boss: 0, fallen: 0, visitor: 0 };
@@ -12755,16 +13199,16 @@ function showTalk(run, done, x = {}) {
   const tick = now => {
     if (!TALKUI.on) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
-    fg.drawImage(R.bg[bgKey], 0, 0);
+    const bgc = R.bg[bgKey], bk = bgc.width / W; fg.drawImage(bgc, 0, 0, W, H);
     if (hall) { try { drawHallLive(fg, t, null); } catch (e) {} }
     else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
       fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
-    if (lair) { fg.drawImage(R.bg[bgKey], W - 28, 0, 28, H, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
-    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s;
+    if (lair) { fg.drawImage(bgc, (W - 28) * bk, 0, 28 * bk, H * bk, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width / (fr.hd || 1) * m.s, h = fr.height / (fr.hd || 1) * m.s;
       fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
-    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
       if (n === 'visitor' && !keys.visitor.startsWith('e:')) { g.save(); g.scale(-1, 1); g.drawImage(jawFrames(keys[n])[mouth[n]], -c.width, 0); g.restore(); } else g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); } // visitors face your hero
     requestAnimationFrame(tick);
   };

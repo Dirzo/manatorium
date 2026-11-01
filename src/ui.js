@@ -223,7 +223,7 @@ const UI = {
       g.clearRect(0, 0, cv.width, cv.height);
       const x = cv.width / 2, y = cv.height - 6, ks = (t - act) / d, strike = ks >= 1 && ks < 1 + 0.35 / d;
       const fr = strike ? 'atk' : Math.floor(t * 2.5) % 2 ? 'idle1' : 'idle0', img = F[fr] || F.idle0;
-      if (strike) { const pad = img.width === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width * S, img.height * S); }
+      if (strike) { const D = img.hd || 1, pad = img.width / D === STAR_PAD.w, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0; g.drawImage(img, x - fs / 2 - L * S, y - fs - T * S, img.width / D * S, img.height / D * S); }
       else drawIdleUnit(g, img, x, y, fs, false, { def, k: ks >= 0 && ks < 1 ? ks : -1, t: t * sp, by: fr === 'idle1' ? 1 : 0 });
       if (t < 4.5) requestAnimationFrame(step);
     };

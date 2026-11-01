@@ -213,8 +213,9 @@ function growWeapon(g, ws, ax, ay, draw) {
 }
 // where a sprite frame lands when its 20x20 body is drawn fs pixels tall with its feet at (cx, by), as in drawUnit
 function frameBox(img, cx, by, fs) {
-  if (img.width !== STAR_PAD.w || img.height !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
-  const k = fs / 20, w = Math.round(img.width * k), h = Math.round(img.height * k);
+  const hd = img.hd || 1, iw = img.width / hd, ih = img.height / hd;
+  if (iw !== STAR_PAD.w || ih !== STAR_PAD.h) return { x: cx - fs / 2, y: by - fs + 1, w: fs, h: fs };
+  const k = fs / 20, w = Math.round(iw * k), h = Math.round(ih * k);
   return { x: cx - w / 2, y: by + 1 - fs - Math.round(STAR_PAD.t * k), w, h };
 }
 
@@ -434,7 +435,10 @@ const SPR = {};   // key -> { frames: {name: canvas}, white: {name: canvas}, sca
 function buildSprite(key, spec, flip, scale = 1) {
   const gen = GENS[spec.gen || 'humanoid'];
   const out = { frames: {}, white: {}, scale };
-  for (const f of FRAMES) { const g = gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); }
+  // hi-detail art (hdart.js): every unit is rebuilt at the fine grid so foes match the champions
+  const hd = typeof hdGenericFrame === 'function' && HD_ON;
+  for (const f of FRAMES) { const g = hd ? hdGenericFrame(key, spec, f) : gen(spec, f); out.frames[f] = g.toCanvas(flip); out.white[f] = g.toCanvas(flip, true); if (hd) out.frames[f].hd = out.white[f].hd = HDK; }
+  if (hd) out.hd = HDK;
   SPR[key] = out; return out;
 }
 
@@ -452,7 +456,8 @@ function buildAllSprites() {
 function ensureSprite(key) {
   if (SPR[key]) return SPR[key];
   // 'h:<id>', 'h:<id>:<element>', either with '~<star>' (2 or 3) and optionally '@<weapon scale>' for the star-up show
-  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?$/.exec(key); if (!m) return null;
+  // a '|<temper>' suffix builds the hi-detail champion (hdart.js) wearing that temper's face
+  const m = /^h:([a-z]+)(?::([a-z]+))?(?:~([23])(?:@([\d.]+))?)?(?:\|([a-z]+))?$/.exec(key); if (!m) return null;
   const d = HERO_BY_ID[m[1]], E = m[2] && ELEMENTS[m[2]]; if (!d || (m[2] && !E)) return null;
   let spec = d.spr;
   if (E) { const dark = c => shade(c, -0.35);
@@ -460,6 +465,7 @@ function ensureSprite(key) {
     if (d.spr.cape) spec.cape = E.col2;
     if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
   if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
+  if (m[5] && typeof buildSpriteHD === 'function' && (spec.gen || 'humanoid') === 'humanoid') return buildSpriteHD(key, spec, m[5]);
   return buildSprite(key, spec, false);
 }
 
@@ -541,6 +547,7 @@ function spriteURL(key, frame = 'idle0', px = 3) {
   ensureSprite(key);
   const s = SPR[key].frames[frame], c = document.createElement('canvas'), ctx = c.getContext('2d');
   // starred legends: crop the 32x34 frame to 26x26 around the body so portraits keep their size and still show the weapon
-  const [sx, sy, sw, sh] = s.width === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width, s.height];
-  c.width = sw * px; c.height = sh * px; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx, sy, sw, sh, 0, 0, c.width, c.height); return c.toDataURL();
+  // hi-detail frames (s.hd) are cropped in grid units and drawn with whole screen pixels per fine pixel
+  const D = s.hd || 1, [sx, sy, sw, sh] = s.width / D === STAR_PAD.w ? [3, 4, 26, 26] : [0, 0, s.width / D, s.height / D], fp = Math.max(1, Math.ceil(px / D));
+  c.width = sw * D * fp; c.height = sh * D * fp; ctx.imageSmoothingEnabled = false; ctx.drawImage(s, sx * D, sy * D, sw * D, sh * D, 0, 0, c.width, c.height); return c.toDataURL();
 }

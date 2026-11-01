@@ -519,15 +519,31 @@ const JAW_CACHE = {};
 // pixels kept at both corners and a tongue in the middle of the wide frame.
 function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
-  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height;
-  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = JAW[id] || JAW.hero;
+  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
+  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
+  // hi-detail humanoids (hdart.js) open the mouth they were drawn with, at its own spot, and the talking gap covers it
+  const hm = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null;
+  if (hm) {
+    const frames = [0, 1, 2].map(gap => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
+      g.drawImage(src, 0, 0); if (!gap) return c;
+      const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128, fill = hexToRgb(hm.fill);
+      for (let y = hm.y; y < hm.y + hm.h; y++) for (let x = hm.x0; x <= hm.x1; x++) {
+        if (!op(x, y) || !hm.ok(d.data, (y * W + x) * 4)) continue;
+        const k = y - hm.y, open = k < gap * 2, edge = x === hm.x0 || x === hm.x1, tongue = gap === 2 && k >= 2 && Math.abs(x - (hm.x0 + hm.x1) / 2) < 1.5;
+        d.data.set(open && !(edge && k === 0) ? (tongue ? [255, 106, 138, 255] : [42, 10, 30, 255]) : [...fill, 255], (y * W + x) * 4);
+      }
+      g.putImageData(d, 0, 0); return c;
+    });
+    return (JAW_CACHE[key] = frames);
+  }
   const frames = [0, 1, 2].map(gap => {
-    const c = document.createElement('canvas'); c.width = W; c.height = H + 2; const g = c.getContext('2d');
+    const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
     g.drawImage(src, 0, 0); if (!gap) return c;
     const d = g.getImageData(0, 0, W, H), op = (x, y) => y >= 0 && y < H && d.data[(y * W + x) * 4 + 3] > 128;
-    for (let k = 0; k < gap; k++) for (let x = x0 + 1; x < x1; x++) {
+    for (let k = 0; k < gap * D; k++) for (let x = x0 + D; x < x1; x++) {
       const y = jy + k; if (!op(x, y)) continue;
-      const i = (y * W + x) * 4, tongue = gap === 2 && k === 1 && Math.abs(x - (x0 + x1) / 2) < 1.5;
+      const i = (y * W + x) * 4, tongue = gap === 2 && k >= D && Math.abs(x - (x0 + x1) / 2) < 1.5 * D;
       d.data.set(tongue ? [255, 106, 138, 255] : [42, 10, 30, 255], i);
     }
     g.putImageData(d, 0, 0); return c;
@@ -588,7 +604,7 @@ function showTalk(run, done, x = {}) {
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
-  const setHero = h => { cur = h; keys.hero = heroSpriteKey(h, true); A.hero.className = 'tk-a tk-hero';
+  const setHero = h => { cur = h; keys.hero = heroFaceKey(heroSpriteKey(h, true), h); A.hero.className = 'tk-a tk-hero';
     const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
     tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
     tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
@@ -618,7 +634,7 @@ function showTalk(run, done, x = {}) {
   // the field: the horde's backdrop, the keep, drifting clouds and a few of the horde milling about the boss's camp
   const fcv = el.querySelector('.tk-field'), fg = fcv.getContext('2d'); fg.imageSmoothingEnabled = false;
   const bgKey = hall ? 'hall' : sc.f + ':' + (run.castleEl || 'stone');
-  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : buildBackground(sc.f, run.castleEl);
+  if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(sc.f, run.castleEl), run.castleEl);
   const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
   const camp = hall ? [] : campSpots.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
   const mouth = { hero: 0, boss: 0, fallen: 0, visitor: 0 };
@@ -627,16 +643,16 @@ function showTalk(run, done, x = {}) {
   const tick = now => {
     if (!TALKUI.on) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
-    fg.drawImage(R.bg[bgKey], 0, 0);
+    const bgc = R.bg[bgKey], bk = bgc.width / W; fg.drawImage(bgc, 0, 0, W, H);
     if (hall) { try { drawHallLive(fg, t, null); } catch (e) {} }
     else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
       fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
-    if (lair) { fg.drawImage(R.bg[bgKey], W - 28, 0, 28, H, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
-    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width * m.s, h = fr.height * m.s;
+    if (lair) { fg.drawImage(bgc, (W - 28) * bk, 0, 28 * bk, H * bk, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width / (fr.hd || 1) * m.s, h = fr.height / (fr.hd || 1) * m.s;
       fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
-    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
       if (n === 'visitor' && !keys.visitor.startsWith('e:')) { g.save(); g.scale(-1, 1); g.drawImage(jawFrames(keys[n])[mouth[n]], -c.width, 0); g.restore(); } else g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); } // visitors face your hero
     requestAnimationFrame(tick);
   };

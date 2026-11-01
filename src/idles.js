@@ -201,13 +201,14 @@ function drawIdleUnit(g, img, x, y, fs, flip, I) {
   g.globalAlpha = base * (p.a != null ? p.a : 1);
   const w = Math.round(fs * (p.sx || 1)), h = Math.round(fs * (p.sy || 1));
   // starred legends have a padded frame (sprites.js STAR_PAD): L, T are the pad left of and above the 20x20 body
-  const pad = img.width === STAR_PAD.w && img.height === STAR_PAD.h, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0, IW = img.width, IH = img.height;
+  // hi-detail frames (hdart.js) carry img.hd source pixels per grid pixel
+  const D = img.hd || 1, IW = img.width / D, IH = img.height / D, pad = IW === STAR_PAD.w && IH === STAR_PAD.h, L = pad ? STAR_PAD.l : 0, T = pad ? STAR_PAD.t : 0;
   const pl = Math.round(L * w / 20), pt = Math.round(T * h / 20), fw = Math.round(IW * w / 20), fh = Math.round(IH * h / 20);
   if (hx || hy) { // the head (rows above cut, left of the weapon column hc) moves on its own
     const cut = p.cut || 11, hc = p.hc || 14, ch = Math.round(cut * h / 20), cw = Math.round(hc * w / 20);
-    g.drawImage(img, 0, T + cut, IW, IH - T - cut, -w / 2 - pl, -h + ch, fw, fh - pt - ch);
-    g.drawImage(img, L + hc, 0, IW - L - hc, T + cut, -w / 2 + cw, -h - pt, fw - pl - cw, pt + ch);
-    g.drawImage(img, 0, 0, L + hc, T + cut, -w / 2 - pl + Math.round(hx * s), -h - pt + Math.round(hy * s), pl + cw, pt + ch); }
+    g.drawImage(img, 0, (T + cut) * D, IW * D, (IH - T - cut) * D, -w / 2 - pl, -h + ch, fw, fh - pt - ch);
+    g.drawImage(img, (L + hc) * D, 0, (IW - L - hc) * D, (T + cut) * D, -w / 2 + cw, -h - pt, fw - pl - cw, pt + ch);
+    g.drawImage(img, 0, 0, (L + hc) * D, (T + cut) * D, -w / 2 - pl + Math.round(hx * s), -h - pt + Math.round(hy * s), pl + cw, pt + ch); }
   else g.drawImage(img, -w / 2 - pl, -h - pt, fw, fh);
   P.fade = g.globalAlpha;
   if (def.front) { def.front(P, k, t); }

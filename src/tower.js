@@ -138,7 +138,7 @@ function drawTower() {
   if (T.phase === 'climb' || T.phase === 'flag') {
     const c = T.phase === 'flag' ? { x: cx - 8, y: towerTopWorld() - 24, dir: 1 } : climberWorld();
     const S = SPR['h:' + T.climber]; if (S) { const fr = T.phase === 'flag' ? (Math.floor(T.t * 3) % 2 ? 'atk' : 'idle0') : (Math.floor(T.t * 10) % 2 ? 'walk0' : 'walk1'); const sy = toS(c.y);
-      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); g.drawImage(S.frames[fr], -10, Math.round(sy) - 19); } else g.drawImage(S.frames[fr], Math.round(c.x) - 10, Math.round(sy) - 19); g.restore(); }
+      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, -10, Math.round(sy) - 19, im.width / D, im.height / D); } else { const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, Math.round(c.x) - 10, Math.round(sy) - 19, im.width / D, im.height / D); } g.restore(); }
   }
   // particles + texts
   for (const p of T.parts) { g.globalAlpha = 1 - p.t / p.life; g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(toS(p.y)), 1, 1); }
