@@ -1240,14 +1240,31 @@ h2.hoard { color: var(--gold); }
 .tk-more { position: absolute; right: 10px; bottom: 4px; font-size: 11px; color: #b0803a; animation: tkMore .6s ease-in-out infinite alternate; }
 .talk.typing .tk-more { visibility: hidden; }
 @keyframes tkMore { to { transform: translateY(3px); } }
-/* cinematic bars: narration, the reply picks and the skip button live here */
+/* cinematic bars: the title, the reply picks and the skip button live here */
 .tk-bar { position: absolute; left: 0; right: 0; background: #07060f; display: flex; align-items: center; justify-content: center; padding: 0 16px; animation: tkBar .5s cubic-bezier(.2,.9,.3,1); }
 .tk-bar.top { top: 0; height: max(44px, 8vh); } .tk-bar.bot { bottom: 0; min-height: max(56px, 11vh); flex-direction: column; gap: 8px; padding: 10px 16px 14px; }
 .tk-bar.top { --from: -100%; } .tk-bar.bot { --from: 100%; }
 @keyframes tkBar { from { transform: translateY(var(--from)); } }
 .tk-eyebrow { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .16em; font-size: 12px; color: var(--muted); }
 .talk.bossy .tk-eyebrow { color: #ff8aa8; }
-.tk-narr { margin: 0; max-width: 760px; text-align: center; font-size: 16px; font-style: italic; color: #e8e4ff; min-height: 1.4em; }
+/* no narration under the scene (Cam 2026-11-04): the bottom bar is a thin letterbox until the reply cards come up */
+.tk-bar.bot:has(.tk-opts:empty) { min-height: max(18px, 3.5vh); padding: 0; }
+/* the hero mulling it over while the player picks: a cloudy thought bubble with little puffs for a tail */
+.tk-bub.thought { border-radius: 26px; border-style: dashed; animation: tkThink 2.4s ease-in-out infinite alternate; } .tk-bub.thought .tk-more { display: none; }
+.tk-bub.thought p { font-style: italic; font-weight: 500; }
+.tk-bub.thought::before, .tk-bub.thought::after { border: 3px solid var(--ink); background: #fffdf4; border-radius: 50%; width: 12px; height: 12px; top: auto; bottom: -8px; }
+.tk-bub.thought::after { width: 7px; height: 7px; bottom: -20px; }
+.tk-bub.thought.from-hero::before { left: -8px; } .tk-bub.thought.from-hero::after { left: -20px; }
+.tk-bub.thought.from-boss::before { right: -8px; left: auto; } .tk-bub.thought.from-boss::after { right: -20px; left: auto; }
+.tk-bub.ghostly.thought::before, .tk-bub.ghostly.thought::after { background: #e8ecff; }
+@keyframes tkThink { to { transform: translateY(-3px); } }
+/* a mishap: a comic burst over the hero ("Out cold!") */
+.tk-burst { position: absolute; left: 50%; top: -6%; transform: translateX(-50%) rotate(-8deg); white-space: nowrap; font-family: var(--f-display); font-size: clamp(14px, 2.2vw, 22px); color: #fffdf4; background: #d42a5a; border: 3px solid var(--ink);
+  padding: 3px 10px; clip-path: polygon(0 20%, 12% 0, 30% 14%, 50% 0, 68% 14%, 88% 0, 100% 22%, 92% 50%, 100% 80%, 86% 100%, 66% 86%, 48% 100%, 30% 86%, 10% 100%, 0 78%, 8% 50%); pointer-events: none;
+  animation: tkBurst 2.6s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes tkBurst { 0% { transform: translateX(-50%) rotate(-8deg) scale(.2); opacity: 0; } 12% { transform: translateX(-50%) rotate(-8deg) scale(1.1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(-50%) rotate(-4deg) translateY(-10px); opacity: 0; } }
+/* what a card's choice did, on the title card at the top */
+.tk-res { margin: 8px auto 0; max-width: min(560px, 80vw); font-size: 15px; font-weight: 600; line-height: 1.35; color: #ffe9a8; background: rgba(7,6,15,.82); border: 2px solid #c9a24a; border-radius: 10px; padding: 6px 12px; white-space: normal; animation: tkPop .3s cubic-bezier(.2,1.4,.4,1) both; }
 .tk-opts { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .tk-opts:empty { display: none; }
 .tk-opt { position: relative; width: min(250px, 30vw); display: flex; flex-direction: column; gap: 3px; text-align: left; background: #fffdf4; color: #1a1230; border: 3px solid var(--ink); border-radius: 16px; border-bottom-left-radius: 4px; padding: 8px 12px 10px;
