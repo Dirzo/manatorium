@@ -41,9 +41,9 @@ function elfBack(g, s, by) {
     for (let y = 8; y <= 14; y++) g.set(y % 2 ? 4 : 5, y + by, h); for (let y = 8; y <= 14; y++) g.set(y % 2 ? 5 : 4, y + by, y % 2 ? hd : h);
     g.set(4, 15 + by, P.leather, true); g.set(3, 16 + by, P.accent, true); g.set(4, 16 + by, '#ffffff', true);
   }
-  if (e.hairdo === 'tail') { // a high ponytail swept back from the crown
-    g.rect(3, 2 + by, 5, 3 + by, h); g.rect(2, 3 + by, 3, 6 + by, h); g.rect(1, 6 + by, 2, 9 + by, h); g.set(1, 10 + by, h);
-    g.set(2, 4 + by, hl, true); g.set(1, 7 + by, hd, true);
+  if (e.hairdo === 'tail') { // a ponytail tied at the back of the crown that hangs down behind (not up, so it never reads as an ear)
+    g.rect(4, 3 + by, 5, 4 + by, h); g.rect(3, 5 + by, 4, 10 + by, h); g.set(3, 11 + by, h);
+    g.set(4, 6 + by, hl, true); g.set(3, 9 + by, hd, true);
   }
   if (elfHas(s, 'quiver')) { // quiver over the back shoulder, fletchings poking up
     g.rect(3, 10 + by, 4, 15 + by, P.leather); g.set(3, 14 + by, shade(P.leather, -0.3), true); g.set(4, 11 + by, P.trim, true);
@@ -139,19 +139,17 @@ function elfTop(g, s, by) {
     g.set(6, 2 + by, P.accent, true); g.set(7, 2 + by, shade(P.accent, -0.3), true); g.set(6, 3 + by, shade(P.accent, -0.3), true); g.set(7, 3 + by, P.accent, true); g.set(7, 1 + by, shade(P.accent, 0.3), true);
     g.set(8, 2 + by, P.leaf, true); g.set(5, 3 + by, P.leaf, true);
   }
-  if (T === 'pin') { g.set(4, 2 + by, P.trim, true); g.set(3, 1 + by, P.trim, true); g.set(5, 3 + by, P.accent, true); }
+  if (T === 'pin') { g.set(4, 4 + by, P.trim, true); g.set(3, 4 + by, P.trim, true); g.set(5, 3 + by, P.accent, true); }
   // ears: long and tapered, with a pink inner shadow
   const E = e.ears || 'long';
   let ear;
-  // short and leaf-shaped: a two-pixel root against the head and a single-pixel tip, so it reads as an ear and not a horn
-  if (E === 'tall') ear = [[4, 7], [4, 6], [4, 5], [3, 5], [3, 4]];
-  else if (E === 'droop') ear = [[4, 6], [4, 7], [3, 7], [2, 7], [3, 6]];
-  else ear = [[4, 7], [4, 6], [3, 6], [3, 5], [2, 4]];
+  // small and pointed (Cam asked twice for shorter ears): three pixels from root to tip
+  if (E === 'tall') ear = [[4, 7], [4, 6], [4, 5]];
+  else if (E === 'droop') ear = [[4, 6], [4, 7], [3, 7]];
+  else ear = [[4, 7], [4, 6], [3, 5]];
   for (const [x, y] of ear) g.set(x, y + by, skin);
-  if (E === 'tall') g.set(4, 6 + by, inner, true);
-  else if (E === 'droop') g.set(3, 7 + by, inner, true);
-  else g.set(3, 6 + by, inner, true);
-  if (elfHas(s, 'cuffs')) { const c = E === 'tall' ? [3, 5] : E === 'droop' ? [2, 7] : [3, 5]; g.set(c[0], c[1] + by, P.trim, true); }
+  g.set(4, (E === 'droop' ? 6 : 7) + by, inner, true);
+  if (elfHas(s, 'cuffs')) { const c = E === 'droop' ? [3, 7] : [4, 6]; g.set(c[0], c[1] + by, P.trim, true); }
   if (elfHas(s, 'rings')) { const pts = E === 'tall' ? [[3, 4], [3, 5], [4, 8]] : [[3, 5], [2, 4], [4, 8]]; for (const [x, y] of pts) g.set(x, y + by, P.trim, true); }
 }
 
