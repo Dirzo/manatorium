@@ -6,7 +6,8 @@ Object.assign(FX, {
   // the wind-up: a roar line, a shake and a burst of steam
   fury(u) {
     const sz = 20 * (u.scale || 1);
-    FX.text(u.x, u.y - sz - 14, pick(FURY_LINES[u.id] || FURY_LINES._), '#ff5d5d', true, true);
+    // the first two wind-ups of a siege are said in a speech bubble (barks.js), later ones just flash the roar
+    if (!u.furyBark) FX.text(u.x, u.y - sz - 14, pick(FURY_LINES[u.id] || FURY_LINES._), '#ff5d5d', true, true);
     FX.shake(4); FX.sound('quake');
     for (let i = 0; i < 18; i++) FXS.parts.push({ x: u.x + rand(-sz / 2, sz / 2), y: u.y - rand(sz * 0.4, sz), vx: rand(-30, 30), vy: rand(-40, -10), life: rand(0.4, 0.8), t: 0, color: pick(['#ffffff', '#d8d8e8', '#ff8a8a']), size: 1, grav: -20 });
   },

@@ -1485,3 +1485,44 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 #banner .k-hero .bspr.live { width: 160px; height: 136px; image-rendering: pixelated; margin: -10px -14px 0 0; animation: bsprIn .6s cubic-bezier(.2,.9,.3,1.6) .1s backwards; }
 html.m #banner .k-hero .bspr { width: 56px; height: 56px; }
 html.m #banner .k-hero .bspr.live { width: 100px; height: 85px; }
+
+/* ===== boss talk that notices you (talkmore.js, 2026-11-06) ===== */
+/* 7. emotes over the speaker's head, and the little move that goes with them */
+.tk-emo { position: absolute; left: 62%; top: -14%; z-index: 3; font-family: var(--f-display); font-weight: 800; font-style: normal; font-size: clamp(26px, 4vw, 48px); line-height: 1;
+  color: #fffdf4; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 rgba(15,20,48,.45); animation: tkEmo 2.2s ease-out forwards; pointer-events: none; }
+.tk-boss .tk-emo { left: 30%; top: 2%; }
+.tk-emo.em-anger { color: #ff4a5a; rotate: 12deg; letter-spacing: -.12em; }
+.tk-emo.em-heart { color: #ff7ab8; } .tk-emo.em-note { color: #9ad8ff; } .tk-emo.em-q { color: #ffd84a; } .tk-emo.em-bang { color: #ffd84a; }
+.tk-emo.em-sweat { width: .5em; height: .7em; background: #8ad8ff; border: 2px solid var(--ink); border-radius: 50% 0 50% 50%; transform: rotate(-45deg); top: 2%; left: 66%; }
+@keyframes tkEmo { 0% { opacity: 0; translate: 0 8px; scale: .4; } 14% { opacity: 1; translate: 0 -4px; scale: 1.2; } 24% { translate: 0 0; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -6px; } }
+.tk-a.mv-hop canvas { animation: mvHop .5s cubic-bezier(.3,1.6,.5,1); }
+.tk-a.mv-tilt canvas { animation: mvTilt .7s ease-in-out; }
+.tk-a.mv-shiver canvas { animation: mvShiver .12s linear 5; }
+.tk-a.mv-sway canvas { animation: mvTilt .7s ease-in-out; }
+.tk-a.mv-stomp canvas { animation: tkStomp .45s cubic-bezier(.3,1.6,.5,1); }
+@keyframes mvHop { 40% { transform: translateY(-12%); } }
+@keyframes mvTilt { 35% { transform: rotate(-7deg); } 70% { transform: rotate(4deg); } }
+@keyframes mvShiver { 25% { transform: translateX(-2%); } 75% { transform: translateX(2%); } }
+/* 5. lettering per speaker: shouted words shake, honks are huge, the slime wobbles, the wyrm takes its time */
+.tk-bub p b.yell { display: inline-block; font-weight: 800; animation: txYell .18s steps(2) infinite; }
+.tk-bub p b.honk { display: inline-block; font-size: 1.35em; font-weight: 800; letter-spacing: .04em; color: #c45a0a; transform: rotate(-3deg); }
+.tk-bub.tx-wobble p .w { white-space: nowrap; }
+.tk-bub.tx-wobble p i { display: inline-block; font-style: normal; animation: txWob 1.1s ease-in-out infinite; animation-delay: var(--d); }
+.tk-bub.tx-smoke p { letter-spacing: .05em; color: #3a2060; }
+.tk-bub.tx-show p { font-family: var(--f-display); }
+.tk-bub.tx-show p b.yell { color: #c4202a; font-size: 1.1em; }
+.tk-bub.tx-posh p { font-style: italic; }
+.tk-bub.tx-frost p { color: #24507a; }
+.tk-bub.tx-chatter p { letter-spacing: -.01em; }
+.tk-bub.tx-sea p b.yell { color: #1a5a8a; }
+.tk-bub.tx-shaky p { animation: txShaky .25s steps(2) infinite; }
+@keyframes txYell { 50% { transform: translate(1px, -1px); } }
+@keyframes txWob { 50% { transform: translateY(-3px); } }
+@keyframes txShaky { 50% { transform: translateX(.5px); } }
+@media (prefers-reduced-motion: reduce) { .tk-bub p b.yell, .tk-bub.tx-wobble p i, .tk-bub.tx-shaky p, .tk-emo { animation: none; } }
+/* 4. the boss's secret reply */
+.tk-opt.parley { background: #fff3c8; box-shadow: 0 0 0 3px #e2a91f inset; }
+.tk-opt.parley b { color: #8a4a00; }
+.tk-opt.parley.locked { opacity: .6; filter: grayscale(.7); cursor: not-allowed; }
+.tk-opt.parley.locked b::before { content: 'Locked · '; font-size: .8em; }
+.tk-opts:has(.parley) { gap: 8px; } .tk-opts:has(.parley) .tk-opt { width: min(230px, 22vw); }

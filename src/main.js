@@ -278,7 +278,7 @@ function showEncounter() {
   if (G.run.post.length === 1 && !vaultDue(G.run) && talkDue(G.run)) {
     UI.closeModal(); let picked = null;
     const pick = i => {
-      const o = enc.opts[i]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; }
+      const o = enc.opts[i]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; noteStoryChoice(G.run, story, o); }
       const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy'); TEL.event('encounter', { id: enc.id, opt: i }); picked = o;
       const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz]; save(); changed();
       return { lines: r.out.filter(x => x !== 'Pick an item to reforge.').concat(r.levels.map(([h]) => `${heroDisplayName(h)} reached level ${h.level}!`)), hz: hz && hz.name };
@@ -293,7 +293,7 @@ function showEncounter() {
 function dropEncounter() { const i = G.run.post.indexOf('encounter'); if (i >= 0) G.run.post.splice(i, 1); }
 function showEncounterCard(enc, story) {
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-    const o = enc.opts[+b.dataset.opt]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
+    const o = enc.opts[+b.dataset.opt]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; noteStoryChoice(G.run, story, o); } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
     const lv = r.levels.map(([h, n]) => `${heroDisplayName(h)} reached level ${h.level}!`);
     const outcome = extra => {
