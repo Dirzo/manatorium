@@ -28,6 +28,9 @@ function elfBack(g, s, by) {
     for (const y of [10, 13]) g.set(3, y + by, hd, true);
     if (elfHas(s, 'flowers')) { g.set(3, 8 + by, P.accent, true); g.set(5, 12 + by, P.accent, true); g.set(3, 15 + by, '#ffffff', true); g.set(4, 10 + by, P.leaf, true); }
   }
+  if (e.hairdo === 'mane') { // shoulder-length hair that stops above the wings
+    g.rect(4, 5 + by, 6, 11 + by, h); g.set(4, 12 + by, h); g.set(5, 9 + by, hl, true); g.set(4, 10 + by, hd, true);
+  }
   if (e.hairdo === 'float') { // hair that streams back and up as if in a night wind, with starlit tips
     g.rect(2, 3 + by, 5, 10 + by, h); g.rect(1, 4 + by, 1, 8 + by, h); g.set(0, 5 + by, h); g.set(0, 7 + by, h); g.rect(3, 11 + by, 4, 12 + by, h); g.set(2, 13 + by, h);
     g.set(1, 2 + by, h); g.set(2, 2 + by, h);
@@ -43,8 +46,8 @@ function elfBack(g, s, by) {
     g.set(2, 4 + by, hl, true); g.set(1, 7 + by, hd, true);
   }
   if (elfHas(s, 'quiver')) { // quiver over the back shoulder, fletchings poking up
-    g.rect(3, 9 + by, 4, 14 + by, P.leather); g.set(3, 13 + by, shade(P.leather, -0.3), true); g.set(4, 10 + by, P.trim, true);
-    g.set(2, 7 + by, P.accent, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.accent, true); g.set(4, 8 + by, P.leaf, true);
+    g.rect(3, 10 + by, 4, 15 + by, P.leather); g.set(3, 14 + by, shade(P.leather, -0.3), true); g.set(4, 11 + by, P.trim, true);
+    g.set(2, 9 + by, P.accent, true); g.set(3, 9 + by, '#ffffff', true);
   }
 }
 
@@ -93,7 +96,7 @@ function elfHead(g, s, by) {
   else if (D === 'braid') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 5, 8 + by, h); g.set(10, 4 + by, hl, true); }
   else if (D === 'tail') { g.set(13, 5 + by, h); g.set(5, 3 + by, h); }
   else if (D === 'flow') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 6, 9 + by, h); g.set(7, 4 + by, hl, true); }
-  else if (D === 'float') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 6, 9 + by, h); }
+  else if (D === 'float' || D === 'mane') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 6, 9 + by, h); }
   else if (D === 'bob') { // sharp bob: thick at the back, cut to a point at the jaw, fringe swept across the brow
     g.rect(5, 5 + by, 7, 9 + by, h); g.set(6, 10 + by, h); g.set(7, 10 + by, hd); g.rect(8, 5 + by, 9, 5 + by, h); g.set(13, 5 + by, h); g.set(13, 6 + by, h);
     g.set(6, 6 + by, hl, true); g.set(6, 8 + by, hd, true);
@@ -140,15 +143,15 @@ function elfTop(g, s, by) {
   // ears: long and tapered, with a pink inner shadow
   const E = e.ears || 'long';
   let ear;
-  if (E === 'tall') ear = [[4, 7], [4, 6], [4, 5], [3, 5], [3, 4], [3, 3], [2, 2], [2, 1]];
-  else if (E === 'droop') ear = [[4, 6], [4, 7], [3, 6], [3, 7], [2, 7], [1, 7], [1, 8], [0, 8]];
-  else ear = [[4, 7], [4, 6], [3, 6], [3, 5], [2, 5], [2, 4], [1, 3], [0, 2]];
+  // short and leaf-shaped: a two-pixel root against the head and a single-pixel tip, so it reads as an ear and not a horn
+  if (E === 'tall') ear = [[4, 7], [4, 6], [4, 5], [3, 5], [3, 4]];
+  else if (E === 'droop') ear = [[4, 6], [4, 7], [3, 7], [2, 7], [3, 6]];
+  else ear = [[4, 7], [4, 6], [3, 6], [3, 5], [2, 4]];
   for (const [x, y] of ear) g.set(x, y + by, skin);
-  g.set(E === 'droop' ? 3 : E === 'tall' ? 4 : 3, (E === 'tall' ? 6 : 6) + by + (E === 'droop' ? 1 : 0) - (E === 'tall' ? 0 : 0), inner, true);
-  if (E === 'long') g.set(2, 5 + by, inner, true);
-  if (E === 'tall') g.set(3, 4 + by, inner, true);
-  if (E === 'droop') g.set(2, 7 + by, inner, true);
-  if (elfHas(s, 'cuffs')) { const c = E === 'tall' ? [3, 3] : E === 'droop' ? [2, 7] : [2, 4]; g.set(c[0], c[1] + by, P.trim, true); g.set(c[0] + 1, c[1] + 1 + by, P.trim, true); }
+  if (E === 'tall') g.set(4, 6 + by, inner, true);
+  else if (E === 'droop') g.set(3, 7 + by, inner, true);
+  else g.set(3, 6 + by, inner, true);
+  if (elfHas(s, 'cuffs')) { const c = E === 'tall' ? [3, 5] : E === 'droop' ? [2, 7] : [3, 5]; g.set(c[0], c[1] + by, P.trim, true); }
   if (elfHas(s, 'rings')) { const pts = E === 'tall' ? [[3, 4], [3, 5], [4, 8]] : [[3, 5], [2, 4], [4, 8]]; for (const [x, y] of pts) g.set(x, y + by, P.trim, true); }
 }
 
