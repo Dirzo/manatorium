@@ -132,12 +132,14 @@ const WPN = {
   maul: {
     i: { o: [2, 12], r: ['.LLLL.', 'DMMMMD', 'DGGGGD', 'DMMMMD', '.DDDD.', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..H...', '..W...', '..w...'] },
     a: { o: [2, 3], r: ['...DMML', '...DMML', '...DGGL', 'wWHDGGL', '...DGGL', '...DMML', '...DMML'] } },
+  // a butcher's cleaver: dark spine, a hanging hole, a bright cutting edge in front, a short wooden grip
   cleaver: {
-    i: { o: [0, 7], r: ['XNNI', 'XKNI', 'XNNI', 'XNNI', 'XNNI', 'XXXI', 'W...', 'H...', 'w...'] },
-    a: { o: [2, 0], r: ['wWHXXXX', '...NKNN', '...NNNN', '...NNNN', '...IIII'] } },
+    i: { o: [0, 8], r: ['XXXXXXX', 'DNNNNKN', 'DNNNNNN', 'DNNNNNN', 'DIIIIII', 'D......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 1], r: ['..XXXXXX', 'wHDNKNNN', '..XNNNNN', '..XNNNNN', '..IIIIII'] } },
+  // a spiked iron ball on a chain
   flail: {
-    i: { o: [0, 9], r: ['..M.', '.MLM', 'MMMD', '.MDD', '..M.', '.C..', 'C...', 'W...', 'W...', 'H...', 'w...'] },
-    a: { o: [0, 4], r: ['...M.', '..MLM', '.CMMD', '.W.M.', 'H....'] } },
+    i: { o: [0, 12], r: ['...L...', '..MMM..', '.MMLMD.', 'LMMMMDL', '.MDDDD.', '..DDD..', '...L...', '..C....', '.C.....', 'C......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 6], r: ['.....L...', '....MMM..', '...LMMMDL', '...CDDD..', '..C..L...', '.C.......', 'wH.......'] } },
   scythe: {
     i: { o: [7, 13], r: ['..LLLLMM', '.LMMMMMD', 'LM.....k', 'L......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......H', '.......k', '.......k'] },
     a: { o: [5, 0], r: ['kkkkkHkkkM', '.......LMM', '......LMM.', '.....LM...', '....L.....'] } },
@@ -220,7 +222,8 @@ function frameBox(img, cx, by, fs) {
 }
 
 function genHumanoid(s, frame) {
-  const g = s.star ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
+  // orcs always get the padded frame: their weapons are held further out from the face and need the room
+  const g = s.star || s.head === 'orc' ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;
@@ -230,6 +233,7 @@ function genHumanoid(s, frame) {
     g.set(2, 10 + wy, shade(w, -0.25), true); g.set(3, 12 + wy, shade(w, -0.25), true); g.set(1, 8 + wy, '#ffffff', true); }
   // cape
   if (s.cape) g.rect(4, 11 + by, 5, 17, s.cape);
+  if (s.orc) orcBack(g, s, by);
   // legs
   const boot = shade(a2, -0.35);
   const leg = (x, lift) => { g.rect(x, 16, x + 1, 18 - lift, cl); g.rect(x, 18 - lift, x + 2, 18 - lift, boot); };
@@ -240,6 +244,7 @@ function genHumanoid(s, frame) {
   if (s.head === 'skeleton' && !s.armor) { g.rect(8, 11, 10, 15, skin); }
   g.rect(6, 11 + by, 12, 15, a1); g.rect(6, 11 + by, 12, 11 + by, a2); g.rect(6, 14, 12, 14, cl); g.set(9, 12 + by, shade(a1, 0.35)); g.set(9, 14, '#ffcf3a', true);
   if (s.head === 'toad') g.rect(8, 12 + by, 11, 13 + by, s.belly || shade(skin, 0.4));
+  if (s.orc) orcTorso(g, s, by);
   // head
   const hx0 = gob ? 6 : 5, hx1 = gob ? 12 : 13, hy0 = 3 + by + hy, hy1 = 10 + by;
   if (s.head === 'toad') {
@@ -267,7 +272,8 @@ function genHumanoid(s, frame) {
       g.set(11, 9 + by, shade(skin, -0.3), true);
     }
     if (s.head === 'elf') { g.set(4, 6 + by, skin); g.set(4, 5 + by, skin); g.set(3, 4 + by, skin); g.set(3, 5 + by, skin); g.set(2, 3 + by, skin); }
-    if (s.head === 'orc') { g.rect(14, 6 + by, 14, 9 + by, skin); g.set(10, 9 + by, '#ffffff', true); g.set(10, 8 + by, '#ffffff', true); g.set(13, 9 + by, '#ffffff', true); g.set(13, 8 + by, '#ffffff', true); g.rect(9, 5 + by, 13, 5 + by, shade(skin, -0.35), true); }
+    if (s.head === 'orc' && s.orc) orcHead(g, s, by);
+    else if (s.head === 'orc') { g.rect(14, 6 + by, 14, 9 + by, skin); g.set(10, 9 + by, '#ffffff', true); g.set(10, 8 + by, '#ffffff', true); g.set(13, 9 + by, '#ffffff', true); g.set(13, 8 + by, '#ffffff', true); g.rect(9, 5 + by, 13, 5 + by, shade(skin, -0.35), true); }
     if (s.head === 'beast') {
       const sn = s.snout || shade(skin, 0.4);
       g.rect(12, 7 + by, 15, 9 + by, sn); g.set(15, 7 + by, OUTLINE, true); g.set(13, 9 + by, shade(sn, -0.3), true);
@@ -320,14 +326,16 @@ function genHumanoid(s, frame) {
   // front arm + weapon
   const wp = WPN[s.weapon];
   if (wp) {
-    const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
+    // orcs hold their weapon a pixel further out, so it never crosses the face
+    const map = atk ? wp.a : wp.i, [ax0, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ax = ax0 + (s.head === 'orc' && !atk ? 1 : 0), ay = ay0 + by, pal = weaponPal(s);
     if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
     else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
     g.set(ax, ay, skin); growWeapon(g, ws, ax, ay, (G, x, y) => drawWpnMap(G, map, pal, x, y));
     if (wp.b) growWeapon(g, ws, 5, 15 + by, (G, x, y) => drawWpnMap(G, wp.b, pal, x, y));
   } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); growWeapon(g, ws, 15, 12 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, true)); }
-  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); growWeapon(g, ws, 13, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
+  else { const hx = s.head === 'orc' ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
+  if (s.orc) orcFront(g, s, by);
   return g.finish();
 }
 

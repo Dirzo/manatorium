@@ -124,7 +124,7 @@ function startIntro(done) {
       const S2 = SPR[r.key] || ensureSprite(r.key), img = S2 && S2.frames[fr]; if (!img) continue;
       const bob = tripping ? 4 : waiting ? (goose.yelp ? -Math.max(0, 6 - (t - 3.55) * 30) : 0) : Math.abs(Math.sin(at * 16 + r.x)) * -2;
       g.fillStyle = 'rgba(26,18,48,0.28)'; g.fillRect(Math.round(p.x) - 4, Math.round(p.y), 8, 2);
-      g.save(); g.translate(Math.round(p.x), Math.round(p.y + bob)); if (tripping) g.rotate(-0.5); if (!waiting) g.scale(-1, 1); g.drawImage(img, -10, -19, 20, 20); g.restore(); g.globalAlpha = 1;
+      g.save(); g.translate(Math.round(p.x), Math.round(p.y + bob)); if (tripping) g.rotate(-0.5); if (!waiting) g.scale(-1, 1); { const b = frameBox(img, 0, 0, 20); g.drawImage(img, b.x, b.y, b.w, b.h); } g.restore(); g.globalAlpha = 1;
     }
     { const p = pathPos(goose.x), Sg = SPR['e:goose'], fr = goose.state === 'chase' || (goose.state === 'enter' && t > 2.7 && goose.x > 472.5) ? (Math.floor(at * 12) % 2 ? 'walk0' : 'walk1') : goose.state === 'mad' ? 'atk' : 'idle0', img = Sg && Sg.frames[fr];
       if (img) { const gy = p.y - (goose.hop || 0); g.fillStyle = 'rgba(26,18,48,0.28)'; g.fillRect(Math.round(p.x) - 7, Math.round(p.y), 14, 2);
