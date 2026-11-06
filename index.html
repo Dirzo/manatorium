@@ -3459,14 +3459,14 @@ function genHumanoid(s, frame) {
   // front arm + weapon
   const wp = WPN[s.weapon];
   if (wp) {
-    // orcs hold their weapon a pixel further out, so it never crosses the face
-    const map = atk ? wp.a : wp.i, [ax0, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ax = ax0 + (s.head === 'orc' && !atk ? 1 : 0), ay = ay0 + by, pal = weaponPal(s);
+    // orcs and elves hold their weapon a pixel further out, so it never crosses the face
+    const map = atk ? wp.a : wp.i, [ax0, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ax = ax0 + ((s.head === 'orc' || s.elf) && !atk ? 1 : 0), ay = ay0 + by, pal = weaponPal(s);
     if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
     else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
     g.set(ax, ay, skin); growWeapon(g, ws, ax, ay, (G, x, y) => drawWpnMap(G, map, pal, x, y));
     if (wp.b) growWeapon(g, ws, 5, 15 + by, (G, x, y) => drawWpnMap(G, wp.b, pal, x, y));
   } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); growWeapon(g, ws, 15, 12 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, true)); }
-  else { const hx = s.head === 'orc' ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
+  else { const hx = s.head === 'orc' || s.elf ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   if (s.orc) orcFront(g, s, by);
   if (s.elf) elfFront(g, s, by);
