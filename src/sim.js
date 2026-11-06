@@ -113,7 +113,7 @@ function dreadedBy(bossId, h) { return !!h && (BOSS_DREAD[bossId] || []).include
 // a voice with a temper the boss dreads loses their nerve before the boss siege: they still fight, but start it stunned (mods.shaken)
 function mishapDue(run, h) { return !!h && isBossSiege(run.siege) && run.finale !== 'ready' && !h.vault && dreadedBy(bossFor(run.siege), h); }
 // the boss-siege replies (taunt / firm / rallycry, goad at the finale): only one counts
-const TALK_REPLIES = ['taunt', 'firm', 'rallycry', 'goad'];
+const TALK_REPLIES = ['taunt', 'firm', 'rallycry', 'goad', 'parley'];
 function setTalkReply(run, mod) { for (const k of TALK_REPLIES) delete run.mods[k]; if (mod) run.mods[mod] = true; }
 function heroTemper(h) { if (!h.temper) { let x = 0; for (const c of String(h.uid)) x = (x * 31 + c.charCodeAt(0)) >>> 0; h.temper = TEMPER_KEYS[x % TEMPER_KEYS.length]; } return h.temper; }
 function temperCounts(run) { const c = {}; for (const h of placedHeroes(run)) { const t = heroTemper(h); c[t] = (c[t] || 0) + 1; } return c; }
@@ -427,7 +427,7 @@ function spawnEnemy(B, id, opts = {}) {
   const ws = opts.wstar || 1; if (tc) { hm *= (1 + 0.3 * tc.rar) * WARBAND.hp[ws - 1]; am *= (1 + 0.15 * tc.rar) * WARBAND.atk[ws - 1]; }
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
-  if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
+  if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8; if (d.boss && mods.parley) hm *= 0.85; // boss talk: parley
   if (d.boss && mods.goad) am *= 1.15; // boss talk (finale): you goaded the goose
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
@@ -441,7 +441,7 @@ function spawnEnemy(B, id, opts = {}) {
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
-    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
+    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) * (mods.parley ? 0.5 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats, route, rofs: route ? y - route.y0 : 0 });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
@@ -453,7 +453,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
-  if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
+  if (d.boss) { B.bossUnit = u; B.cueArrive = true; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     if (mods.taunt) for (const sk in u.skillT) u.skillT[sk] = Math.min(u.skillT[sk], 1.5); // boss talk: taunted, it opens with its fury
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name, { kind: 'boss', spr: 'e:' + id }); FX.shake(6); FX.sound('boss'); }
@@ -573,6 +573,7 @@ function killUnit(B, u, src) {
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
     traitFell(B, u);
+    FX.cue(B, src && src.boss ? 'kill' : 'fall', u, src);
     if (B.heroes.every(h => !h.alive || h.temp)) FX.text(W / 2, 60, 'The heroes have fallen!', '#ff7a9a', true);
     return;
   }
@@ -603,7 +604,7 @@ function killUnit(B, u, src) {
   if (B.carry > 0 && !u.boss && B.kills >= B.carryAt) { B.carry--; drops++; }
   for (let i = 0; i < drops; i++) { const key = Math.random() < ITEM_DROP.shard ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
-  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
+  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; const ks = src && (src.owner || src); B.bossSlayer = ks && ks.inst ? ks.inst.id : null; FX.cue(B, 'slain', u, src); }
 }
 
 function chainLightning(B, src, first, dmg, n, color, from) {
@@ -669,6 +670,7 @@ function damageCastle(B, dmg, src) {
   if (src && src.alive && src.range <= 40 && (T.bastion || T.walls1)) dealDamage(B, null, src, dmg * (T.bastion ? 0.8 : 0.3), { quiet: true });
   if (src && src.alive && T.fountain && !src.boss) { src.slowT = Math.max(src.slowT || 0, 2); src.slowAmt = Math.max(src.slowAmt || 0, 0.4); }
   if (src && T.walls2) { for (const e of B.enemies) if (e.alive && e !== src && dist(e, src) < 26) dealDamage(B, null, e, dmg * 0.5, { quiet: true }); if (Math.random() < 0.3) FX.particles(src.x, src.y - 8, 5, ['#ffd27a', '#ff9a3a', '#5a3a1a'], { spread: 12 }); }
+  if (!B.cueWall && B.castle.hp < B.castle.max * 0.5 && B.bossUnit && B.bossUnit.alive) { B.cueWall = true; FX.cue(B, 'wall', B.bossUnit); } // fight barks (barks.js)
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 
@@ -909,7 +911,7 @@ function bossSkill(B, u, sk) {
     case 'breath': { B.zones.push({ type: 'breath', x: u.x - 30, y: u.y, t: 0, dur: 1.4, src: u, tick: 0 }); FX.sound('breath'); return 7; }
     case 'gust': for (const h of targets) { if (!h.rafter) { h.x = Math.max(CASTLE_X + 8, h.x - 30); } dealDamage(B, u, h, u.atk * 0.4, { quiet: false }); } FX.gust(); FX.shake(5); FX.sound('gust'); return 9;
     case 'fireRain': { const ts = targets.slice().sort(() => Math.random() - 0.5).slice(0, 5); for (const h of ts) B.zones.push({ type: 'telegraph', x: h.x, y: h.y, r: 18, t: 0, dur: 1.1, meteor: true, onEnd: z => { for (const hh of inRadius(B.heroes, z, z.r)) dealDamage(B, u, hh, u.atk * 1.3); FX.explode(z.x, z.y - 4, 18, ['#ffde3a', '#ff8a3a', '#ff3d3d']); FX.shake(3); FX.sound('boom'); } }); return 8; }
-    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; FX.fury(u); return 99;
+    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; u.furyBark = FX.cue(B, 'fury', u); FX.fury(u); return 99;
     case 'laser': { const t = pick(targets); if (!t) return 3; B.zones.push({ type: 'laser', t: 0, dur: 1.6, src: u, ty: t.y, tick: 0 }); FX.sound('beam'); return 8; }
   }
   return 6;
@@ -962,6 +964,11 @@ function stepBattle(B, dt) {
   B.t += dt;
   const run = B.run;
   if (B.bossUnit && B.bossUnit.shards) stepShards(B);
+  // fight barks (barks.js): a line a second in, and the boss's panic when it drops under 35%
+  if (!B.cueStart && B.t > 1.2) { B.cueStart = true; FX.cue(B, 'start'); }
+  if (B.barkReply && B.t >= B.barkReply) { B.barkReply = 0; FX.cue(B, 'reply'); }
+  if (B.cueArrive && B.bossUnit) { B.cueArrive = false; FX.cue(B, 'arrive', B.bossUnit); }
+  if (!B.cueLow && B.bossUnit && B.bossUnit.alive && B.bossUnit.hp < B.bossUnit.maxHp * 0.35) { B.cueLow = true; FX.cue(B, 'low', B.bossUnit); }
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
     spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, wstar: q.wstar, defected: q.defected, route: q.route }); B.lastSpawn = B.t; }

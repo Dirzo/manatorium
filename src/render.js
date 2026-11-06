@@ -508,6 +508,7 @@ function renderFrame(V, dt) {
   drawSpellFX(ctx, k, ox, oy, B);
   if (!B && typeof G !== 'undefined' && G.run && G.run.finale !== 'ready' && G.phase === 'prep') drawPlanLabels(ctx, k, G.run);
   if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
+  if (typeof drawBarks === 'function') drawBarks(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);

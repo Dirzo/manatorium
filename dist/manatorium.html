@@ -1496,6 +1496,47 @@ html.m .shop { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 html.m #banner .k-hero .bspr { width: 56px; height: 56px; }
 html.m #banner .k-hero .bspr.live { width: 100px; height: 85px; }
 
+/* ===== boss talk that notices you (talkmore.js, 2026-11-06) ===== */
+/* 7. emotes over the speaker's head, and the little move that goes with them */
+.tk-emo { position: absolute; left: 62%; top: -14%; z-index: 3; font-family: var(--f-display); font-weight: 800; font-style: normal; font-size: clamp(26px, 4vw, 48px); line-height: 1;
+  color: #fffdf4; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 rgba(15,20,48,.45); animation: tkEmo 2.2s ease-out forwards; pointer-events: none; }
+.tk-boss .tk-emo { left: 30%; top: 2%; }
+.tk-emo.em-anger { color: #ff4a5a; rotate: 12deg; letter-spacing: -.12em; }
+.tk-emo.em-heart { color: #ff7ab8; } .tk-emo.em-note { color: #9ad8ff; } .tk-emo.em-q { color: #ffd84a; } .tk-emo.em-bang { color: #ffd84a; }
+.tk-emo.em-sweat { width: .5em; height: .7em; background: #8ad8ff; border: 2px solid var(--ink); border-radius: 50% 0 50% 50%; transform: rotate(-45deg); top: 2%; left: 66%; }
+@keyframes tkEmo { 0% { opacity: 0; translate: 0 8px; scale: .4; } 14% { opacity: 1; translate: 0 -4px; scale: 1.2; } 24% { translate: 0 0; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -6px; } }
+.tk-a.mv-hop canvas { animation: mvHop .5s cubic-bezier(.3,1.6,.5,1); }
+.tk-a.mv-tilt canvas { animation: mvTilt .7s ease-in-out; }
+.tk-a.mv-shiver canvas { animation: mvShiver .12s linear 5; }
+.tk-a.mv-sway canvas { animation: mvTilt .7s ease-in-out; }
+.tk-a.mv-stomp canvas { animation: tkStomp .45s cubic-bezier(.3,1.6,.5,1); }
+@keyframes mvHop { 40% { transform: translateY(-12%); } }
+@keyframes mvTilt { 35% { transform: rotate(-7deg); } 70% { transform: rotate(4deg); } }
+@keyframes mvShiver { 25% { transform: translateX(-2%); } 75% { transform: translateX(2%); } }
+/* 5. lettering per speaker: shouted words shake, honks are huge, the slime wobbles, the wyrm takes its time */
+.tk-bub p b.yell { display: inline-block; font-weight: 800; animation: txYell .18s steps(2) infinite; }
+.tk-bub p b.honk { display: inline-block; font-size: 1.35em; font-weight: 800; letter-spacing: .04em; color: #c45a0a; transform: rotate(-3deg); }
+.tk-bub.tx-wobble p .w { white-space: nowrap; }
+.tk-bub.tx-wobble p i { display: inline-block; font-style: normal; animation: txWob 1.1s ease-in-out infinite; animation-delay: var(--d); }
+.tk-bub.tx-smoke p { letter-spacing: .05em; color: #3a2060; }
+.tk-bub.tx-show p { font-family: var(--f-display); }
+.tk-bub.tx-show p b.yell { color: #c4202a; font-size: 1.1em; }
+.tk-bub.tx-posh p { font-style: italic; }
+.tk-bub.tx-frost p { color: #24507a; }
+.tk-bub.tx-chatter p { letter-spacing: -.01em; }
+.tk-bub.tx-sea p b.yell { color: #1a5a8a; }
+.tk-bub.tx-shaky p { animation: txShaky .25s steps(2) infinite; }
+@keyframes txYell { 50% { transform: translate(1px, -1px); } }
+@keyframes txWob { 50% { transform: translateY(-3px); } }
+@keyframes txShaky { 50% { transform: translateX(.5px); } }
+@media (prefers-reduced-motion: reduce) { .tk-bub p b.yell, .tk-bub.tx-wobble p i, .tk-bub.tx-shaky p, .tk-emo { animation: none; } }
+/* 4. the boss's secret reply */
+.tk-opt.parley { background: #fff3c8; box-shadow: 0 0 0 3px #e2a91f inset; }
+.tk-opt.parley b { color: #8a4a00; }
+.tk-opt.parley.locked { opacity: .6; filter: grayscale(.7); cursor: not-allowed; }
+.tk-opt.parley.locked b::before { content: 'Locked · '; font-size: .8em; }
+.tk-opts:has(.parley) { gap: 8px; } .tk-opts:has(.parley) .tk-opt { width: min(230px, 22vw); }
+
 /* ===== Mobile: phone layouts and touch controls (html.m = phone layout, html.touch = finger input) ===== */
 #safeProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) var(--safe-area-inset-right, env(safe-area-inset-right, 0px)) var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); }
 #mMore, #mMenu, #mDet, #mDetX, .m-det > .none { display: none; }
@@ -1660,6 +1701,7 @@ html.m .rdiv.field { border-left: 0; }
 #rotateCard .rc-phone { width: 46px; height: 80px; border: 4px solid #ffe6a0; border-radius: 9px; position: relative; animation: rcturn 2.2s ease-in-out infinite; margin-bottom: 10px; }
 #rotateCard .rc-phone i { position: absolute; left: 50%; bottom: 5px; width: 10px; height: 3px; margin-left: -5px; border-radius: 2px; background: #ffe6a0; }
 @keyframes rcturn { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+html.m-land .tk-opts:has(.parley) { gap: 6px; } html.m-land .tk-opts:has(.parley) .tk-opt { width: 22vw; }
 /* ===== Board-first desktop layout (src/board.js). Everything is scoped to html.board so phone layouts stay as they are. ===== */
 img.pxi { width: 18px; height: 18px; vertical-align: -3px; image-rendering: pixelated; display: inline-block; flex: 0 0 auto; }
 .chip img.pxi, .btn img.pxi { width: 16px; height: 16px; }
@@ -4843,7 +4885,7 @@ function dreadedBy(bossId, h) { return !!h && (BOSS_DREAD[bossId] || []).include
 // a voice with a temper the boss dreads loses their nerve before the boss siege: they still fight, but start it stunned (mods.shaken)
 function mishapDue(run, h) { return !!h && isBossSiege(run.siege) && run.finale !== 'ready' && !h.vault && dreadedBy(bossFor(run.siege), h); }
 // the boss-siege replies (taunt / firm / rallycry, goad at the finale): only one counts
-const TALK_REPLIES = ['taunt', 'firm', 'rallycry', 'goad'];
+const TALK_REPLIES = ['taunt', 'firm', 'rallycry', 'goad', 'parley'];
 function setTalkReply(run, mod) { for (const k of TALK_REPLIES) delete run.mods[k]; if (mod) run.mods[mod] = true; }
 function heroTemper(h) { if (!h.temper) { let x = 0; for (const c of String(h.uid)) x = (x * 31 + c.charCodeAt(0)) >>> 0; h.temper = TEMPER_KEYS[x % TEMPER_KEYS.length]; } return h.temper; }
 function temperCounts(run) { const c = {}; for (const h of placedHeroes(run)) { const t = heroTemper(h); c[t] = (c[t] || 0) + 1; } return c; }
@@ -5157,7 +5199,7 @@ function spawnEnemy(B, id, opts = {}) {
   const ws = opts.wstar || 1; if (tc) { hm *= (1 + 0.3 * tc.rar) * WARBAND.hp[ws - 1]; am *= (1 + 0.15 * tc.rar) * WARBAND.atk[ws - 1]; }
   if (tac === 'swarm') hm *= 0.65; if (tac === 'blitz') hm *= 0.85;
   if (mods.curse) hm *= 1.3;
-  if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8;
+  if (d.boss && mods.bossmad) hm *= 1.25; if (d.boss && mods.bosssoft) hm *= 0.8; if (d.boss && mods.parley) hm *= 0.85; // boss talk: parley
   if (d.boss && mods.goad) am *= 1.15; // boss talk (finale): you goaded the goose
   let vs = 1, spdM = rand(0.92, 1.08);
   if (mods.tiny && !d.boss) { hm *= 0.75; vs = 0.7; spdM *= 1.3; }
@@ -5171,7 +5213,7 @@ function spawnEnemy(B, id, opts = {}) {
   const swk = opts.sw && !d.boss ? opts.sw : 1; hm /= swk; am /= swk; if (opts.rush) spdM *= 1.15; if (tac === 'blitz') spdM *= 1.35;
   const hp = Math.round(d.hp * hm);
   const u = makeUnit('enemy', { def: d, id, key: 'e:' + id, x: opts.x != null ? opts.x : W + rand(8, 30), y, maxHp: hp, hp, atk: d.atk * am, as: d.as, range: d.range, spd: d.spd * spdM, armor: d.armor,
-    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
+    flying: fly, z: fly ? 16 : 0, scale: d.scale || 1, vscale: vs, gold: Math.round(d.gold * goldMul(s) / swk * BAL.goldK * (d.boss ? BAL.bossGold * (mods.bossmad ? 2 : 1) * (mods.taunt ? 1.25 : 1) * (mods.parley ? 0.5 : 1) : 1)), xpv: (d.boss === 'big' ? 200 : d.boss ? 90 : (d.cost || 1) * BAL.xpK / swk) * (1 + 0.07 * (s - 1)),
     boss: d.boss, skillT: {}, name: d.name, hat: !!mods.partyhats, route, rofs: route ? y - route.y0 : 0 });
   if (tac === 'shieldwall') u.armor += 30;
   if (cap) { u.captain = true; u.scale *= 1.25; u.name = 'Captain ' + u.name; }
@@ -5183,7 +5225,7 @@ function spawnEnemy(B, id, opts = {}) {
   if (hzK === 'fog' && u.range > 40) u.range = Math.max(40, u.range * 0.7);
   if (hzK === 'goldrush') u.gold = Math.round(u.gold * 1.5);
   if (id === 'shardgoose') { u.shards = 12; u.shardBase = { atk: u.atk, armor: u.armor }; }
-  if (d.boss) { B.bossUnit = u; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
+  if (d.boss) { B.bossUnit = u; B.cueArrive = true; u.final = s >= FINAL_SIEGE; u.y = GRID.y + GRID.rows * GRID.cell / 2 + 6; for (const sk of d.skills) u.skillT[sk] = rand(3, 6); if (BOSS_MOVES[id]) u.skillT.move = 5;
     if (mods.taunt) for (const sk in u.skillT) u.skillT[sk] = Math.min(u.skillT[sk], 1.5); // boss talk: taunted, it opens with its fury
     FX.shake(14); FX.flash('#ffffff', 0.25); FX.combo(W / 2, 64, d.name.toUpperCase(), ['#ff5d8f', '#ffd84a']); FX.sound('roar');
     FX.banner(d.boss === 'big' ? 'BOSS' : 'MINI-BOSS', d.name, { kind: 'boss', spr: 'e:' + id }); FX.shake(6); FX.sound('boss'); }
@@ -5303,6 +5345,7 @@ function killUnit(B, u, src) {
     u.alive = false; u.hp = 0; u.deadT = 0; FX.particles(u.x, u.y - 8, 12, '#ffffff', { spread: 30 }); FX.sound('herodie');
     if (!u.temp) FX.text(u.x, u.y - 26, 'XP lost', '#ff7a9a', true, true);
     traitFell(B, u);
+    FX.cue(B, src && src.boss ? 'kill' : 'fall', u, src);
     if (B.heroes.every(h => !h.alive || h.temp)) FX.text(W / 2, 60, 'The heroes have fallen!', '#ff7a9a', true);
     return;
   }
@@ -5333,7 +5376,7 @@ function killUnit(B, u, src) {
   if (B.carry > 0 && !u.boss && B.kills >= B.carryAt) { B.carry--; drops++; }
   for (let i = 0; i < drops; i++) { const key = Math.random() < ITEM_DROP.shard ? 'shard' : pick(COMP_KEYS); B.drops.push(key); FX.drop(u.x + i * 6, u.y - 10 - u.z, key); }
   if (u.def.split) { const n = u.boss ? 6 : 2; for (let i = 0; i < n; i++) spawnEnemy(B, u.def.split, { x: u.x + rand(-10, 10), y: clamp(u.y + rand(-14, 14), GRID.y, GRID.y + GRID.rows * GRID.cell) }); }
-  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; }
+  if (u.boss) { FX.hitstop(0.35); FX.shake(10); FX.flash('#ffffff', 0.6); FX.banner(u.def.boss === 'big' ? 'BOSS SLAIN' : 'MINI-BOSS SLAIN', u.def.name, { kind: 'slain', spr: 'e:' + u.id }); B.bossKilled = u.def.boss; const ks = src && (src.owner || src); B.bossSlayer = ks && ks.inst ? ks.inst.id : null; FX.cue(B, 'slain', u, src); }
 }
 
 function chainLightning(B, src, first, dmg, n, color, from) {
@@ -5399,6 +5442,7 @@ function damageCastle(B, dmg, src) {
   if (src && src.alive && src.range <= 40 && (T.bastion || T.walls1)) dealDamage(B, null, src, dmg * (T.bastion ? 0.8 : 0.3), { quiet: true });
   if (src && src.alive && T.fountain && !src.boss) { src.slowT = Math.max(src.slowT || 0, 2); src.slowAmt = Math.max(src.slowAmt || 0, 0.4); }
   if (src && T.walls2) { for (const e of B.enemies) if (e.alive && e !== src && dist(e, src) < 26) dealDamage(B, null, e, dmg * 0.5, { quiet: true }); if (Math.random() < 0.3) FX.particles(src.x, src.y - 8, 5, ['#ffd27a', '#ff9a3a', '#5a3a1a'], { spread: 12 }); }
+  if (!B.cueWall && B.castle.hp < B.castle.max * 0.5 && B.bossUnit && B.bossUnit.alive) { B.cueWall = true; FX.cue(B, 'wall', B.bossUnit); } // fight barks (barks.js)
   if (B.castle.hp <= 0 && !B.done) { B.castle.hp = 0; B.done = 'defeat'; FX.shake(12); FX.sound('castlefall'); }
 }
 
@@ -5639,7 +5683,7 @@ function bossSkill(B, u, sk) {
     case 'breath': { B.zones.push({ type: 'breath', x: u.x - 30, y: u.y, t: 0, dur: 1.4, src: u, tick: 0 }); FX.sound('breath'); return 7; }
     case 'gust': for (const h of targets) { if (!h.rafter) { h.x = Math.max(CASTLE_X + 8, h.x - 30); } dealDamage(B, u, h, u.atk * 0.4, { quiet: false }); } FX.gust(); FX.shake(5); FX.sound('gust'); return 9;
     case 'fireRain': { const ts = targets.slice().sort(() => Math.random() - 0.5).slice(0, 5); for (const h of ts) B.zones.push({ type: 'telegraph', x: h.x, y: h.y, r: 18, t: 0, dur: 1.1, meteor: true, onEnd: z => { for (const hh of inRadius(B.heroes, z, z.r)) dealDamage(B, u, hh, u.atk * 1.3); FX.explode(z.x, z.y - 4, 18, ['#ffde3a', '#ff8a3a', '#ff3d3d']); FX.shake(3); FX.sound('boom'); } }); return 8; }
-    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; FX.fury(u); return 99;
+    case 'move': if (!BOSS_MOVES[u.id]) return 8; u.fury = { t: 0, dur: 1.1 }; u.furyBark = FX.cue(B, 'fury', u); FX.fury(u); return 99;
     case 'laser': { const t = pick(targets); if (!t) return 3; B.zones.push({ type: 'laser', t: 0, dur: 1.6, src: u, ty: t.y, tick: 0 }); FX.sound('beam'); return 8; }
   }
   return 6;
@@ -5692,6 +5736,11 @@ function stepBattle(B, dt) {
   B.t += dt;
   const run = B.run;
   if (B.bossUnit && B.bossUnit.shards) stepShards(B);
+  // fight barks (barks.js): a line a second in, and the boss's panic when it drops under 35%
+  if (!B.cueStart && B.t > 1.2) { B.cueStart = true; FX.cue(B, 'start'); }
+  if (B.barkReply && B.t >= B.barkReply) { B.barkReply = 0; FX.cue(B, 'reply'); }
+  if (B.cueArrive && B.bossUnit) { B.cueArrive = false; FX.cue(B, 'arrive', B.bossUnit); }
+  if (!B.cueLow && B.bossUnit && B.bossUnit.alive && B.bossUnit.hp < B.bossUnit.maxHp * 0.35) { B.cueLow = true; FX.cue(B, 'low', B.bossUnit); }
   while (B.queue.length && B.queue[0].t <= B.t) { const q = B.queue.shift();
     if (q.event) { B.wave = q.wave; B.waves_of = q.of; if (q.event === 'surge') { FX.combo(W / 2, 46, 'THE HORDE SURGES', ['#ff3d6e', '#ffd84a']); FX.shake(8); FX.sound('roar'); FX.surge && FX.surge(q.n); } else { FX.combo(W / 2, 46, `WAVE ${q.wave}`, ['#ffd84a', '#ffffff']); FX.sound('boss'); } continue; }
     spawnEnemy(B, q.id, { sw: q.sw, rush: q.rush, captain: q.captain, turncoat: q.turncoat, wstar: q.wstar, defected: q.defected, route: q.route }); B.lastSpawn = B.t; }
@@ -7196,6 +7245,7 @@ function finishSiege(run, meta, B) {
   run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a better roll on the next shop, and every fourth press a loot pick
   if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; rep.press = { gold: g, loot: A2.pressed % 4 === 0 }; }
+  if (typeof noteBossMemory === 'function') noteBossMemory(run, meta, B, rep); // boss talk remembers you across runs (talkmore.js)
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
@@ -7756,6 +7806,7 @@ function stepFX(dt) {
   FXS.clock += dt; if (FXS.slowmo > 0) FXS.slowmo -= dt;
   if (typeof stepSpellFX === 'function') stepSpellFX(dt);
   if (typeof stepBossFX === 'function') stepBossFX(dt);
+  if (typeof stepBarks === 'function') stepBarks(dt);
   for (const a of ['dmgs', 'cutins', 'shocks', 'combos']) { for (const o of FXS[a]) o.t += dt; FXS[a] = FXS[a].filter(o => o.t < o.life); }
   for (const d of FXS.drops) { d.t += dt; if (d.t < 0.7) { d.vy += 220 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.y > d.ground) { d.y = d.ground; d.vy *= -0.5; d.vx *= 0.6; } } else if (!d.flown) { d.flown = true; UI.flyItem && UI.flyItem(d); } }
   FXS.drops = FXS.drops.filter(d => !d.flown);
@@ -8333,7 +8384,8 @@ Object.assign(FX, {
   // the wind-up: a roar line, a shake and a burst of steam
   fury(u) {
     const sz = 20 * (u.scale || 1);
-    FX.text(u.x, u.y - sz - 14, pick(FURY_LINES[u.id] || FURY_LINES._), '#ff5d5d', true, true);
+    // the first two wind-ups of a siege are said in a speech bubble (barks.js), later ones just flash the roar
+    if (!u.furyBark) FX.text(u.x, u.y - sz - 14, pick(FURY_LINES[u.id] || FURY_LINES._), '#ff5d5d', true, true);
     FX.shake(4); FX.sound('quake');
     for (let i = 0; i < 18; i++) FXS.parts.push({ x: u.x + rand(-sz / 2, sz / 2), y: u.y - rand(sz * 0.4, sz), vx: rand(-30, 30), vy: rand(-40, -10), life: rand(0.4, 0.8), t: 0, color: pick(['#ffffff', '#d8d8e8', '#ff8a8a']), size: 1, grav: -20 });
   },
@@ -8440,6 +8492,109 @@ function drawBossFX(ctx, k, ox, oy, B) {
     }
   }
   ctx.globalAlpha = 1;
+}
+
+// ===== Fight barks (Cam 2026-11-06): the talk keeps going once the siege starts =====
+// Short speech bubbles over a boss or your voice at a few key moments, typed out in their own babble (voices.js).
+// sim.js calls FX.cue(B, kind, unit, src); the headless sims stub FX, so none of this touches the fight itself.
+// Kinds: start (a second in), fury (the boss winds up, first two times), low (boss under 35%), wall (keep under half while the
+// boss stands), kill (the boss drops a champion), fall (another champion drops), slain (the boss goes down).
+const BOSS_BARK = {
+  grubnose: { start: 'CHARGE-ISH!', low: 'Ow! OW! Not the face! Not the BUCKET!', kill: 'BONK! Royal bonk!', wall: 'I can see your SPOONS from here!', down: 'My bucket... look after my bucket...' },
+  gloop: { start: 'Wobble at them, sweeties!', low: 'Mother is... leaking...', kill: 'Into the pudding with you, dear.', wall: 'Ooh, damp walls. Mother likes damp walls.', down: 'Mother will... reform... eventually...' },
+  wyrm: { start: 'Chapter one. The siege begins.', low: 'This was NOT in the outline!', kill: 'And so they fell. Beautiful prose.', wall: 'The walls crumble. Foreshadowing!', down: 'The end... ugh... a cliffhanger...' },
+  ringmaster: { start: 'LADIES AND GENTLEMEN!', low: 'Intermission! INTERMISSION!', kill: 'And they DISAPPEAR!', wall: 'The crowd goes WILD!', down: 'Curtain... call...' },
+  sporebaron: { start: 'Court is in session.', low: 'I seem to be... wilting.', kill: 'Back to the soil, darling.', wall: 'Such lovely damp cracks.', down: 'Plant me... somewhere shady...' },
+  matriarch: { start: 'Inspection begins NOW.', low: 'This is highly irregular!', kill: 'Evicted.', wall: 'Structural failure. Noted. FINED.', down: 'I want... to speak... to your manager...' },
+  trashpaw: { start: 'Dinner time, babies!', low: 'Mama needs a minute, sugar!', kill: 'Mama ate that one.', wall: 'Lid\'s comin\' off, sugar!', down: 'Save Mama... a plate...' },
+  colossus: { start: 'DEMOLITION: STARTED.', low: 'WARNING. WARNING. OUCH.', kill: 'UNIT REMOVED. SORRY.', wall: 'WALL INTEGRITY: LOW. HAPPINESS: HIGH.', down: 'WARRANTY... VOID...' },
+  pinchbeard: { start: 'BOARD \'EM, ME CRABS!', low: 'I\'m takin\' on water!', kill: 'Overboard with ye!', wall: 'Breach in the hull! THEIR hull!', down: 'Tell me crabs... I loved \'em...' },
+  goosegod: { start: 'HONK!', low: 'honk... (Translation: ow.)', kill: 'HONK. (Translation: Mine.)', wall: 'HONK HONK! (Translation: Bread time.)', down: 'HOOonk... (Translation: I will be back.)' },
+  shardgoose: { start: 'HOOOONK!', low: 'HONK?! (Translation: My shards!)', kill: 'HONK. (Translation: Into the nest.)', wall: 'HONK! (Translation: The hall is MINE.)', down: 'honk... (Translation: ...fine. Keep them.)' },
+};
+// your voice, by temper: start = a battle cry (or an answer to the boss's), fall = another champion drops, slay = they finish the boss
+const HERO_BARK = {
+  heroic: { start: 'Hold the line!', fall: 'I\'ll carry on for you!', slay: 'For the keep!' },
+  cheerful: { start: 'Let\'s go, team!', fall: 'Nooo! Get up! Please?', slay: 'We did it! Yay!' },
+  honorable: { start: 'Fight with honour!', fall: 'You fought well, friend.', slay: 'A fair fight. Well fought.' },
+  wholesome: { start: 'Everyone be careful!', fall: 'Oh no! Someone get a blanket!', slay: 'Sorry! Sorry! Good fight!' },
+  zealous: { start: 'FOR THE LIGHT!', fall: 'Your sacrifice burns bright!', slay: 'JUDGEMENT!' },
+  wise: { start: 'As planned.', fall: 'That was not in the plan.', slay: 'Predictable.' },
+  loyal: { start: 'Together, everyone!', fall: 'I\'ve got your back!', slay: 'That one\'s for my friends!' },
+  optimistic: { start: 'This is going to go great!', fall: 'Still going great! Mostly!', slay: 'Told you so!' },
+  angry: { start: 'COME HERE!', fall: 'NOW I\'M ANGRY!', slay: 'AND STAY DOWN!' },
+  cruel: { start: 'Make it hurt.', fall: 'Weak.', slay: 'Pathetic.' },
+  greedy: { start: 'Loot first, questions later!', fall: 'Dibs on their stuff!', slay: 'Mine! The loot is mine!' },
+  vain: { start: 'Watch this, everyone.', fall: 'Ugh. Not in front of me.', slay: 'Did everyone see that?' },
+  deranged: { start: 'Hehehe. Fight time!', fall: 'They\'re just napping! Probably!', slay: 'Can I keep the head?' },
+  paranoid: { start: 'It\'s a trap! It\'s always a trap!', fall: 'I KNEW it!', slay: 'Is it really dead? Poke it.' },
+  cowardly: { start: 'I\'ll be... right here. At the back.', fall: 'Eep! Who\'s next? Not me!', slay: 'D-did I do that?' },
+  lazy: { start: 'Wake me when it\'s over.', fall: 'Ugh. More work for me.', slay: 'Can I go back to bed now?' },
+};
+const BARKS = [];
+const BARK_MAX = 4, BARK_GAP = 3.2, BARK_CPS = 34;
+function barkVoiceUnit(B) { const v = B.run && B.run.voice; return v ? B.heroes.find(x => x.alive && x.inst && x.inst.uid === v.uid) : null; }
+function barkSay(B, u, text, voice, hero, force) {
+  if (!u || !text) return false;
+  if (!force && ((B.barkN || 0) >= BARK_MAX || B.t - (B.barkT != null ? B.barkT : -99) < BARK_GAP)) return false;
+  B.barkN = (B.barkN || 0) + 1; B.barkT = B.t;
+  for (let i = BARKS.length - 1; i >= 0; i--) if (BARKS[i].u === u) BARKS.splice(i, 1);
+  BARKS.push({ u, text, n: 0, t: 0, life: text.length / BARK_CPS + 1.7, vx: voiceFor(voice), hero, caps: false });
+  if (BARKS.length > 2) BARKS.shift();
+  return true;
+}
+Object.assign(FX, {
+  cue(B, kind, u, src) {
+    if (typeof TALK_PREF !== 'undefined' && TALK_PREF.mode === 'off') return;
+    if (!B || !B.run) return;
+    const boss = B.bossUnit && B.bossUnit.boss ? B.bossUnit : null, L = boss && BOSS_BARK[boss.id], vu = barkVoiceUnit(B);
+    const hv = h => ({ hero: h.inst.id, temper: heroTemper(h.inst) }), H = h => HERO_BARK[heroTemper(h.inst)] || HERO_BARK.heroic;
+    // the boss arrives with its battle cry and your voice answers it; an ordinary siege sometimes opens with the voice's cry
+    if (kind === 'arrive') { if (L && u.alive && barkSay(B, u, L.start, u.id, false, true) && vu) B.barkReply = B.t + 1.6; }
+    else if (kind === 'reply') { if (vu) barkSay(B, vu, H(vu).start, hv(vu), true, true); }
+    else if (kind === 'start') { if (vu && !B.bossUnit && !isBossSiege(B.siege) && B.run.finale !== 'ready' && Math.random() < 0.6) barkSay(B, vu, H(vu).start, hv(vu), true); } else if (kind === 'fury') { if (L && u === boss && (B.furyBarks = (B.furyBarks || 0) + 1) <= 2) return barkSay(B, u, pick(FURY_LINES[u.id] || FURY_LINES._), u.id, false, true); return false; }
+    else if (kind === 'low' && L) barkSay(B, boss, L.low, boss.id, false);
+    else if (kind === 'wall' && L) barkSay(B, boss, L.wall, boss.id, false);
+    else if (kind === 'kill' && L && src === boss) barkSay(B, boss, L.kill, boss.id, false);
+    else if (kind === 'fall' && vu && u !== vu && !u.temp && !B.fallBark) { B.fallBark = true; barkSay(B, vu, H(vu).fall, hv(vu), true); }
+    else if (kind === 'slain' && L && u === boss) {
+      const k = src && (src.owner || src);
+      if (vu && k === vu) barkSay(B, vu, H(vu).slay, hv(vu), true, true); else barkSay(B, u, L.down, u.id, false, true);
+    }
+  },
+});
+function stepBarks(dt) {
+  for (const b of BARKS) {
+    b.t += dt; const want = Math.min(b.text.length, Math.floor(b.t * BARK_CPS));
+    while (b.n < want) { b.n++; const ch = b.text[b.n - 1]; try { if (VOX.due(b.vx, ch, b.n)) VOX.say(b.vx, ch, b.n, b.text[b.n] || ' '); } catch (e) { } }
+  }
+  for (let i = BARKS.length - 1; i >= 0; i--) if (BARKS[i].t >= BARKS[i].life) BARKS.splice(i, 1);
+}
+// drawn on the hi-res layer above the fight: a comic bubble over the speaker's head, tail pointing down at them
+function drawBarks(ctx, k, ox, oy, B) {
+  if (!B || !BARKS.length) { if (!B) BARKS.length = 0; return; }
+  for (const b of BARKS) {
+    const u = b.u, a = Math.min(1, (b.life - b.t) * 3), pop = b.t < 0.12 ? 0.7 + b.t * 2.5 : 1;
+    const fs = 5.2 * k, pad = 3 * k, maxW = 96 * k;
+    ctx.save(); ctx.globalAlpha = Math.max(0, a);
+    ctx.font = `700 ${fs}px "Cinzel", "Atkinson Hyperlegible", sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    // wrap the full line so the bubble keeps its size while it types
+    const words = b.text.split(' '), lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur);
+    const tw = Math.max(...lines.map(l => ctx.measureText(l).width)), lh = fs * 1.2, bw = tw + pad * 2, bh = lines.length * lh + pad * 2 - fs * 0.15;
+    const hx = u.x * k + ox, top = (u.y - 20 * (u.vscale || u.scale || 1) - (u.z || 0) - 6) * k + oy;
+    let bx = hx - bw / 2; bx = Math.max(2 * k, Math.min(W * k - bw - 2 * k, bx)); const by = Math.max(14 * k, top - bh - 4 * k);
+    ctx.translate(hx, by + bh); ctx.scale(pop, pop); ctx.translate(-hx, -(by + bh));
+    const r = 3 * k; ctx.fillStyle = '#fffdf4'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = 1.2 * k;
+    ctx.beginPath(); ctx.moveTo(bx + r, by); ctx.lineTo(bx + bw - r, by); ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r); ctx.lineTo(bx + bw, by + bh - r); ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+    const tx = Math.max(bx + r + 3 * k, Math.min(bx + bw - r - 3 * k, hx));
+    ctx.lineTo(tx + 2.5 * k, by + bh); ctx.lineTo(tx, by + bh + 4 * k); ctx.lineTo(tx - 2.5 * k, by + bh);
+    ctx.lineTo(bx + r, by + bh); ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r); ctx.lineTo(bx, by + r); ctx.quadraticCurveTo(bx, by, bx + r, by); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = b.hero ? '#1a1230' : '#8a1a3a';
+    let left = b.n;
+    lines.forEach((l, i) => { if (left <= 0) return; const s = l.slice(0, left); left -= l.length + 1; ctx.fillText(s, bx + pad, by + pad + i * lh); });
+    ctx.restore();
+  }
 }
 
 // ===== Ultimates: Cinder Colossus, Glacier Lance, Grasp of the Crypt, Tempest Cage, Rocket Barrage, Lotus Sanctuary =====
@@ -9403,6 +9558,7 @@ function renderFrame(V, dt) {
   drawSpellFX(ctx, k, ox, oy, B);
   if (!B && typeof G !== 'undefined' && G.run && G.run.finale !== 'ready' && G.phase === 'prep') drawPlanLabels(ctx, k, G.run);
   if (typeof drawBossFX === 'function') drawBossFX(ctx, k, ox, oy, B);
+  if (typeof drawBarks === 'function') drawBarks(ctx, k, ox, oy, B);
   // boss bar
   if (B && B.bossUnit && B.bossUnit.alive) { const u = B.bossUnit, bw = 200 * k, bx = (W * k - bw) / 2, by = 8 * k;
     ctx.fillStyle = OUTLINE; ctx.fillRect(bx - k, by - k, bw + 2 * k, 7 * k); ctx.fillStyle = '#3a2a4a'; ctx.fillRect(bx, by, bw, 5 * k); ctx.fillStyle = u.def.boss === 'big' ? '#ff3d6e' : '#ffb02e'; ctx.fillRect(bx, by, bw * u.hp / u.maxHp, 5 * k);
@@ -13073,13 +13229,23 @@ function talkScene(run) {
   if (sp.stand) beats.push({ who: 'hero', text: `${talkVoiceFirst(run.voice.name)} is stuck in the goose's nest, so I'm answering for the keep.` });
   if (finale) beats.push({ who: 'boss', text: `HONK. (Translation: Every legend you have left, in MY great hall. I wear all twelve shards, and I am not sharing.)` });
   // read the mood when the line plays: a story choice made earlier in the same scene can still sway the boss
-  const open = () => { const m = run.mood || 0; return i >= 3 && !finale ? (m >= 1 && S.k ? S.k : m <= -1 && S.g ? S.g : S.o) : S.o; };
+  // a boss met in an earlier run greets you with what it remembers (talkmore.js)
+  const mem = i === 0 && !finale && !sp.fallen ? memoryOpener(bossId) : null; if (mem) sc.fresh = true;
+  const open = () => { const m = run.mood || 0; return mem ? mem : i >= 3 && !finale ? (m >= 1 && S.k ? S.k : m <= -1 && S.g ? S.g : S.o) : S.o; };
   let openLine = null; beats.push({ who: 'boss', text: () => openLine || (openLine = fillB(open())) });
   // the voice answers the boss's line in their own temper, about what the boss just said ({q}), and brings up how the
   // run is going: a champion lost last siege, cracked walls, the boss's mood late in the horde, an empty purse at an offer
   const q = (TALK_TOPIC[bossId] || {})[S.t], late = i >= 3 && !finale;
   const asides = ['loss', 'hurt'].concat(late ? ['kind', 'grudge'] : [], S.t === 'offer' ? ['broke'] : []);
+  // the showdown: the boss throws this horde's story choice back at you, in your own words
+  const grudge = i === 4 && !finale ? grudgeLine(run, bossId, f) : null;
+  if (grudge) { sc.fresh = true; beats.push({ who: 'boss', text: fillB(grudge) }); }
   let reply = null; beats.push({ who: 'hero', text: () => reply || (reply = fill(voiceLine(h, S.t), { q }) + (run.siege > 1 && !sc.boss ? talkTail(sc, run, h, asides) : '')) });
+  // once a horde another champion on the field butts in, and the voice answers them
+  const mate = (i === 1 || i === 2) && !finale && !sp.fallen && !sp.stand ? banterMate(run, h, f) : null;
+  if (mate) { run.banter = f; sc.mate = mate; sc.fresh = true; const mf = { mate: talkVoiceFirst(heroDisplayName(mate)) };
+    beats.push({ who: 'mate', text: fill(BANTER_CUT[heroTemper(mate)] || BANTER_CUT.heroic, mf) });
+    beats.push({ who: 'hero', text: fill(BANTER_BACK[talkGroup(h)] || BANTER_BACK.kind, mf) }); }
   const scared = dreads(run, h);
   if (sc.boss) {
     // the first boss talk of a player's life explains the dread (G.meta.seen.dread)
@@ -13101,7 +13267,13 @@ function talkScene(run) {
     sc.react = T.react;
   } else if (run.siege > 1) {
     // siege 1 keeps it short for new players: one line each. Otherwise the boss answers the tone of the reply first
-    beats.push({ who: 'boss', text: scared && i > 0 ? fillB(T.sniff) : fillB(bossRetort(sc, h) + ' ' + S.c) });
+    // the boss comments on something only this run has (a starred legend, a stacked element, endless rerolls, a fat purse)
+    // instead of answering the tone of the reply
+    const nt = scared && i > 0 ? null : boardNotice(run, bossId);
+    if (nt) { sc.fresh = true; sc.notice = nt; }
+    // a scene seen in an earlier run with nothing new in it skips the boss's last word
+    const repeat = G.meta.talkSeen && G.meta.talkSeen[sc.seenKey] && !sc.fresh;
+    if (!repeat) beats.push({ who: 'boss', text: () => { if (scared && i > 0) return fillB(T.sniff); if (nt) { nt.seal(); return fillB(nt.line + ' ' + S.c); } return fillB(bossRetort(sc, h) + ' ' + S.c); } });
   }
   return sc;
 }
@@ -13118,7 +13290,8 @@ const TALK_CHOICES_FINALE = [
 ];
 // what the reply does, for the scouts panel during the siege
 const TALK_REPLY_NOTE = { taunt: 'You taunted the boss: it opens with its fury, +25% boss gold, and an extra pick of components if it is a big boss.', firm: 'You stood firm: walls take 15% less damage, the boss is 20% more patient.',
-  rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.' };
+  rallycry: 'You rallied: champions start with half their mana.', goad: 'You goaded the goose: it and your champions hit 15% harder.',
+  parley: 'You found the boss\'s soft spot: it starts 15% weaker and skips its fury opener, but drops half the gold.' };
 
 // ----- the boss gloats (Cam 2026-10-24) -----
 // when the horde wins a siege the keep cracks (BREACH in data.js) and the boss who sent them rubs it in.
@@ -13251,7 +13424,7 @@ function jawFrames(key) {
 // the cinematic bars only hold the title and the reply cards.
 const TALKUI = { on: false };
 // where everyone stands, in field pixels (the 480x270 field, zoomed so the camera has to pan between them)
-const TK_SPOT = { hero: [226, 186], boss: [410, 186], fallen: [196, 184], visitor: [298, 188] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6, visitor: 2.6 };
+const TK_SPOT = { hero: [226, 186], boss: [410, 186], fallen: [196, 184], visitor: [298, 188], mate: [262, 190] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6, visitor: 2.6, mate: 2.4 };
 const TK_CAMP = [[352, 176, 1.7], [468, 190, 2], [452, 172, 1.5]]; // horde extras around the boss on the road: x, feet y, scale
 // how much talk the player wants (Sound panel, localStorage manatorium.talk): 'all', 'boss' (boss sieges and the finale) or 'off'
 const TALK_PREF = { mode: 'all' };
@@ -13277,7 +13450,7 @@ function showTalk(run, done, x = {}) {
   const bossId = sc.bossId, F = FACTIONS[sc.f], E = ENEMIES[bossId], hall = sc.finale;
   // past the right edge of the field lies the boss's own lair (lairs.js); the camera pans across to it
   const lair = !hall && !sc.gloat && LAIRS[bossId] ? LAIRS[bossId] : null, WW = W + (lair ? LAIR_W : 0);
-  const SPOT = { hero: TK_SPOT.hero, fallen: TK_SPOT.fallen, visitor: TK_SPOT.visitor, boss: lair ? [W + lair.bx, 186] : TK_SPOT.boss };
+  const SPOT = { hero: TK_SPOT.hero, fallen: TK_SPOT.fallen, visitor: TK_SPOT.visitor, mate: TK_SPOT.mate, boss: lair ? [W + lair.bx, 186] : TK_SPOT.boss };
   const enc = x.enc, encKey = enc && (enc.portrait && enc.portrait !== 'e:' ? enc.portrait : 'npc:' + enc.id), encWho = enc && (encKey === 'e:' + bossId ? 'boss' : 'visitor');
   const campSpots = lair ? lair.camp.map(([x, y, sc2]) => [W + x, y, sc2]) : TK_CAMP;
   let el = $('talk'); if (!el) { el = document.createElement('div'); el.id = 'talk'; document.body.appendChild(el); }
@@ -13285,7 +13458,7 @@ function showTalk(run, done, x = {}) {
   el.className = 'talk' + (sc.boss ? ' bossy' : '') + (sc.fallen ? ' mourn' : '') + (sc.gloat ? ' gloat' : '');
   const actor = (k, extra = '') => `<div class="tk-a tk-${k}" id="tk-${k}"><i class="tk-shadow"></i>${extra}<canvas width="20" height="22"></canvas></div>`;
   el.innerHTML = `<div class="tk-cam" id="tkCam"><canvas class="tk-field" width="${WW}" height="${H}"></canvas>
-      ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}${encWho === 'visitor' ? actor('visitor') : ''}
+      ${sc.fallen ? actor('fallen', '<i class="tk-candle"></i>') : ''}${actor('hero', '<i class="tk-puddle"></i>')}${actor('boss')}${encWho === 'visitor' ? actor('visitor') : ''}${sc.mate ? actor('mate') : ''}
       <div class="tk-bub" id="tkBub" hidden><b class="tk-who"></b><p></p><span class="tk-more">▼</span></div>
     </div>
     <div class="tk-temper" id="tkTemper"></div>
@@ -13293,7 +13466,7 @@ function showTalk(run, done, x = {}) {
     <div class="tk-bar top"><span class="tk-eyebrow">${sc.eyebrow ? esc(sc.eyebrow) : sc.finale ? 'The great hall' : sc.boss ? `Boss siege ${run.siege}` : `Before siege ${run.siege}`} · ${esc(F.name)}</span><button class="tk-skip" id="tkSkip">Skip ›</button></div>
     <div class="tk-bar bot"><div class="tk-opts" id="tkOpts"></div></div>`;
   el.hidden = false; TALKUI.on = true;
-  const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen'), visitor: el.querySelector('#tk-visitor') };
+  const cam = el.querySelector('#tkCam'), A = { hero: el.querySelector('#tk-hero'), boss: el.querySelector('#tk-boss'), fallen: el.querySelector('#tk-fallen'), visitor: el.querySelector('#tk-visitor'), mate: el.querySelector('#tk-mate') };
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
@@ -13305,6 +13478,7 @@ function showTalk(run, done, x = {}) {
   setHero(sc.h);
   if (sc.fallen) { keys.fallen = 'h:' + sc.fallen.id; A.hero.classList.add('waiting'); }
   if (encWho === 'visitor') { keys.visitor = encKey; A.visitor.classList.add('waiting'); }
+  if (sc.mate) { keys.mate = heroFaceKey(heroSpriteKey(sc.mate, true), sc.mate); A.mate.classList.add('waiting'); }
   const card = el.querySelector('#tkCard'); let encLeft = !!enc; // the card's choice is still to be made
   // replied: a boss reply was picked, so taps only finish lines from here on. gen: bumped by Skip, so a beat still panning in
   // gives up instead of typing over the replies
@@ -13330,7 +13504,7 @@ function showTalk(run, done, x = {}) {
   if (!R.bg[bgKey]) R.bg[bgKey] = hall ? buildHall() : hdPolishBackground(buildBackground(sc.f, run.castleEl), run.castleEl);
   const clouds = [0, 1, 2, 3].map(i => ({ x: i * 130 + 20, y: 10 + i * 11 % 40, w: 18 + i * 5, s: 4 + i }));
   const camp = hall ? [] : campSpots.map((c, i) => { const id = F.pool[i % F.pool.length]; ensureSprite('e:' + id); return SPR['e:' + id] ? { key: 'e:' + id, x: c[0], y: c[1], s: c[2], ph: i * 1.7 } : null; }).filter(Boolean);
-  const mouth = { hero: 0, boss: 0, fallen: 0, visitor: 0 };
+  const mouth = { hero: 0, boss: 0, fallen: 0, visitor: 0, mate: 0 };
   let speaker = null, typing = null, beatI = -1, ended = false, flapT = 0, last = performance.now(), t = 0;
   const bub = el.querySelector('#tkBub'), btxt = bub.querySelector('p'), who = bub.querySelector('.tk-who'), opts = el.querySelector('#tkOpts');
   const tick = now => {
@@ -13345,21 +13519,28 @@ function showTalk(run, done, x = {}) {
       fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
-    for (const n of ['hero', 'boss', 'fallen', 'visitor']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    for (const n of ['hero', 'boss', 'fallen', 'visitor', 'mate']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
       if (n === 'visitor' && !keys.visitor.startsWith('e:')) { g.save(); g.scale(-1, 1); g.drawImage(jawFrames(keys[n])[mouth[n]], -c.width, 0); g.restore(); } else g.drawImage(jawFrames(keys[n])[mouth[n]], 0, 0); } // visitors face your hero
     requestAnimationFrame(tick);
   };
   // each speaker babbles in their own voice while their line types out (voices.js): bosses by id, heroes by temper
-  const voiceOf = w => w === 'boss' ? bossId : w === 'visitor' ? { visitor: encKey } : w === 'fallen' ? { hero: sc.fallen.id || sc.fallen.name, temper: 'heroic', ghost: true } : { hero: cur.id, temper: heroTemper(cur) };
+  const voiceOf = w => w === 'mate' ? { hero: sc.mate.id, temper: heroTemper(sc.mate) } : w === 'boss' ? bossId : w === 'visitor' ? { visitor: encKey } : w === 'fallen' ? { hero: sc.fallen.id || sc.fallen.name, temper: 'heroic', ghost: true } : { hero: cur.id, temper: heroTemper(cur) };
   // text types into the speaker's bubble
+  // every speaker types at their own pace with their own lettering (talkmore.js TALK_TEXT), and a little emote pops over their head
+  const textStyle = w => w === 'boss' ? TALK_TEXT[bossId] || TALK_TEXT.hero : w === 'hero' || w === 'mate' ? TALK_TEXT[talkGroup(w === 'mate' ? sc.mate : cur)] || TALK_TEXT.hero : TALK_TEXT.hero;
   const type = (text, w) => new Promise(res => {
-    const out = btxt, vx = voiceFor(voiceOf(w)); typing = { text, n: 0, res, out }; out.textContent = ''; el.classList.add('typing');
-    const step = () => { if (!typing || typing.text !== text) return; typing.n += 1; out.textContent = text.slice(0, typing.n); const ch = text[typing.n - 1];
+    const out = btxt, vx = voiceFor(voiceOf(w)), ts = textStyle(w); typing = { text, n: 0, res, out, cls: ts.cls }; out.innerHTML = ''; el.classList.add('typing');
+    if (ts.cls) bub.classList.add(ts.cls);
+    if (A[w] && w !== 'fallen') emote(A[w], talkEmote(text, w === 'mate' ? 'hero' : w === 'visitor' ? 'boss' : w, w === 'mate' ? sc.mate : cur));
+    const step = () => { if (!typing || typing.text !== text) return; typing.n += 1; out.innerHTML = talkTextHTML(text.slice(0, typing.n), ts.cls); const ch = text[typing.n - 1];
       if (VOX.due(vx, ch, typing.n) && !(/[.!?]/.test(ch) && /[.!?]/.test(text[typing.n] || ''))) VOX.say(vx, ch, typing.n, text[typing.n] || ' ');
-      if (typing.n >= text.length) { finishType(); return; } setTimeout(step, (/[.!?]/.test(ch) ? 160 : /,/.test(ch) ? 80 : 22) / (fast ? 2 : 1)); };
+      if (typing.n >= text.length) { finishType(); return; } setTimeout(step, Math.max(14, (/[.!?]/.test(ch) ? 160 * ts.stop : /,/.test(ch) ? 80 * ts.stop : 22)) * ts.spd / (fast ? 2 : 1)); };
     step();
   });
-  const finishType = () => { if (!typing) return; const r = typing.res; typing.out.textContent = typing.text; typing = null; el.classList.remove('typing'); r(); };
+  const finishType = () => { if (!typing) return; const r = typing.res; typing.out.innerHTML = talkTextHTML(typing.text, typing.cls); typing = null; el.classList.remove('typing'); r(); };
+  const emote = (a, em) => { a.querySelectorAll('.tk-emo').forEach(x => x.remove()); if (!em) return;
+    const b = document.createElement('b'); b.className = 'tk-emo em-' + em; b.textContent = EMOTE_GLYPH[em]; a.appendChild(b); setTimeout(() => b.remove(), 2200);
+    const mv = EMOTE_MOVE[em]; if (mv) { a.classList.remove(mv); void a.offsetWidth; a.classList.add(mv); setTimeout(() => a.classList.remove(mv), 700); } };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   // speech bubble beside the speaker's head, on the side facing the open field, tail pointing at the mouth
   const placeBubble = w => { const [x, y] = SPOT[w], half = 10 * TK_SCALE[w], top = (y - 20 * TK_SCALE[w] * 1.02) * k, left = w === 'boss';
@@ -13375,10 +13556,10 @@ function showTalk(run, done, x = {}) {
   const say = async (w, think) => {
     speaker = w; for (const n in A) if (A[n]) A[n].classList.toggle('talking', n === w && !think); tcard.classList.toggle('speaking', w === 'hero');
     bub.hidden = true; if (!w) return;
-    const target = w === 'fallen' ? 'hero' : w; if (!think && focusOn !== target) { pan(target); await wait(820); }
+    const target = w === 'fallen' || w === 'mate' ? 'hero' : w; if (!think && focusOn !== target) { pan(target); await wait(820); }
     bub.className = 'tk-bub ' + (w === 'boss' ? 'from-boss' : 'from-hero') + (w === 'boss' && bossId === 'colossus' ? ' robot' : '') + (w === 'fallen' ? ' ghostly' : '') + (think ? ' thought' : '');
     placeBubble(w); bub.hidden = false; btxt.textContent = think || '';
-    who.textContent = w === 'boss' ? E.name : w === 'visitor' ? visitorName() : w === 'fallen' ? sc.fallen.name : heroName(cur) + ' · ' + heroTagText(cur); };
+    who.textContent = w === 'boss' ? E.name : w === 'visitor' ? visitorName() : w === 'fallen' ? sc.fallen.name : w === 'mate' ? heroName(sc.mate) + ' · ' + heroTagText(sc.mate) : heroName(cur) + ' · ' + heroTagText(cur); };
   const beats = (enc ? [{ who: 'enc' }, { who: 'encpick' }] : []).concat(sc.beats);
   let busy = false;
   const encDone = () => { encLeft = false; if (card) card.classList.add('out'); };
@@ -13409,6 +13590,7 @@ function showTalk(run, done, x = {}) {
         busy = false; await type(`HA! ${b.text}`, 'boss'); return; }
       if (b.swap) { await say(null); pan('hero'); setHero(b.swap); A.hero.classList.add('enter'); SFX.play('draft'); await wait(500); if (g !== gen) return; }
       if (b.succession) SFX.play('herodie');
+      if (b.who === 'mate' && A.mate.classList.contains('waiting')) { A.mate.classList.remove('waiting'); A.mate.classList.add('enter'); SFX.play('draft'); }
       if (b.who === 'hero' && sc.fallen) { A.hero.classList.remove('waiting'); A.hero.classList.add('enter'); A.fallen.classList.add('gone'); }
       await say(b.who); if (g !== gen) return;
       if (b.who === 'boss' && b === sc.beats.find(x => x.who === 'boss')) { SFX.play(sc.boss ? 'boss' : 'roar'); A.boss.classList.add('stomp'); }
@@ -13434,18 +13616,23 @@ function showTalk(run, done, x = {}) {
       next();
     });
   };
-  const CHOICES = sc.finale ? TALK_CHOICES_FINALE : TALK_CHOICES;
+  // a fourth reply only this boss falls for, opened by a kind story path this horde (talkmore.js); locked cards still show
+  const PAR = sc.boss ? parleyChoice(run, bossId, sc.finale) : null;
+  const CHOICES = (sc.finale ? TALK_CHOICES_FINALE : TALK_CHOICES).concat(PAR ? [PAR] : []);
   const choose = async () => {
     if (replied) return;
     const h = cur; await say(null); el.classList.add('choosing'); pan('hero'); say('hero', `How do I answer ${BOSS_SHORT[bossId] || 'that'}?`);
     // the cards say what the reply does; the voice picks the words once it is chosen (Cam 2026-10-23)
-    opts.innerHTML = CHOICES.map((c, i) => `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(TALK_INTENT[c.mod] || TALK_INTENT[c.k], run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
+    opts.innerHTML = CHOICES.map((c, i) => c.k === 'parley'
+      ? `<button class="tk-opt parley${c.locked ? ' locked' : ''}" data-c="${i}"${c.locked ? ' disabled' : ''}><b>${esc(c.locked ? 'A secret reply' : c.label)}</b><q>${esc(c.locked ? `Be kind to ${BOSS_SHORT[bossId]} in this horde's story to open it.` : `Only ${BOSS_SHORT[bossId]} would fall for this.`)}</q><span>${esc(c.sub)}</span></button>`
+      : `<button class="tk-opt" data-c="${i}"><b>${esc(c.label)}</b><q>${esc(talkFill(TALK_INTENT[c.mod] || TALK_INTENT[c.k], run, h))}</q><span>${esc(c.sub)}</span></button>`).join('');
     opts.querySelectorAll('[data-c]').forEach(btn => btn.onclick = async e => {
-      e.stopPropagation(); if (replied) return; replied = true; const c = CHOICES[+btn.dataset.c]; opts.innerHTML = ''; say(null); el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
+      e.stopPropagation(); if (replied) return; const c = CHOICES[+btn.dataset.c]; if (c.locked) return; replied = true; opts.innerHTML = ''; say(null); el.classList.remove('choosing'); pan('hero'); SFX.play('stamp');
       setTalkReply(run, c.mod); TEL.event('bosstalk', { boss: bossId, pick: c.k, temper: heroTemper(h) }); save();
-      busy = true; await say('hero'); busy = false; await type(talkFill(voiceLine(h, c.k), run, h) + talkTail(sc, run, h, ['loss', 'hurt', 'kind', 'grudge']), 'hero');
+      const P = c.k === 'parley' ? BOSS_PARLEY[bossId] : null, caps = TALK[sc.f] && TALK[sc.f].caps;
+      busy = true; await say('hero'); busy = false; await type(P ? P.said : talkFill(voiceLine(h, c.k), run, h) + talkTail(sc, run, h, ['loss', 'hurt', 'kind', 'grudge']), 'hero');
       await wait(500);
-      busy = true; await say('boss'); busy = false; SFX.play('roar'); A.boss.classList.remove('stomp'); void A.boss.offsetWidth; A.boss.classList.add('stomp'); await type(sc.react[c.k], 'boss');
+      busy = true; await say('boss'); busy = false; SFX.play(P ? 'level' : 'roar'); A.boss.classList.remove('stomp'); void A.boss.offsetWidth; if (!P) A.boss.classList.add('stomp'); await type(P ? (caps ? P.react.toUpperCase() : P.react) : sc.react[c.k], 'boss');
       await wait(450);
       await type(sc.close, 'boss');
       beatI = 1e9; el.classList.add('last');
@@ -13781,6 +13968,276 @@ function encBossAside(sc, enc, o) {
 }
 // what the boss says back to the tone of the hero's reply
 function bossRetort(sc, h) { const B = BOSS_BACKTALK[sc.bossId]; return B ? B.retort[talkGroup(h)] : ''; }
+
+// ===== Boss talk that notices you (Cam 2026-11-06: "do them all", after the Undertale / Eastward dialogue study) =====
+// Lessons, not content: the talk remembers you across runs, notices what you did on the board, names the story choice it
+// holds against you, lets one champion butt in on another, and offers a reply only that boss would fall for.
+// talk.js builds the scenes and calls in here. Nothing in this file changes combat except the Parley reply (sim.js).
+
+// ----- 1. bosses remember past runs (G.meta.bossMem, written by noteBossMemory in finishSiege) -----
+// per boss: again = met before, nothing settled; beat = you beat it last time; slayer = same, naming the legend who landed the
+// last hit; lost = it broke your keep last time; vet = you've met five times or more. {n} = times met, {slayer} = that legend.
+const BOSS_MEM = {
+  grubnose: {
+    again: "Oi! BIG HOUSE! It's me again. Grubnose. King of the ditch. You remember the bucket. Everybody remembers the bucket.",
+    beat: "YOU. Last time you knocked me flat and I had to walk home. In the rain. With the bucket on my head. It filled up.",
+    slayer: "Where's {slayer}? Last time {slayer} bonked me so hard I saw two buckets. One of them was nice. I want it back.",
+    lost: "Hah! Remember me? Last time I got IN. I still have one of your spoons. I eat soup with it. Royally.",
+    vet: "Visit number {n}! I've started a little scrapbook of your castle. It's mostly drawings of rafters." },
+  gloop: {
+    again: "Hello again, dear. Mother remembers you. Mother remembers everyone who has ever popped one of her babies.",
+    beat: "You splashed me all over the field last time, dear. It took me a week to find my left side.",
+    slayer: "Is {slayer} still with you, dear? Last time {slayer} popped me like a bubble. Mother has been practising being tougher.",
+    lost: "Ooh, you came back! Last time Mother got all the way into your kitchen. Your larder still smells of bog. You're welcome.",
+    vet: "That's {n} visits now, dear. The babies have started calling you Auntie Castle." },
+  wyrm: {
+    again: "You again. How fortunate. You appear in my notes as \"recurring character\". Underline. Question mark.",
+    beat: "Last time, you won. It was a terrible ending. Unearned. The critics agreed. The critics were zombies, but still.",
+    slayer: "Ah. Is {slayer} here? {slayer} slew me in our last draft. I've written them a much sadder fate this time.",
+    lost: "Welcome back. Last time I burned your keep in chapter three. The reviews called it \"too short\". Let's fix that.",
+    vet: "Our {n}th meeting. I'm calling this edition \"The Siege, Again, Revised\". Readers love a series." },
+  ringmaster: {
+    again: "Back by popular demand! Well. MY demand. Welcome back to Malgoth's Infernal Carnival!",
+    beat: "You! You closed my show last time! The imps got refunds! Do you know how hard it is to refund fire?",
+    slayer: "Where is {slayer}? {slayer} stole my finale last time! Nobody takes a bow on MY stage but me!",
+    lost: "Encore! Last time your keep went up in such lovely flames. The crowd begged for a sequel. Here it is!",
+    vet: "Performance number {n}! Season tickets for the castle! The imps have learned all your names." },
+  sporebaron: {
+    again: "We meet again. I never forget a castle. I've grown on several. I may still be growing on yours.",
+    beat: "You beat me last time, darling. I had to regrow from a single spore. One very embarrassed spore.",
+    slayer: "Is {slayer} about? {slayer} composted me last time. Rather rude of them. I've been stewing in the leaf litter about it.",
+    lost: "Hello again. Last time my court took your cellar. There's a lovely patch of me down there still. Do say hello.",
+    vet: "Our {n}th little chat. I think of you as an old friend. A friend I would like to decompose." },
+  matriarch: {
+    again: "You. I have your file. It is a large file. Shall we add to it?",
+    beat: "According to my records, you won last time. I have filed a complaint. Against the result.",
+    slayer: "Is {slayer} present? I'd like a word. {slayer} assaulted an HOA officer last time. I have it on a form.",
+    lost: "Welcome back. Last time I condemned your property. I see you rebuilt without a permit. Again.",
+    vet: "This is your {n}th violation. The board has given you a nickname. The board is still mostly me." },
+  trashpaw: {
+    again: "Well, look who's back, sugar. Mama never forgets a kitchen.",
+    beat: "You chased me off last time, sugar. Forty babies, no dinner. Mama is HUNGRY.",
+    slayer: "Where's {slayer}, honey? {slayer} whacked Mama with a ladle last time. Mama wants that ladle.",
+    lost: "Sugar! We got in last time! The babies still talk about the pantry. The lasagne. The second lasagne.",
+    vet: "Visit {n}, sugar. The babies think of your bins as a timeshare." },
+  colossus: {
+    again: "RECOGNITION: CASTLE. STATUS: STILL STANDING. CORRECTING STATUS.",
+    beat: "PREVIOUS ENCOUNTER: DEFEAT. I WAS TOWED HOME BY A HORSE. THE HORSE WAS ALSO DISAPPOINTED.",
+    slayer: "SCANNING FOR: {slayer}. {slayer} DENTED MY LEFT KNEE LAST CYCLE. IT STILL SQUEAKS IN B FLAT.",
+    lost: "PREVIOUS ENCOUNTER: CASTLE FLATTENED. CUSTOMER SATISFACTION: HIGH. REPEATING SERVICE.",
+    vet: "ENCOUNTER NUMBER {n}. YOU ARE NOW A REGULAR. REGULARS GET A DISCOUNT ON DEMOLITION." },
+  pinchbeard: {
+    again: "Ahoy again, landlubbers! Pinchbeard never forgets a moat with good parking.",
+    beat: "Ye sank me last time! Me and three hundred crabs, bobbin' in the moat. Most embarrassin' night of me life.",
+    slayer: "Where be {slayer}? {slayer} pinched me back last time! Nobody pinches the Pinchbeard!",
+    lost: "Har! Last time we plundered ye proper. I've still got yer drawbridge chain. It's a lovely necklace.",
+    vet: "That's {n} raids now! I've named a crab after ye. He's grumpy and he's surrounded by water." },
+  goosegod: {
+    again: "HONK. (Translation: You. I remember you. Geese remember everything. Especially bread.)",
+    beat: "HONK HONK. (Translation: Last time you won. I have been honking about it for weeks. Ask anyone.)",
+    slayer: "HONK. (Translation: Where is {slayer}? {slayer} plucked a feather last time. I want it back. It was my best one.)",
+    lost: "HONK. (Translation: Last time I took your castle. I sat on it like an egg. It did not hatch. Disappointing.)",
+    vet: "HONK. (Translation: Meeting number {n}. I have a whole flock now. They are all named after your walls.)" },
+};
+BOSS_MEM.shardgoose = BOSS_MEM.goosegod;
+function bossMem(meta, id) { const M = meta.bossMem = meta.bossMem || {}; return M[id] || (M[id] = { met: 0, beat: 0, lost: 0 }); }
+// the opener a boss uses when it has met you in an earlier run, or null on a first meeting
+function memoryOpener(id) {
+  const L = BOSS_MEM[id], m = G.meta.bossMem && G.meta.bossMem[id]; if (!L || !m || !m.met) return null;
+  const sl = m.slayer && HERO_BY_ID[m.slayer] ? talkVoiceFirst(HERO_BY_ID[m.slayer].name) : null;
+  let s = m.met >= 5 && Math.random() < 0.5 ? L.vet : m.last === 'beat' ? (sl && Math.random() < 0.6 ? L.slayer : L.beat) : m.last === 'lost' ? L.lost : L.again;
+  const n = m.met + 1, ord = n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  return s.replace(/\{slayer\}/g, sl || 'your champion').replace(/\{n\}th/g, ord).replace(/\{n\}/g, n);
+}
+// called from finishSiege: met on the first siege of a horde, beat / lost when its boss siege is decided, lost when it ends a run
+function noteBossMemory(run, meta, B, rep) {
+  if (run.finale === 'ready' || !meta) return;
+  const s = rep.siege, id = bossFor(s), m = bossMem(meta, id);
+  if ((s - 1) % 5 === 0) m.met++;
+  if (isBossSiege(s)) {
+    if (B.bossKilled) { m.beat++; m.last = 'beat'; m.slayer = B.bossSlayer || null; }
+    else if (rep.breach) { m.lost++; m.last = 'lost'; m.slayer = null; }
+  } else if (rep.breach && rep.breach.over) { m.lost++; m.last = 'lost'; m.slayer = null; }
+}
+
+// ----- 2. bosses notice your board -----
+// star: your best 2- or 3-star legend ({star} = name, {stars} = "two-star" / "three-star"), stack: four or more of one
+// element ({el}, {n}), reroll: lots of shop rerolls since the last talk ({n}), hoard: sitting on 30+ gold ({gold}).
+const BOSS_NOTICE = {
+  grubnose: { star: "What's that, a {stars} {star}? Shiny! I want to put them in the ditch and look at them.",
+    stack: "{n} {el} champions? Is that a theme? Goblins don't have themes. We have mud.",
+    reroll: "I heard you shook the shop {n} times. The shopkeeper's been crying in our ditch. We gave him a rock.",
+    hoard: "{gold} gold, just sitting there? I could buy a bucket with NO HOLE. Two buckets!" },
+  gloop: { star: "Oh, is {star} {stars} now, dear? They grow up so fast. Mine just split.",
+    stack: "{n} {el} champions, dear? You're building a family. Mother approves. Mother will still drown it.",
+    reroll: "Rerolling {n} times, dear? Patience. Mother waited three hundred years for a bog this nice.",
+    hoard: "{gold} gold under the mattress, dear? Mother can smell it. Mother can smell everything." },
+  wyrm: { star: "A {stars} {star}. Every story needs a chosen one. They usually die in act two.",
+    stack: "{n} {el} champions. A motif. Heavy-handed, but I respect it.",
+    reroll: "You rerolled your shop {n} times. Indecisive. I'm writing you as indecisive.",
+    hoard: "{gold} gold and nothing to spend it on. A tragic flaw. Greed, chapter nine." },
+  ringmaster: { star: "A {stars} {star}! Now THAT'S a headliner! I'd pay to see them. I'd pay MORE to see them lose!",
+    stack: "{n} {el} acts in one show? Darling, the audience wants variety!",
+    reroll: "{n} rerolls! You're auditioning half the realm! Can I sell tickets to that?",
+    hoard: "{gold} gold in the till and no show to spend it on? Tragic! Buy a balloon!" },
+  sporebaron: { star: "Ah, a {stars} {star}. A prize specimen. They'll make a splendid compost.",
+    stack: "{n} {el} sorts all together. Monoculture, darling. Very bad for the soil.",
+    reroll: "Rerolling {n} times? Do sit still. Things only grow when you sit still.",
+    hoard: "{gold} gold, hoarded like acorns. A squirrel's strategy. Squirrels rot too." },
+  matriarch: { star: "A {stars} {star}. Over the height limit for champions in this zone. Noted.",
+    stack: "{n} {el} champions on one lot? That's a zoning violation.",
+    reroll: "{n} shop rerolls this season. Excessive noise. There will be a fine.",
+    hoard: "{gold} gold, undeclared. The association will be taking its cut." },
+  trashpaw: { star: "Ooh, {star}'s gone all {stars}, sugar. Shiny. Mama likes shiny.",
+    stack: "{n} {el} kids in one house? Honey, that's MY trick.",
+    reroll: "You went through that shop {n} times, sugar. Mama knows a bin-digger when she sees one.",
+    hoard: "{gold} gold in the jar, sugar? Mama knows where you keep the jar." },
+  colossus: { star: "UNIT {star} DETECTED. RATING: {stars}. THREAT LEVEL: SPARKLY.",
+    stack: "{n} {el} UNITS. PATTERN DETECTED. PATTERN DOES NOT COMPUTE AS ART.",
+    reroll: "SHOP REFRESHED {n} TIMES. YOU ARE PRESSING THE BUTTON LIKE ME.",
+    hoard: "{gold} GOLD STORED. RECOMMENDED USE: OIL. FOR ME." },
+  pinchbeard: { star: "That {stars} {star}'s a fine bit o' treasure. I'll be wantin' that for me hold.",
+    stack: "{n} {el} hands on deck? Ye've got yerself a crew. A doomed crew.",
+    reroll: "{n} times ye shook that shop! Like a crab lookin' for a bigger shell.",
+    hoard: "{gold} gold buried in yer keep? X marks the spot, matey." },
+  goosegod: { star: "Honk. (Translation: {star} is {stars} now. Shiny. I will steal them for the nest.)",
+    stack: "HONK. (Translation: {n} {el} champions. A flock. You are learning from the goose.)",
+    reroll: "Honk honk. (Translation: {n} rerolls. You honk at the shop like a goose honks at a door.)",
+    hoard: "HONK. (Translation: {gold} gold. Gold is nice. Bread is nicer. Give me the bread.)" },
+};
+BOSS_NOTICE.shardgoose = BOSS_NOTICE.goosegod;
+// what on the board a boss could comment on right now; one comment per scene, and never the same thing twice in a run
+function boardNotice(run, bossId) {
+  const L = BOSS_NOTICE[bossId]; if (!L) return null;
+  const said = run.noticed = run.noticed || [], opts = [];
+  const top = run.roster.filter(h => !h.vault && heroStar(h) >= 2).sort((a, b) => heroStar(b) - heroStar(a))[0];
+  if (top) { const k = 'star:' + top.uid + ':' + heroStar(top); if (!said.includes(k)) opts.push([k, L.star, { star: talkVoiceFirst(heroDisplayName(top)), stars: heroStar(top) === 3 ? 'three-star' : 'two-star' }]); }
+  const els = {}; for (const h of run.roster) if (h.place && h.el) els[h.el] = (els[h.el] || 0) + 1;
+  const big = Object.keys(els).sort((a, b) => els[b] - els[a])[0];
+  if (big && els[big] >= 4 && ELEMENTS[big]) { const k = 'stack:' + big; if (!said.includes(k)) opts.push([k, L.stack, { el: ELEMENTS[big].name, n: els[big] }]); }
+  const rr = (run.shopRerolls || 0) - (run.rrNoticed || 0);
+  if (rr >= 6) opts.push(['reroll:' + run.siege, L.reroll, { n: rr }]);
+  if (run.gold >= 30 && !said.includes('hoard:' + factionIndex(run.siege))) opts.push(['hoard:' + factionIndex(run.siege), L.hoard, { gold: run.gold }]);
+  if (!opts.length) return null;
+  const [k, s, v] = pick(opts);
+  return { line: s.replace(/\{(\w+)\}/g, (m, x) => v[x] != null ? v[x] : m), seal: () => { said.push(k); if (k.startsWith('reroll')) run.rrNoticed = run.shopRerolls || 0; } };
+}
+
+// ----- 8. name the grudge -----
+// the story choice the boss holds against you (or thanks you for), in the hero's own words. {said} = what the hero said.
+const BOSS_GRUDGE = {
+  grubnose: { rude: "\"{said},\" you said. I HEARD. Goblins have big ears. Huge ears. Look at them.", kind: "\"{said},\" you said. Nobody ever said a thing like that to a goblin. I wrote it on the leaf." },
+  gloop: { rude: "\"{said},\" you said, dear. Mother heard. Mother was in the drain.", kind: "\"{said},\" you said. Mother remembers that, dear. Mother wobbled for an hour." },
+  wyrm: { rude: "\"{said},\" you said. I quoted it in full. Chapter eleven. You are the villain now.", kind: "\"{said},\" you said. Lovely line. I put it on the back cover." },
+  ringmaster: { rude: "\"{said}!\" you said! In front of my IMPS! They do impressions of you now!", kind: "\"{said},\" you said! The imps clapped! I had to dock their wages for it!" },
+  sporebaron: { rude: "\"{said},\" you said. It's in the court records. Mouldering nicely.", kind: "\"{said},\" you said. Terribly decent of you. It's almost a shame. Almost." },
+  matriarch: { rude: "\"{said},\" you said. Verbatim. It's on the form. Page one.", kind: "\"{said},\" you said. It has been noted. In the good column. The good column is very short." },
+  trashpaw: { rude: "\"{said},\" you said, sugar. Mama heard. Mama always hears.", kind: "\"{said},\" you said, honey. Mama won't forget that. Mama's still gonna eat your kitchen." },
+  colossus: { rude: "PLAYBACK: \"{said}.\" RUDENESS: CONFIRMED. GRUDGE: SAVED TO DISK.", kind: "PLAYBACK: \"{said}.\" KINDNESS: CONFIRMED. I HAVE SAVED IT. I PLAY IT AT NIGHT." },
+  pinchbeard: { rude: "\"{said},\" ye said! I've had it tattooed on a crab so I never forget it!", kind: "\"{said},\" ye said. A fine thing to say to an old pirate. Still boardin' ye, though." },
+  goosegod: { rude: "HONK. (Translation: \"{said},\" you said. The goose remembers.)", kind: "honk. (Translation: \"{said},\" you said. The goose remembers that too.)" },
+};
+// story choices are kept per horde: the last kind one and the last rude one (main.js calls this when a story card is picked)
+function noteStoryChoice(run, story, o) {
+  if (!story) return; const st = encStance(o), f = story.f != null ? story.f : factionIndex(run.siege);
+  if (story.p === 1 || !run.storyNote || run.storyNote.f !== f) run.storyNote = { f };
+  if (st === 'kind' || st === 'truce') run.storyNote.kind = o.label; else if (st === 'rude' || st === 'fight') run.storyNote.rude = o.label;
+}
+function grudgeLine(run, bossId, f) {
+  const N = run.storyNote, L = BOSS_GRUDGE[bossId]; if (!N || N.f !== f || !L) return null;
+  const m = run.mood || 0, label = m <= -1 ? N.rude : m >= 1 ? N.kind : null; if (!label) return null;
+  const g = encGist({ label }), said = 'We should ' + g;
+  return (m <= -1 ? L.rude : L.kind).replace('{said}', said);
+}
+
+// ----- 4. a reply only this boss would fall for (needs a kind story path this horde) -----
+// Parley: the boss starts the fight 15% weaker and doesn't open with its fury, but drops half the gold (sim.js).
+const BOSS_PARLEY = {
+  grubnose: { label: 'Offer him the guest room', said: "Grubnose. We have a guest room. It has a roof. And a bucket. With no hole.", react: "A ROOF? A bucket with no HOLE? ...I still have to fight you. It's the job. But I'll fight you SOFTLY." },
+  gloop: { label: 'Offer to babysit', said: "Mother Gloop, you look exhausted. Let us mind the little ones for an afternoon.", react: "An afternoon off? Oh, dear. Oh, I could weep. I'll still flood you, but I'll do it with a smile." },
+  wyrm: { label: 'Offer to co-write the ending', said: "Vexmora, what if the last chapter has two authors? You and us.", react: "A collaboration? How... modern. Fine. I'll go easy on you. For the sake of the sequel." },
+  ringmaster: { label: 'Give a standing ovation', said: "Everyone, on your feet! Bravo, Malgoth! BRAVO!", react: "A standing ovation? For ME? Oh, I'm verklempt. The imps are crying. Let's make this a short show." },
+  sporebaron: { label: 'Offer him the cellar', said: "Baron, the cellar is dark and damp and it's yours. No scrubbing. Ever.", react: "No scrubbing? EVER? You'd do that for an old mushroom? Well. I suppose I can rot you slowly." },
+  matriarch: { label: 'Hand in every form', said: "Here are all the forms, Matriarch. Filled in. In triplicate. In Yeti.", react: "In... Yeti? Correct Yeti? This is the best paperwork I've ever seen. I will flatten you gently." },
+  trashpaw: { label: 'Promise her the lasagne', said: "Big Mama, after this, there's a lasagne with your name on it. A big one.", react: "With my NAME on it? Oh, sugar. Mama's heart is meltin'. Mama's still comin' in, but she's takin' her shoes off." },
+  colossus: { label: 'Hand over the oil can', said: "Here, big fella. A full can of oil. For your knees.", react: "OIL. OIL. OIL. SQUEAKING: STOPPED. HAPPINESS: ONLINE. DEMOLITION: SET TO GENTLE." },
+  pinchbeard: { label: 'Offer him the moat, toll-free', said: "Captain, the moat's yours. Free parking. Forever.", react: "FREE PARKIN'? Ye magnificent landlubbers! Fine. We board ye, but we wipe our claws first." },
+  goosegod: { label: 'Offer the whole loaf', said: "Goose. The whole loaf. Not a crumb. The whole thing.", react: "...honk. (Translation: The WHOLE loaf. Nobody has ever offered the goose the whole loaf. I will peck you less.)" },
+};
+const PARLEY_CARD = { k: 'parley', mod: 'parley', sub: 'The boss starts 15% weaker and skips its fury opener, but drops half the gold.' };
+// the fourth card for this boss siege: open when you were kind this horde, shown locked otherwise so players learn it exists
+function parleyChoice(run, bossId, finale) {
+  const P = BOSS_PARLEY[bossId]; if (!P || finale) return null;
+  return Object.assign({}, PARLEY_CARD, { label: P.label, locked: (run.mood || 0) < 1 });
+}
+
+// ----- 6. champions banter: once a horde another champion butts in on the voice -----
+// cut: what the champion blurts out (by their temper), back: how the voice answers (by the voice's group). {me} = the voice,
+// {mate} = the champion who butted in, {boss} = the boss.
+const BANTER_CUT = {
+  heroic: "Wait! Let me say something brave too. Ahem. {boss}! I am ALSO here!",
+  cheerful: "Ooh, ooh, can I talk? Hi, {boss}! Big fan! Going to beat you!",
+  honorable: "Pardon me, {me}. Protocol says the second-in-command also gets a word. My word is: no.",
+  wholesome: "Sorry, sorry. Just wanted to say, {boss}, your hat is lovely. Okay. Carry on.",
+  zealous: "ENOUGH TALK! The light demands we SHOUT at them! I'm shouting! HAH!",
+  wise: "If I may, {me}. You're answering a question {boss} didn't ask. Classic you.",
+  loyal: "Whatever {me} said, I agree with it! I didn't hear it, but I agree!",
+  optimistic: "This is going great, everyone. Really great. I can feel it.",
+  angry: "Can we stop talking and START HITTING? I've been holding this axe for ages!",
+  cruel: "Let me tell {boss} what we'll do to their camp. It involves a lot of salt.",
+  greedy: "Quick question, {boss}. If we win, do we get your stuff? Asking for me.",
+  vain: "Is the light on me? Hold on. Okay. Now it is. You may continue, {me}.",
+  deranged: "I licked the castle wall this morning. It tastes like victory. And moss.",
+  paranoid: "Don't trust them, {me}! That's what they WANT you to think. I don't know what they want you to think!",
+  cowardly: "Um. Hi. I'm only standing here because the door is locked. Hello.",
+  lazy: "Is this going to take long? I left a nap running.",
+};
+const BANTER_BACK = {
+  kind: "Thank you, {mate}. Next time let me finish, though.",
+  fierce: "{mate}! I was in the middle of a threat!",
+  sharp: "Noted, {mate}. Unhelpful, but noted.",
+  odd: "Who said that? Oh. It's you. Hello, {mate}.",
+  timid: "Th-thanks, {mate}. You can do the talking from now on.",
+};
+// a fielded champion who doesn't talk like the voice, if this horde hasn't had its banter yet
+function banterMate(run, h, f) {
+  if (run.banter === f) return null;
+  const g = talkGroup(h), mates = run.roster.filter(x => x !== h && x.place && !x.vault && talkGroup(x) !== g);
+  return mates.length ? pick(mates) : null;
+}
+
+// ----- 5. text that performs: each boss types at its own pace, with its own lettering -----
+// spd: typing pace (x the base), stop: pause at . ! ? (x), cls: lettering class on the bubble (style.css)
+const TALK_TEXT = {
+  grubnose: { spd: 0.8, stop: 1, cls: 'tx-jitter' }, gloop: { spd: 1.15, stop: 1.2, cls: 'tx-wobble' }, wyrm: { spd: 1.7, stop: 1.6, cls: 'tx-smoke' },
+  ringmaster: { spd: 0.9, stop: 1.8, cls: 'tx-show' }, sporebaron: { spd: 1.25, stop: 1.3, cls: 'tx-posh' }, matriarch: { spd: 1, stop: 1, cls: 'tx-frost' },
+  trashpaw: { spd: 0.55, stop: 0.6, cls: 'tx-chatter' }, colossus: { spd: 1.1, stop: 0, cls: 'tx-robot' }, pinchbeard: { spd: 1, stop: 1.2, cls: 'tx-sea' },
+  goosegod: { spd: 1, stop: 1.3, cls: 'tx-goose' }, shardgoose: { spd: 1, stop: 1.3, cls: 'tx-goose' },
+  hero: { spd: 1, stop: 1, cls: '' }, timid: { spd: 1.2, stop: 1.5, cls: 'tx-shaky' }, fierce: { spd: 0.85, stop: 0.8, cls: '' },
+};
+// the typed text as html: shouted words (ALL CAPS) shake, honks are huge, and a wobbly speaker wobbles every letter
+function talkTextHTML(s, cls) {
+  const e = esc(s);
+  if (cls === 'tx-robot') return e;
+  if (cls === 'tx-wobble') { let n = 0; return e.split(' ').map(w => `<span class="w">${w.replace(/(&[a-z]+;|.)/g, c => `<i style="--d:${(n++ % 9) * 0.07}s">${c}</i>`)}</span>`).join(' '); }
+  return e.replace(/\b([A-Z][A-Z]{2,})\b/g, w => /^HO+NK$/.test(w) ? `<b class="honk">${w}</b>` : `<b class="yell">${w}</b>`);
+}
+
+// ----- 7. emotes and little actions: a mark over the speaker's head and a small move, read from the line -----
+const KIND_WORDS = /\b(friend|hug|sorry|love|lovely|nice|thank|thanks|kind|gentle|cosy|biscuit|smile)\b/i;
+function talkEmote(text, who, h) {
+  const t = String(text), shout = /\b[A-Z]{3,}\b/.test(t.replace(/HONK/g, '')), bang = /!/.test(t), ask = /\?\s*$/.test(t) || /\?\)?$/.test(t);
+  const g = who === 'hero' && h ? talkGroup(h) : null;
+  if (who === 'boss') return shout && bang ? 'anger' : ask ? 'q' : bang ? 'bang' : null;
+  if (g === 'timid') return 'sweat';
+  if (ask) return 'q';
+  if (g === 'kind' && KIND_WORDS.test(t)) return 'heart';
+  if (g === 'fierce' && bang) return 'anger';
+  if (g === 'odd') return Math.random() < 0.5 ? 'note' : null;
+  return bang ? 'bang' : null;
+}
+const EMOTE_GLYPH = { anger: '!!', q: '?', bang: '!', heart: '♥', note: '♪', sweat: '' };
+const EMOTE_MOVE = { anger: 'mv-stomp', q: 'mv-tilt', bang: 'mv-hop', heart: 'mv-hop', note: 'mv-sway', sweat: 'mv-shiver' };
 
 // ===== Developer splash: someone has a go at the "NOOBSCRUB GAMES" logo and it goes wrong =====
 // Three skits, one picked at random each launch (never the same twice in a row):
@@ -14825,7 +15282,7 @@ function showEncounter() {
   if (G.run.post.length === 1 && !vaultDue(G.run) && talkDue(G.run)) {
     UI.closeModal(); let picked = null;
     const pick = i => {
-      const o = enc.opts[i]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; }
+      const o = enc.opts[i]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; noteStoryChoice(G.run, story, o); }
       const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy'); TEL.event('encounter', { id: enc.id, opt: i }); picked = o;
       const hz = G.run.mods.hz && HAZARDS[G.run.mods.hz]; save(); changed();
       return { lines: r.out.filter(x => x !== 'Pick an item to reforge.').concat(r.levels.map(([h]) => `${heroDisplayName(h)} reached level ${h.level}!`)), hz: hz && hz.name };
@@ -14840,7 +15297,7 @@ function showEncounter() {
 function dropEncounter() { const i = G.run.post.indexOf('encounter'); if (i >= 0) G.run.post.splice(i, 1); }
 function showEncounterCard(enc, story) {
   UI.modal(UI.encounterHTML(enc), s => s.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => {
-    const o = enc.opts[+b.dataset.opt]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
+    const o = enc.opts[+b.dataset.opt]; dropEncounter(); if (story) { if (story.p === 1) G.run.mood = 0; G.run.storySeen = [...(G.run.storySeen || []), story.id]; noteStoryChoice(G.run, story, o); } const r = resolveEncounter(G.run, G.meta, o.fx); SFX.play('buy');
     TEL.event('encounter', { id: enc.id, opt: +b.dataset.opt });
     const lv = r.levels.map(([h, n]) => `${heroDisplayName(h)} reached level ${h.level}!`);
     const outcome = extra => {

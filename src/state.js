@@ -441,6 +441,7 @@ function finishSiege(run, meta, B) {
   run.history.push({ s, lost: !!rep.breach, t: rep.time, kills: rep.kills, gold: rep.gold, castle: Math.round(run.castle.hp), heroes: rep.heroes.map(h => ({ id: h.id, lv: h.toLv, dmg: h.dmg, alive: h.alive })) });
   // pressing the attack pays out: more gold now, a better roll on the next shop, and every fourth press a loot pick
   if (pressOn(run) && !rep.breach) { const g = PRESS.gold; run.gold += g; rep.gold += g; run.pressDraft = Math.min(3, (run.pressDraft || 0) + 1); const A2 = run.stats.ach = run.stats.ach || {}; A2.pressed = (A2.pressed || 0) + 1; rep.press = { gold: g, loot: A2.pressed % 4 === 0 }; }
+  if (typeof noteBossMemory === 'function') noteBossMemory(run, meta, B, rep); // boss talk remembers you across runs (talkmore.js)
   run.mods = {};
   // a voice who lost their nerve before the boss (talk.js) comes back to the line
   for (const h of run.roster) if (h.fled) { const p = h.fledPlace; delete h.fled; delete h.fledPlace; if (p && !run.roster.some(x => x !== h && x.place && x.place.type === p.type && x.place.c === p.c && x.place.r === p.r && x.place.i === p.i)) h.place = p; else autoPlace(run, h); }
