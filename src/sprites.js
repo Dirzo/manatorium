@@ -231,6 +231,7 @@ function genHumanoid(s, frame) {
   // cape
   if (s.cape) g.rect(4, 11 + by, 5, 17, s.cape);
   if (s.orc) orcBack(g, s, by);
+  if (s.elf) elfBack(g, s, by);
   // legs
   const boot = shade(a2, -0.35);
   const leg = (x, lift) => { g.rect(x, 16, x + 1, 18 - lift, cl); g.rect(x, 18 - lift, x + 2, 18 - lift, boot); };
@@ -242,6 +243,7 @@ function genHumanoid(s, frame) {
   g.rect(6, 11 + by, 12, 15, a1); g.rect(6, 11 + by, 12, 11 + by, a2); g.rect(6, 14, 12, 14, cl); g.set(9, 12 + by, shade(a1, 0.35)); g.set(9, 14, '#ffcf3a', true);
   if (s.head === 'toad') g.rect(8, 12 + by, 11, 13 + by, s.belly || shade(skin, 0.4));
   if (s.orc) orcTorso(g, s, by);
+  if (s.elf) elfTorso(g, s, by, frame);
   // head
   const hx0 = gob ? 6 : 5, hx1 = gob ? 12 : 13, hy0 = 3 + by + hy, hy1 = 10 + by;
   if (s.head === 'toad') {
@@ -268,7 +270,8 @@ function genHumanoid(s, frame) {
       if (s.head !== 'orc' && s.head !== 'beast') g.set(13, 8 + by, '#ff9aa8', true);
       g.set(11, 9 + by, shade(skin, -0.3), true);
     }
-    if (s.head === 'elf') { g.set(4, 6 + by, skin); g.set(4, 5 + by, skin); g.set(3, 4 + by, skin); g.set(3, 5 + by, skin); g.set(2, 3 + by, skin); }
+    if (s.head === 'elf' && s.elf) elfHead(g, s, by);
+    else if (s.head === 'elf') { g.set(4, 6 + by, skin); g.set(4, 5 + by, skin); g.set(3, 4 + by, skin); g.set(3, 5 + by, skin); g.set(2, 3 + by, skin); }
     if (s.head === 'orc' && s.orc) orcHead(g, s, by);
     else if (s.head === 'orc') { g.rect(14, 6 + by, 14, 9 + by, skin); g.set(10, 9 + by, '#ffffff', true); g.set(10, 8 + by, '#ffffff', true); g.set(13, 9 + by, '#ffffff', true); g.set(13, 8 + by, '#ffffff', true); g.rect(9, 5 + by, 13, 5 + by, shade(skin, -0.35), true); }
     if (s.head === 'beast') {
@@ -279,7 +282,7 @@ function genHumanoid(s, frame) {
     }
     if (s.head === 'dwarf') { g.rect(7, 8 + by, 14, 11 + by, hair); g.rect(8, 12 + by, 13, 13 + by, hair); g.rect(9, 14 + by, 12, 14 + by, hair); g.set(11, 8 + by, skin); g.set(12, 8 + by, skin); }
     // hair
-    if (s.head === 'human' || s.head === 'elf' || s.head === 'dwarf' || (s.head === 'orc' && s.hairStyle)) {
+    if (s.head === 'human' || (s.head === 'elf' && !s.elf) || s.head === 'dwarf' || (s.head === 'orc' && s.hairStyle)) {
       if (s.head !== 'orc' || s.hairStyle === 'long') {
         g.rect(hx0, hy0, hx1, hy0 + 1, hair); g.rect(hx0, hy0 + 2, hx0 + 1, hy0 + 5, hair); g.set(hx1, hy0 + 2, hair);
         if (s.hairStyle === 'long') g.rect(4, 5 + by, 6, 13 + by, hair);
@@ -318,6 +321,7 @@ function genHumanoid(s, frame) {
     case 'bandana':
       g.rect(5, 3 + hatY, 13, 4 + hatY, cl); g.set(4, 4 + hatY, cl); g.set(3, 5 + hatY, cl); g.set(3, 6 + hatY, cl); g.set(11, 3 + hatY, '#ffffff', true); break;
   }
+  if (s.elf) elfTop(g, s, by);
   // halo floats above whatever is on the head
   if (s.halo) { const hy0 = Math.max(0, hatY - (s.hat && s.hat !== 'none' ? 1 : -1)); g.rect(7, hy0, 11, hy0, s.halo, true); g.set(6, hy0 + 1, s.halo, true); g.set(12, hy0 + 1, s.halo, true); }
   // front arm + weapon
@@ -333,6 +337,7 @@ function genHumanoid(s, frame) {
   else { const hx = s.head === 'orc' ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   if (s.orc) orcFront(g, s, by);
+  if (s.elf) elfFront(g, s, by);
   return g.finish();
 }
 
@@ -468,7 +473,8 @@ function ensureSprite(key) {
   if (E) { const dark = c => shade(c, -0.35);
     spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
     if (d.spr.cape) spec.cape = E.col2;
-    if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
+    // an elf keeps their own hair: it is part of who they are (Katharine's brown hair)
+    if (d.spr.hair && !d.spr.elf) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
   if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
   if (m[5] && typeof buildSpriteHD === 'function' && (spec.gen || 'humanoid') === 'humanoid') return buildSpriteHD(key, spec, m[5]);
   return buildSprite(key, spec, false);

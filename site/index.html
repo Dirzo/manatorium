@@ -2320,9 +2320,11 @@ const HEROES = [
   { id: 'iria', name: 'Iria Cinderveil', race: 'human', cls: 'mage', tier: 1, rar: 0, ability: 'cinderColossus', aName: 'Cinder Colossus', aDesc: 'Drops a Cinder Colossus onto the biggest crowd for {0}. It stays for 5s, stomping every foe near it for {1} and lumbering after the horde.', proj: 'fire',
     spr: { head: 'human', skin: SK.pale, hair: '#ff6a3d', hairStyle: 'long', hat: 'wizard', armor: '#e2384f', armor2: '#9b1f43', cloth: '#ffcf3a', weapon: 'staff', gem: '#ff8a3d' } },
   { id: 'vale', name: 'Vale Quickthorn', race: 'elf', cls: 'rogue', tier: 1, rar: 0, ability: 'bladeDance', aName: 'Emerald Waltz', aDesc: 'Dashes through up to 4 enemies, striking each for {0}. Every cut leaves a leaf-blade that bursts a moment later for {1}.',
-    spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'hood', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff' } },
+    spr: { head: 'elf', skin: SK.pale, hair: '#f6e27a', hat: 'none', armor: '#3fae6a', armor2: '#23704a', cloth: '#2f9e5c', weapon: 'daggers', metal: '#dfe9ff',
+      elf: { build: 'lithe', ears: 'long', hairdo: 'shag', top: 'leafcowl', gear: ['scarf', 'vines'], face: ['freckles'], leaf: '#5a9a32', accent: '#d8a03a', leather: '#6a4426', trim: '#e8d8a0' } } },
   { id: 'thessa', name: 'Katharine the Great', race: 'elf', cls: 'ranger', tier: 1, rar: 0, ability: 'glacierLance', aName: 'Glacier Lance', aDesc: 'Looses a giant arrow of ice across the whole field. The first foe hit takes {0} and freezes for up to 3.5s, longer the farther it flew. Everything else in its path takes 60% and is slowed.', proj: 'arrow',
-    spr: { head: 'elf', skin: SK.tan, hair: '#8a5a32', hairStyle: 'long', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow' } },
+    spr: { head: 'elf', skin: SK.tan, hair: '#8a5a32', hat: 'none', armor: '#7bd36a', armor2: '#3f8c4a', cloth: '#a2672f', weapon: 'bow',
+      elf: { build: 'ranger', ears: 'tall', hairdo: 'braid', top: 'circlet', gear: ['quiver', 'leafmantle', 'bracer'], leaf: '#3f8c4a', accent: '#e8434d', leather: '#7a4e2a', trim: '#dfe6f5' } } },
   { id: 'grukk', name: 'Grukk Tuskbreaker', race: 'orc', cls: 'berserker', tier: 1, rar: 0, ability: 'whirlwind', aName: 'Tusk Cyclone', aDesc: 'Hurls a roaring cyclone down the lane. It drags foes into its eye and hits everything inside 10 times for {0}.',
     spr: { head: 'orc', skin: '#5fbf3e', hair: '#2b2b2b', hat: 'none', armor: '#9a6a3e', armor2: '#5d3b22', cloth: '#8a4a2a', weapon: 'greataxe', metal: '#d8dde8',
       orc: { build: 'hulk', tusk: 'huge', top: 'topknot', gear: ['mantle', 'harness'], face: ['paint'], fur: '#7a5230', leather: '#5a3a20', paint: '#3a8ad8' } } },
@@ -2336,7 +2338,8 @@ const HEROES = [
   { id: 'rook', name: 'Rook Bellhammer', race: 'dwarf', cls: 'berserker', tier: 2, rar: 1, ability: 'quake', aName: 'Fault Line', aDesc: 'Splits the earth in a line ahead. Rock spires burst up one after another, dealing {0} to each foe and tossing them into the air.',
     spr: { head: 'dwarf', skin: SK.tan, hair: '#ff8f3a', hat: 'helm', armor: '#c9a35a', armor2: '#8a6a2a', cloth: '#3a64c9', weapon: 'hammer', metal: '#cfd6e6' } },
   { id: 'sera', name: 'Sera Stormglass', race: 'elf', cls: 'mage', tier: 2, rar: 0, ability: 'tempestCage', aName: 'Tempest Cage', aDesc: 'Cages the biggest crowd in lightning for 3s. Bolts strike foes inside for {1}, anyone touching the bars is stunned and thrown back, and it ends in a thunderclap for {0}.', proj: 'spark',
-    spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hairStyle: 'long', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff' } },
+    spr: { head: 'elf', skin: SK.pale, hair: '#c7b7ff', hat: 'none', armor: '#4a5bd8', armor2: '#2c3592', cloth: '#7cf0ff', weapon: 'staff', gem: '#9ff6ff',
+      elf: { build: 'robe', ears: 'long', hairdo: 'tail', top: 'pin', gear: ['sash', 'cuffs'], trim: '#e8eefc', accent: '#5fd3ff' } } },
   { id: 'mara', name: 'Mara Dawnstitch', race: 'human', cls: 'cleric', tier: 2, rar: 1, ability: 'dawnMend', aName: 'Sunrise Choir', aDesc: 'A dawn sun rises over the field. Its rays heal every ally for {0}, clear poison and stuns, and scorch up to 8 foes for {1}.', proj: 'heal',
     spr: { head: 'human', skin: SK.brown, hair: '#2a1a12', hairStyle: 'bun', hat: 'none', armor: '#f4f1ff', armor2: '#b8b0e0', cloth: '#ffcf3a', weapon: 'staff', gem: '#ffe066' } },
   { id: 'hilda', name: 'Hilda Brassbeard', race: 'dwarf', cls: 'ranger', tier: 2, rar: 1, ability: 'rocketBarrage', aName: 'Rocket Barrage', aDesc: 'Fires a salvo of 6 rockets that carpet the enemy line, each exploding for {0} and knocking foes back.', proj: 'bullet',
@@ -2365,7 +2368,8 @@ const HEROES = [
   { id: 'thrain', name: 'Thrain Runeforge', race: 'dwarf', cls: 'guardian', tier: 3, rar: 3, ability: 'runicAegis', aName: 'Runeforge Citadel', aDesc: 'Taunts every foe in a wide circle as rune pillars slam down around your heroes. Every ally gets a shield of {0}, and foes under a pillar take {1}.',
     spr: { head: 'dwarf', skin: SK.brown, hair: '#e8e8f0', hat: 'helm', plume: '#5fd3ff', armor: '#5fd3ff', armor2: '#2a7ab0', cloth: '#ffcf3a', weapon: 'shield', metal: '#ffcf3a' } },
   { id: 'sylvaris', name: 'Sylvaris', race: 'elf', cls: 'cleric', tier: 3, rar: 3, ability: 'bloom', aName: 'World Blossom', aDesc: 'A great blossom tree sprouts among your heroes. It revives a fallen ally at 60% HP and heals everyone for {0}.', proj: 'heal',
-    spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hairStyle: 'long', hat: 'crown', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff' } },
+    spr: { head: 'elf', skin: '#cfe9ff', hair: '#ff9fd0', hat: 'none', armor: '#9be05a', armor2: '#5a9a2a', cloth: '#ff9fd0', weapon: 'staff', gem: '#ffffff',
+      elf: { build: 'gown', ears: 'droop', hairdo: 'flow', top: 'branches', gear: ['flowers'], leaf: '#5fbf4a', bark: '#8a5a32', accent: '#ffffff' } } },
   { id: 'kodo', name: 'Kodo Stormhorn', race: 'beast', cls: 'mage', tier: 3, rar: 3, ability: 'stampede', aName: 'Spirit Stampede', aDesc: 'A storm breaks and spirit beasts thunder across the field, dealing {0} to everything they trample.', proj: 'spark',
     spr: { head: 'beast', skin: '#6a6a8a', snout: '#c8c8e0', hat: 'horns', hornCol: '#ffe9b0', armor: '#2f4fb8', armor2: '#1f3080', cloth: '#ffd84a', weapon: 'totem', gem: '#7cf0ff' } },
   // ----- expansion (Cam 2026-10-15): 24 more legends. fixed: always rolls that rarity (4 Legendary, 5 God) -----
@@ -2381,7 +2385,8 @@ const HEROES = [
   { id: 'fizzwick', name: 'Fizzwick Gearspark', race: 'dwarf', cls: 'mage', tier: 3, rar: 4, fixed: 4, ability: 'clockworkMoon', aName: 'Clockwork Moon', aDesc: 'Lowers a clockwork moon over the field. Its great eye sweeps a beam across the enemy ranks, burning everything it touches for {0} every half second.',
     spr: { head: 'dwarf', skin: SK.pale, hair: '#c8c8d8', hat: 'tricorn', armor: '#c9883a', armor2: '#7a4a1a', cloth: '#5fd3ff', weapon: 'orb', gem: '#ffd84a', cape: '#3a64c9' } },
   { id: 'nyx', name: 'Nyx Hollowstar', race: 'elf', cls: 'mage', tier: 3, rar: 5, fixed: 5, ability: 'starfall', aName: 'Starfall Requiem', aDesc: 'Night falls. For 3s stars rain on the enemy side, each dealing {0} where it lands, then the sky collapses into a supernova that hits every foe for {1}.',
-    spr: { head: 'elf', skin: '#d8d0ff', hair: '#ffffff', hairStyle: 'long', hat: 'none', armor: '#2a2a6a', armor2: '#14143a', cloth: '#b8a8ff', weapon: 'orb', gem: '#fff3a0', cape: '#4a2a8a', halo: '#fff3a0', wings: '#b8a8ff' } },
+    spr: { head: 'elf', skin: '#d8d0ff', hair: '#ffffff', hat: 'none', armor: '#2a2a6a', armor2: '#14143a', cloth: '#b8a8ff', weapon: 'orb', gem: '#fff3a0', halo: '#fff3a0', wings: '#b8a8ff',
+      elf: { build: 'robe', ears: 'droop', hairdo: 'float', top: 'crescent', gear: ['stars'], trim: '#6a4ad8', accent: '#bfe6ff' } } },
   { id: 'grizelda', name: 'Granny Grizelda', race: 'orc', cls: 'mage', tier: 2, rar: 1, ability: 'cauldron', aName: 'Cauldron Catastrophe', aDesc: 'Drops a bubbling cauldron on the biggest crowd for {0}. It boils over into a toxic bog that deals {1} every half second and slows foes.',
     spr: { head: 'orc', skin: '#8fb85a', hair: '#e8e8f0', hat: 'wizard', armor: '#5a3a7a', armor2: '#3a2050', cloth: '#7ad43a', weapon: 'staff', gem: '#c8ff6a',
       orc: { build: 'hunch', tusk: 'snaggle', top: 'braids', gear: ['shawl', 'earrings'], face: ['wart'], fur: '#b89a6a', bone: '#e8e0c0', paint: '#c8ff6a' } } },
@@ -2392,7 +2397,8 @@ const HEROES = [
   { id: 'tibbs', name: 'Tibbs Lightpaw', race: 'beast', cls: 'rogue', tier: 1, rar: 1, ability: 'alleyAmbush', aName: 'Alley Ambush', aDesc: 'Shadow cats leap from every side onto the toughest enemy in reach, each clawing for {0}. If it falls, the cats pick the next foe.',
     spr: { head: 'beast', skin: '#4a4a5a', snout: '#e8e8f0', hat: 'none', armor: '#7a4ab0', armor2: '#4a2a7a', cloth: '#ffd84a', weapon: 'daggers', metal: '#ffffff', eye: '#ffd84a' } },
   { id: 'veyra', name: 'Veyra Nightbloom', race: 'elf', cls: 'rogue', tier: 3, rar: 4, fixed: 4, ability: 'eclipse', aName: 'Eclipse', aDesc: 'The sun goes dark. Veyra marks up to 8 enemies, then crescent blades cut each for {0}. Marked foes take 20% more damage for 4s.',
-    spr: { head: 'elf', skin: '#e8d8ff', hair: '#2a1a4a', hairStyle: 'long', hat: 'hood', armor: '#3a1a5a', armor2: '#1a0a2a', cloth: '#ff5d8f', weapon: 'daggers', metal: '#c8b8ff', cape: '#ff5d8f', wings: '#5a3a8a' } },
+    spr: { head: 'elf', skin: '#a898d0', hair: '#2a1a4a', hat: 'none', armor: '#3a1a5a', armor2: '#1a0a2a', cloth: '#ff5d8f', weapon: 'daggers', metal: '#c8b8ff', wings: '#5a3a8a',
+      elf: { build: 'lithe', ears: 'tall', hairdo: 'bob', top: 'rose', gear: ['straps', 'rings'], face: ['tattoo'], accent: '#c8203a', leaf: '#2a4a3a', leather: '#2a1a2a', trim: '#ffcf3a' } } },
   { id: 'murk', name: 'Murk the Smiling', race: 'toad', cls: 'rogue', tier: 2, rar: 2, ability: 'bogJaws', aName: 'Bog Jaws', aDesc: 'Giant jaws of mud burst up under the toughest enemy in reach and chomp it 3 times for {0}, splashing foes beside it.',
     spr: { head: 'toad', skin: '#6a7a3a', belly: '#c8d08a', hat: 'hood', armor: '#4a3a2a', armor2: '#2a1a0a', cloth: '#9a7a4a', weapon: 'daggers', metal: '#c8d0a0' } },
   { id: 'pell', name: 'Pell Featherwind', race: 'human', cls: 'ranger', tier: 1, rar: 0, ability: 'skyhawks', aName: 'Skyhawk Squadron', aDesc: 'A squadron of hawks dives on the front of the enemy line one after another, each hitting for {0} and blinding foes so their attacks can miss.',
@@ -2401,7 +2407,8 @@ const HEROES = [
     spr: { head: 'orc', skin: '#4f9a62', hair: '#1a1a1a', hat: 'none', armor: '#6a4a3a', armor2: '#3a2a20', cloth: '#7a2a2a', weapon: 'bow',
       orc: { build: 'lean', tusk: 'small', top: 'crest', gear: ['quiver', 'ribs', 'feather'], bone: '#efe6cc', leather: '#5a3a24', paint: '#f1ecdc' } } },
   { id: 'lirien', name: 'Lirien Dawnstring', race: 'elf', cls: 'ranger', tier: 3, rar: 5, fixed: 5, ability: 'arrowOfDawn', aName: 'Arrow of Dawn', aDesc: 'Looses one arrow into the sky. It bursts into 20 shards of light over the enemy side, each dealing {0}, and the sunrise heals every ally for {1}.',
-    spr: { head: 'elf', skin: SK.pale, hair: '#ffe066', hairStyle: 'long', hat: 'crown', armor: '#ffffff', armor2: '#ffd84a', cloth: '#ff9a4a', weapon: 'bow', cape: '#ffd84a', halo: '#ffffff', wings: '#fff3c0' } },
+    spr: { head: 'elf', skin: SK.pale, hair: '#ffe066', hat: 'none', armor: '#ffffff', armor2: '#ffd84a', cloth: '#ff9a4a', weapon: 'bow', halo: '#ffffff', wings: '#fff3c0',
+      elf: { build: 'robe', ears: 'tall', hairdo: 'flow', top: 'sunburst', gear: ['mantle'], face: ['gild'], trim: '#ffcf3a', accent: '#fffaf0' } } },
   { id: 'ribbsby', name: 'Sir Ribbsby', race: 'toad', cls: 'ranger', tier: 1, rar: 1, ability: 'lilyBombs', aName: 'Lily Bombardment', aDesc: 'Lobs 5 giant lily bombs that bounce 3 times along the enemy line, exploding for {0} with every bounce.',
     spr: { head: 'toad', skin: '#7ad46a', belly: '#f0ffd0', hat: 'tricorn', armor: '#ff7aa8', armor2: '#c04a7a', cloth: '#ffffff', weapon: 'crossbow', metal: '#3a8a5a' } },
   { id: 'brakka', name: 'Brakka Skullsplitter', race: 'orc', cls: 'berserker', tier: 1, rar: 0, ability: 'bloodMoon', aName: 'Blood Moon', aDesc: 'A blood moon rises as Brakka leaps into the biggest crowd for {0}. The ground there bleeds for 4s: foes take {1} a second and Brakka heals for half of it.',
@@ -3356,6 +3363,7 @@ function genHumanoid(s, frame) {
   // cape
   if (s.cape) g.rect(4, 11 + by, 5, 17, s.cape);
   if (s.orc) orcBack(g, s, by);
+  if (s.elf) elfBack(g, s, by);
   // legs
   const boot = shade(a2, -0.35);
   const leg = (x, lift) => { g.rect(x, 16, x + 1, 18 - lift, cl); g.rect(x, 18 - lift, x + 2, 18 - lift, boot); };
@@ -3367,6 +3375,7 @@ function genHumanoid(s, frame) {
   g.rect(6, 11 + by, 12, 15, a1); g.rect(6, 11 + by, 12, 11 + by, a2); g.rect(6, 14, 12, 14, cl); g.set(9, 12 + by, shade(a1, 0.35)); g.set(9, 14, '#ffcf3a', true);
   if (s.head === 'toad') g.rect(8, 12 + by, 11, 13 + by, s.belly || shade(skin, 0.4));
   if (s.orc) orcTorso(g, s, by);
+  if (s.elf) elfTorso(g, s, by, frame);
   // head
   const hx0 = gob ? 6 : 5, hx1 = gob ? 12 : 13, hy0 = 3 + by + hy, hy1 = 10 + by;
   if (s.head === 'toad') {
@@ -3393,7 +3402,8 @@ function genHumanoid(s, frame) {
       if (s.head !== 'orc' && s.head !== 'beast') g.set(13, 8 + by, '#ff9aa8', true);
       g.set(11, 9 + by, shade(skin, -0.3), true);
     }
-    if (s.head === 'elf') { g.set(4, 6 + by, skin); g.set(4, 5 + by, skin); g.set(3, 4 + by, skin); g.set(3, 5 + by, skin); g.set(2, 3 + by, skin); }
+    if (s.head === 'elf' && s.elf) elfHead(g, s, by);
+    else if (s.head === 'elf') { g.set(4, 6 + by, skin); g.set(4, 5 + by, skin); g.set(3, 4 + by, skin); g.set(3, 5 + by, skin); g.set(2, 3 + by, skin); }
     if (s.head === 'orc' && s.orc) orcHead(g, s, by);
     else if (s.head === 'orc') { g.rect(14, 6 + by, 14, 9 + by, skin); g.set(10, 9 + by, '#ffffff', true); g.set(10, 8 + by, '#ffffff', true); g.set(13, 9 + by, '#ffffff', true); g.set(13, 8 + by, '#ffffff', true); g.rect(9, 5 + by, 13, 5 + by, shade(skin, -0.35), true); }
     if (s.head === 'beast') {
@@ -3404,7 +3414,7 @@ function genHumanoid(s, frame) {
     }
     if (s.head === 'dwarf') { g.rect(7, 8 + by, 14, 11 + by, hair); g.rect(8, 12 + by, 13, 13 + by, hair); g.rect(9, 14 + by, 12, 14 + by, hair); g.set(11, 8 + by, skin); g.set(12, 8 + by, skin); }
     // hair
-    if (s.head === 'human' || s.head === 'elf' || s.head === 'dwarf' || (s.head === 'orc' && s.hairStyle)) {
+    if (s.head === 'human' || (s.head === 'elf' && !s.elf) || s.head === 'dwarf' || (s.head === 'orc' && s.hairStyle)) {
       if (s.head !== 'orc' || s.hairStyle === 'long') {
         g.rect(hx0, hy0, hx1, hy0 + 1, hair); g.rect(hx0, hy0 + 2, hx0 + 1, hy0 + 5, hair); g.set(hx1, hy0 + 2, hair);
         if (s.hairStyle === 'long') g.rect(4, 5 + by, 6, 13 + by, hair);
@@ -3443,6 +3453,7 @@ function genHumanoid(s, frame) {
     case 'bandana':
       g.rect(5, 3 + hatY, 13, 4 + hatY, cl); g.set(4, 4 + hatY, cl); g.set(3, 5 + hatY, cl); g.set(3, 6 + hatY, cl); g.set(11, 3 + hatY, '#ffffff', true); break;
   }
+  if (s.elf) elfTop(g, s, by);
   // halo floats above whatever is on the head
   if (s.halo) { const hy0 = Math.max(0, hatY - (s.hat && s.hat !== 'none' ? 1 : -1)); g.rect(7, hy0, 11, hy0, s.halo, true); g.set(6, hy0 + 1, s.halo, true); g.set(12, hy0 + 1, s.halo, true); }
   // front arm + weapon
@@ -3458,6 +3469,7 @@ function genHumanoid(s, frame) {
   else { const hx = s.head === 'orc' ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   if (s.orc) orcFront(g, s, by);
+  if (s.elf) elfFront(g, s, by);
   return g.finish();
 }
 
@@ -3593,7 +3605,8 @@ function ensureSprite(key) {
   if (E) { const dark = c => shade(c, -0.35);
     spec = Object.assign({}, d.spr, { armor: E.col, armor2: dark(E.col), cloth: E.col2, gem: E.col, plume: E.col2, hornCol: E.col2 });
     if (d.spr.cape) spec.cape = E.col2;
-    if (d.spr.hair) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
+    // an elf keeps their own hair: it is part of who they are (Katharine's brown hair)
+    if (d.spr.hair && !d.spr.elf) spec.hair = E.col2 === '#0f0a2a' ? '#5a3aff' : E.col2; }
   if (m[3]) spec = starSpec(spec, +m[3], m[4] ? +m[4] : 0);
   if (m[5] && typeof buildSpriteHD === 'function' && (spec.gen || 'humanoid') === 'humanoid') return buildSpriteHD(key, spec, m[5]);
   return buildSprite(key, spec, false);
@@ -3805,6 +3818,191 @@ function hdOrcFace(G, s, by) {
   const F = o.face || [];
   if (F.includes('paint')) for (let x = 16; x <= 19; x++) { put(x, 15 + dy, P.paint); put(x + 1, 16 + dy, P.paint); }
   if (F.includes('wart')) { put(21, 16 + dy, shade(skin, -0.3)); put(22, 16 + dy, shade(skin, -0.3)); put(21, 15 + dy, shade(skin, 0.25)); }
+}
+
+// ===== Elves (Cam 2026-11-06: "lets redesign elves to be unique in this same manner" as the orcs)
+// An elf legend carries an `elf` look in its sprite spec. genHumanoid (sprites.js) calls these hooks while it builds the
+// 20x20 body, and hdart.js calls hdElfFace after the temper face. Every elf gets long tapered ears, a slim pointed chin and
+// upswept lashes; the rest (build, hair, headpiece, gear, face marks) is their own.
+// An elf keeps their own hair through an element swap, and the colours they are known by (leaf, bark, trim, accent) are
+// never swapped by an element either, so two elves of the same element still read as two different elves.
+// The face is never covered: hair, headpieces and marks stay off the eyes and mouth.
+//
+// e.build : 'lithe' (slim waist, tunic tail), 'robe' (long robe to the feet), 'gown' (flared leaf skirt), 'ranger' (tunic)
+// e.ears  : 'long' (swept back), 'tall' (up like a hare), 'droop' (long, pointing back and down)
+// e.hairdo: 'shag', 'braid' (one long braid), 'tail' (high ponytail), 'flow' (to the knees), 'float' (streams back), 'bob'
+// e.top   : 'leafcowl', 'circlet' (leaves), 'branches' (twig antlers with blossoms), 'crescent' (moon), 'sunburst', 'rose', 'pin'
+// e.gear  : 'quiver', 'leafmantle', 'scarf', 'vines', 'sash', 'stars', 'straps', 'flowers', 'mantle' (feathers), 'bracer', 'cuffs', 'rings'
+// e.face  : 'freckles', 'stars', 'tattoo' (pale cheek chevron), 'gild' (marks stay on the cheeks, never on the eyes or mouth)
+
+function elfPal(s) {
+  const e = s.elf;
+  return { leaf: e.leaf || '#4f9a3a', bark: e.bark || '#7a5230', trim: e.trim || '#dfe6f5', accent: e.accent || '#ff9fd0', leather: e.leather || '#7a4e2a' };
+}
+const elfHas = (s, k) => s.elf && s.elf.gear && s.elf.gear.includes(k);
+
+// behind the body: long hair, quivers
+function elfBack(g, s, by) {
+  const e = s.elf, P = elfPal(s), h = s.hair, hl = shade(h, 0.25), hd = shade(h, -0.25);
+  if (e.hairdo === 'flow') { // hair poured down the back to the knees, with a wavy edge
+    g.rect(3, 6 + by, 6, 15 + by, h); g.rect(4, 16, 6, 16, h); g.set(3, 16, h); g.set(2, 9 + by, h); g.set(2, 13 + by, h);
+    for (const y of [8, 11, 14]) g.set(4, y + by, hl, true);
+    for (const y of [10, 13]) g.set(3, y + by, hd, true);
+    if (elfHas(s, 'flowers')) { g.set(3, 8 + by, P.accent, true); g.set(5, 12 + by, P.accent, true); g.set(3, 15 + by, '#ffffff', true); g.set(4, 10 + by, P.leaf, true); }
+  }
+  if (e.hairdo === 'float') { // hair that streams back and up as if in a night wind, with starlit tips
+    g.rect(2, 3 + by, 5, 10 + by, h); g.rect(1, 4 + by, 1, 8 + by, h); g.set(0, 5 + by, h); g.set(0, 7 + by, h); g.rect(3, 11 + by, 4, 12 + by, h); g.set(2, 13 + by, h);
+    g.set(1, 2 + by, h); g.set(2, 2 + by, h);
+    for (const [x, y] of [[2, 5], [3, 8], [1, 6]]) g.set(x, y + by, hd, true);
+    g.set(0, 5 + by, s.gem || '#fff3a0', true); g.set(2, 13 + by, s.gem || '#fff3a0', true);
+  }
+  if (e.hairdo === 'braid') { // one long braid down the back, tied off with a feather
+    for (let y = 8; y <= 14; y++) g.set(y % 2 ? 4 : 5, y + by, h); for (let y = 8; y <= 14; y++) g.set(y % 2 ? 5 : 4, y + by, y % 2 ? hd : h);
+    g.set(4, 15 + by, P.leather, true); g.set(3, 16 + by, P.accent, true); g.set(4, 16 + by, '#ffffff', true);
+  }
+  if (e.hairdo === 'tail') { // a high ponytail swept back from the crown
+    g.rect(3, 2 + by, 5, 3 + by, h); g.rect(2, 3 + by, 3, 6 + by, h); g.rect(1, 6 + by, 2, 9 + by, h); g.set(1, 10 + by, h);
+    g.set(2, 4 + by, hl, true); g.set(1, 7 + by, hd, true);
+  }
+  if (elfHas(s, 'quiver')) { // quiver over the back shoulder, fletchings poking up
+    g.rect(3, 9 + by, 4, 14 + by, P.leather); g.set(3, 13 + by, shade(P.leather, -0.3), true); g.set(4, 10 + by, P.trim, true);
+    g.set(2, 7 + by, P.accent, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.accent, true); g.set(4, 8 + by, P.leaf, true);
+  }
+}
+
+// the body: build first, then what is worn on it (called after the plain torso, before the head)
+function elfTorso(g, s, by, frame) {
+  const e = s.elf, P = elfPal(s), skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2;
+  const sway = frame === 'walk0' ? -1 : frame === 'walk1' ? 1 : 0;
+  if (e.build === 'lithe') {
+    // slim waist: the back arm tucks in, the tunic narrows and ends in a pointed tail
+    for (let y = 11; y <= 15; y++) g.clear(5, y + by); for (let y = 13; y <= 15; y++) g.clear(6, y);
+    g.rect(6, 12 + by, 6, 13 + by, a2); g.set(6, 14 + by, skin);
+    g.rect(7, 14, 12, 14, P.leather); g.set(9, 14, P.trim, true);
+    g.rect(8, 15, 11, 15, a1); g.rect(9, 16, 10, 16, a1); g.set(10, 16, a2);
+  } else if (e.build === 'robe') {
+    // a long robe to the feet, with a trimmed hem that swings as they walk
+    for (let y = 16; y <= 18; y++) for (let x = 4; x <= 14; x++) g.clear(x, y);
+    g.rect(6, 14, 12, 15, a1); g.rect(6, 16, 12, 17, a1); g.rect(5 + Math.min(0, sway), 17, 13 + Math.max(0, sway), 17, a1);
+    g.rect(5 + Math.min(0, sway), 18, 13 + Math.max(0, sway), 18, P.trim); g.set(9, 16, a2); g.set(9, 17, a2);
+    g.rect(6, 14, 12, 14, cl); g.set(12, 18, shade(a2, -0.35));
+  } else if (e.build === 'gown') {
+    // a flared skirt of layered leaves over a fitted bodice
+    for (let y = 16; y <= 18; y++) for (let x = 4; x <= 14; x++) g.clear(x, y);
+    const L = P.leaf, L2 = shade(L, -0.25), L3 = shade(L, 0.25);
+    g.rect(6, 14, 12, 14, cl); g.rect(6, 15, 12, 15, L); g.rect(5, 16, 13, 16, L); g.rect(5, 17, 13, 17, a1); g.rect(4 + Math.min(0, sway), 18, 14 + Math.max(0, sway), 18, L);
+    for (const x of [6, 9, 12]) { g.set(x, 15, L3, true); g.set(x + 1, 17, L2, true); }
+    for (const x of [5, 8, 11, 14]) g.clear(x + Math.max(0, sway), 18);
+    g.set(7, 16, P.accent, true); g.set(11, 16, '#ffffff', true);
+  } else { // ranger: a belted tunic with a short skirt
+    g.rect(6, 14, 12, 14, P.leather); g.set(10, 14, P.trim, true); g.rect(7, 15, 12, 15, a1); g.set(9, 15, a2);
+  }
+  if (elfHas(s, 'sash')) { for (let i = 0; i < 4; i++) g.set(7 + i, 11 + by + i, P.trim, true); g.set(11, 14, P.accent, true); }
+  if (elfHas(s, 'straps')) { for (let i = 0; i < 4; i++) { g.set(7 + i, 11 + by + i, P.leather); g.set(11 - i, 11 + by + i, P.leather); } g.set(9, 13 + by, P.trim, true); }
+  if (elfHas(s, 'stars')) for (const [x, y] of [[7, 12], [11, 13], [8, 16], [11, 17], [6, 15]]) if (g.get(x, y < 16 ? y + by : y)) g.set(x, y < 16 ? y + by : y, s.gem || '#fff3a0', true);
+}
+
+// the head: tapered chin and the hair (the default elf hair and ears are skipped)
+function elfHead(g, s, by) {
+  const e = s.elf, h = s.hair, hl = shade(h, 0.25), hd = shade(h, -0.25);
+  // a slim pointed chin
+  g.clear(13, 9 + by); g.set(12, 10 + by, s.skin); g.clear(6, 10 + by);
+  // the crown of the hair every elf shares: sleek and close to the head
+  g.rect(6, 3 + by, 12, 3 + by, h); g.rect(5, 4 + by, 13, 4 + by, h); g.rect(5, 5 + by, 6, 7 + by, h); g.set(7, 5 + by, h);
+  g.set(9, 3 + by, hl, true);
+  const D = e.hairdo;
+  if (D === 'shag') { g.set(13, 5 + by, h); g.set(11, 5 + by, h); g.set(5, 8 + by, h); g.set(8, 5 + by, hd, true); }
+  else if (D === 'braid') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 5, 8 + by, h); g.set(10, 4 + by, hl, true); }
+  else if (D === 'tail') { g.set(13, 5 + by, h); g.set(5, 3 + by, h); }
+  else if (D === 'flow') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 6, 9 + by, h); g.set(7, 4 + by, hl, true); }
+  else if (D === 'float') { g.set(13, 5 + by, h); g.rect(5, 8 + by, 6, 9 + by, h); }
+  else if (D === 'bob') { // sharp bob: thick at the back, cut to a point at the jaw, fringe swept across the brow
+    g.rect(5, 5 + by, 7, 9 + by, h); g.set(6, 10 + by, h); g.set(7, 10 + by, hd); g.rect(8, 5 + by, 9, 5 + by, h); g.set(13, 5 + by, h); g.set(13, 6 + by, h);
+    g.set(6, 6 + by, hl, true); g.set(6, 8 + by, hd, true);
+  }
+}
+
+// after the hats: headpieces and the long ears that poke through hoods and hair
+function elfTop(g, s, by) {
+  const e = s.elf, P = elfPal(s), skin = s.skin, inner = mix(shade(skin, -0.2), '#ff9aa8', 0.35);
+  const T = e.top;
+  if (T === 'leafcowl') { // a cowl of overlapping leaves with points along its edge, the face left open
+    const L = P.leaf, L2 = shade(L, -0.28), L3 = shade(L, 0.3);
+    g.rect(5, 2 + by, 12, 3 + by, L); g.rect(4, 4 + by, 7, 4 + by, L); g.rect(4, 5 + by, 6, 10 + by, L); g.rect(7, 4 + by, 12, 4 + by, L);
+    for (const x of [5, 8, 11]) g.set(x, 1 + by, L); g.set(13, 3 + by, L); g.set(13, 4 + by, L); g.set(3, 3 + by, L); g.set(2, 3 + by, L); g.set(3, 7 + by, L); g.set(3, 10 + by, L);
+    for (const [x, y] of [[6, 2], [9, 2], [12, 3], [5, 6], [5, 9]]) g.set(x, y + by, L3, true);
+    for (const [x, y] of [[7, 3], [10, 3], [4, 8], [6, 4]]) g.set(x, y + by, L2, true);
+    g.set(12, 5 + by, s.hair); g.set(11, 5 + by, s.hair); // a blond fringe peeks out under the leaves
+  }
+  if (T === 'circlet') { // a thin circlet of silver and leaves
+    g.rect(7, 4 + by, 13, 4 + by, P.trim, true); g.set(10, 4 + by, P.accent, true); g.set(6, 3 + by, P.leaf, true); g.set(5, 2 + by, P.leaf, true); g.set(6, 2 + by, shade(P.leaf, 0.3), true);
+  }
+  if (T === 'branches') { // twig antlers with blossoms, rising out of the hair
+    const B = P.bark;
+    g.rect(7, 1 + by, 7, 2 + by, B); g.set(6, 0 + by, B); g.set(8, 0 + by, B); g.set(5, 1 + by, B);
+    g.rect(11, 1 + by, 11, 2 + by, B); g.set(12, 0 + by, B); g.set(10, 0 + by, B); g.set(13, 1 + by, B);
+    g.set(5, 0 + by, P.accent, true); g.set(13, 0 + by, P.accent, true); g.set(8, 0 + by, '#ffffff', true); g.set(9, 2 + by, P.leaf, true); g.set(12, 1 + by, P.leaf, true);
+    g.set(9, 3 + by, P.accent, true);
+  }
+  if (T === 'crescent') { // a crescent moon set on a silver band
+    g.rect(7, 4 + by, 12, 4 + by, P.trim, true); g.set(9, 3 + by, P.accent, true); g.set(11, 3 + by, P.accent, true); g.set(10, 4 + by, P.accent, true);
+  }
+  if (T === 'sunburst') { // a gold band with sun rays fanning up
+    const G = P.trim;
+    g.rect(6, 4 + by, 13, 4 + by, G, true); g.set(10, 4 + by, P.accent, true);
+    // the rays fan out to the sides, so the halo above stays its own ring
+    g.set(6, 3 + by, G, true); g.set(5, 2 + by, G, true); g.set(13, 3 + by, G, true); g.set(14, 2 + by, G, true);
+    g.set(8, 3 + by, G, true); g.set(10, 3 + by, G, true); g.set(12, 3 + by, G, true);
+  }
+  if (T === 'rose') { // a night rose behind the ear
+    g.set(6, 2 + by, P.accent, true); g.set(7, 2 + by, shade(P.accent, -0.3), true); g.set(6, 3 + by, shade(P.accent, -0.3), true); g.set(7, 3 + by, P.accent, true); g.set(7, 1 + by, shade(P.accent, 0.3), true);
+    g.set(8, 2 + by, P.leaf, true); g.set(5, 3 + by, P.leaf, true);
+  }
+  if (T === 'pin') { g.set(4, 2 + by, P.trim, true); g.set(3, 1 + by, P.trim, true); g.set(5, 3 + by, P.accent, true); }
+  // ears: long and tapered, with a pink inner shadow
+  const E = e.ears || 'long';
+  let ear;
+  if (E === 'tall') ear = [[4, 7], [4, 6], [4, 5], [3, 5], [3, 4], [3, 3], [2, 2], [2, 1]];
+  else if (E === 'droop') ear = [[4, 6], [4, 7], [3, 6], [3, 7], [2, 7], [1, 7], [1, 8], [0, 8]];
+  else ear = [[4, 7], [4, 6], [3, 6], [3, 5], [2, 5], [2, 4], [1, 3], [0, 2]];
+  for (const [x, y] of ear) g.set(x, y + by, skin);
+  g.set(E === 'droop' ? 3 : E === 'tall' ? 4 : 3, (E === 'tall' ? 6 : 6) + by + (E === 'droop' ? 1 : 0) - (E === 'tall' ? 0 : 0), inner, true);
+  if (E === 'long') g.set(2, 5 + by, inner, true);
+  if (E === 'tall') g.set(3, 4 + by, inner, true);
+  if (E === 'droop') g.set(2, 7 + by, inner, true);
+  if (elfHas(s, 'cuffs')) { const c = E === 'tall' ? [3, 3] : E === 'droop' ? [2, 7] : [2, 4]; g.set(c[0], c[1] + by, P.trim, true); g.set(c[0] + 1, c[1] + 1 + by, P.trim, true); }
+  if (elfHas(s, 'rings')) { const pts = E === 'tall' ? [[3, 4], [3, 5], [4, 8]] : [[3, 5], [2, 4], [4, 8]]; for (const [x, y] of pts) g.set(x, y + by, P.trim, true); }
+}
+
+// in front of everything: shoulder pieces, scarves, arm wraps
+function elfFront(g, s, by) {
+  const P = elfPal(s);
+  if (elfHas(s, 'leafmantle')) { const L = P.leaf;
+    g.rect(5, 11 + by, 12, 11 + by, L); for (const x of [5, 7, 9, 11]) g.set(x, 12 + by, L); g.set(4, 11 + by, L);
+    for (const x of [6, 10]) g.set(x, 11 + by, shade(L, 0.3), true); g.set(8, 11 + by, P.trim, true); }
+  if (elfHas(s, 'scarf')) { const c = P.accent;
+    g.rect(7, 11 + by, 12, 11 + by, c); g.set(6, 12 + by, c); g.set(5, 12 + by, c); g.set(4, 13 + by, c); g.set(3, 13 + by, shade(c, -0.25)); g.set(10, 11 + by, shade(c, -0.25), true); }
+  if (elfHas(s, 'mantle')) { const f = P.accent, f2 = shade(f, -0.2);
+    g.rect(4, 10 + by, 7, 11 + by, f); g.set(3, 11 + by, f); g.set(4, 12 + by, f); g.set(6, 12 + by, f); g.set(8, 11 + by, f);
+    g.set(5, 11 + by, f2, true); g.set(7, 12 + by, f2); g.set(5, 10 + by, P.trim, true); }
+  if (elfHas(s, 'vines')) { g.set(5, 13 + by, P.leaf, true); g.set(6, 12 + by, P.leaf, true); g.set(13, 13 + by, P.leaf, true); g.set(12, 12 + by, P.leaf, true); g.set(5, 14 + by, '#ffffff', true); }
+  if (elfHas(s, 'bracer')) { g.set(13, 13 + by, P.leather, true); g.set(12, 13 + by, P.leather, true); }
+}
+
+// ===== fine-grid face extras (after the temper face): upswept lashes, cheekbones, marks
+function hdElfFace(G, s, by) {
+  const e = s.elf; if (!e) return;
+  const P = elfPal(s), dy = by * HDK, skin = s.skin, ink = mix(OUTLINE, skin, 0.18);
+  // only on bare skin, so nothing ever lands on an eye, a mouth or the hair
+  const put = (x, y, c) => { if (G.get(x, y) === skin) G.set(x, y, c, true); };
+  // the outer corner of the front eye flicks up, and a soft light sits on the high cheekbone
+  put(26, 11 + dy, ink); put(27, 10 + dy, ink);
+  put(25, 15 + dy, shade(skin, 0.14));
+  const F = e.face || [];
+  if (F.includes('freckles')) { const c = mix(skin, '#b0603a', 0.4); for (const [x, y] of [[20, 16], [22, 17], [25, 17], [27, 16], [19, 17]]) put(x, y + dy, c); }
+  if (F.includes('stars')) { const c = P.accent; put(27, 15 + dy, c); put(19, 16 + dy, c); put(18, 15 + dy, shade(c, -0.2)); put(26, 17 + dy, '#ffffff'); }
+  if (F.includes('tattoo')) { const c = mix(skin, '#ffffff', 0.55); put(18, 15 + dy, c); put(19, 16 + dy, c); put(18, 17 + dy, c); }
+  if (F.includes('gild')) { const c = P.trim; put(19, 16 + dy, c); put(26, 15 + dy, c); put(22, 10 + dy, '#ffffff'); }
 }
 
 // ===== Hi-detail champion art (Cam 2026-10-31: "32 bit character upgrades ... a different facial expression for the character trait they rolled")
@@ -4019,6 +4217,7 @@ function hdHumanoid(spec, frame, temper) {
   const base = G.p.slice();
   hdPaintFace(G, spec, by, temper);
   if (spec.orc) hdOrcFace(G, spec, by);
+  if (spec.elf) hdElfFace(G, spec, by);
   const roles = new Map([[spec.skin, 'skin']]); if (spec.snout) roles.set(spec.snout, 'skin'); if (spec.belly) roles.set(spec.belly, 'skin');
   if (spec.hair) roles.set(spec.hair, 'hair');
   for (const m of [spec.metal || '#dfe6f5', '#dfe6f5', '#cfd6e6', '#d8dde8', '#e8eefc']) roles.set(m, 'metal');
