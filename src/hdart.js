@@ -210,6 +210,7 @@ function hdHumanoid(spec, frame, temper) {
   const base = G.p.slice();
   hdPaintFace(G, spec, by, temper);
   if (spec.orc) hdOrcFace(G, spec, by);
+  if (spec.elf) hdElfFace(G, spec, by);
   const roles = new Map([[spec.skin, 'skin']]); if (spec.snout) roles.set(spec.snout, 'skin'); if (spec.belly) roles.set(spec.belly, 'skin');
   if (spec.hair) roles.set(spec.hair, 'hair');
   for (const m of [spec.metal || '#dfe6f5', '#dfe6f5', '#cfd6e6', '#d8dde8', '#e8eefc']) roles.set(m, 'metal');
