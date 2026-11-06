@@ -132,12 +132,14 @@ const WPN = {
   maul: {
     i: { o: [2, 12], r: ['.LLLL.', 'DMMMMD', 'DGGGGD', 'DMMMMD', '.DDDD.', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..H...', '..W...', '..w...'] },
     a: { o: [2, 3], r: ['...DMML', '...DMML', '...DGGL', 'wWHDGGL', '...DGGL', '...DMML', '...DMML'] } },
+  // a butcher's cleaver: dark spine, a hanging hole, a bright cutting edge in front, a short wooden grip
   cleaver: {
-    i: { o: [0, 7], r: ['XNNI', 'XKNI', 'XNNI', 'XNNI', 'XNNI', 'XXXI', 'W...', 'H...', 'w...'] },
-    a: { o: [2, 0], r: ['wWHXXXX', '...NKNN', '...NNNN', '...NNNN', '...IIII'] } },
+    i: { o: [0, 8], r: ['XXXXXXX', 'DNNNNKN', 'DNNNNNN', 'DNNNNNN', 'DIIIIII', 'D......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 1], r: ['..XXXXXX', 'wHDNKNNN', '..XNNNNN', '..XNNNNN', '..IIIIII'] } },
+  // a spiked iron ball on a chain
   flail: {
-    i: { o: [0, 9], r: ['..M.', '.MLM', 'MMMD', '.MDD', '..M.', '.C..', 'C...', 'W...', 'W...', 'H...', 'w...'] },
-    a: { o: [0, 4], r: ['...M.', '..MLM', '.CMMD', '.W.M.', 'H....'] } },
+    i: { o: [0, 12], r: ['...L...', '..MMM..', '.MMLMD.', 'LMMMMDL', '.MDDDD.', '..DDD..', '...L...', '..C....', '.C.....', 'C......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 6], r: ['.....L...', '....MMM..', '...LMMMDL', '...CDDD..', '..C..L...', '.C.......', 'wH.......'] } },
   scythe: {
     i: { o: [7, 13], r: ['..LLLLMM', '.LMMMMMD', 'LM.....k', 'L......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......H', '.......k', '.......k'] },
     a: { o: [5, 0], r: ['kkkkkHkkkM', '.......LMM', '......LMM.', '.....LM...', '....L.....'] } },
@@ -220,7 +222,8 @@ function frameBox(img, cx, by, fs) {
 }
 
 function genHumanoid(s, frame) {
-  const g = s.star ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
+  // orcs always get the padded frame: their weapons are held further out from the face and need the room
+  const g = s.star || s.head === 'orc' ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;

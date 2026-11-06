@@ -2356,7 +2356,7 @@ const HEROES = [
   { id: 'hrolf', name: 'Hrolf Wildmane', race: 'beast', cls: 'berserker', tier: 2, rar: 1, ability: 'rampage', aName: 'Wild Hunt', aDesc: 'Charges through the enemy line with a pack of spirit wolves. Everything in the way takes {0}, the wolves bite for {1}, and Hrolf fights 40% faster for 4s.',
     spr: { head: 'beast', skin: '#9a5a2a', snout: '#e8c49a', hat: 'horns', hornCol: '#f1ecdc', ears: 'round', armor: '#7a4a2a', armor2: '#4a2a1a', cloth: '#e8434d', weapon: 'axe', metal: '#d8dde8', cape: '#5a3a8c' } },
   { id: 'gorehorn', name: 'Gorehorn', race: 'orc', cls: 'berserker', tier: 3, rar: 3, ability: 'earthsplitter', aName: 'Doomhorn Drop', aDesc: 'Leaps into the sky and crashes into the biggest crowd for {0}, stunning for 1s. The ground splits into lava fissures that burn for {1} a second.',
-    spr: { head: 'orc', skin: '#3f8f4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'flail', metal: '#ffcf3a', cape: '#e8434d',
+    spr: { head: 'orc', skin: '#3f8f4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#f1ecdc', armor: '#3a3a4a', armor2: '#22222e', cloth: '#e8434d', weapon: 'flail', metal: '#b8c0cc', cape: '#e8434d',
       orc: { build: 'hulk', tusk: 'big', top: 'bald', gear: ['pauldrons'], face: ['brow', 'scar'], metal: '#5a5a6a' } } },
   { id: 'vesper', name: 'Lady Vesperine', race: 'skeleton', cls: 'rogue', tier: 3, rar: 3, ability: 'deathMark', aName: 'Danse Macabre', aDesc: 'Marks 4 enemies with a phantom rose. After 1.5s a spectral scythe cuts each for {0}. From Epic up, foes it kills pass the mark on to the nearest enemy.',
     spr: { head: 'skeleton', skin: SK.bone, hat: 'crown', armor: '#2a1f3a', armor2: '#160f22', cloth: '#ff3d6e', weapon: 'daggers', metal: '#ff8ab0', cape: '#ff3d6e' } },
@@ -2438,7 +2438,7 @@ const ENEMIES = {
   slimelet:{ name: 'Slimelet', hp: 40, atk: 6, as: 1.0, range: 12, spd: 24, armor: 0, gold: 2, cost: 0.6, kind: 'melee', small: true, spr: { gen: 'slime', body: '#b0f07a', eye: '#1a1230', small: true } },
   lurker:  { name: 'Bog Lurker', hp: 90, atk: 11, as: 0.7, range: 70, spd: 17, armor: 5, gold: 11, cost: 2, kind: 'ranged', proj: 'spit', poison: 4, spr: { gen: 'humanoid', head: 'toad', skin: '#5a7a3a', belly: '#9aaa5a', hat: 'none', armor: '#4a3a2a', armor2: '#2a2018', cloth: '#7a5a3a', weapon: 'none' } },
   wisp:    { name: 'Will-o-Wisp', hp: 60, atk: 10, as: 0.9, range: 50, spd: 28, armor: 0, gold: 10, cost: 2, kind: 'flyer', proj: 'soul', spr: { gen: 'flyer', body: '#8affd8', wing: '#d8fff2', eye: '#1a6a5a', glow: true } },
-  troll:   { name: 'Bog Troll', hp: 520, atk: 26, as: 0.7, range: 15, spd: 14, armor: 25, gold: 35, cost: 7, kind: 'melee', elite: true, regen: 0.02, spr: { gen: 'humanoid', head: 'orc', skin: '#4a8a6a', hair: '#2a4a3a', hairStyle: 'long', hat: 'none', armor: '#5a4a3a', armor2: '#3a2a20', cloth: '#5a4a3a', weapon: 'hammer', metal: '#7a6a5a', orc: { build: 'hunch', tusk: 'small', top: 'braids', gear: [] } } },
+  troll:   { name: 'Bog Troll', hp: 520, atk: 26, as: 0.7, range: 15, spd: 14, armor: 25, gold: 35, cost: 7, kind: 'melee', elite: true, regen: 0.02, spr: { gen: 'humanoid', head: 'orc', skin: '#4a8a6a', hair: '#2a4a3a', hairStyle: 'long', hat: 'none', armor: '#5a4a3a', armor2: '#3a2a20', cloth: '#5a4a3a', weapon: 'maul', metal: '#8a8a7a', orc: { build: 'hunch', tusk: 'small', top: 'braids', gear: [] } } },
   // Grave Rot
   zombie:  { name: 'Shambler', hp: 150, atk: 12, as: 0.7, range: 13, spd: 13, armor: 5, gold: 9, cost: 1.5, kind: 'melee', spr: { gen: 'humanoid', head: 'human', skin: '#9ac48a', hair: '#3a4a3a', hat: 'none', armor: '#5a6a8a', armor2: '#3a4a5a', cloth: '#4a3a3a', weapon: 'none', eye: '#ff3a3a' } },
   ghoul:   { name: 'Ghoul', hp: 110, atk: 15, as: 1.2, range: 13, spd: 40, armor: 0, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#9a8ac0', belly: '#c8b8e0', eye: '#ff3a6a' } },
@@ -2449,7 +2449,7 @@ const ENEMIES = {
   imp:     { name: 'Imp', hp: 70, atk: 11, as: 1.1, range: 13, spd: 36, armor: 0, gold: 9, cost: 1.4, kind: 'flyer', spr: { gen: 'flyer', body: '#ff4a4a', wing: '#8a1a3a', eye: '#ffde3a', horns: true } },
   hound:   { name: 'Hellhound', hp: 160, atk: 18, as: 1.1, range: 13, spd: 31, armor: 5, gold: 14, cost: 2.2, kind: 'melee', spr: { gen: 'quad', body: '#3a2a3a', belly: '#ff6a2a', eye: '#ffde3a', fire: true } },
   juggler: { name: 'Fire Juggler', hp: 120, atk: 17, as: 0.8, range: 78, spd: 18, armor: 5, gold: 16, cost: 2.5, kind: 'ranged', proj: 'fire', spr: { gen: 'humanoid', head: 'goblin', skin: '#ff7a5a', hat: 'wizard', armor: '#ffd84a', armor2: '#d84a8a', cloth: '#5a2a8a', weapon: 'none' } },
-  brute:   { name: 'Pit Brute', hp: 900, atk: 34, as: 0.7, range: 16, spd: 15, armor: 30, gold: 50, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'orc', skin: '#d84a4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#ffe9b0', armor: '#3a2a3a', armor2: '#1a121a', cloth: '#ffd84a', weapon: 'axe', metal: '#ff8a3a', orc: { build: 'hulk', tusk: 'huge', top: 'bald', gear: ['harness'], face: ['brow'], leather: '#3a2418' } } },
+  brute:   { name: 'Pit Brute', hp: 900, atk: 34, as: 0.7, range: 16, spd: 15, armor: 30, gold: 50, cost: 8, kind: 'melee', elite: true, spr: { gen: 'humanoid', head: 'orc', skin: '#d84a4a', hair: '#1a1a1a', hat: 'horns', hornCol: '#ffe9b0', armor: '#3a2a3a', armor2: '#1a121a', cloth: '#ffd84a', weapon: 'greataxe', metal: '#d8dde8', orc: { build: 'hulk', tusk: 'huge', top: 'bald', gear: ['harness'], face: ['brow'], leather: '#3a2418' } } },
   // Frostfang Clans
   snowwolf:{ name: 'Snow Wolf', hp: 170, atk: 18, as: 1.1, range: 13, spd: 44, armor: 5, gold: 14, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#e8f0ff', belly: '#ffffff', eye: '#3a8aff' } },
   icearcher:{ name: 'Ice Archer', hp: 130, atk: 19, as: 0.8, range: 84, spd: 18, armor: 5, gold: 16, cost: 2.5, kind: 'ranged', proj: 'ice', slow: 0.3, spr: { gen: 'humanoid', head: 'goblin', skin: '#9ad8ff', hat: 'hood', armor: '#e8f0ff', armor2: '#9ab0d8', cloth: '#3a6ad8', weapon: 'bow' } },
@@ -3257,12 +3257,14 @@ const WPN = {
   maul: {
     i: { o: [2, 12], r: ['.LLLL.', 'DMMMMD', 'DGGGGD', 'DMMMMD', '.DDDD.', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..W...', '..H...', '..W...', '..w...'] },
     a: { o: [2, 3], r: ['...DMML', '...DMML', '...DGGL', 'wWHDGGL', '...DGGL', '...DMML', '...DMML'] } },
+  // a butcher's cleaver: dark spine, a hanging hole, a bright cutting edge in front, a short wooden grip
   cleaver: {
-    i: { o: [0, 7], r: ['XNNI', 'XKNI', 'XNNI', 'XNNI', 'XNNI', 'XXXI', 'W...', 'H...', 'w...'] },
-    a: { o: [2, 0], r: ['wWHXXXX', '...NKNN', '...NNNN', '...NNNN', '...IIII'] } },
+    i: { o: [0, 8], r: ['XXXXXXX', 'DNNNNKN', 'DNNNNNN', 'DNNNNNN', 'DIIIIII', 'D......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 1], r: ['..XXXXXX', 'wHDNKNNN', '..XNNNNN', '..XNNNNN', '..IIIIII'] } },
+  // a spiked iron ball on a chain
   flail: {
-    i: { o: [0, 9], r: ['..M.', '.MLM', 'MMMD', '.MDD', '..M.', '.C..', 'C...', 'W...', 'W...', 'H...', 'w...'] },
-    a: { o: [0, 4], r: ['...M.', '..MLM', '.CMMD', '.W.M.', 'H....'] } },
+    i: { o: [0, 12], r: ['...L...', '..MMM..', '.MMLMD.', 'LMMMMDL', '.MDDDD.', '..DDD..', '...L...', '..C....', '.C.....', 'C......', 'W......', 'W......', 'H......', 'w......'] },
+    a: { o: [1, 6], r: ['.....L...', '....MMM..', '...LMMMDL', '...CDDD..', '..C..L...', '.C.......', 'wH.......'] } },
   scythe: {
     i: { o: [7, 13], r: ['..LLLLMM', '.LMMMMMD', 'LM.....k', 'L......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......k', '.......H', '.......k', '.......k'] },
     a: { o: [5, 0], r: ['kkkkkHkkkM', '.......LMM', '......LMM.', '.....LM...', '....L.....'] } },
@@ -3345,7 +3347,8 @@ function frameBox(img, cx, by, fs) {
 }
 
 function genHumanoid(s, frame) {
-  const g = s.star ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
+  // orcs always get the padded frame: their weapons are held further out from the face and need the room
+  const g = s.star || s.head === 'orc' ? new PixGrid(STAR_PAD.w, STAR_PAD.h, STAR_PAD.l, STAR_PAD.t) : new PixGrid(20, 20), ws = s.ws || 1;
   const by = frame === 'idle1' ? 1 : 0, atk = frame === 'atk';
   const skin = s.skin, a1 = s.armor, a2 = s.armor2 || shade(a1, -0.3), cl = s.cloth || a2, hair = s.hair || shade(skin, -0.4);
   const gob = s.head === 'goblin', hy = gob ? 2 : 0;
@@ -12573,7 +12576,7 @@ function drawTower() {
   if (T.phase === 'climb' || T.phase === 'flag') {
     const c = T.phase === 'flag' ? { x: cx - 8, y: towerTopWorld() - 24, dir: 1 } : climberWorld();
     const S = SPR['h:' + T.climber]; if (S) { const fr = T.phase === 'flag' ? (Math.floor(T.t * 3) % 2 ? 'atk' : 'idle0') : (Math.floor(T.t * 10) % 2 ? 'walk0' : 'walk1'); const sy = toS(c.y);
-      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, -10, Math.round(sy) - 19, im.width / D, im.height / D); } else { const im = S.frames[fr], D = im.hd || 1; g.drawImage(im, Math.round(c.x) - 10, Math.round(sy) - 19, im.width / D, im.height / D); } g.restore(); }
+      g.save(); if (c.dir < 0 && T.phase === 'climb') { g.translate(Math.round(c.x), 0); g.scale(-1, 1); const im = S.frames[fr], b = frameBox(im, 0, Math.round(sy), 20); g.drawImage(im, b.x, b.y, b.w, b.h); } else { const im = S.frames[fr], b = frameBox(im, Math.round(c.x), Math.round(sy), 20); g.drawImage(im, b.x, b.y, b.w, b.h); } g.restore(); }
   }
   // particles + texts
   for (const p of T.parts) { g.globalAlpha = 1 - p.t / p.life; g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(toS(p.y)), 1, 1); }
@@ -13523,10 +13526,15 @@ const JAW_CACHE = {};
 // pixels kept at both corners and a tongue in the middle of the wide frame.
 function jawFrames(key) {
   if (JAW_CACHE[key]) return JAW_CACHE[key];
-  ensureSprite(key); const src = SPR[key].frames.idle0, W = src.width, H = src.height, D = src.hd || 1;
-  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map(v => v * D);
+  ensureSprite(key); let src = SPR[key].frames.idle0;
+  // a padded frame (orcs, starred legends) is cut to its body plus a margin (TK_PAD), so a weapon held out still fits;
+  // the actor box in layout() grows by the same margin, so the body keeps its size
+  const D0 = src.hd || 1, padded = src.width / D0 === STAR_PAD.w && src.height / D0 === STAR_PAD.h, [pl, pt, pw, ph] = TK_PAD;
+  if (padded) { const c = document.createElement('canvas'); c.width = pw * D0; c.height = ph * D0; c.getContext('2d').drawImage(src, (STAR_PAD.l - pl) * D0, (STAR_PAD.t - pt) * D0, pw * D0, ph * D0, 0, 0, pw * D0, ph * D0); c.hd = src.hd; src = c; }
+  const W = src.width, H = src.height, D = src.hd || 1, ox = padded ? pl * D : 0, oy = padded ? pt * D : 0;
+  const id = key.startsWith('e:') ? key.slice(2) : 'hero', [jy, x0, x1] = (JAW[id] || JAW.hero).map((v, i) => v * D + (i ? ox : oy));
   // hi-detail humanoids (hdart.js) open the mouth they were drawn with, at its own spot, and the talking gap covers it
-  const hm = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null;
+  const hm0 = D > 1 && typeof hdMouthBox === 'function' ? hdMouthBox(key, src) : null, hm = hm0 && Object.assign(hm0, { x0: hm0.x0 + ox, x1: hm0.x1 + ox, y: hm0.y + oy });
   if (hm) {
     const frames = [0, 1, 2].map(gap => {
       const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
@@ -13539,7 +13547,7 @@ function jawFrames(key) {
       }
       g.putImageData(d, 0, 0); return c;
     });
-    return (JAW_CACHE[key] = frames);
+    if (padded) frames.pad = [pl, pt]; return (JAW_CACHE[key] = frames);
   }
   const frames = [0, 1, 2].map(gap => {
     const c = document.createElement('canvas'); c.width = W; c.height = H + 2 * D; const g = c.getContext('2d');
@@ -13552,7 +13560,7 @@ function jawFrames(key) {
     }
     g.putImageData(d, 0, 0); return c;
   });
-  return (JAW_CACHE[key] = frames);
+  if (padded) frames.pad = [pl, pt]; return (JAW_CACHE[key] = frames);
 }
 
 // ----- the scene -----
@@ -13562,6 +13570,8 @@ function jawFrames(key) {
 // the cinematic bars only hold the title and the reply cards.
 const TALKUI = { on: false };
 // where everyone stands, in field pixels (the 480x270 field, zoomed so the camera has to pan between them)
+// margin kept around a padded body in talk scenes: [left, top, width, height] in grid pixels (body is 20x20 at left, top)
+const TK_PAD = [3, 4, 27, 24];
 const TK_SPOT = { hero: [226, 186], boss: [410, 186], fallen: [196, 184], visitor: [298, 188], mate: [262, 190] }, TK_SCALE = { hero: 2.6, boss: 3.6, fallen: 2.6, visitor: 2.6, mate: 2.4 };
 const TK_CAMP = [[352, 176, 1.7], [468, 190, 2], [452, 172, 1.5]]; // horde extras around the boss on the road: x, feet y, scale
 // how much talk the player wants (Sound panel, localStorage manatorium.talk): 'all', 'boss' (boss sieges and the finale) or 'off'
@@ -13608,7 +13618,11 @@ function showTalk(run, done, x = {}) {
   const keys = { boss: 'e:' + bossId };
   let cur = sc.h, k = 4, focusOn = 'hero';
   const tcard = el.querySelector('#tkTemper');
-  const setHero = h => { cur = h; keys.hero = heroFaceKey(heroSpriteKey(h, true), h); A.hero.className = 'tk-a tk-hero';
+  // an actor's box: 20x22 grid pixels above its feet, or the padded cut of an orc or starred legend (jawFrames)
+  function sizeActor(n) { if (!A[n]) return; const [x, y] = SPOT[n], u = TK_SCALE[n] * k, w = 20 * u, jf = keys[n] && jawFrames(keys[n]), p = jf && jf.pad;
+    if (p) { const D = jf[0].hd || 1; Object.assign(A[n].style, { left: x * k - w / 2 - p[0] * u + 'px', top: y * k - w - p[1] * u + 'px', width: jf[0].width / D * u + 'px', height: jf[0].height / D * u + 'px' }); return; }
+    Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w + 'px', width: w + 'px', height: w * 1.1 + 'px' }); }
+  const setHero = h => { cur = h; keys.hero = heroFaceKey(heroSpriteKey(h, true), h); A.hero.className = 'tk-a tk-hero'; try { sizeActor('hero'); } catch (e) {}
     const t = heroTemper(h), T = TEMPERS[t], dread = !hall && (BOSS_DREAD[bossId] || []).includes(t);
     tcard.className = 'tk-temper ' + T.side + (dread ? ' dread' : '');
     tcard.innerHTML = `<span class="tk-tl">Personality</span><b>${T.icon} ${esc(T.name)}</b><i>${esc(heroName(h))}</i><p>${esc((TEMPER_TALK[t] || TEMPER_TALK.heroic).style)}</p>`
@@ -13625,7 +13639,7 @@ function showTalk(run, done, x = {}) {
   const layout = () => {
     const vw = innerWidth, vh = innerHeight; k = Math.min(vw / 320, vh / 190); portrait = vh > vw * 1.1; el.classList.toggle('portrait', portrait);
     cam.style.width = WW * k + 'px'; cam.style.height = H * k + 'px';
-    for (const n in A) if (A[n]) { const [x, y] = SPOT[n], w = 20 * TK_SCALE[n] * k; Object.assign(A[n].style, { left: x * k - w / 2 + 'px', top: y * k - w + 'px', width: w + 'px', height: w * 1.1 + 'px' }); } // sprite rows 0-19 above the feet line, jaw rows below
+    for (const n in A) sizeActor(n); // sprite rows 0-19 above the feet line, jaw rows below
     pan(focusOn, true); if (speaker) placeBubble(speaker);
   };
   const pan = (n, now) => {
@@ -13653,8 +13667,8 @@ function showTalk(run, done, x = {}) {
     else { for (const c of clouds) { c.x += c.s * dt; if (c.x > W + 30) c.x = -c.w - 10; fg.fillStyle = '#ffffff'; fg.fillRect(Math.round(c.x), c.y, c.w, 4); fg.fillRect(Math.round(c.x + 4), c.y - 3, c.w - 10, 3); }
       fg.drawImage(buildCastle(run), 0, 0); try { drawCastleLive(fg, t); } catch (e) {} }
     if (lair) { fg.drawImage(bgc, (W - 28) * bk, 0, 28 * bk, H * bk, W, 0, 28, H); fg.drawImage(lairCanvas(bossId), W, 0); fg.save(); fg.translate(W, 0); lair.live(fg, t); fg.restore(); }
-    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], w = fr.width / (fr.hd || 1) * m.s, h = fr.height / (fr.hd || 1) * m.s;
-      fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(m.x - w / 2), Math.round(m.y - h + 1), w, h); }
+    for (const m of camp.slice().sort((a, b) => a.y - b.y)) { const fr = SPR[m.key].frames[Math.floor(t * 2.5 + m.ph) % 2 ? 'idle1' : 'idle0'], b = frameBox(fr, m.x, m.y, 20 * m.s), w = 20 * m.s;
+      fg.fillStyle = 'rgba(40,30,20,.3)'; fg.beginPath(); fg.ellipse(m.x, m.y, w * 0.3, 2.2, 0, 0, 7); fg.fill(); fg.drawImage(fr, Math.round(b.x), Math.round(b.y), b.w, b.h); }
     for (const n in mouth) mouth[n] = 0;
     if (typing && speaker && mouth[speaker] != null) { flapT++; const ch = typing.text[typing.n - 1] || ''; mouth[speaker] = /[\s.,!?]/.test(ch) ? 0 : flapT % 6 < 2 ? 0 : flapT % 6 < 4 ? 1 : 2; }
     for (const n of ['hero', 'boss', 'fallen', 'visitor', 'mate']) { if (!keys[n] || !A[n]) continue; const c = A[n].querySelector('canvas'), jf = jawFrames(keys[n])[0]; if (c.width !== jf.width) { c.width = jf.width; c.height = jf.height; } const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
@@ -14989,7 +15003,7 @@ function startIntro(done) {
       const S2 = SPR[r.key] || ensureSprite(r.key), img = S2 && S2.frames[fr]; if (!img) continue;
       const bob = tripping ? 4 : waiting ? (goose.yelp ? -Math.max(0, 6 - (t - 3.55) * 30) : 0) : Math.abs(Math.sin(at * 16 + r.x)) * -2;
       g.fillStyle = 'rgba(26,18,48,0.28)'; g.fillRect(Math.round(p.x) - 4, Math.round(p.y), 8, 2);
-      g.save(); g.translate(Math.round(p.x), Math.round(p.y + bob)); if (tripping) g.rotate(-0.5); if (!waiting) g.scale(-1, 1); g.drawImage(img, -10, -19, 20, 20); g.restore(); g.globalAlpha = 1;
+      g.save(); g.translate(Math.round(p.x), Math.round(p.y + bob)); if (tripping) g.rotate(-0.5); if (!waiting) g.scale(-1, 1); { const b = frameBox(img, 0, 0, 20); g.drawImage(img, b.x, b.y, b.w, b.h); } g.restore(); g.globalAlpha = 1;
     }
     { const p = pathPos(goose.x), Sg = SPR['e:goose'], fr = goose.state === 'chase' || (goose.state === 'enter' && t > 2.7 && goose.x > 472.5) ? (Math.floor(at * 12) % 2 ? 'walk0' : 'walk1') : goose.state === 'mad' ? 'atk' : 'idle0', img = Sg && Sg.frames[fr];
       if (img) { const gy = p.y - (goose.hop || 0); g.fillStyle = 'rgba(26,18,48,0.28)'; g.fillRect(Math.round(p.x) - 7, Math.round(p.y), 14, 2);
