@@ -26,7 +26,7 @@ function orcBack(g, s, by) {
   }
   if (orcHas(s, 'quiver')) { // a quiver over the back shoulder with fletchings poking up
     g.rect(3, 9 + by, 4, 14 + by, P.leather); g.set(3, 13 + by, shade(P.leather, -0.3), true);
-    g.set(2, 7 + by, P.paint, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.paint, true); g.set(5, 8 + by, '#ffffff', true); g.set(4, 8 + by, P.bone);
+    g.set(2, 7 + by, P.paint, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.paint, true); 
   }
   if (s.orc.build === 'hunch') { g.rect(4, 9 + by, 6, 12 + by, s.armor); g.clear(4, 9 + by); }
 }
@@ -66,8 +66,8 @@ function orcHead(g, s, by) {
   const o = s.orc, P = orcPal(s), skin = s.skin, hair = s.hair || shade(skin, -0.4);
   // sloped cranium (narrower on top), broad jaw that pushes past the face
   g.clear(5, 3 + by); g.clear(6, 3 + by); g.clear(5, 4 + by); g.clear(12, 3 + by);
-  g.rect(13, 5 + by, 14, 5 + by, shade(skin, -0.2)); if (o.face && o.face.includes('brow')) g.set(14, 4 + by, shade(skin, -0.2));
-  g.rect(13, 8 + by, 14, 10 + by, skin); g.set(13, 10 + by, skin);
+  g.set(13, 5 + by, shade(skin, -0.2));
+  g.rect(13, 8 + by, 13, 10 + by, skin);
   // the underside of the jaw sits in shadow, so the head never melts into a bare chest
   g.rect(7, 11 + by, 13, 11 + by, shade(skin, -0.32), true);
   // pointed ear swept back
@@ -103,16 +103,14 @@ function hdOrcFace(G, s, by) {
   const P = orcPal(s), dy = by * HDK, skin = s.skin, ink = mix(OUTLINE, skin, 0.15);
   const put = (x, y, c) => { if (G.get(x, y)) G.set(x, y, c, true); };
   // a broad flat nose between the eyes and the mouth
-  put(26, 15 + dy, shade(skin, -0.3)); put(27, 15 + dy, shade(skin, -0.3)); put(27, 14 + dy, shade(skin, 0.15)); put(26, 16 + dy, shade(skin, -0.12));
+
   // tusks jut up from the lower jaw on either side of the mouth: ivory with a shaded back edge and an ink outline
   const iv = P.bone === '#efe6cc' ? '#fff4d8' : P.bone;
   // a tusk curves up and outward (dir -1 back, +1 forward): a wide shaded base, then a lean to a sharp tip
   const tusk = (x, h, wide, dir = 1) => {
     const base = 20 + dy;
     for (let k = 0; k < h; k++) { const y = base - k, lean = k >= h - 2 && h > 2 ? dir : 0, w = wide && k < h - 2 ? 2 : 1, x0 = x + lean;
-      for (let i = 0; i < w; i++) put(x0 + i, y, i === 0 && w === 2 ? shade(iv, -0.22) : iv);
-      put(dir > 0 ? x0 - 1 : x0 + w, y, ink); }
-    put(x + (h > 2 ? dir : 0), base - h, ink);
+      for (let i = 0; i < w; i++) put(x0 + i, y, i === 0 && w === 2 ? shade(iv, -0.18) : iv); }
   };
   const T = o.tusk || 'big';
   if (T === 'huge') { tusk(19, 5, true, -1); tusk(26, 6, true, 1); }
@@ -122,7 +120,5 @@ function hdOrcFace(G, s, by) {
   else if (T === 'broken') { tusk(19, 4, true, -1); tusk(26, 2, true, 1); put(26, 18 + dy, shade(iv, -0.4)); put(27, 18 + dy, shade(iv, -0.25)); }
   const F = o.face || [];
   if (F.includes('paint')) for (let x = 16; x <= 19; x++) { put(x, 15 + dy, P.paint); put(x + 1, 16 + dy, P.paint); }
-  if (F.includes('scar')) for (let k = 0; k < 6; k++) put(21 + k, 9 + dy + k, k === 2 || k === 3 ? '#ffb3a0' : mix('#ffb3a0', skin, 0.4));
   if (F.includes('wart')) { put(21, 16 + dy, shade(skin, -0.3)); put(22, 16 + dy, shade(skin, -0.3)); put(21, 15 + dy, shade(skin, 0.25)); }
-  if (F.includes('brow')) for (let x = 18; x <= 27; x++) put(x, 10 + dy, shade(skin, -0.38));
 }

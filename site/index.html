@@ -2399,7 +2399,7 @@ const HEROES = [
     spr: { head: 'human', skin: SK.pale, hair: '#e8b84a', hat: 'tricorn', armor: '#5a8ad8', armor2: '#2a4a8a', cloth: '#ffffff', weapon: 'bow', cape: '#ffd84a' } },
   { id: 'kragg', name: 'Kragg Bonebow', race: 'orc', cls: 'ranger', tier: 2, rar: 2, ability: 'ballista', aName: 'Ballista of Ruin', aDesc: 'Fires a ballista bolt through the whole line for {0}, pinning the first foe in place for 2s. The bolt explodes at the end for {1}.',
     spr: { head: 'orc', skin: '#4f9a62', hair: '#1a1a1a', hat: 'none', armor: '#6a4a3a', armor2: '#3a2a20', cloth: '#7a2a2a', weapon: 'bow',
-      orc: { build: 'lean', tusk: 'small', top: 'crest', gear: ['quiver', 'ribs', 'feather'], face: ['paint'], bone: '#efe6cc', leather: '#5a3a24', paint: '#f1ecdc' } } },
+      orc: { build: 'lean', tusk: 'small', top: 'crest', gear: ['quiver', 'ribs', 'feather'], bone: '#efe6cc', leather: '#5a3a24', paint: '#f1ecdc' } } },
   { id: 'lirien', name: 'Lirien Dawnstring', race: 'elf', cls: 'ranger', tier: 3, rar: 5, fixed: 5, ability: 'arrowOfDawn', aName: 'Arrow of Dawn', aDesc: 'Looses one arrow into the sky. It bursts into 20 shards of light over the enemy side, each dealing {0}, and the sunrise heals every ally for {1}.',
     spr: { head: 'elf', skin: SK.pale, hair: '#ffe066', hairStyle: 'long', hat: 'crown', armor: '#ffffff', armor2: '#ffd84a', cloth: '#ff9a4a', weapon: 'bow', cape: '#ffd84a', halo: '#ffffff', wings: '#fff3c0' } },
   { id: 'ribbsby', name: 'Sir Ribbsby', race: 'toad', cls: 'ranger', tier: 1, rar: 1, ability: 'lilyBombs', aName: 'Lily Bombardment', aDesc: 'Lobs 5 giant lily bombs that bounce 3 times along the enemy line, exploding for {0} with every bounce.',
@@ -2438,7 +2438,7 @@ const ENEMIES = {
   slimelet:{ name: 'Slimelet', hp: 40, atk: 6, as: 1.0, range: 12, spd: 24, armor: 0, gold: 2, cost: 0.6, kind: 'melee', small: true, spr: { gen: 'slime', body: '#b0f07a', eye: '#1a1230', small: true } },
   lurker:  { name: 'Bog Lurker', hp: 90, atk: 11, as: 0.7, range: 70, spd: 17, armor: 5, gold: 11, cost: 2, kind: 'ranged', proj: 'spit', poison: 4, spr: { gen: 'humanoid', head: 'toad', skin: '#5a7a3a', belly: '#9aaa5a', hat: 'none', armor: '#4a3a2a', armor2: '#2a2018', cloth: '#7a5a3a', weapon: 'none' } },
   wisp:    { name: 'Will-o-Wisp', hp: 60, atk: 10, as: 0.9, range: 50, spd: 28, armor: 0, gold: 10, cost: 2, kind: 'flyer', proj: 'soul', spr: { gen: 'flyer', body: '#8affd8', wing: '#d8fff2', eye: '#1a6a5a', glow: true } },
-  troll:   { name: 'Bog Troll', hp: 520, atk: 26, as: 0.7, range: 15, spd: 14, armor: 25, gold: 35, cost: 7, kind: 'melee', elite: true, regen: 0.02, spr: { gen: 'humanoid', head: 'orc', skin: '#4a8a6a', hair: '#2a4a3a', hairStyle: 'long', hat: 'none', armor: '#5a4a3a', armor2: '#3a2a20', cloth: '#5a4a3a', weapon: 'hammer', metal: '#7a6a5a' } },
+  troll:   { name: 'Bog Troll', hp: 520, atk: 26, as: 0.7, range: 15, spd: 14, armor: 25, gold: 35, cost: 7, kind: 'melee', elite: true, regen: 0.02, spr: { gen: 'humanoid', head: 'orc', skin: '#4a8a6a', hair: '#2a4a3a', hairStyle: 'long', hat: 'none', armor: '#5a4a3a', armor2: '#3a2a20', cloth: '#5a4a3a', weapon: 'hammer', metal: '#7a6a5a', orc: { build: 'hunch', tusk: 'small', top: 'braids', gear: [] } } },
   // Grave Rot
   zombie:  { name: 'Shambler', hp: 150, atk: 12, as: 0.7, range: 13, spd: 13, armor: 5, gold: 9, cost: 1.5, kind: 'melee', spr: { gen: 'humanoid', head: 'human', skin: '#9ac48a', hair: '#3a4a3a', hat: 'none', armor: '#5a6a8a', armor2: '#3a4a5a', cloth: '#4a3a3a', weapon: 'none', eye: '#ff3a3a' } },
   ghoul:   { name: 'Ghoul', hp: 110, atk: 15, as: 1.2, range: 13, spd: 40, armor: 0, gold: 12, cost: 2, kind: 'melee', spr: { gen: 'quad', body: '#9a8ac0', belly: '#c8b8e0', eye: '#ff3a6a' } },
@@ -2490,11 +2490,11 @@ const ENEMIES = {
   grubnose: { name: 'Grubnose the Goblin King', boss: 'mini', hp: 2600, atk: 34, as: 0.8, range: 22, spd: 13, armor: 25, gold: 220, kind: 'melee', scale: 2, skills: ['slam', 'summon:grunt'], spr: { gen: 'humanoid', head: 'goblin', skin: '#7ac83a', hat: 'crown', armor: '#d83a5a', armor2: '#8a1a3a', cloth: '#ffd84a', weapon: 'kingclub', metal: '#ffcf3a', cape: '#7a3ad8' } },
   gloop:    { name: 'Mother Gloop', boss: 'mini', hp: 4200, atk: 36, as: 0.7, range: 22, spd: 11, armor: 15, gold: 300, kind: 'melee', scale: 2, split: 'slime', skills: ['slam', 'summon:slimelet'], spr: { gen: 'slime', body: '#5ad84a', eye: '#1a1230', crown: true } },
   wyrm:     { name: 'Vexmora, the Ashen Wyrm', boss: 'big', hp: 14000, atk: 60, as: 0.6, range: 30, spd: 10, armor: 35, gold: 900, kind: 'melee', scale: 3, skills: ['breath', 'gust', 'fireRain'], spr: { gen: 'quad', body: '#5a4a6a', belly: '#ff9a4a', eye: '#ffde3a', wings: true, horns: true } },
-  ringmaster:{ name: 'Ringmaster Malgoth', boss: 'mini', hp: 13000, atk: 70, as: 0.8, range: 22, spd: 13, armor: 40, gold: 700, kind: 'melee', scale: 2, skills: ['slam', 'summon:imp', 'fireRain'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff5a5a', hair: '#1a1a1a', hat: 'wizard', armor: '#2a1a4a', armor2: '#1a0f2a', cloth: '#ffd84a', weapon: 'staff', gem: '#ff3a3a', cape: '#ffd84a' } },
+  ringmaster:{ name: 'Ringmaster Malgoth', boss: 'mini', hp: 13000, atk: 70, as: 0.8, range: 22, spd: 13, armor: 40, gold: 700, kind: 'melee', scale: 2, skills: ['slam', 'summon:imp', 'fireRain'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff5a5a', hair: '#1a1a1a', hat: 'wizard', armor: '#2a1a4a', armor2: '#1a0f2a', cloth: '#ffd84a', weapon: 'staff', gem: '#ff3a3a', cape: '#ffd84a', orc: { build: 'stout', tusk: 'big', top: 'bald', gear: ['earrings'] } } },
   matriarch:{ name: 'The Yeti Matriarch', boss: 'mini', hp: 22000, atk: 95, as: 0.7, range: 22, spd: 12, armor: 50, gold: 1000, kind: 'melee', scale: 2, skills: ['slam', 'summon:snowwolf', 'gust'], spr: { gen: 'humanoid', head: 'beast', skin: '#ffffff', snout: '#9ab0d8', ears: 'round', hat: 'crown', armor: '#e8f0ff', armor2: '#b8c8e8', cloth: '#5fd3ff', weapon: 'none' } },
   sporebaron:{ name: 'The Spore Baron', boss: 'mini', hp: 16000, atk: 80, as: 0.7, range: 22, spd: 12, armor: 40, gold: 800, kind: 'melee', scale: 2, skills: ['slam', 'summon:shroom', 'gust'], spr: { gen: 'humanoid', head: 'goblin', skin: '#f4e4c8', hat: 'wizard', armor: '#8a3ad8', armor2: '#5a1a9a', cloth: '#e84a5a', weapon: 'staff', gem: '#c8ff6a', cape: '#e84a5a' } },
   trashpaw: { name: 'Big Mama Trashpaw', boss: 'mini', hp: 30000, atk: 110, as: 0.8, range: 22, spd: 14, armor: 55, gold: 1200, kind: 'melee', scale: 2, skills: ['slam', 'summon:bandit', 'fireRain'], spr: { gen: 'humanoid', head: 'beast', skin: '#7a7a8a', snout: '#2a2a3a', ears: 'round', hat: 'none', armor: '#c84a8a', armor2: '#8a2a5a', cloth: '#3a3a4a', weapon: 'pan', metal: '#c8c8d8', cape: '#5a3a7a' } },
-  pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'cutlass', metal: '#ffd84a', cape: '#a82a3a' } },
+  pinchbeard:{ name: 'Captain Pinchbeard', boss: 'mini', hp: 45000, atk: 150, as: 0.8, range: 22, spd: 13, armor: 65, gold: 1600, kind: 'melee', scale: 2, skills: ['slam', 'summon:crab', 'fireRain', 'gust'], spr: { gen: 'humanoid', head: 'orc', skin: '#ff6a4a', hair: '#1a1a1a', hairStyle: 'long', hat: 'helm', armor: '#2a2a3a', armor2: '#1a1a24', cloth: '#d8b84a', weapon: 'cutlass', metal: '#ffd84a', cape: '#a82a3a', orc: { build: 'stout', tusk: 'broken', top: 'braids', gear: ['earrings'] } } },
   shardgoose: { name: 'The Shard-Crowned Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3.2, skills: ['breath', 'slam', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#d8d0f0', beak: '#ff8a1a', neck: true, crown: '#c98aff' } },
   goosegod: { name: 'The Eternal Goose', boss: 'big', hp: 120000, atk: 200, as: 0.9, range: 30, spd: 12, armor: 70, gold: 5000, kind: 'melee', scale: 3, skills: ['breath', 'slam', 'summon:chicken', 'summon:gosling', 'gust', 'laser'], spr: { gen: 'bird', body: '#fbfbf6', wing: '#c8c8d0', beak: '#ff8a1a', neck: true, crown: '#ffd84a' } },
   colossus: { name: 'The Brass Colossus', boss: 'big', hp: 60000, atk: 130, as: 0.5, range: 30, spd: 9, armor: 60, gold: 2500, kind: 'melee', scale: 3, skills: ['laser', 'slam', 'summon:cog'], spr: { gen: 'golem', body: '#e8b84a', trim: '#8a5a2a', eye: '#ff3a5a', crown: true } },
@@ -3448,13 +3448,14 @@ function genHumanoid(s, frame) {
   // front arm + weapon
   const wp = WPN[s.weapon];
   if (wp) {
-    const map = atk ? wp.a : wp.i, [ax, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ay = ay0 + by, pal = weaponPal(s);
+    // orcs hold their weapon a pixel further out, so it never crosses the face
+    const map = atk ? wp.a : wp.i, [ax0, ay0] = map.at || (atk ? [15, 12] : [16, 13]), ax = ax0 + (s.head === 'orc' && !atk ? 1 : 0), ay = ay0 + by, pal = weaponPal(s);
     if (atk) g.rect(12, 12 + by, ax - 1, 12 + by, a2);
     else { g.rect(12, 12 + by, 13, 13 + by, a2); if (ax > 14) g.rect(14, ay, ax - 1, ay, a2); }
     g.set(ax, ay, skin); growWeapon(g, ws, ax, ay, (G, x, y) => drawWpnMap(G, map, pal, x, y));
     if (wp.b) growWeapon(g, ws, 5, 15 + by, (G, x, y) => drawWpnMap(G, wp.b, pal, x, y));
   } else if (atk) { g.rect(12, 12 + by, 14, 12 + by, a2); g.set(15, 12 + by, skin); growWeapon(g, ws, 15, 12 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, true)); }
-  else { g.rect(12, 12 + by, 13, 13 + by, a2); g.set(13, 14 + by, skin); growWeapon(g, ws, 13, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
+  else { const hx = s.head === 'orc' ? 16 : 13; g.rect(12, 12 + by, 13, 13 + by, a2); if (hx > 13) g.rect(14, 13 + by, hx, 13 + by, a2); g.set(hx, 14 + by, skin); growWeapon(g, ws, hx, 14 + by, (G, x, y) => drawWeapon(G, s, s.weapon, x - 1, y, false)); }
   if (s.weapon === 'none' && atk) { g.set(16, 12 + by, skin); }
   if (s.orc) orcFront(g, s, by);
   return g.finish();
@@ -3709,7 +3710,7 @@ function orcBack(g, s, by) {
   }
   if (orcHas(s, 'quiver')) { // a quiver over the back shoulder with fletchings poking up
     g.rect(3, 9 + by, 4, 14 + by, P.leather); g.set(3, 13 + by, shade(P.leather, -0.3), true);
-    g.set(2, 7 + by, P.paint, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.paint, true); g.set(5, 8 + by, '#ffffff', true); g.set(4, 8 + by, P.bone);
+    g.set(2, 7 + by, P.paint, true); g.set(3, 7 + by, '#ffffff', true); g.set(3, 8 + by, P.paint, true); 
   }
   if (s.orc.build === 'hunch') { g.rect(4, 9 + by, 6, 12 + by, s.armor); g.clear(4, 9 + by); }
 }
@@ -3749,8 +3750,8 @@ function orcHead(g, s, by) {
   const o = s.orc, P = orcPal(s), skin = s.skin, hair = s.hair || shade(skin, -0.4);
   // sloped cranium (narrower on top), broad jaw that pushes past the face
   g.clear(5, 3 + by); g.clear(6, 3 + by); g.clear(5, 4 + by); g.clear(12, 3 + by);
-  g.rect(13, 5 + by, 14, 5 + by, shade(skin, -0.2)); if (o.face && o.face.includes('brow')) g.set(14, 4 + by, shade(skin, -0.2));
-  g.rect(13, 8 + by, 14, 10 + by, skin); g.set(13, 10 + by, skin);
+  g.set(13, 5 + by, shade(skin, -0.2));
+  g.rect(13, 8 + by, 13, 10 + by, skin);
   // the underside of the jaw sits in shadow, so the head never melts into a bare chest
   g.rect(7, 11 + by, 13, 11 + by, shade(skin, -0.32), true);
   // pointed ear swept back
@@ -3786,16 +3787,14 @@ function hdOrcFace(G, s, by) {
   const P = orcPal(s), dy = by * HDK, skin = s.skin, ink = mix(OUTLINE, skin, 0.15);
   const put = (x, y, c) => { if (G.get(x, y)) G.set(x, y, c, true); };
   // a broad flat nose between the eyes and the mouth
-  put(26, 15 + dy, shade(skin, -0.3)); put(27, 15 + dy, shade(skin, -0.3)); put(27, 14 + dy, shade(skin, 0.15)); put(26, 16 + dy, shade(skin, -0.12));
+
   // tusks jut up from the lower jaw on either side of the mouth: ivory with a shaded back edge and an ink outline
   const iv = P.bone === '#efe6cc' ? '#fff4d8' : P.bone;
   // a tusk curves up and outward (dir -1 back, +1 forward): a wide shaded base, then a lean to a sharp tip
   const tusk = (x, h, wide, dir = 1) => {
     const base = 20 + dy;
     for (let k = 0; k < h; k++) { const y = base - k, lean = k >= h - 2 && h > 2 ? dir : 0, w = wide && k < h - 2 ? 2 : 1, x0 = x + lean;
-      for (let i = 0; i < w; i++) put(x0 + i, y, i === 0 && w === 2 ? shade(iv, -0.22) : iv);
-      put(dir > 0 ? x0 - 1 : x0 + w, y, ink); }
-    put(x + (h > 2 ? dir : 0), base - h, ink);
+      for (let i = 0; i < w; i++) put(x0 + i, y, i === 0 && w === 2 ? shade(iv, -0.18) : iv); }
   };
   const T = o.tusk || 'big';
   if (T === 'huge') { tusk(19, 5, true, -1); tusk(26, 6, true, 1); }
@@ -3805,9 +3804,7 @@ function hdOrcFace(G, s, by) {
   else if (T === 'broken') { tusk(19, 4, true, -1); tusk(26, 2, true, 1); put(26, 18 + dy, shade(iv, -0.4)); put(27, 18 + dy, shade(iv, -0.25)); }
   const F = o.face || [];
   if (F.includes('paint')) for (let x = 16; x <= 19; x++) { put(x, 15 + dy, P.paint); put(x + 1, 16 + dy, P.paint); }
-  if (F.includes('scar')) for (let k = 0; k < 6; k++) put(21 + k, 9 + dy + k, k === 2 || k === 3 ? '#ffb3a0' : mix('#ffb3a0', skin, 0.4));
   if (F.includes('wart')) { put(21, 16 + dy, shade(skin, -0.3)); put(22, 16 + dy, shade(skin, -0.3)); put(21, 15 + dy, shade(skin, 0.25)); }
-  if (F.includes('brow')) for (let x = 18; x <= 27; x++) put(x, 10 + dy, shade(skin, -0.38));
 }
 
 // ===== Hi-detail champion art (Cam 2026-10-31: "32 bit character upgrades ... a different facial expression for the character trait they rolled")
