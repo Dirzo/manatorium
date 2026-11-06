@@ -137,7 +137,7 @@ html.m-land .roster.m-details { z-index: 14; }
 html.m-land .tk-bar.top { height: calc(30px + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px); }
 html.m-land .tk-bar.bot { min-height: 40px; padding: 6px calc(12px + env(safe-area-inset-right, 0px)) 8px calc(12px + env(safe-area-inset-left, 0px)); }
 html.m-land .tk-bub { max-width: 36vw; padding: 6px 10px 8px; } html.m-land .tk-bub p { font-size: 13px; }
-html.m-land .tk-narr { font-size: 13px; }
+html.m-land .tk-res { font-size: 13px; }
 html.m-land .tk-opt { width: 30vw; padding: 5px 8px 6px; } html.m-land .tk-opt q { display: none; }
 @media (max-height: 460px) { .tk-bub p { font-size: 13px; } .tk-opt q { display: none; } .tk-bar.top { height: 30px; } }
 html.m-land .tk-card { top: calc(34px + env(safe-area-inset-top, 0px)); } html.m-land .tk-card h2 { font-size: 20px; }
